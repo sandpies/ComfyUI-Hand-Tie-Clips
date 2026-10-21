@@ -1180,6 +1180,43 @@ def _core_call(node_cls, what, **kw):
         ) from e
 
 
+class _EncodeCache:
+    """Per-run memoizing wrapper around a VAE for MiniMaxH3ReferenceToVideo.
+
+    Core's MiniMaxH3ReferenceToVideo calls `.encode(x)` on every hop for the
+    same @ref stills, clips and voices. Keying on `(id(inner), shape, dtype,
+    sha1(bytes))` skips redundant VAE loads and encodes after the first miss
+    while returning an identical tensor on the original result's device/dtype.
+    """
+
+    def __init__(self, inner):
+        self._inner = inner
+        self._cache = {}
+        self.hits = 0
+        self.misses = 0
+
+    @staticmethod
+    def _key(inner_id, x):
+        c = x.detach().cpu().contiguous()
+        digest = hashlib.sha1(c.view(torch.uint8).numpy().tobytes()).hexdigest()
+        return (inner_id, tuple(x.shape), str(x.dtype), digest)
+
+    def encode(self, x):
+        k = self._key(id(self._inner), x)
+        hit = self._cache.get(k)
+        if hit is not None:
+            self.hits += 1
+            saved, dev, dt = hit
+            return saved.to(device=dev, dtype=dt).clone()
+        self.misses += 1
+        out = self._inner.encode(x)
+        self._cache[k] = (out.detach().cpu().clone(), out.device, out.dtype)
+        return out
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+
 def _validate_anchors(shots, start_image_file):
     """Refuse an unusable anchor=restart before anything samples.
 
@@ -4571,6 +4608,8 @@ class HandTieClips:
             print(f"[{TAG}] writer unload skipped ({_le!r})", flush=True)
 
         dry = str(dry_run) == "on"
+        ref_vae = _EncodeCache(vae) if vae is not None else None
+        ref_audio_vae = _EncodeCache(audio_vae) if audio_vae is not None else None
         # SWAP is not a chain, and not a mode of one. A non-empty `swap_script`
         # replaces the plan outright: one hop, no pin, no continuation.
         #
@@ -5995,7 +6034,7 @@ class HandTieClips:
                                     else ref_image_size)
                     packed = _core_call(
                         MiniMaxH3ReferenceToVideo, "the hand-tie previs",
-                        clip=clip, vae=vae, audio_vae=audio_vae, prompt=pblock,
+                        clip=clip, vae=ref_vae, audio_vae=ref_audio_vae, prompt=pblock,
                         width=int(pv_w), height=int(pv_h), length=_p_len,
                         ref_image_size=_pv_ref_size, ref_images=hop_images,
                         ref_videos=hop_videos,
@@ -6684,7 +6723,7 @@ class HandTieClips:
                 # ours to depend on; its parameter names are the contract.
                 packed = _core_call(
                     MiniMaxH3ReferenceToVideo, "the reference conditioning",
-                    clip=clip, vae=vae, audio_vae=audio_vae, prompt=block,
+                    clip=clip, vae=ref_vae, audio_vae=ref_audio_vae, prompt=block,
                     width=int(width), height=int(height), length=render_length,
                     ref_image_size=ref_image_size,
                     ref_images=hop_images,
@@ -7231,7 +7270,7 @@ class HandTieClips:
                     # then renders to it, mouth included.
                     _dp = _core_call(
                         MiniMaxH3ReferenceToVideo, "the sound draft conditioning",
-                        clip=clip, vae=vae, audio_vae=audio_vae, prompt=block,
+                        clip=clip, vae=ref_vae, audio_vae=ref_audio_vae, prompt=block,
                         width=int(sd_w), height=int(sd_h), length=render_length,
                         ref_image_size=ref_image_size, ref_images=hop_images,
                         ref_videos=hop_videos,
@@ -8174,7 +8213,8 @@ class HandTieClips:
                     # latent this discards.
                     _cap_cond = _cond_cpu(_result(_core_call(
                         MiniMaxH3ReferenceToVideo, "the h3upscale caption",
-                        clip=clip, prompt=_ug.CAPTION, width=int(width),
+                        clip=clip, vae=ref_vae, audio_vae=ref_audio_vae,
+                        prompt=_ug.CAPTION, width=int(width),
                         height=int(height), length=5,
                         ref_image_size=ref_image_size))[0], keep_refs=True)
                     _offload_text_encoder(clip, _up_model)
@@ -8231,6 +8271,12 @@ class HandTieClips:
             info += (chr(10) + f"hand-tie previs {_sec} (seed {_seed}) cuts at "
                      + ", ".join(f"f{c}" for c in _cuts) + "; check the film there")
         print(f"[{TAG}] {info}", flush=True)
+        _ref_hits = ((ref_vae.hits if ref_vae is not None else 0)
+                     + (ref_audio_vae.hits if ref_audio_vae is not None else 0))
+        _ref_misses = ((ref_vae.misses if ref_vae is not None else 0)
+                       + (ref_audio_vae.misses if ref_audio_vae is not None else 0))
+        print(f"[{TAG}] ref encode cache: {_ref_hits} hits / {_ref_misses} misses",
+              flush=True)
         # The assembled prompts being inspectable is the whole point of the
         # directive layer -- wire `info` to a Preview Text node to read exactly
         # what each hop sent to the text encoder.
