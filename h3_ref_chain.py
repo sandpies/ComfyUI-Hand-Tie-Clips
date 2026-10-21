@@ -1197,7 +1197,7 @@ class _EncodeCache:
 
     @staticmethod
     def _key(inner_id, x):
-        c = x.detach().cpu().contiguous()
+        c = x.detach().cpu().contiguous().reshape(-1)
         digest = hashlib.sha1(c.view(torch.uint8).numpy().tobytes()).hexdigest()
         return (inner_id, tuple(x.shape), str(x.dtype), digest)
 
