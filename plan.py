@@ -34,6 +34,7 @@ Shot fields (all optional except `beat`):
 """
 
 import json
+import re
 
 from . import directives as _d
 
@@ -366,13 +367,26 @@ def check_place_handoff(shots, ref_plan=None):
     # a chain that spends every hop on one platform. What matters is whether
     # this beat names somewhere OTHER than where the previous hop ended, which
     # is what the live frame at its first frame actually shows.
+    #
+    # Only the hop's OPENING has to agree with the live frame (2026-10-24). A
+    # restart has no live frame at all -- it opens on its own refs, a cut by
+    # definition -- so it never warns. And a beat written as H3 shots
+    # ("[Shot 1] ... [Shot 2] At 00:03.000 a cut to @kitchen ...") cuts inside
+    # the hop on purpose: only [Shot 1] opens on the pin, and the film ends the
+    # hop wherever its last shot names a place.
+    def _named(text):
+        return {t for t in places if ("@" + t).lower() in text}
+
     current = set()
     for i, s in enumerate(shots):
         low = (s.get("beat") or "").lower()
-        named = {t for t in places if ("@" + t).lower() in low}
-        if i and current:
+        segs = [g for g in re.split(r"\[shot\s+\d+\]", low) if g.strip()] or [low]
+        opening = segs[0]
+        named = _named(opening)
+        restart = str(s.get("anchor") or "") == "restart"
+        if i and current and not restart:
             for tag in sorted(named - current):
-                if any(v in low for v in _ARRIVES):
+                if any(v in opening for v in _ARRIVES):
                     continue
                 warnings.append(
                     f"shot {i + 1}: @{tag} is a new place and shot {i} is "
@@ -380,8 +394,10 @@ def check_place_handoff(shots, ref_plan=None):
                     f"location, so the only way to obey is a cut. End shot {i} "
                     f"with the arrival, or have shot {i + 1} do the travelling."
                 )
-        if named:
-            current = named
+        for g in reversed(segs):
+            if _named(g):
+                current = _named(g)
+                break
 
     # The same defect seen from the other side. Both LM Studio models plated
     # the opening location, moved the story somewhere else, and gave the new
