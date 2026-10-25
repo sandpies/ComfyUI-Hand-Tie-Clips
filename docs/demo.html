@@ -497,7 +497,7 @@
       <span class="badge green">✓ Lossless Hop Cache &amp; Solo Retake</span>
     </div>
 
-    <img src="https://media.githubusercontent.com/media/dntpi/ComfyUI-Hand-Tie-Clips/main/docs/img/seam-frames.png" alt="Six consecutive frames across a join">
+    <img src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/seam-frames.png" alt="Six consecutive frames across a join">
     <div class="caption">Six consecutive frames crossing the join between Hop 1 and Hop 2 — no cut, flash, or identity jump.</div>
 
     <!-- =================================================================== -->
@@ -507,7 +507,7 @@
       <div style="font-weight:600; margin-bottom:6px;">Hand-Tie 10x8s example</div>
       <video controls preload="metadata" width="50%" style="max-width:480px; width:50%; margin:0 auto; border-radius:8px; border:1px solid var(--border); background:#000;">
         <source src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/hand-tie-10hop-00138.mp4" type="video/mp4">
-        <source src="https://media.githubusercontent.com/media/dntpi/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-10hop-00138.mp4" type="video/mp4">
+        <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-10hop-00138.mp4" type="video/mp4">
       </video>
     </div>
 
@@ -848,7 +848,7 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
       <div style="font-weight:600; margin-bottom:6px;">Simple Mode (15s · Realism Boost + 2 MP Upsample) example</div>
       <video controls preload="metadata" width="50%" style="max-width:480px; width:50%; margin:0 auto; border-radius:8px; border:1px solid var(--border); background:#000;">
         <source src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/simple-realism-boost-2mp-00008.mp4" type="video/mp4">
-        <source src="https://media.githubusercontent.com/media/dntpi/ComfyUI-Hand-Tie-Clips/main/docs/img/simple-realism-boost-2mp-00008.mp4" type="video/mp4">
+        <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/simple-realism-boost-2mp-00008.mp4" type="video/mp4">
       </video>
     </div>
 
@@ -905,12 +905,12 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
             Download <code>h3upscale_v2_x2.safetensors</code> from <strong><a href="https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/tree/main/lora">sandpies/ComfyUI-H3-Video-Upsampler (Hugging Face)</a></strong>.</li>
         <li><strong><code>upsample_dit</code> wire:</strong> When using <code>h3upscale_v2_x2</code>, wire a <strong>plain, unpatched H3 UNETLoader</strong> into <code>upsample_dit</code> (the LoRA was trained on the bare DiT without turbo/realism LoRAs underneath).</li>
       </ol>
-      <p style="margin:8px 0 0 0; font-size:13px;"><em>Want to upscale any existing video outside a chain? Use the included <strong>H3 Video Upsampler (finished clip)</strong> node (<code>workflows/HandTieClips_Upsample_Video.json</code>) or the standalone repo: <a href="https://github.com/dntpi/ComfyUI-H3-Video-Upsampler">dntpi/ComfyUI-H3-Video-Upsampler</a>.</em></p>
+      <p style="margin:8px 0 0 0; font-size:13px;"><em>Want to upscale any existing video outside a chain? Use the included <strong>H3 Video Upsampler (finished clip)</strong> node (<code>workflows/HandTieClips_Upsample_Video.json</code>) or the standalone repo: <a href="https://github.com/sandpies/ComfyUI-H3-Video-Upsampler">sandpies/ComfyUI-H3-Video-Upsampler</a>.</em></p>
     </div>
 
     <h2>Quick Start (60 Seconds)</h2>
     <pre><code>cd ComfyUI/custom_nodes
-git clone https://github.com/dntpi/ComfyUI-Hand-Tie-Clips.git</code></pre>
+git clone https://github.com/sandpies/ComfyUI-Hand-Tie-Clips.git</code></pre>
     <ol>
       <li><strong>Restart ComfyUI</strong> and hard-refresh your browser (<code>Ctrl+Shift+R</code>). Zero pip dependencies.</li>
       <li>Drag <strong><code>workflows/HandTieClips_Starter.json</code></strong> onto ComfyUI and point the loaders at your MiniMax H3 ref2va checkpoint, text encoder, and VAEs.</li>
@@ -950,7 +950,7 @@ git clone https://github.com/dntpi/ComfyUI-Hand-Tie-Clips.git</code></pre>
         </tr>
       </tbody>
     </table>
-    <p>📖 Full authoring guide: <a href="https://github.com/dntpi/ComfyUI-Hand-Tie-Clips/blob/main/PROMPTING.md"><strong>PROMPTING.md</strong></a> · Release history: <a href="https://github.com/dntpi/ComfyUI-Hand-Tie-Clips/blob/main/CHANGELOG.md"><strong>CHANGELOG.md</strong></a> · Credits &amp; Notices: <a href="https://github.com/dntpi/ComfyUI-Hand-Tie-Clips/blob/main/THIRD_PARTY_NOTICES.md"><strong>THIRD_PARTY_NOTICES.md</strong></a></p>
+    <p>📖 Full authoring guide: <a href="https://github.com/sandpies/ComfyUI-Hand-Tie-Clips/blob/main/PROMPTING.md"><strong>PROMPTING.md</strong></a> · Release history: <a href="https://github.com/sandpies/ComfyUI-Hand-Tie-Clips/blob/main/CHANGELOG.md"><strong>CHANGELOG.md</strong></a> · Credits &amp; Notices: <a href="https://github.com/sandpies/ComfyUI-Hand-Tie-Clips/blob/main/THIRD_PARTY_NOTICES.md"><strong>THIRD_PARTY_NOTICES.md</strong></a></p>
   </div>
 
 

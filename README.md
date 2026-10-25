@@ -15,17 +15,17 @@ tags:
 
 **Multi-hop MiniMax H3 video from one ComfyUI node.** Author shot cards, manage reference stills and voices on a visual rail, lock or solo-retake individual hops from a lossless cache, run guided character/head swaps, and upscale to 2 MP.
 
-![Six consecutive frames across a join](https://media.githubusercontent.com/media/dntpi/ComfyUI-Hand-Tie-Clips/main/docs/img/seam-frames.png)
+![Six consecutive frames across a join](https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/seam-frames.png)
 
 *Six consecutive frames crossing the join between Hop 1 and Hop 2 — no cut, flash, or identity jump.*
 
-> 🚀 **[Launch the Interactive Node UI Demo in Your Browser (`docs/demo.html`)](https://dntpi.github.io/ComfyUI-Hand-Tie-Clips/demo.html)** — Click through **Script · Refs · Timeline · Media · Write · Swap** and the **`⚙` (`RUN`)** render-controls page live, toggle shot locks, solo-retake hops, and inspect the 10-hop `hand_tie` setup (compatible with both Classic LiteGraph and ComfyUI Vue Nodes 2.0).
+> 🚀 **[Launch the Interactive Node UI Demo in Your Browser (`docs/demo.html`)](https://sandpies.github.io/ComfyUI-Hand-Tie-Clips/demo.html)** — Click through **Script · Refs · Timeline · Media · Write · Swap** and the **`⚙` (`RUN`)** render-controls page live, toggle shot locks, solo-retake hops, and inspect the 10-hop `hand_tie` setup (compatible with both Classic LiteGraph and ComfyUI Vue Nodes 2.0).
 
 <div align="center">
   <p><strong>Hand-Tie 10x8s example</strong></p>
   <video controls preload="metadata" width="50%" style="max-width:480px; border-radius:8px;" src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/hand-tie-10hop-00138.mp4">
     <source src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/hand-tie-10hop-00138.mp4" type="video/mp4">
-    <source src="https://media.githubusercontent.com/media/dntpi/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-10hop-00138.mp4" type="video/mp4">
+    <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-10hop-00138.mp4" type="video/mp4">
   </video>
 </div>
 
@@ -49,7 +49,7 @@ tags:
 | Mode | Status & Best Use Case | How It Works & Honest Tradeoffs |
 |---|---|---|
 | **`motion_context`** *(Default — Built-In)* | **Stable** — Continuous relays (~5–6 hops on Turbo, ~7–8 hops on non-Turbo with Refine) & multi-scene `restart` cuts | Built directly into Hand Tie Clips (no separate node install required; credit to [NikoDemon80's ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context) for the latent-slice + end-aligned audio timeline design). Relays the previous hop's sampler AV latent into the next hop with in-latent head inpainting and distribution locking — and resets cleanly on `restart` cuts. |
-| **`hand_tie`** *(Single-Take Previs)* | **Public Experimental** — Continuous one-location walking vlogs & tracking shots ([🎬 10-Hop 72 s Example](https://media.githubusercontent.com/media/dntpi/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-10hop-00138.mp4)) | Renders one low-res single-take bridge previs first and ties each full-res hop's opening and closing 0.9 s to those clean windows via 7 per-step Motion-Context keyframes (with muted-window audio stripping and ambient floor locking) so hops never copy texture from each other.<br><br>**Previs Compiler Model (Recommended in `ComfyUI/models/text_encoders/`):** Drop any `qwen3vl_4b*.safetensors` or `qwen3vl_8b*.safetensors` into `models/text_encoders/` — e.g. [`qwen3vl_4b_fp8_scaled.safetensors` (Comfy-Org)](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors), [`qwen3vl_4b` (silveroxides/K2Q)](https://huggingface.co/silveroxides/K2Q/tree/main/qwen3vl_4b), or [`qwen3vl_8b_int8_convrot.safetensors` (Comfy-Org)](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors). It loads at the start of the run to compile your beats into continuous bridge moments and unloads from VRAM before H3 starts.<br><br>**Caveat:** Because every hop must meet its bridge window, beats that ask for a sudden location change, hard camera angle jump, or fast prop action across a join can cause the previs to cut or morph. It works best when the camera and subject flow continuously in one setting, and may occasionally need a seed re-roll if a beat moves too far. |
+| **`hand_tie`** *(Single-Take Previs)* | **Public Experimental** — Continuous one-location walking vlogs & tracking shots ([🎬 10-Hop 72 s Example](https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-10hop-00138.mp4)) | Renders one low-res single-take bridge previs first and ties each full-res hop's opening and closing 0.9 s to those clean windows via 7 per-step Motion-Context keyframes (with muted-window audio stripping and ambient floor locking) so hops never copy texture from each other.<br><br>**Previs Compiler Model (Recommended in `ComfyUI/models/text_encoders/`):** Drop any `qwen3vl_4b*.safetensors` or `qwen3vl_8b*.safetensors` into `models/text_encoders/` — e.g. [`qwen3vl_4b_fp8_scaled.safetensors` (Comfy-Org)](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors), [`qwen3vl_4b` (silveroxides/K2Q)](https://huggingface.co/silveroxides/K2Q/tree/main/qwen3vl_4b), or [`qwen3vl_8b_int8_convrot.safetensors` (Comfy-Org)](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors). It loads at the start of the run to compile your beats into continuous bridge moments and unloads from VRAM before H3 starts.<br><br>**Caveat:** Because every hop must meet its bridge window, beats that ask for a sudden location change, hard camera angle jump, or fast prop action across a join can cause the previs to cut or morph. It works best when the camera and subject flow continuously in one setting, and may occasionally need a seed re-roll if a beat moves too far. |
 
 ---
 
@@ -64,7 +64,7 @@ tags:
   <p><strong>Simple Mode (15s · Realism Boost + 2 MP Upsample) example</strong></p>
   <video controls preload="metadata" width="50%" style="max-width:480px; border-radius:8px;" src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/simple-realism-boost-2mp-00008.mp4">
     <source src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/simple-realism-boost-2mp-00008.mp4" type="video/mp4">
-    <source src="https://media.githubusercontent.com/media/dntpi/ComfyUI-Hand-Tie-Clips/main/docs/img/simple-realism-boost-2mp-00008.mp4" type="video/mp4">
+    <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/simple-realism-boost-2mp-00008.mp4" type="video/mp4">
   </video>
 </div>
 
@@ -82,7 +82,7 @@ Enlarges the finished film to 1.5–2.0 MP in latent chunks and runs a 2-step ti
    Download `h3upscale_v2_x2.safetensors` from **[sandpies/ComfyUI-H3-Video-Upsampler (Hugging Face)](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/tree/main/lora)**.
 3. **`upsample_dit` wire:** When using `h3upscale_v2_x2`, wire a **plain, unpatched H3 UNETLoader** into `upsample_dit` (the LoRA was trained on the bare DiT without turbo/realism LoRAs underneath).
 
-*Want to upscale any existing video outside a chain? Use the included **H3 Video Upsampler (finished clip)** node (`workflows/HandTieClips_Upsample_Video.json`) or the standalone repo: [dntpi/ComfyUI-H3-Video-Upsampler](https://github.com/dntpi/ComfyUI-H3-Video-Upsampler).*
+*Want to upscale any existing video outside a chain? Use the included **H3 Video Upsampler (finished clip)** node (`workflows/HandTieClips_Upsample_Video.json`) or the standalone repo: [sandpies/ComfyUI-H3-Video-Upsampler](https://github.com/sandpies/ComfyUI-H3-Video-Upsampler).*
 
 ---
 
@@ -91,7 +91,7 @@ Enlarges the finished film to 1.5–2.0 MP in latent chunks and runs a 2-step ti
 From your `ComfyUI/custom_nodes/` folder:
 
 ```bash
-git clone https://github.com/dntpi/ComfyUI-Hand-Tie-Clips.git
+git clone https://github.com/sandpies/ComfyUI-Hand-Tie-Clips.git
 ```
 
 1. **Restart ComfyUI** and hard-refresh your browser (`Ctrl+Shift+R`). Zero pip dependencies.
@@ -105,7 +105,7 @@ git clone https://github.com/dntpi/ComfyUI-Hand-Tie-Clips.git
 | Component | Where to Get It |
 |---|---|
 | **Turbo / SLA / AdaLN Nodes** | [ComfyUI-PlagueKind-Nodes](https://github.com/PlagueKind/ComfyUI-PlagueKind-Nodes) & [ComfyUI-KJNodes](https://github.com/kijai/ComfyUI-KJNodes) |
-| **Upscaler LoRA & Standalone Pack** | [sandpies/ComfyUI-H3-Video-Upsampler (HF)](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler) · [GitHub](https://github.com/dntpi/ComfyUI-H3-Video-Upsampler) |
+| **Upscaler LoRA & Standalone Pack** | [sandpies/ComfyUI-H3-Video-Upsampler (HF)](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler) · [GitHub](https://github.com/sandpies/ComfyUI-H3-Video-Upsampler) |
 | **3D Latent Upscaler Weights** | [LBH-123-AI/Minimax_h3_latent_Upscaler](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) (`models/latent_upscale_models/`) |
 | **Hand-Tie Previs Compiler (`models/text_encoders/`)** | [`qwen3vl_4b_fp8_scaled.safetensors` (5.2 GB)](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors) · [`silveroxides/K2Q (4B)`](https://huggingface.co/silveroxides/K2Q/tree/main/qwen3vl_4b) · [`qwen3vl_8b_int8_convrot.safetensors` (9.3 GB)](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors) |
 

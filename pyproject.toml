@@ -15,9 +15,9 @@ requires-python = ">=3.10"
 dependencies = []
 
 [project.urls]
-Repository = "https://github.com/dntpi/ComfyUI-Hand-Tie-Clips"
-Documentation = "https://github.com/dntpi/ComfyUI-Hand-Tie-Clips/blob/main/PROMPTING.md"
-"Bug Tracker" = "https://github.com/dntpi/ComfyUI-Hand-Tie-Clips/issues"
+Repository = "https://github.com/sandpies/ComfyUI-Hand-Tie-Clips"
+Documentation = "https://github.com/sandpies/ComfyUI-Hand-Tie-Clips/blob/main/PROMPTING.md"
+"Bug Tracker" = "https://github.com/sandpies/ComfyUI-Hand-Tie-Clips/issues"
 
 # `comfy node publish` needs PublisherId as well as the Repository above.
 # Set 2026-08-30 from registry.comfy.org/publishers/sandpies. Globally unique
@@ -40,5 +40,5 @@ DisplayName = "Hand Tie Clips"
 # Square, 400x400. The specifications page requires square and <=400x400; the
 # publishing page says "max 800x400", which is looser. 400x400 satisfies both.
 # The wide crop belongs in Banner, which is what the 21:9 slot is for.
-Icon = "https://media.githubusercontent.com/media/dntpi/ComfyUI-Hand-Tie-Clips/main/docs/img/icon.png"
-Banner = "https://media.githubusercontent.com/media/dntpi/ComfyUI-Hand-Tie-Clips/main/docs/img/banner.png"
+Icon = "https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/icon.png"
+Banner = "https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/banner.png"

@@ -718,7 +718,7 @@ encoder will actually receive — the directive layer, the continuation
 scaffolding, the identity lock and the `<Picture N>` citations are all assembled
 at render time.
 
-![`lock` and the range button on the shot cards](https://media.githubusercontent.com/media/dntpi/ComfyUI-Hand-Tie-Clips/main/docs/img/shot-lock-range.png)
+![`lock` and the range button on the shot cards](https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/shot-lock-range.png)
 
 `render_through=N` stops after N hops; with `cache_hops=on`, 3 → 5 → 8 builds a
 chain up in stages and only ever renders the new hops. The plan is not
@@ -736,7 +736,7 @@ hop's first and last **delivered** frame side by side, its beat, its directives,
 and what actually happened to it. On a chain of any length this is the fastest
 way to find the hop that broke.
 
-![Contact sheet](https://media.githubusercontent.com/media/dntpi/ComfyUI-Hand-Tie-Clips/main/docs/img/contact-sheet-vlog.png)
+![Contact sheet](https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/contact-sheet-vlog.png)
 
 Set `dry_run=on` and queue. Every hop's prompt compiles and the node stops —
 no model, no sampler, a few seconds. The text comes out on `info`, and the same
