@@ -28,6 +28,13 @@ tags:
     <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-10hop-00138.mp4" type="video/mp4">
   </video>
 </div>
+<div align="center">
+  <p><strong>Hand-Tie music video: 12x15s, one take, the song locked (<code>master_audio_file</code>)</strong></p>
+  <video controls preload="metadata" width="40%" style="max-width:360px; border-radius:8px;" src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/hand-tie-mv-hold-me-anyway.mp4">
+    <source src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/hand-tie-mv-hold-me-anyway.mp4" type="video/mp4">
+    <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-mv-hold-me-anyway.mp4" type="video/mp4">
+  </video>
+</div>
 
 ---
 
@@ -41,6 +48,7 @@ tags:
 | **🎵 MEDIA** (Clips, Voices & Lip-Sync) | Load a starting frame, up to 3 reference videos, 3 voice timbre clips, a background music bed (with auto-ducking), or a **Master Audio File** that locks lip-sync across the entire film. |
 | **✍️ WRITE** (AI Draft Assistant — *WIP*) | Connect a local OpenAI-compatible server (nInfer / LM Studio / llama.cpp) to propose films, draft shot cards, surgically edit individual hops (`Edit shots`), or lay out bar-synced music videos (`Song` → `Lay out`). **Note:** WRITE is an experimental work-in-progress drafting tool, not a 100% hands-off autopilot — always review the generated beats and photo descriptions before rendering. |
 | **🎭 SWAP** (Guided Video Swap) | Standalone one-hop character or head swap driven by a reference video's motion and audio (`replace_person`, `head_swap`, `face_only`, `keep_person`) with a free-text wardrobe override box and automatic dual Swap LoRA loading. Leaves your multi-shot `SCRIPT` and `REFS` untouched. |
+| **📄 STANDARD** (Single-Gen Writer) | One standard MiniMax H3 prompt (T2VA or Ref2VA) for a single generation in `Simple` mode: the model plans a storyboard, you edit it, then it writes the block, checked against the official field contract. Pictures on `REFS` make it Ref2VA. |
 
 ---
 
@@ -49,7 +57,7 @@ tags:
 | Mode | Status & Best Use Case | How It Works & Honest Tradeoffs |
 |---|---|---|
 | **`motion_context`** *(Default — Built-In)* | **Stable** — Continuous relays (~5–6 hops on Turbo, ~7–8 hops on non-Turbo with Refine) & multi-scene `restart` cuts | Built directly into Hand Tie Clips (no separate node install required; credit to [NikoDemon80's ComfyUI-H3-Motion-Context](https://github.com/NikoDemon80/ComfyUI-H3-Motion-Context) for the latent-slice + end-aligned audio timeline design). Relays the previous hop's sampler AV latent into the next hop with in-latent head inpainting and distribution locking — and resets cleanly on `restart` cuts. |
-| **`hand_tie`** *(Single-Take Previs)* | **Public Experimental** — Continuous one-location walking vlogs & tracking shots ([🎬 10-Hop 72 s Example](https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-10hop-00138.mp4)) | Renders one low-res single-take bridge previs first and ties each full-res hop's opening and closing 0.9 s to those clean windows via 7 per-step Motion-Context keyframes (with muted-window audio stripping and ambient floor locking) so hops never copy texture from each other.<br><br>**Previs Compiler Model (Recommended in `ComfyUI/models/text_encoders/`):** Drop any `qwen3vl_4b*.safetensors` or `qwen3vl_8b*.safetensors` into `models/text_encoders/` — e.g. [`qwen3vl_4b_fp8_scaled.safetensors` (Comfy-Org)](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors), [`qwen3vl_4b` (silveroxides/K2Q)](https://huggingface.co/silveroxides/K2Q/tree/main/qwen3vl_4b), or [`qwen3vl_8b_int8_convrot.safetensors` (Comfy-Org)](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors). It loads at the start of the run to compile your beats into continuous bridge moments and unloads from VRAM before H3 starts.<br><br>**Caveat:** Because every hop must meet its bridge window, beats that ask for a sudden location change, hard camera angle jump, or fast prop action across a join can cause the previs to cut or morph. It works best when the camera and subject flow continuously in one setting, and may occasionally need a seed re-roll if a beat moves too far. |
+| **`hand_tie`** *(Single-Take Previs)* | **Public Experimental** — Continuous one-location walking vlogs & tracking shots ([🎬 10-Hop 72 s Example](https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-10hop-00138.mp4)), and one-take music videos on a `master_audio_file` ([🎬 12-Hop 2:51 MV](https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-mv-hold-me-anyway.mp4)) | Renders one low-res single-take bridge previs first and ties each full-res hop's opening and closing 0.9 s to those clean windows via 7 per-step Motion-Context keyframes (with muted-window audio stripping and ambient floor locking) so hops never copy texture from each other.<br><br>**Previs Compiler Model (Recommended in `ComfyUI/models/text_encoders/`):** Drop any `qwen3vl_4b*.safetensors` or `qwen3vl_8b*.safetensors` into `models/text_encoders/` — e.g. [`qwen3vl_4b_fp8_scaled.safetensors` (Comfy-Org)](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors), [`qwen3vl_4b` (silveroxides/K2Q)](https://huggingface.co/silveroxides/K2Q/tree/main/qwen3vl_4b), or [`qwen3vl_8b_int8_convrot.safetensors` (Comfy-Org)](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors). It loads at the start of the run to compile your beats into continuous bridge moments and unloads from VRAM before H3 starts.<br><br>**Caveat:** Because every hop must meet its bridge window, beats that ask for a sudden location change, hard camera angle jump, or fast prop action across a join can cause the previs to cut or morph. It works best when the camera and subject flow continuously in one setting, and may occasionally need a seed re-roll if a beat moves too far. |
 
 ---
 
@@ -72,15 +80,15 @@ tags:
 - Runs a gentle low-sigma detail pass per hop (supports wiring a stock 30-step H3 DiT to `refine_model` while your main wire runs a Turbo model).
 - **The honest truth on chain length:** `Refine` holds back relay degradation and keeps joins clean, pushing continuous `motion_context` chains to **5–6 clips on Turbo** before very visible texture changes appear, and **7–8 clips on non-Turbo**. Under `motion_context`, plan to transition to a cut (`anchor: "restart"`) every 4–5 clips or so to maintain the integrity of your textures (or use `pin_mech: hand_tie` for continuous single-take sequences).
 
-### 3. Guided Tiled Upsampler (`upsample: on`) & Standalone Node
-Enlarges the finished film to 1.5–2.0 MP in latent chunks and runs a 2-step tiled redraw. With the **`h3upscale` x2 LoRA**, the redraw is guided by your actual canvas frames at half the output size so it restores real detail instead of inventing texture. Toggling `upsample` on a cached chain skips hop generation and runs only the upscaler.
+### 3. Tiled Upsampler (`upsample: on`) & Standalone Node
+Enlarges the finished film to 1.5–2.0 MP in latent chunks and runs the original MMH3 Ultimate Upscale recipe: one tiled re-draw step from sigma 0.75 (`upsample_denoise` 0.2), 102-frame chunks with 17 shared, 70000-token tiles with 128 px overlap. An optional **HTC Upsample Settings** node on the `upsample_settings` socket exposes every one of those numbers. Toggling `upsample` on a cached chain skips hop generation and runs only the upscaler.
 
 **Required Files for Upsampling:**
 1. **Latent Upscaler (`ComfyUI/models/latent_upscale_models/`):**
    Download `minimax_h3_latent_upscaler_3d_bf16.safetensors` from [LBH-123-AI/Minimax_h3_latent_Upscaler](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) (or `h3_upscaler_lms_v0.1.safetensors`).
-2. **Guided Upscale LoRA (`ComfyUI/models/loras/`):**
-   Download `h3upscale_v2_x2.safetensors` from **[sandpies/ComfyUI-H3-Video-Upsampler (Hugging Face)](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/tree/main/lora)**.
-3. **`upsample_dit` wire:** When using `h3upscale_v2_x2`, wire a **plain, unpatched H3 UNETLoader** into `upsample_dit` (the LoRA was trained on the bare DiT without turbo/realism LoRAs underneath).
+2. **`upsample_dit` wire (optional):** a separate model for the re-draw, e.g. a plain H3 UNETLoader with no LoRAs. Unwired, the re-draw uses the boost model or the MODEL wire.
+
+No upscale LoRA is needed. `upsample_lora` is retired and ignored: the h3upscale guide cost fine detail and drew tile grids against the plain recipe.
 
 *Want to upscale any existing video outside a chain? Use the included **H3 Video Upsampler (finished clip)** node (`workflows/HandTieClips_Upsample_Video.json`) or the standalone repo: [sandpies/ComfyUI-H3-Video-Upsampler](https://github.com/sandpies/ComfyUI-H3-Video-Upsampler).*
 
@@ -132,8 +140,10 @@ Full authoring guide: **[PROMPTING.md](PROMPTING.md)** · Release history: **[CH
 
 - **H3 Ref2VA Chain (`HandTieClips`):** The main studio node (`images`, `audio`, `info`, `contact_sheet`).
 - **H3 Chain Preview (`HTCChainPreview`):** Live progress, seam side-by-side viewer, and end-of-run A/V drift monitor.
-- **H3 Video Upsampler (`HTCVideoUpsampler`):** Standalone node to upscale any finished video clip using the tiled latent upsampler + `h3upscale` guide.
+- **H3 Video Upsampler (`HTCVideoUpsampler`):** Standalone node to upscale any finished video clip with the same tiled latent upsampler recipe.
 - **H3 Tiled Upsampler (`HTCTiledUpsampler`):** Latent-input tiled upsampler for custom graphs.
+- **HTC Upsample Settings (`HTCUpsampleSettings`):** Every number of the chain's upsample, on its optional `upsample_settings` socket; unwired, the original recipe.
+- **HTC Save Video (long-form) (`HTCSaveVideo`):** Replaces RTX Frame Generation -> CreateVideo -> SaveVideo for long films: streams the frames, frame generation per pair on the GPU, NVENC constant quality, a keyframe on every cut.
 - **H3 RefMod Builder (`HTCRefModBuilder`):** Builds reusable visual/voice reference modules for the REFS rail.
 - **H3 Cache (`HTCH3Cache`):** Residual step cache on the MODEL wire ([silveroxides](https://github.com/silveroxides) / [PlagueKind](https://github.com/PlagueKind); see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)).
 

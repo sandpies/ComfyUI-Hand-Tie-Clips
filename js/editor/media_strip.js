@@ -82,6 +82,9 @@ const SLOTS = [
     ["master_audio_file", "audio", "master audio",
      "The spoken take for the whole chain. Every hop is given its own window of this file and generates the picture to match, so the voice is yours rather than the model's. Not a reference and not the SOUNDTRACK beside it: this one is delivered verbatim, no VAE round trip. Empty = the model generates a voice, as before.",
      "master_audio*", null, null],
+    ["dialogue_audio_file", "audio", "dialogue lines",
+     "For dialogue_lock (RUN > soundtrack): one recording on the film's timeline, each line where it is spoken and silence between them. Empty = H3 drafts the lines itself and Whisper keeps only the scripted words.",
+     null, null, null],
 ];
 
 /** The widget names this strip owns, so the caller hides exactly those. */

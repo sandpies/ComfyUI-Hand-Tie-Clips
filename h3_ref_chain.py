@@ -80,6 +80,7 @@ from . import sheet as _sheet
 from . import music as _music
 from . import latents as _latents
 from . import audio_lock as _alock
+from . import dialogue_lock as _dlg
 from . import planner as _planner
 from . import refine_blend as _rblend
 from . import tiled_upsampler as _tu
@@ -2309,6 +2310,54 @@ def _splice_locked_audio(latent, z_audio, carry=None, carry_frames=0, hop_frames
     return out
 
 
+def _splice_dialogue_audio(latent, z_audio, steps_mask):
+    """Freeze the hop's audio to `z_audio` where `steps_mask` < 1. Video stays live.
+
+    `steps_mask` is dialogue_lock.mask_steps: per audio-latent step, 0 frozen,
+    1 generative, feathered between. Where it is 1 the latent keeps its own
+    audio (a Motion-Context head stays the carried sound). Any noise_mask
+    already on the latent is combined, not replaced: video ANDed, audio by the
+    minimum, so a frozen head stays frozen."""
+    import comfy.nested_tensor as nt
+    parts = _latents.from_dict(latent)
+    if parts is None or len(parts) < 2:
+        raise RuntimeError(f"{TAG}: dialogue_lock needs a joint AV latent (video+audio).")
+    video, audio = parts[0], parts[1]
+    z = z_audio.to(device=audio.device, dtype=audio.dtype)
+    while z.dim() < audio.dim():
+        z = z.unsqueeze(0)
+    while z.dim() > audio.dim():
+        z = z[0]
+    if int(z.shape[-1]) != int(audio.shape[-1]):
+        raise RuntimeError(f"{TAG}: dialogue audio latent length {int(z.shape[-1])} != "
+                           f"hop audio length {int(audio.shape[-1])}.")
+    if tuple(z.shape[:-1]) != tuple(audio.shape[:-1]):
+        z = z.expand(audio.shape)
+    m = steps_mask.to(device=audio.device, dtype=torch.float32).reshape(-1)
+    if int(m.shape[0]) != int(audio.shape[-1]):
+        raise RuntimeError(f"{TAG}: dialogue mask has {int(m.shape[0])} steps, audio "
+                           f"{int(audio.shape[-1])}.")
+    keep = (m < 1.0).view(*([1] * (audio.dim() - 1)), -1)
+    parts[1] = torch.where(keep, z, audio)
+    out = dict(latent)
+    out["samples"] = _latents.rebuild(latent["samples"], parts)
+    v_shape = (1, 1) + tuple(int(d) for d in video.shape[2:])
+    a_shape = (1, 1) + tuple(int(d) for d in audio.shape[2:])
+    vmask = torch.ones(v_shape, device=video.device, dtype=torch.float32)
+    amask = m.view(*([1] * (len(a_shape) - 1)), -1).expand(a_shape).clone()
+    prev = latent.get("noise_mask")
+    if prev is not None:
+        try:
+            pv, pa = list(prev.unbind())[0], list(prev.unbind())[1]
+            vmask = vmask * pv.to(device=vmask.device, dtype=vmask.dtype)
+            amask = torch.minimum(amask, pa.to(device=amask.device, dtype=amask.dtype))
+        except Exception as e:
+            raise RuntimeError(f"{TAG}: dialogue_lock could not combine with the existing "
+                               f"noise mask ({e}).") from e
+    out["noise_mask"] = nt.NestedTensor((vmask, amask))
+    return out
+
+
 def _mean_anchor(sampled, ref, strength, skip=0, ramp=0):
     """ht_seam_fix: pull a hop's video latent means onto hop 1's.
 
@@ -2731,9 +2780,23 @@ def _audio_refine_masks(video, audio):
     return vmask, amask
 
 
+def _audio_refine_model(audio_model, hop_refine, refine_model, model):
+    """The model the audio pass runs on. -> (model, role for the log + key).
+
+    Never the boost model. H3 runs text, video and audio through the same
+    blocks, so the realism LoRAs colour the soundtrack too; re-cooking it on
+    them repeats that colour instead of removing it.
+    """
+    if audio_model is not None:
+        return audio_model, "wired"
+    if str(hop_refine) == "full" and refine_model is not None:
+        return refine_model, "refine"
+    return model, "base"
+
+
 def _audio_refine_sampled(sampled, *, model, guider, sampler, scheduler,
                           steps, denoise, seed, sigma_cache, hop_no,
-                          sampler_label="same"):
+                          sampler_label="same", model_label="base"):
     """Re-noise the soundtrack against the finished picture.
 
     The video refine holds audio frozen. This pass is the other way round, and
@@ -2768,7 +2831,8 @@ def _audio_refine_sampled(sampled, *, model, guider, sampler, scheduler,
     print(f"[{TAG}] hop {hop_no}: audio refine {int(r_sigmas.shape[-1]) - 1} "
           f"steps denoise={float(denoise):.2f} "
           f"sigma={float(r_sigmas[0]):.4f}->0 "
-          f"[{sampler_label}/{scheduler}, picture frozen]", flush=True)
+          f"[{sampler_label}/{scheduler}, {model_label} model, picture frozen]",
+          flush=True)
     out = dict(_result(_core_call(
         SamplerCustomAdvanced, "the audio refine sampler",
         noise=r_noise, guider=guider, sampler=sampler,
@@ -2818,7 +2882,7 @@ _BOOST_LOADERS = {}
 # by eye on a boosted single hop (2026-09-30): 0.2 (sigma 0.75 at shift 12)
 # repaints skin texture, 0.075 smeared mid-distance faces, 0.1 textured least
 # while still sharp. The side node keeps the recipe's 0.2.
-UPSAMPLE_DENOISE = 0.1
+UPSAMPLE_DENOISE = 0.2   # the original recipe (sigma 0.75, one step)
 
 
 def _boost_lora_choices():
@@ -4324,9 +4388,9 @@ class HandTieClips:
                 # APPENDED 2026-09-30, LAST, same positional reason.
                 "upsample_denoise": ("FLOAT", {
                     "default": UPSAMPLE_DENOISE, "min": 0.0, "max": 1.0, "step": 0.005,
-                    "tooltip": ("How hard upsample re-draws after enlarging. 0.1 (sigma 0.57 under the "
-                                "video shift) textures the least while still cleaning up the enlarge. "
-                                "0.2 is the original recipe (sigma 0.75) and repaints skin texture; "
+                    "tooltip": ("How hard upsample re-draws after enlarging. 0.2 is the original "
+                                "recipe: one step from sigma 0.75, the most fine detail measured. "
+                                "0.1 (sigma 0.57) stays a little closer to the canvas but softer; "
                                 "below ~0.075 faces start to smear. 0 skips the re-draw."),
                 }),
                 # APPENDED 2026-09-30, LAST, same positional reason.
@@ -4361,12 +4425,9 @@ class HandTieClips:
                 # APPENDED 2026-10-04, LAST, same positional reason.
                 "upsample_lora": (_boost_lora_choices(), {
                     "default": "None",
-                    "tooltip": ("A LoRA on the upsample re-draw only, on top of whatever model "
-                                "re-draws (the boost model under realism_boost, else the MODEL "
-                                "wire). Hops never see it. None skips it. An h3upscale "
-                                "LoRA also gets its guide in that same step: the film "
-                                "at half size, so the re-draw restores the film's own "
-                                "detail instead of inventing texture."),
+                    "tooltip": ("Retired (10-25): ignored. The upsample runs the original "
+                                "recipe with no LoRA; the h3upscale guide cost fine detail and "
+                                "drew tile grids. Kept only so saved graphs keep their slots."),
                 }),
                 "upsample_lora_strength": ("FLOAT", {
                     "default": 1.0, "min": -4.0, "max": 4.0, "step": 0.05,
@@ -4387,10 +4448,8 @@ class HandTieClips:
                 # APPENDED 2026-10-04, LAST. A socket, so it takes no widget slot.
                 "upsample_dit": ("MODEL", {
                     "tooltip": ("Optional model for the upsample re-draw instead of the boost "
-                                "model / MODEL wire. Wire the plain UNETLoader output here "
-                                "(before SLA and the LoRA stack): the h3upscale LoRA was "
-                                "trained on the bare DiT. The chain applies its own sigma "
-                                "shift to it; upsample_lora still goes on top."),
+                                "model / MODEL wire, e.g. a plain UNETLoader output with no "
+                                "LoRAs. The chain applies its own sigma shift to it."),
                 }),
                 # APPENDED 2026-10-14, LAST (recover branch, seam-fix batch). hand_tie only.
                 "ht_seam_fix": (["off", "on"], {
@@ -4452,8 +4511,11 @@ class HandTieClips:
                 }),
                 "audio_denoise": ("FLOAT", {
                     "default": 0.50, "min": 0.05, "max": 1.0, "step": 0.05,
-                    "tooltip": ("How far the soundtrack is re-noised. 0.5 cleans it up. "
-                                "1.0 regenerates it against the finished picture."),
+                    "tooltip": ("A fraction of the schedule, not of the noise. Under beta "
+                                "0.1 starts near sigma 0.34, 0.3 near 0.80 and 0.5 near "
+                                "0.92 (most of the soundtrack is drawn again); 1.0 "
+                                "regenerates it against the finished picture. The log "
+                                "prints the real start sigma."),
                 }),
                 "audio_steps": ("INT", {
                     "default": 5, "min": 1, "max": 30,
@@ -4471,10 +4533,36 @@ class HandTieClips:
                     "default": 0, "min": -1000000000, "max": 1000000000,
                     "tooltip": "Added to the hop seed for the audio pass's own noise draw.",
                 }),
+                # APPENDED 2026-10-26, LAST two widgets. Off adds no hop-key field.
+                "dialogue_lock": (list(_dlg.MODES), {
+                    "default": "off",
+                    "tooltip": ("Freeze each hop's spoken lines in the soundtrack so the "
+                                "words come out exactly and nobody adds any. lines: each "
+                                "line, H3 makes the rest of the sound. lines+hold: also "
+                                "holds 1.5 s quiet after each line, where extra words "
+                                "start. full: the whole hop, as a song is. The lines come "
+                                "from dialogue_audio_file, or with it empty H3 drafts each "
+                                "hop's sound first and Whisper keeps only the scripted "
+                                "words. Not with master_audio_file, realism_boost, "
+                                "audio_refine or SWAP. Under hand_tie it does nothing."),
+                }),
+                "dialogue_audio_file": ("STRING", {
+                    "default": "",
+                    "tooltip": ("Optional, for dialogue_lock: one recording laid on the "
+                                "film's timeline, each line where it is spoken and silence "
+                                "between them (any TTS or your own voice). Empty = H3 "
+                                "drafts the lines itself. Set it on the MEDIA tab."),
+                }),
                 "audio_model": ("MODEL", {
-                    "tooltip": ("Optional model for the audio pass. Unwired uses the model that "
-                                "finished the picture (the boost model, or the refine model when "
-                                "hop_refine=full)."),
+                    "tooltip": ("Optional model for the audio pass. Unwired uses the base "
+                                "model (the refine model when hop_refine=full), never the "
+                                "realism boost model: its LoRAs colour the audio too."),
+                }),
+                # A literal, as every socket here: tools read these types from source.
+                "upsample_settings": ("HTC_UPSAMPLE", {
+                    "tooltip": ("Optional HTC Upsample Settings node: steps, schedule, noise, "
+                                "chunks, anchor, tiles and VRAM splits of the upsample. "
+                                "Unwired keeps the shipped recipe."),
                 }),
             },
             "hidden": {
@@ -4588,8 +4676,9 @@ class HandTieClips:
              ht_seam_fix="off",
             audio_refine="off", audio_denoise=0.50, audio_steps=5,
             audio_sampler="same", audio_scheduler="same",
-            audio_seed_offset=0, audio_model=None,
-            unique_id=None):
+            audio_seed_offset=0, dialogue_lock="off", dialogue_audio_file="",
+            audio_model=None,
+            upsample_settings=None, unique_id=None):
         # First thing, before a single model is touched: hand the writer's VRAM
         # back. The plan writer stays resident between plans now, which is the
         # right trade everywhere except here -- a 27B and an H3 render do not
@@ -4921,11 +5010,9 @@ class HandTieClips:
                     f"{TAG}: pin_mech=hand_tie needs a shot plan: its previs is "
                     "compiled from the shots (their beats, or `moment` where set). "
                     "Switch the editor to Shots, or use pin_mech=auto.")
-            if str(master_audio_file or "").strip():
-                raise ValueError(
-                    f"{TAG}: pin_mech=hand_tie does not take master_audio_file yet: "
-                    "it pins each window's previs sound. Clear master_audio_file, or "
-                    "use pin_mech=auto.")
+            # master_audio_file (10-26): every hop's sound is the song, locked as on
+            # motion_context; the previs is silent except for the song at its
+            # windows, which tie picture only (hand_tie.song_windows).
             _ht_errors = _ht.settings_errors(overlap_n, last_frame_guide, shots, lengths)
             if _ht_errors:
                 raise ValueError(f"{TAG}: " + " ".join(_ht_errors))
@@ -5396,6 +5483,45 @@ class HandTieClips:
                 raise RuntimeError(
                     f"{TAG}: realism_boost is on with no boost LoRA set -- "
                     "pick at least one of boost_lora_1..4.")
+        dlg_mode = _dlg.normalize_mode(dialogue_lock)
+        dlg = None
+        if dlg_mode != "off" and str(pin_mech) in ("hand_tie", "hand_tie_mc"):
+            # A no-op under hand_tie (user, 10-26), not a refusal: tried on HT3 at two
+            # seeds, one take cut at 10.08 s where off did not, the other had a speaker say his
+            # line twice. The run goes on with the lock off and off's hop keys.
+            print(f"[{TAG}] dialogue_lock {dlg_mode}: off under pin_mech=hand_tie "
+                  "(it does nothing there); it runs with motion_context", flush=True)
+            dlg_mode = "off"
+        if dlg_mode != "off":
+            for _bad, _why in (
+                    (str(master_audio_file or "").strip(), "master_audio_file already owns "
+                     "the whole soundtrack"),
+                    (boost_on, "realism_boost's second stage would see the frozen sound "
+                     "un-noised"),
+                    (str(audio_refine) == "on", "audio_refine would re-noise the frozen "
+                     "lines"),
+                    (str(swap_script or "").strip(), "SWAP is one hop with its own contract")):
+                if _bad:
+                    raise RuntimeError(f"{TAG}: dialogue_lock does not run here: {_why}.")
+            if str(dialogue_audio_file or "").strip():
+                _dsrc = _prepare_master_audio(dialogue_audio_file, 0.0)
+                dlg = {"mode": dlg_mode, "src": _dsrc,
+                       "spans": _dlg.speech_spans(_dsrc["wav32"], _alock.VAE_SR)}
+                print(f"[{TAG}] dialogue_lock {dlg_mode}: {len(dlg['spans'])} line(s) found "
+                      f"in {dialogue_audio_file}", flush=True)
+            else:
+                if not dry and _hear.available() is None:
+                    raise RuntimeError(
+                        f"{TAG}: dialogue_lock with no dialogue_audio_file drafts each "
+                        "hop's lines and needs Whisper to tell scripted words from "
+                        "invented ones, and none is in the local Hugging Face cache "
+                        "(openai/whisper-small). Download it, or set "
+                        "dialogue_audio_file.")
+                dlg = {"mode": dlg_mode, "src": None, "spans": None,
+                       "size": _canvas(_ht.SOUND_DRAFT_RESOLUTION, aspect)}
+                print(f"[{TAG}] dialogue_lock {dlg_mode}: H3 drafts each dialogue hop's "
+                      f"sound at {dlg['size'][0]}x{dlg['size'][1]}, Whisper keeps the "
+                      "scripted words", flush=True)
         if str(audio_refine) == "on":
             if split_on:
                 raise RuntimeError(
@@ -5434,6 +5560,11 @@ class HandTieClips:
                 if upsample_dit is not None:
                     print(f"[{TAG}] upsample_dit is wired but upsample_denoise is "
                           "0: there is no re-draw for it to run", flush=True)
+            if str(upsample_lora) != "None":
+                # Retired 10-25: the upsample is the original recipe, no LoRA.
+                print(f"[{TAG}] upsample_lora is retired: {upsample_lora} is ignored; "
+                      "the upsample runs the original recipe without a LoRA", flush=True)
+                upsample_lora = "None"
             if str(upsample_lora) != "None":
                 if not folder_paths.get_full_path("loras", str(upsample_lora)):
                     raise RuntimeError(f"{TAG}: upsample_lora {upsample_lora} is not "
@@ -5775,6 +5906,7 @@ class HandTieClips:
         _ht_pv_hi_ref = [None]  # Previs 1's high-frequency RMS ceiling
         _ht_pv_lat = {}         # section -> sampled previs latent (for chained spine alignment)
         _ht_pre_ref2va = {}     # hop index -> pre-encoded (cond, latent) while Qwen 32B is in VRAM
+        _dlg_pre = {}           # hop index -> the dialogue draft's (cond, latent), same batch
         # Each section's previs renders no bigger than one of its hops, and no
         # bigger than the PREVIS_RESOLUTION tier (hand_tie.previs_canvas); each
         # hop drafts its sound first unless something else owns the audio
@@ -5819,7 +5951,11 @@ class HandTieClips:
                                                      0, establish))
                 ht_layouts.append(_lay)
                 ht_pv.append(_ht.previs_canvas(width, height, _frames, _lay["previs"], pv_cap))
-                ht_speaks.append(_ht.window_speaks([_pshots[j] for j in _sec], len(_lay["windows"])))
+                # A master song owns every hop's sound: no window carries a line of
+                # its own, so the windows tie picture only and the heads hold no
+                # previs sound.
+                ht_speaks.append([False] * len(_lay["windows"]) if locked is not None else
+                                 _ht.window_speaks([_pshots[j] for j in _sec], len(_lay["windows"])))
                 for _k, _j in enumerate(_sec):
                     ht_pos[_j] = (_si, _k)
                 print(f"[{TAG}] hand-tie section {_si + 1}: hops {_sec[0] + 1}-{_sec[-1] + 1}, "
@@ -5909,7 +6045,7 @@ class HandTieClips:
             # windows, cost a whole retake). The cut detector only logs below.
             _pc = _pl = None
             # Muted unless a window speaks: that window carries the previs's words.
-            _mute = bool(_ht.PREVIS_MUTE) and not any(ht_speaks[_si])
+            _mute = (bool(_ht.PREVIS_MUTE) and not any(ht_speaks[_si])) or locked is not None
             pv_w, pv_h = ht_pv[_si]
             _p_seed = _p_seed0
             _p_key = None
@@ -5930,6 +6066,7 @@ class HandTieClips:
                     **({"canvas": [pv_w, pv_h]} if (pv_w, pv_h) != (int(width), int(height))
                        else {}),
                     **({"mute": True} if _mute else {}),
+                    **({"song": locked["digest"]} if locked is not None else {}),
                 })
                 _hit = hop_store.get(_p_key)
                 if _hit is None and _si < len(ht_sections):
@@ -6102,6 +6239,29 @@ class HandTieClips:
                         _pa = _latents.from_dict(_pl)
                         _sil = torch.zeros(2, int(math.ceil(_p_len / float(FPS) * _alock.VAE_SR))
                                            + _alock.VAE_SR)
+                        if locked is not None:
+                            # The song at every window, silence between: each window
+                            # is a seam two hops share, so its mouth sings what the
+                            # film plays there.
+                            _src = locked["wav32"].detach().float().cpu()
+                            while _src.dim() > 2:
+                                _src = _src[0]
+                            if int(_src.shape[0]) == 1:
+                                _src = _src.expand(2, -1)
+                            _spans = [_alock.hop_audio_window_s(
+                                _j, lengths[_j], overlap_n, FPS,
+                                lengths=lengths, start_at=hop_starts)
+                                for _j in ht_sections[_si]]
+                            for _dst, _from_s, _n_s in _ht.song_windows(_lay["windows"], _spans):
+                                _d0 = int(round(_dst * _alock.VAE_SR))
+                                _f0 = int(round(_from_s * _alock.VAE_SR))
+                                _nn = min(int(round(_n_s * _alock.VAE_SR)),
+                                          int(_sil.shape[-1]) - _d0,
+                                          max(0, int(_src.shape[-1]) - _f0))
+                                if _nn > 0:
+                                    _sil[:, _d0:_d0 + _nn] = _src[:2, _f0:_f0 + _nn]
+                            print(f"[{TAG}] hand-tie previs {_si + 1}: the song at its "
+                                  f"{len(_lay['windows'])} windows, silent between", flush=True)
                         _pl = _splice_locked_audio(_pl, _encode_locked_slice(
                             audio_vae, _sil, 0.0, _p_len / float(FPS), int(_pa[1].shape[-1])))
                         del _pa, _sil
@@ -6240,6 +6400,8 @@ class HandTieClips:
         assembled = []
         for i, block in enumerate(blocks):
             mm.throw_exception_if_processing_interrupted()
+            _dlg_hop = None
+            _dlg_open = []      # hand_tie: hop-clock windows the lock leaves to the previs
             shot = shots[i] or {}
             hop_length = lengths[i]
             # ht_seam_fix v2 (tail discard): a hop with a next hop renders
@@ -6746,8 +6908,36 @@ class HandTieClips:
                         refmod_image_blocks, refmod_video_blocks)
                 return c, lat
 
+            def _dlg_encode():
+                # The dialogue draft's conditioning, on the draft canvas. Called
+                # while the text encoder is loaded: encoding it after the offload
+                # reloads the 32B, the cost that turned sound-first off in hand_tie.
+                if dlg is None or dlg["src"] is not None or not _dlg.script_words(block):
+                    return None, None
+                _dp = _core_call(
+                    MiniMaxH3ReferenceToVideo, "the dialogue draft conditioning",
+                    clip=clip, vae=ref_vae, audio_vae=ref_audio_vae, prompt=block,
+                    width=int(dlg["size"][0]), height=int(dlg["size"][1]),
+                    length=render_length, ref_image_size=ref_image_size,
+                    ref_images=hop_images, ref_videos=hop_videos,
+                    ref_video_audios=(hop_video_audios or None),
+                    ref_audios=hop_ref_audios)
+                dc, dl = _result(_dp)[0], _result(_dp)[1]
+                if refmod_image_blocks or refmod_video_blocks:
+                    dc = _refmod.splice_blocks(
+                        dc, hop_images, hop_videos,
+                        refmod_image_blocks, refmod_video_blocks)
+                return dc, dl
+
+            def _hop_and_draft():
+                # hand_tie encodes a section's first hop inside the previs's
+                # text-encoder batch; the draft rides in the same batch.
+                c = _hop_ref2va()
+                _dlg_pre[i] = _dlg_encode()
+                return c
+
             if ht and ht_pos[i][0] not in ht_windows:
-                _ht_previs(i, pre_encode_hop=_hop_ref2va)
+                _ht_previs(i, pre_encode_hop=_hop_and_draft)
             if previs_only:
                 pbar.update(1)
                 continue
@@ -6929,7 +7119,19 @@ class HandTieClips:
                         str(audio_sampler), str(audio_scheduler),
                         int(audio_seed_offset),
                         (None if (dry or audio_model is None)
-                         else _model_fingerprint(audio_model))]
+                         else _model_fingerprint(audio_model)),
+                        # Which model the pass resolves to: hops cooked on
+                        # the boost model before this field must not hit.
+                        _audio_refine_model(audio_model, hop_refine,
+                                            refine_model, model)[1]]
+                if dlg is not None:
+                    hop_payload["dialogue_lock"] = [
+                        1, dlg["mode"],
+                        dlg["src"]["digest"] if dlg["src"] is not None else "draft",
+                        [_dlg.PRE_S, _dlg.POST_S, _dlg.HOLD_S, _dlg.FEATHER_S,
+                         _dlg.ENERGY_DB, _dlg.WORD_GAP_S],
+                        (None if dlg["src"] is not None
+                         else [list(dlg["size"]), _ht.SOUND_TRIES])]
                 if ht:
                     # The two windows, not the previous hop: a hand-tie hop reads
                     # nothing from its predecessor, so editing an earlier beat
@@ -7084,6 +7286,8 @@ class HandTieClips:
             else:
                 cond, latent = (_ht_pre_ref2va.pop(i)
                                 if i in _ht_pre_ref2va else _hop_ref2va())
+                _dlg_dc, _dlg_dl = (_dlg_pre.pop(i) if i in _dlg_pre
+                                    else _dlg_encode())
                 # The conditioning as Ref2VA built it, before any pin or guide
                 # is added to it. `refine_cond=base` pulls the second pass
                 # toward this -- the references and the text, nothing about the
@@ -7104,6 +7308,11 @@ class HandTieClips:
                         + ([(-(_ht.WINDOW + _xtra), _k + 1)] if _k + 1 < len(_wp) else [])
                     # A skipped previs (one-hop chain) has no windows to tie to.
                     _ties = [(_fi, _w) for _fi, _w in _ties if _wp[_w] is not None]
+                    # dialogue_lock leaves every tied window to the previs.
+                    _dlg_open = [((0.0, _ht.WINDOW / float(FPS)) if _fi >= 0 else
+                                  ((render_length + _fi) / float(FPS),
+                                   render_length / float(FPS)))
+                                 for _fi, _w in _ties]
                     for _fi, _w in _ties:
                         # A muted previs window's sound is recorded silence: tying it would pin the hop to silence over the voice reference, so a muted window ties picture only.
                         _pv_muted = bool(_ht.PREVIS_MUTE) and not any(ht_speaks[_si])
@@ -7427,6 +7636,108 @@ class HandTieClips:
 
                 _offload_text_encoder(clip, model)
 
+                if dlg is not None:
+                    # AFTER the pin (it may rewrite the latent), BEFORE the sampler.
+                    _dparts = _latents.from_dict(latent)
+                    _dalen = int(_dparts[1].shape[-1])
+                    _dt0, _dt1 = _alock.hop_audio_window_s(
+                        i, hop_length, overlap_n, FPS,
+                        lengths=lengths, start_at=hop_starts)
+                    _dsrc32, _dlines, _dbab = None, [], []
+                    if dlg["src"] is not None:
+                        _s0, _s1 = _alock.sample_range(_dt0, _dt1, _alock.VAE_SR)
+                        _dsrc32 = _alock.fit_samples(dlg["src"]["wav32"], _s1)[..., _s0:_s1]
+                        _dlines = _dlg.hop_local(dlg["spans"], _dt0, _dt1)
+                    elif _dlg_dl is not None:
+                        _ddl = _dlg_dl
+                        if i > 0 and not hop_restart and prev_sampled is not None:
+                            # The draft continues the sound this hop's overlap
+                            # carries, so its first words follow the last hop's.
+                            _pp0 = _latents.from_dict(prev_sampled)
+                            if _pp0 is not None and len(_pp0) >= 2:
+                                _ddl, _ = _lock_audio_head(_ddl, _pp0[1], overlap_n,
+                                                           render_length)
+                            del _pp0
+                        _d_steps = int(shot.get("steps") or steps)
+                        if _d_steps not in sigma_cache:
+                            sigma_cache[_d_steps] = _result(_core_call(
+                                BasicScheduler, "the sigma schedule",
+                                model=model, scheduler=scheduler, steps=_d_steps,
+                                denoise=1.0))[0]
+                        _dg = _result(_core_call(BasicGuider, "the dialogue draft guider",
+                                                 model=model, conditioning=_dlg_dc))[0]
+                        _want = _dlg.script_words(block)
+                        _lang = _ht.hop_language(block)
+                        _d_seed0 = (int(shot["seed"]) if shot.get("seed") is not None
+                                    else (int(seed) + i) if seed_per_shot else int(seed))
+                        _best = None
+                        _carried_s = (overlap_n / float(FPS)
+                                      if (i > 0 and not hop_restart) else 0.0)
+                        for _t in range(_ht.SOUND_TRIES):
+                            _d_seed = (_d_seed0 + _t * _ht.SOUND_RETRY_STRIDE) & 0x7FFFFFFF
+                            _push_preview(unique_id, f"hop {i + 1}/{n} dialogue draft {_t + 1}…",
+                                          hop=i + 1, total=n)
+                            _ds = _result(_core_call(
+                                SamplerCustomAdvanced, "the dialogue draft sampler",
+                                noise=_result(_core_call(RandomNoise, "the dialogue draft noise",
+                                                         noise_seed=_d_seed))[0],
+                                guider=_dg, sampler=sampler, sigmas=sigma_cache[_d_steps],
+                                latent_image=_ddl))[0]
+                            _da = vae_decode_audio(audio_vae, _ds)
+                            del _ds
+                            _hw = _hear.transcribe_words(_da["waveform"], _da["sample_rate"], _lang)
+                            if _hw is None:
+                                _lines_t, _bab_t = [], []
+                                _ok, _score, _note = True, 0.0, "unchecked"
+                            else:
+                                _lines_t, _bab_t = _dlg.match_words(_hw[1], _want)
+                                # Words in the carried overlap are the last hop's.
+                                _bab_t = [s for s in _bab_t if s[0] >= _carried_s]
+                                _ok, _score, _note = _ht.judge_sound(_want, _hw[0])
+                            if _best is None or (_ok, _score) > (_best[0], _best[1]):
+                                _best = (_ok, _score, _da, _lines_t, _bab_t, _d_seed, _note)
+                            print(f"[{TAG}] hop {i + 1}: dialogue draft {_t + 1} (seed "
+                                  f"{_d_seed}): {_note}"
+                                  + (f' -- heard "{_hw[0][:120]}"' if _hw else ""), flush=True)
+                            if _ok:
+                                break
+                        del _dg, _ddl
+                        _ok, _score, _da, _dlines, _dbab, _d_seed, _note = _best
+                        _w = _da["waveform"].detach().float().cpu()
+                        while _w.dim() > 2:
+                            _w = _w[0]
+                        _dsrc32 = _resample_wav(_w, int(_da["sample_rate"]), _alock.VAE_SR)
+                        _dsrc32 = _dlg.silence(_dsrc32, _alock.VAE_SR, _dbab)
+                        if not _ok:
+                            # A draft that missed the script is a wrong take or a
+                            # wrong reading of the script; frozen, either one cuts
+                            # real words as babble (10-26). The hop stays generated.
+                            print(f"[{TAG}] WARNING: hop {i + 1}: no dialogue draft passed in "
+                                  f"{_ht.SOUND_TRIES} ({_note}); the lock is off on this "
+                                  "hop, its sound is generated", flush=True)
+                            _dsrc32, _dlines, _dbab = None, [], []
+                        del _best, _da
+                    _dlg_dc = _dlg_dl = None
+                    # hand_tie: the previs windows keep the seams; lines and
+                    # babble cuts count only between them.
+                    _dlines = _dlg.outside(_dlines, _dlg_open)
+                    _dbab = _dlg.outside(_dbab, _dlg_open)
+                    if _dsrc32 is not None and (dlg["mode"] == "full" or _dlines or _dbab):
+                        _dz = _encode_locked_slice(audio_vae, _dsrc32, 0.0,
+                                                   _dt1 - _dt0, _dalen)
+                        _dm = _dlg.open_steps(
+                            _dlg.mask_steps(_dalen, _dlines, dlg["mode"], _dbab), _dlg_open)
+                        latent = _splice_dialogue_audio(latent, _dz, _dm)
+                        _dlg_hop = {"src32": _dsrc32, "lines": _dlines}
+                        print(f"[{TAG}] hop {i + 1}: dialogue lock "
+                              + _dlg.describe(_dlines, _dbab, dlg["mode"])
+                              + f" ({int((_dm < 1).sum())}/{_dalen} audio steps frozen)",
+                              flush=True)
+                        del _dz, _dm
+                    else:
+                        print(f"[{TAG}] hop {i + 1}: dialogue lock: no line on this hop, "
+                              "its sound is generated", flush=True)
+
                 guider = _result(_core_call(
                     BasicGuider, "the guider",
                     model=model, conditioning=cond))[0]
@@ -7635,14 +7946,8 @@ class HandTieClips:
                     # After the picture is final, including a video refine and
                     # the dropped tail. The cache stores this latent, so a hit
                     # does not run the pass again.
-                    if audio_model is not None:
-                        _am = audio_model
-                    elif str(hop_refine) == "full":
-                        _am = refine_model if refine_model is not None else model
-                    elif boost_model is not None:
-                        _am = boost_model
-                    else:
-                        _am = model
+                    _am, _am_role = _audio_refine_model(
+                        audio_model, hop_refine, refine_model, model)
                     _aguider = guider if _am is model else _result(_core_call(
                         BasicGuider, "the audio refine guider",
                         model=_am, conditioning=cond))[0]
@@ -7659,7 +7964,8 @@ class HandTieClips:
                         seed=(int(shot_seed) + int(audio_seed_offset)) & 0x7FFFFFFF,
                         sigma_cache=sigma_cache, hop_no=i + 1,
                         sampler_label=(sampler_name if str(audio_sampler) == "same"
-                                       else str(audio_sampler)))
+                                       else str(audio_sampler)),
+                        model_label=_am_role)
                 if _sfix and _ht.SEAMFIX_ANCHOR:
                     if _mean_ref[0] is None or i == 0:
                         _, _mean_ref[0] = _mean_anchor(sampled, None, 0.0)
@@ -7682,8 +7988,14 @@ class HandTieClips:
                     # was clean. The hop checks itself like the previs does and
                     # renders once more on a seed clear of every other. The kept take is
                     # cached under the hop's own key (its planned seed), so a hit serves it.
-                    _hcuts = _ht.previs_cuts(imgs)
-                    if _hcuts:
+                    _hcuts = _ht.unplanned_cuts(_ht.previs_cuts(imgs), block)
+                    if _hcuts and not _ht.HOP_RETAKE:
+                        print(f"[{TAG}] WARNING: hand-tie hop {i + 1}: cuts at "
+                              + ", ".join(f"f{c} ({c / FPS:.2f}s)" for c in _hcuts)
+                              + " that the beat does not write; a beat that moves to a "
+                              "new place asks for a cut. Retake the hop with its own "
+                              "seed if it shows.", flush=True)
+                    elif _hcuts:
                         _rs = (shot_seed + _ht.PREVIS_RETRY_STRIDE) & 0x7FFFFFFF
                         print(f"[{TAG}] hand-tie hop {i + 1}: seed {shot_seed} cuts at "
                               + ", ".join(f"f{c} ({c / FPS:.2f}s)" for c in _hcuts)
@@ -7707,7 +8019,7 @@ class HandTieClips:
                                 _s2, prev_sampled, overlap_n, hop_no=i + 1)
                         _i2, _a2 = _decode_av(vae, audio_vae, _s2)
                         _i2 = _i2.contiguous().cpu()
-                        _c2 = _ht.previs_cuts(_i2)
+                        _c2 = _ht.unplanned_cuts(_ht.previs_cuts(_i2), block)
                         if len(_c2) < len(_hcuts):
                             sampled, imgs = _s2, _i2
                             wav = _a2["waveform"].contiguous().cpu()
@@ -7722,6 +8034,13 @@ class HandTieClips:
                             print(f"[{TAG}] hand-tie hop {i + 1}: seed {_rs} holds one take",
                                   flush=True)
                         del _n2, _s2, _i2, _a2
+                if _dlg_hop is not None and _dlg_hop["lines"]:
+                    _dsr = _resample_wav(_dlg_hop["src32"], _alock.VAE_SR, sr)
+                    wav = _batch_wav(_dlg.splice_cores(
+                        audio["waveform"].contiguous().cpu(), _dsr, _dlg_hop["lines"], sr))
+                    audio = {"waveform": wav, "sample_rate": sr}
+                    print(f"[{TAG}] hop {i + 1}: {len(_dlg_hop['lines'])} line(s) delivered "
+                          "from the source, sample for sample", flush=True)
                 if locked is not None:
                     # The pin of the NEXT hop must carry the take, not a
                     # decoded generate. Replace this hop's audio with the
@@ -7798,7 +8117,7 @@ class HandTieClips:
                     _h_sp = bool(ht_speaks[_si][_k]) if not _h_free else True
                     _t_sp = bool(ht_speaks[_si][_k + 1]) if (_k + 1 < len(ht_speaks[_si])) else False
                     wav = _ht.calm_hop_audio(
-                        wav, sr, has_line=bool(_ht.hop_words(block)),
+                        wav, sr, has_line=bool(_dlg.script_words(block)),
                         head_speaks=_h_sp, tail_speaks=_t_sp,
                         overlap_n=overlap_n, fps=FPS)
                     audio = {"waveform": wav, "sample_rate": sr}
@@ -8229,7 +8548,7 @@ class HandTieClips:
                     upscaler=str(upsample_model),
                     denoise=float(upsample_denoise),
                     alloc=_alloc_master, guide=_up_guide,
-                    budget=_up_budget)
+                    budget=_up_budget, settings=upsample_settings)
                 master_imgs = _up_imgs
                 del _up_imgs
                 print(f"[{TAG}] {upsample_note}", flush=True)

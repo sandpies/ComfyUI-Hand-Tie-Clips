@@ -1048,9 +1048,10 @@ simpleNote.appendChild(el("div", "h3e-simple-help",
                 + "between the two hops. Do not repeat it in the beat."));
             if (index === shots.length - 1) {
                 adv.appendChild(momentBox("moment_end",
-                    "moment end: what is on screen as the film ends (blank = the beat's last sentence)",
-                    "hand-tie: the previs ends on this, and the last hop is tied to it. A line here "
-                    + "is spoken so that it ends with the film."));
+                    "moment end: a line that ends with the film, as <d>[English] ...</d>",
+                    "hand-tie: the previs ends on this beat's own last action, and the last hop is "
+                    + "tied to it. A line written here is added to the last hop so it ends with the "
+                    + "film. Write the ending itself in the beat, not here."));
             }
         }
 

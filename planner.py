@@ -192,12 +192,8 @@ def spoken_spans(beat):
     picture assigned and no sound, and rule 3 applies inside a hop as well as
     across one. See the lead-in lint in `validate`.
     """
-    text = str(beat or "")
-    marks = [m.start() for m in re.finditer(r"'", text)]
-    delims = [i for i in marks
-              if not (i > 0 and text[i - 1].isalnum()
-                      and i + 1 < len(text) and text[i + 1].isalnum())]
-    return list(zip(delims[0::2], delims[1::2]))
+    # One rule, in hand_tie (which reads beats before planner exists in a run).
+    return _ht.quote_spans(beat)
 
 
 # The official dialogue tag. The language label and any inline tag inside it

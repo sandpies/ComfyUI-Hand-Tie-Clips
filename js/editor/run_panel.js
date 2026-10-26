@@ -118,7 +118,8 @@ const GROUPS = [
     ["soundtrack", ["music_gain_db", "music_duck", "music_fit",
                     "music_fade_s",
                     "audio_refine", "audio_denoise", "audio_steps",
-                    "audio_sampler", "audio_scheduler", "audio_seed_offset"]],
+                    "audio_sampler", "audio_scheduler", "audio_seed_offset",
+                    "dialogue_lock"]],
 ];
 
 /**
@@ -211,6 +212,10 @@ const REFINE_V2_HIDDEN = new Set([
     "pin_noise",
     "tone_compensate",
     "tone_anchor",
+    // Retired 10-25 (the upsample runs the original recipe, no LoRA): owned so
+    // the raw widgets stay hidden, never drawn.
+    "upsample_lora",
+    "upsample_lora_strength",
 ]);
 
 // Per-widget legacy combo values hidden from the RUN panel dropdowns while

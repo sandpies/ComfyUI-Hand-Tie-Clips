@@ -4,7 +4,7 @@ Everything in this file was confirmed against renders, not reasoned from the
 code. Where a rule exists because of something the model actually did, that is
 said out loud — the reasons are more useful than the rules.
 
-If you only read one section, read [The three laws](#the-three-laws).
+If you only read one section, read [The four laws](#the-four-laws).
 
 ---
 
@@ -71,7 +71,7 @@ airlock, and the node prints a note saying so.
 
 ---
 
-## The three laws
+## The four laws
 
 ### 1. The prompt is additive
 
@@ -159,6 +159,32 @@ Two fixes, and use both:
 
 The rewritten chain rendered 39 s with no cut detectable at a 0.08 scene
 threshold.
+
+### 4. Every movement takes the time it takes
+
+The renderer plays every action in real time. A timed window too short for what it
+holds squeezes the action, skips it, or draws the people doing it twice: a wide that
+asked one man to open a door, another to open the door behind it and a third to walk
+round the bonnet, all in 4.6 seconds, came back with extra copies of people.
+
+So work each shot out before writing a word of it, in this order:
+
+1. **The camera:** where it stands, which way it faces, and what it can and cannot see
+   from there. A prop resting where the camera cannot see gets moved to where it can.
+2. **Everyone in the frame at the start:** left or right of this frame, near or far, facing which
+   way, eyes on what. Sides belong to the camera: when the view turns round, give every person
+   their side again, or one left without a side can be drawn twice.
+3. **Every prop:** where it is, in whose hand.
+4. **What each person does in each window, timed in real seconds:** a step is about half
+   a second, sitting down or standing up 2 s, opening a door and getting in 3 s, walking
+   round a car 4-5 s, a spoken line its own seconds. One change of state per person per
+   window. If the seconds are not there, drop the action or give it its own shot.
+5. **The end of the shot:** where everyone and everything is now. That is where the next
+   shot starts; nothing turns up somewhere new after a cut without being seen to get there.
+6. **The sound,** and what every mouth is doing.
+
+Then write the shot from those answers, naming only what is in the frame. Someone off
+the frame is a sound, or the target of someone's eyes, never someone doing something.
 
 ### Dialogue propagates, and `tail: ongoing` compounds it
 

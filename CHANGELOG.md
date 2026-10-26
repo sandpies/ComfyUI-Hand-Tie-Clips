@@ -3,6 +3,84 @@
 User-facing. The files named here are in the repository, not in the installed
 pack — the published package excludes them.
 
+## 3.1.0 — 2026-10-27
+
+- **hand_tie takes `master_audio_file`** -- a music video can now run on `pin_mech=hand_tie`.
+  Every hop locks its own slice of the song, exactly as on `motion_context`; the previs is
+  silent except for the song at each join window, so the mouths at a join sing the syllables
+  both hops hear. Proven on a 12-hop, 2:51 one-take music video (15 s hops): lip sync held
+  across all 11 joins. One hand note from it: a hand moving through a join blurs there, so
+  end each hop with the hands at rest (knees, a stand, a table).
+- **Fix: 15 s hops under hand_tie** -- three 15 s hops fitted one previs only without its
+  closing window, so every third hop ended unguided and could snap. Long hops now go two to
+  a previs, every hop tied at both ends; 8 s and 12 s hops are unchanged.
+- **HTC Save Video (long-form)** -- a save node that replaces `RTX Video Frame Generation ->
+  CreateVideo -> SaveVideo` for long films. It streams the frames to the GPU in small chunks,
+  runs RTX frame generation per pair (x2 / x3 / x4, never holding the doubled film in RAM),
+  converts to BT.709 NV12 on the GPU and encodes with NVENC at constant quality (CPU x264 /
+  x265 / SVT-AV1 without CUDA), with a keyframe on every hard cut and every 2 s. A 171 s film
+  with x2 frame generation saved in 29 s. Prints NO AUDIO when the soundtrack is not wired.
+- **Reference encodes are cached per run** -- each reference still, clip and voice is
+  VAE-encoded once and reused by every hop that names it, instead of once per hop. The log
+  ends with the hit / miss count.
+- **Fix: the new-place warning** no longer fires on a restart (it opens on its own refs), and
+  a `[Shot N]` beat is checked on its `[Shot 1]` only; the hop ends at its last shot's place.
+- **`dialogue_lock` (RUN > soundtrack) + `dialogue_audio_file` (MEDIA)** -- freezes each hop's
+  spoken lines in the soundtrack so the words come out exactly and nobody adds any, while H3
+  still makes the rest of the sound. `lines` freezes each line with margins, `lines+hold` also
+  holds 1.5 s quiet after it (where extra words start), `full` the whole hop. With
+  `dialogue_audio_file` empty, H3 drafts each dialogue hop's sound at 448p first, Whisper keeps
+  only the scripted words and silences the rest; with a recording set (lines on the film's
+  timeline), that is used. The delivered lines are the source, sample for sample. Off by
+  default; not with `master_audio_file`, `realism_boost`, `audio_refine` or SWAP.
+  Experimental: lip sync and the sound bed held in every test, but no test babbled without it,
+  so it is not yet seen removing babble. Each dialogue hop costs one extra small draft (about
+  30% more time), more if a draft misses its lines; a hop whose drafts all miss is left
+  generated. Use it on a hop that babbles. Under `pin_mech=hand_tie` it does nothing (logged): tried
+  there, one take cut and another repeated a line.
+- **Fix: hand_tie dialogue and joins** (all since 3.0.0).
+  - Single-quoted lines (`says, 'Hey.'`, the form the WRITE tab and plans use) are now read
+    as lines. Before, only `<d>` and double quotes were: on every hop after a section's first
+    the audio clean-up replaced the line with room tone, and line timing, crossing-line splits
+    and the plan warnings did nothing.
+  - The previs now shows where each hop lands, not only how it starts. Its compiler dropped
+    each beat's ending and wrote negations ("no movement"), so a seated two-person scene
+    rendered a frozen previs; people stood up at the joins and props jumped back to their
+    opening place in a hop's last frames. Join windows now name everyone in them.
+  - A hop is no longer rendered twice for a cut its own beat writes (`[Shot N] At ...`), and
+    the automatic hop retake is off: in every logged case it cut again at the same frame. A
+    cutting hop now prints a warning instead.
+  - The `moment end` box said the previs ends on it; it carries a closing line only, and now
+    says so.
+- **Fix: a possessive on a name no longer reads as a quote.** `@boss's` compiles to
+  `<Subject 1>'s`, and that apostrophe shifted every quoted line after it, so voice timing on
+  that hop was placed against the narration instead of the line.
+- **STANDARD tab** -- one standard MiniMax H3 prompt (T2VA or Ref2VA) for a single generation in
+  Simple mode, planned then written, following the MiniMax H3 prompting skill.
+- **Upsample is the original MMH3 recipe again** — since 3.0.0 the chain re-drew
+  in 2 steps from sigma 0.57 (`upsample_denoise` 0.1) with a 192 px tile overlap.
+  It now runs the recipe the standalone H3 Tiled Upsampler always matched: one
+  step from sigma 0.75 (`upsample_denoise` 0.2), 102 / 17-frame chunks, anchor
+  0.999, 70000-token tiles with 128 px overlap, seed 444. Measured on one 576p
+  clip upsampled to 2 MP, it kept 14% more fine detail. Saved graphs keep their
+  own `upsample_denoise`; set it to 0.2. The shipped workflows carry 0.2.
+- **The upsample LoRA is retired** — `upsample_lora` / `upsample_lora_strength`
+  (and the H3 Video Upsampler's `lora`) are hidden and ignored, with a log line
+  when a saved graph names one. The h3upscale guide cost fine detail and drew
+  tile grids at 2 MP. The widget slots stay so saved graphs load.
+- **HTC Upsample Settings (`tiled_upsampler.py`)** — a new node for the chain's
+  optional `upsample_settings` socket: re-draw steps, start sigma, noise
+  (`per_chunk` or one `film` field, so the frames two chunks share get the same
+  noise), seed, chunk length and overlap, anchor strength, tile overlap, detail
+  merge, attention / feed-forward VRAM splits, and an optional sampler.
+  Unwired, the upsample runs exactly as before. The log now times each chunk's
+  re-draw, each run and each phase.
+- **`audio_refine` runs on the base model, never the realism boost model** —
+  H3 shares every block between picture and sound, so the boost LoRAs colour the
+  audio too. Hops cached with `audio_refine=on` render again once. The log names
+  the model, and the `audio_denoise` tooltip gives the real start sigma (0.5
+  starts near 0.92: most of the soundtrack is drawn again).
+
 ## 3.0.0 — 2026-10-18
 
 ### Built-In `_HTCMotionContext`, Refine v2.4, `hand_tie` v2.6 & `audio_refine`
@@ -38,11 +116,12 @@ pack — the published package excludes them.
   alignment, and `2.0` wps post-line pose timing — validated on the 10-hop
   `71.7 s` `1024×768 @ 48 fps` showcase `docs/img/hand-tie-10hop-00138.mp4`).
 - **Per-hop `audio_refine` pass (`[99..104]`, `h3_ref_chain.py`)** —
-  Re-samples the audio branch (`audio_refine`, `audio_refine_denoise`,
-  `audio_refine_steps`, `audio_refine_cfg`, `audio_refine_sampler`,
-  `audio_refine_scheduler`) while holding the finished video latent 100% frozen
-  via `SetLatentNoiseMask` (`zeros` on video, `ones` on audio after pinned head
-  frames). Ideal for pairing with `realism_boost` (4–5 steps).
+  Re-samples the audio branch (`audio_refine`, `audio_denoise`, `audio_steps`,
+  `audio_sampler`, `audio_scheduler`, `audio_seed_offset`, optional `audio_model`
+  socket) while holding the finished video latent 100% frozen via
+  `SetLatentNoiseMask` (`zeros` on video, `ones` on the whole soundtrack: no
+  head, since a boundary inside the audio warbles). Unwired, it runs on the base
+  model, never the realism boost model. Ideal for pairing with `realism_boost` (4–5 steps).
 - **3-Phase Tiled Upsampler, Streamed VAE Decode & VRAM Guardrails (`tiled_upsampler.py`, `video_upsampler.py`)** —
   `upsample()` now executes in 3 non-overlapping phases (1: `VideoVAE` guide
   prep once -> CPU RAM; 2: `upscale_chunks_batch` on 3D `LatentUpscaler` once ->

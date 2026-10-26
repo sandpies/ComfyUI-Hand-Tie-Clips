@@ -510,6 +510,13 @@
         <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-10hop-00138.mp4" type="video/mp4">
       </video>
     </div>
+    <div style="text-align:center; margin:16px 0;">
+      <div style="font-weight:600; margin-bottom:6px;">Hand-Tie music video: 12x15s, one take, the song locked</div>
+      <video controls preload="metadata" width="40%" style="max-width:360px; width:40%; margin:0 auto; border-radius:8px; border:1px solid var(--border); background:#000;">
+        <source src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/hand-tie-mv-hold-me-anyway.mp4" type="video/mp4">
+        <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/hand-tie-mv-hold-me-anyway.mp4" type="video/mp4">
+      </video>
+    </div>
 
     <!-- =================================================================== -->
     <!-- INTERACTIVE NODE SIMULATOR                                          -->
@@ -834,7 +841,7 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
                 <select class="sim-select"><option>off</option><option selected>on (5 steps @ 0.5)</option></select>
               </div>
               <div class="sim-field">
-                <label>upsample (h3upscale x2)</label>
+                <label>upsample</label>
                 <select class="sim-select"><option>off</option><option selected>on (2.0 MP)</option></select>
               </div>
             </div>
@@ -893,17 +900,15 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
       <li><strong>The honest truth on chain length:</strong> <code>Refine</code> holds back relay degradation and keeps joins clean, pushing continuous <code>motion_context</code> chains to <strong>5–6 clips on Turbo</strong> before very visible texture changes appear, and <strong>7–8 clips on non-Turbo</strong>. Under <code>motion_context</code>, plan to transition to a cut (<code>anchor: "restart"</code>) every 4–5 clips or so to maintain the integrity of your textures (or use <code>pin_mech: hand_tie</code> for continuous single-take sequences).</li>
     </ul>
 
-    <h3>3. Guided Tiled Upsampler (<code>upsample: on</code>) &amp; Standalone Node</h3>
-    <p>Enlarges the finished film to 1.5–2.0 MP in latent chunks and runs a 2-step tiled redraw. With the <strong><code>h3upscale</code> x2 LoRA</strong>, the redraw is guided by your actual canvas frames at half the output size so it restores real detail instead of inventing texture. Toggling <code>upsample</code> on a cached chain skips hop generation and runs only the upscaler.</p>
+    <h3>3. Tiled Upsampler (<code>upsample: on</code>) &amp; Standalone Node</h3>
+    <p>Enlarges the finished film to 1.5–2.0 MP in latent chunks and runs the original MMH3 Ultimate Upscale recipe: one tiled re-draw step from sigma 0.75 (<code>upsample_denoise</code> 0.2), 102-frame chunks with 17 shared, 70000-token tiles with 128 px overlap. An optional <strong>HTC Upsample Settings</strong> node on the <code>upsample_settings</code> socket exposes every one of those numbers. Toggling <code>upsample</code> on a cached chain skips hop generation and runs only the upscaler.</p>
 
     <div class="callout">
       <strong>Required Files for Upsampling:</strong>
       <ol style="margin:6px 0 0 0; padding-left:20px;">
         <li><strong>Latent Upscaler (`ComfyUI/models/latent_upscale_models/`):</strong><br>
             Download <code>minimax_h3_latent_upscaler_3d_bf16.safetensors</code> from <a href="https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler">LBH-123-AI/Minimax_h3_latent_Upscaler</a> (or <code>h3_upscaler_lms_v0.1.safetensors</code>).</li>
-        <li><strong>Guided Upscale LoRA (`ComfyUI/models/loras/`):</strong><br>
-            Download <code>h3upscale_v2_x2.safetensors</code> from <strong><a href="https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/tree/main/lora">sandpies/ComfyUI-H3-Video-Upsampler (Hugging Face)</a></strong>.</li>
-        <li><strong><code>upsample_dit</code> wire:</strong> When using <code>h3upscale_v2_x2</code>, wire a <strong>plain, unpatched H3 UNETLoader</strong> into <code>upsample_dit</code> (the LoRA was trained on the bare DiT without turbo/realism LoRAs underneath).</li>
+        <li><strong><code>upsample_dit</code> wire (optional):</strong> a separate model for the re-draw, e.g. a plain H3 UNETLoader with no LoRAs. No upscale LoRA is needed: <code>upsample_lora</code> is retired and ignored.</li>
       </ol>
       <p style="margin:8px 0 0 0; font-size:13px;"><em>Want to upscale any existing video outside a chain? Use the included <strong>H3 Video Upsampler (finished clip)</strong> node (<code>workflows/HandTieClips_Upsample_Video.json</code>) or the standalone repo: <a href="https://github.com/sandpies/ComfyUI-H3-Video-Upsampler">sandpies/ComfyUI-H3-Video-Upsampler</a>.</em></p>
     </div>

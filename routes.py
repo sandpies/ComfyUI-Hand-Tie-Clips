@@ -48,6 +48,7 @@ LLM_ROUTE = "/h3_ref_chain/llm"
 PLAN_ROUTE = "/h3_ref_chain/plan"
 SWAP_PLAN_ROUTE = "/h3_ref_chain/swap_plan"
 SWAP_DESCRIBE_ROUTE = "/h3_ref_chain/swap_describe"
+STANDARD_ROUTE = "/h3_ref_chain/standard"
 UNLOAD_ROUTE = "/h3_ref_chain/llm/unload"
 HOP_SPRITE_ROUTE = "/h3_ref_chain/hop_sprite"
 HOP_CLIP_ROUTE = "/h3_ref_chain/hop_clip"
@@ -1461,6 +1462,99 @@ def register():
         if out.get("ok"):
             print(f"[{TAG}] SWAP wrote a 1-hop plan in {out.get('attempts')} "
                   f"attempt(s)", flush=True)
+        return web.json_response(out)
+
+    @instance.routes.post(STANDARD_ROUTE)
+    async def _standard(request):
+        """One standard H3 prompt for Simple mode: stage `plan`, then `write`."""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response(
+                {"ok": False, "error": "expected a JSON body"}, status=400)
+        stage = str(body.get("stage") or "plan").strip().lower()
+        brief = str(body.get("brief") or "").strip()
+        plan = str(body.get("plan") or "").strip()
+        ref_plan = str(body.get("ref_plan") or "")
+        start_file = str(body.get("start_image_file") or "").strip()
+        dur_label = str(body.get("duration") or "10 s").strip()
+        if not brief and stage == "plan":
+            return web.json_response({"ok": False, "error": "write a brief first"})
+        try:
+            from . import mv_solver as _mvs
+            from . import standard as _std
+            _llm, _planner, conn = _swap_conn()
+        except Exception as exc:
+            return web.json_response(
+                {"ok": False, "error": f"STANDARD failed to load: {exc}"})
+        if not conn.get("model"):
+            return web.json_response(
+                {"ok": False, "error": "no model is selected -- open WRITE, "
+                                       "Settings, and pick one."})
+        frames = _mvs.DURATION_FRAMES.get(dur_label)
+        try:
+            duration_s = (frames / 24.0) if frames else float(dur_label.split()[0])
+        except (TypeError, ValueError, IndexError):
+            duration_s = 10.0
+
+        import asyncio
+
+        def encode():
+            try:
+                lab = _std.labels(ref_plan)
+            except Exception:
+                lab = {"pictures": []}
+            ims = []
+            for p in lab.get("pictures") or []:
+                url = _media.vision_data_url(p["file"]) if p.get("file") else None
+                if url:
+                    ims.append({"tag": p["tag"], "data_url": url})
+            start = _media.vision_data_url(start_file) if start_file else None
+            return ims, start
+
+        try:
+            images, start_url = await asyncio.get_running_loop().run_in_executor(
+                None, encode)
+        except Exception as exc:
+            print(f"[{TAG}] STANDARD could not attach stills: {exc!r}", flush=True)
+            images, start_url = [], None
+        notes = []
+        if start_file and not start_url:
+            notes.append("the start image could not be read; the plan ignores it")
+
+        async def complete_fn(messages, schema=None):
+            try:
+                return await _llm.complete(conn["server_url"], conn["model"], messages,
+                                           schema=schema, temperature=conn["temperature"])
+            except _llm.LLMError as exc:
+                if _llm.has_images(messages) and "HTTP 4" in str(exc):
+                    notes.append("the model could not look at the pictures; "
+                                 "it wrote from the labels only")
+                    return await _llm.complete(
+                        conn["server_url"], conn["model"], _llm.text_only(messages),
+                        schema=schema, temperature=conn["temperature"])
+                raise
+
+        try:
+            out = await _std.write(stage, brief, complete_fn=complete_fn,
+                                   ref_plan=ref_plan, duration_s=duration_s,
+                                   images=images, start_image=start_url, plan=plan)
+        except _llm.LLMError as exc:
+            return web.json_response({"ok": False, "error": str(exc)})
+        except Exception as exc:
+            print(f"[{TAG}] standard failed: {exc!r}", flush=True)
+            return web.json_response({"ok": False, "error": str(exc)})
+        if notes:
+            out["warnings"] = list(out.get("warnings") or []) + notes
+        out["duration_s"] = round(duration_s, 3)
+        if not conn.get("keep_warm"):
+            try:
+                await _llm.unload(conn["server_url"], conn["model"])
+            except Exception:
+                pass
+        print(f"[{TAG}] STANDARD {out.get('stage')} ({out.get('mode')}): "
+              + ("ok" if out.get("ok") else f"{len(out.get('errors') or [])} error(s)")
+              + f", files {', '.join(out.get('files') or [])}", flush=True)
         return web.json_response(out)
 
     # -- the retake timeline: pictures and playback of cached hops --------

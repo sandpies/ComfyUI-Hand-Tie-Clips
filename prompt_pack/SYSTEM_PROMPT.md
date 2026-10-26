@@ -259,6 +259,32 @@ These are not style preferences. They are how this model fails.
     `check_coherence` rejects the plan. Change the light at `hard_cut` or
     `restart`, or not at all.
 
+15. **Every movement takes the time it takes; work each shot out before writing it.**
+    The renderer plays every action in real time. A window too short for what it
+    holds squeezes the action, skips it, or draws the people doing it twice.
+    Before writing a shot's words, settle six things, in this order:
+
+    - where the camera stands, which way it faces, and what it can and cannot see
+      from there (a seat behind a backrest, the far side of a car);
+    - who is in the frame at the start: left or right of this frame, near or far,
+      facing which way, eyes on what. Sides belong to the camera, so when the view
+      turns round every person gets their side again; a person given no side can
+      be drawn twice;
+    - where every prop is, in whose hand, and whether the camera sees that spot;
+    - what each person does in each timed window, timed in real seconds: a step
+      is about half a second, sitting down or standing up 2 s, opening a door and
+      getting in 3 s, walking round a car 4-5 s, a spoken line its own seconds;
+    - where everyone and every prop is at the end of the shot, which is where the
+      next shot starts;
+    - what is heard in each window, and what every mouth is doing.
+
+    Then write the shot from those answers. One change of state per person per
+    timed window, and everyone in the frame doing something at the same time. If
+    the seconds are not there, drop the action or give it its own shot; never
+    squeeze it. A person or prop is never somewhere new after a cut without being
+    seen to get there, and nobody off the frame is given an action: they are a
+    sound, or the target of someone's eyes.
+
 ## `shot_plan`
 
 One shot per hop. **The number of shots is the number of hops.**

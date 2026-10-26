@@ -9,10 +9,11 @@ import { createRefRail, parseRefPlan, refPlanToJson } from "./editor/ref_rail.js
 import { createRunPanel } from "./editor/run_panel.js";
 import { createWriterBar } from "./editor/writer_bar.js";
 import { createVideoSwap } from "./editor/video_swap.js";
+import { createStandardWriter } from "./editor/standard_writer.js";
 import { createMediaStrip, MEDIA_WIDGETS } from "./editor/media_strip.js";
 import { createTimeline } from "./editor/timeline.js";
 
-const VERSION = "v3.0.0";
+const VERSION = "v3.1.0";
 /* Both ids. The pack registers the pre-rename id as a deprecated subclass so
  * workflows saved before 2026-08-29 still load. If this check knew only the
  * new id those nodes would come up with NO editor at all, which looks exactly
@@ -359,6 +360,15 @@ function mountEditor(node) {
         },
     });
 
+    // STANDARD writes Simple mode's prompt (chains = 1). The writer itself sets
+    // the widgets and the editor mode; refresh shows the Simple card with it.
+    const standard = createStandardWriter(node, {
+        onWritten: () => {
+            node._h3Editor?.refresh();
+            node.graph?.setDirtyCanvas?.(true, true);
+        },
+    });
+
     // One pane at a time, RUN pinned underneath.
     //
     // The four authoring sections used to be stacked in a single scroller, so
@@ -377,6 +387,7 @@ function mountEditor(node) {
         { id: "media", label: "Media", title: "Start image, reference clip, voice, soundtrack", body: mediaStrip.root },
         { id: "write", label: "Write", title: "Draft a plan with a local model", body: writer.root },
         { id: "swap", label: "Swap", title: "One-hop identity swap from clip 1", body: videoSwap.root },
+        { id: "standard", label: "Standard", title: "One standard H3 prompt for a single generation (Simple mode)", body: standard.root },
     ], {
         active: node.properties?.[ACTIVE_TAB_PROP],
         onShow: (id) => {
@@ -387,6 +398,10 @@ function mountEditor(node) {
             // visit the tab) while making the pane usable once you have.
             if (id === "write") writer.root.open = true;
             if (id === "timeline") timeline.render();
+            if (id === "standard") {
+                standard.root.open = true;
+                standard.render?.();
+            }
             if (id === "swap") {
                 videoSwap.root.open = true;
                 videoSwap.render?.();

@@ -98,3 +98,12 @@ pack's own `latents.py` and `refine_blend.py` helpers so `motion_context` works
 out of the box with zero external custom-node dependency and no registry or
 version-drift conflicts.
 
+## `prompt_pack/standard/` — the MiniMax H3 prompting skill
+
+The STANDARD tab follows a community MiniMax H3 prompting skill (`minimax-h3`),
+vendored here with its LoRA-adapter, multishot and known-characters files removed.
+Each reference file names its own sources on its first line: MiniMax's official
+prompt writing guides and staff answers on the MiniMax-H3 repository,
+[phileiny/h3-storyboard-skill](https://github.com/phileiny/h3-storyboard-skill) (MIT),
+Emily2040/seedance-2.0, ruashots/open-h3-ir, teskor-hub/minimax-h3-skill and
+ComfyUI's own `nodes_minimax_h3.py`. Credit for those findings stays with them.

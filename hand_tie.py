@@ -149,8 +149,13 @@ def sections(shots, hop_frames=None):
         f = int(hop_frames[i]) if hop_frames is not None else None
         # layout() only adds a closing window that fits, so this is the
         # one-window-per-hop length: the closing window never splits a section.
+        # Long hops are the exception: 15 s fit 3 to a previs only without a
+        # closing window, so a third of the film's hops would end unguided (the
+        # start-only last hop snapped at f22 on 00155, 00156). They go 2 + 2.
         full = (f is not None and out
-                and layout(frames + [f])["previs"] > PREVIS_MAX)
+                and (layout(frames + [f])["previs"] > PREVIS_MAX
+                     or (frames and long_hops(frames + [f])
+                         and not layout(frames + [f])["closing"])))
         if i == 0 or _anchor(sh) in ("restart", "extend") or full:
             out.append([])
             auto.append(bool(full) and _anchor(sh) not in ("restart", "extend"))
@@ -172,7 +177,9 @@ def sections(shots, hop_frames=None):
         for z in sizes:
             cut.append(hops[pos:pos + z])
             pos += z
-        fits = all(layout([int(hop_frames[h]) for h in sec])["previs"] <= PREVIS_MAX for sec in cut)
+        fits = all(layout(fr)["previs"] <= PREVIS_MAX
+                   and (layout(fr)["closing"] or not long_hops(fr))
+                   for fr in ([int(hop_frames[h]) for h in sec] for sec in cut))
         even.extend(cut if fits else out[s:e])
         s = e
     return even
@@ -219,6 +226,12 @@ def layout(hop_frames):
     return {"windows": w, "spacings": sp, "previs": w[-1] + WINDOW, "closing": closing}
 
 
+def long_hops(hop_frames):
+    """True when a previs holds 3 or fewer of these hops (15 s): every section's
+    last hop then needs its closing window."""
+    return bool(hop_frames) and max_hops(max(int(f) for f in hop_frames)) <= 3
+
+
 def max_hops(hop_frames=REF_HOP):
     """How many hops of this length one previs can hold."""
     return (PREVIS_MAX - WINDOW) // spacing(hop_frames) + 1
@@ -227,6 +240,30 @@ def max_hops(hop_frames=REF_HOP):
 def window_audio(start, fps=FPS):
     """(start_s, duration_s) of a window's slice of the previs soundtrack."""
     return (start / float(fps), WINDOW / float(fps))
+
+
+def song_windows(windows, hop_spans, fps=FPS):
+    """Where the master song goes in a previs: [(previs start s, song start s, length s)].
+
+    Under master_audio_file the previs is silent except at its windows. Each
+    window is a seam two hops share, so it carries the exact slice of the song
+    the film plays there: window k (k < n) is hop k's head, the window after the
+    last hop (the closing one) is that hop's tail. The previs's mouths then sing
+    the syllables the hops will hear across every join. `hop_spans` is the
+    section's hops' `[t0, t1)` in the song (audio_lock.hop_audio_window_s).
+    """
+    out = []
+    w_s = WINDOW / float(fps)
+    n = len(hop_spans or [])
+    for k, w in enumerate(windows or []):
+        if k < n:
+            src = float(hop_spans[k][0])
+        elif n:
+            src = float(hop_spans[-1][1]) - w_s
+        else:
+            continue
+        out.append((int(w) / float(fps), max(0.0, src), w_s))
+    return out
 
 
 def film_frames(hop_frames):
@@ -242,7 +279,7 @@ _SENT = re.compile(r"(?<=[.!?])\s+")
 
 
 def _spoken_s(text):
-    words = sum(len(_TAG.sub("", m).split()) for m in _D.findall(text or ""))
+    words = sum(len(_TAG.sub("", m).split()) for m in _D.findall(quotes_to_d(text)))
     return words / SPEECH_WPS
 
 
@@ -253,6 +290,41 @@ _QUOTED_SPEECH = re.compile(
     r'(\b(?:says?|asks?|whispers?|shouts?|replies|reply|adds?|mutters?|calls?|'
     r'continues?|answers?|sings?)\b[^<."]{0,20}?)"([^"\n]{2,})"', re.I)
 _WHO_RE = re.compile(r"@[A-Za-z0-9_]+|<Subject \d+>")
+
+
+def quote_spans(text):
+    """Character spans of the single-quoted spoken lines, in order: [(open, close)].
+
+    The one quote rule (planner.spoken_spans calls this). An apostrophe between two
+    letters or digits is not a quote ("doesn't"), and neither is a possessive on a
+    label: the compiler turns "@boss's" into "<Subject 1>'s", and that apostrophe
+    shifted every pair after it, so the narration read as the line (10-26).
+    """
+    text = str(text or "")
+    marks = [m.start() for m in re.finditer(r"'", text)]
+    delims = [i for i in marks
+              if not (i > 0 and (text[i - 1].isalnum() or text[i - 1] == ">")
+                      and i + 1 < len(text) and text[i + 1].isalnum())]
+    return list(zip(delims[0::2], delims[1::2]))
+
+
+def quotes_to_d(text):
+    """`text` with every single-quoted line written as `<d>[English] ...</d>`.
+
+    hand_tie's dialogue machinery (line timing, crossing splits, the audio
+    clean-up, the plan warnings) reads `<d>`. Plans and the writer write
+    'quoted' lines, and until 10-26 only double quotes were converted, so on a
+    single-quoted plan all of it did nothing: every hop after a section's first
+    had its lines replaced by room tone. A text that already has `<d>` is kept.
+    """
+    t = str(text or "")
+    if _D.search(t):
+        return t
+    for a, b in reversed(quote_spans(t)):
+        inner = t[a + 1:b].strip()
+        if inner:
+            t = t[:a] + "<d>[English] " + inner + "</d>" + t[b + 1:]
+    return t
 
 
 _TALKING = re.compile(
@@ -450,6 +522,7 @@ def open_lips(shots):
         if not _D.search(b) and _QUOTED_SPEECH.search(b):
             b = _QUOTED_SPEECH.sub(
                 lambda m: f"{m.group(1)}<d>[English] {m.group(2).strip()}</d>", b)
+        b = quotes_to_d(b)
         if _D.search(b):
             b = _clean_dialogue_pauses(b)
             if _MOUTH_OPEN_SAY.search(b):
@@ -523,6 +596,24 @@ def _sound_sentence(text):
     return cand
 
 
+_STAMP_LEAD = re.compile(r"^\s*At\s+\d+:\d+(?:\.\d+)?(?:\s*-\s*\d+:\d+(?:\.\d+)?)?,\s*", re.I)
+
+
+def ending(beat):
+    """Where the beat lands, as one clause for the previs: `_end_sentence` without its
+    own `At mm:ss` stamp (inside a previs range a stamp is a cut), "" when none.
+
+    The window at a hop's END is this moment carried on, so a moment without the
+    ending pins the hop's tail to how it STARTED: a seated man folded his arms and slid
+    his mug aside, the closing window still showed the mug in his hand, and the
+    cup jumped back to it in the last 22 frames (10-26).
+    """
+    e = _STAMP_LEAD.sub("", _end_sentence(beat)).strip()
+    if not e or _NEGATION.search(e):
+        return ""
+    return e[0].upper() + e[1:]
+
+
 def moments(shots, sound=PREVIS_SOUND):
     """One moment per window: shot k's `moment` (else the first sentence of its beat)
     for window k. There is no closing moment: the last hop ends where its beat goes.
@@ -547,7 +638,7 @@ def moments(shots, sound=PREVIS_SOUND):
             # cut at 4.83 / 7.54 / 10.50 s against endings stamped 4.71 / 7.54 /
             # 10.38 s). Every `At` is a shot boundary to H3.
             m = _first_sentence(beat)
-            end = _end_sentence(beat)
+            end = ending(beat)
             if m and end:
                 m = m + " " + end
         if m and sound:
@@ -793,9 +884,16 @@ def carry_text(moment):
     """A window's range: the beat before it carrying on, alive, with no new action of
     its own. Never settle/hold/still/pause/stop/stare: those froze the hop's tail
     into a blank stare at camera (2026-10-14, user 22:05)."""
-    who = _WHO.search(moment or "")
-    return ("%s carries on naturally with that motion, moving and relaxed, "
-            "in the same continuous shot." % (who.group(0) if who else "The subject"))
+    # Everyone the moment names, in order: a two-person window that named one of
+    # them left the other unguided for 22 frames, and "moving" stood a seated man
+    # up at the join (10-26). Alive, not moving; in the same place.
+    who = list(dict.fromkeys(_WHO.findall(moment or "")))
+    if len(who) > 1:
+        return ("%s and %s carry on naturally with that motion, alive and relaxed, each "
+                "in the same place, in the same continuous shot."
+                % (", ".join(who[:-1]), who[-1]))
+    return ("%s carries on naturally with that motion, alive and relaxed, "
+            "in the same place, in the same continuous shot." % (who[0] if who else "The subject"))
 
 
 def chain_previs_text(text, shots, lay, fps=FPS):
@@ -903,7 +1001,7 @@ def crossing_lints(shots):
     warn = []
     for k, sh in enumerate(shots or []):
         m = " ".join(_D.findall(str((sh or {}).get("moment") or ""))).lower()
-        b = " ".join(_D.findall(str((sh or {}).get("beat") or ""))).lower()
+        b = " ".join(_D.findall(quotes_to_d((sh or {}).get("beat")))).lower()
         mw = [w.strip(".,!?") for w in _TAG.sub("", m).split()]
         if not mw or not b:
             continue
@@ -928,7 +1026,7 @@ def hop_words(block):
     """The words a hop's assembled block asks it to say, in order. A line cut by
     `<|cutoff|>` counts up to the cut."""
     out = []
-    for m in _D.findall(str(block or "")):
+    for m in _D.findall(quotes_to_d(block)):
         out += _words(_TAG.sub("", m.replace(CUTOFF, " ")))
     return out
 
@@ -1062,7 +1160,7 @@ def _close_s(beat, hop_frames, fps=FPS, start_s=LINE_START_S):
     """When the sentence after a hop's last line should start: the predicted end of
     the line at LINE_WPS_FAST for short phrases (<= 5 words) or 2.0 wps for full
     sentences, never later than CLOSE_MARGIN_S before the tail."""
-    words = sum(len(_TAG.sub("", m).split()) for m in _D.findall(beat))
+    words = sum(len(_TAG.sub("", m).split()) for m in _D.findall(quotes_to_d(beat)))
     last = (int(hop_frames) - WINDOW) / float(fps) - CLOSE_MARGIN_S
     wps = LINE_WPS_FAST if words <= 5 else 2.0
     return round(max(start_s + 0.5, min(start_s + words / wps, last)), 1)
@@ -1134,6 +1232,7 @@ def line_lints(shots, hop_frames, fps=FPS):
                         "H3 makes them up, so the node leaves it out. Name sounds that are "
                         "not voices: footsteps, traffic, a sizzling grill."
                         % (k + 1, "; ".join(gone)))
+        beat = quotes_to_d(beat)
         if _D.search(beat):
             m = _MOUTH.search(_D.sub(" ", beat))
             if m:
@@ -1368,6 +1467,11 @@ CUT_CELLS = 12           # coarse cells across the frame's short side: layout, n
                          # A count, not a pixel size: 32 px cells caught 00156's snap at
                          # 512p and missed 00164's hop-7 cut at native (1.34x; 1.49x here)
 # PREVIS_TRIES removed 2026-10-14: the previs is one take, never re-rolled.
+# The hop retake renders a cutting hop a second time on a new seed. Off since
+# 10-26: every retake in the logs on disk cut again at the same frame (4 of 4,
+# two seeds each; the cut comes from the hop, not the seed), each one a whole
+# hop's render. The check still runs and still warns.
+HOP_RETAKE = False
 PREVIS_RETRY_STRIDE = 104729   # the HOP retake's seed step (h3_ref_chain hop cut check); not the previs
 
 
@@ -1395,6 +1499,29 @@ def window_cuts(cuts, windows):
     that window whole.
     """
     return [c for c in cuts if any(w < c < w + WINDOW for w in windows)]
+
+
+PLANNED_CUT_S = 0.35     # a detected cut this close to a written one is that one
+_SHOT_CUT = re.compile(r"\[Shot\s+(\d+)\]\s*At\s+(\d+):(\d+(?:\.\d+)?)", re.I)
+
+
+def planned_cuts(block):
+    """Seconds where the hop's text writes a cut: every `[Shot N] At mm:ss` but [Shot 1].
+
+    A multi-shot beat asks for its cuts. The hop cut check took them for the
+    previs failure it exists for and rendered every such hop twice (10-26,
+    both hops of a 2-hop dialogue: about 70 s each, the retake cutting at the
+    same frames).
+    """
+    return [int(m.group(2)) * 60 + float(m.group(3))
+            for m in _SHOT_CUT.finditer(str(block or "")) if int(m.group(1)) > 1]
+
+
+def unplanned_cuts(cuts, block, fps=FPS):
+    """`cuts` (frame indices) less the ones the text asked for."""
+    want = planned_cuts(block)
+    return [c for c in cuts
+            if not any(abs(c / float(fps) - t) <= PLANNED_CUT_S for t in want)]
 
 
 def previs_cuts(frames):
@@ -1752,7 +1879,13 @@ PREVIS_LAWS_SYSTEM = (
     "speech verbs ('says', 'talking', 'chatting'), and crowd voices ('chatter', "
     "'calling out'). Never use ellipses ('...' or '…') or dashes ('—' / '--'); use "
     "only commas (',') and periods ('.').\n"
-    "4. EXACT FORMAT: Output ONLY numbered lines `1: <one short sentence>`, "
+    "4. AFFIRMATIVE AND ALIVE: Write only what is there and what moves. Never write "
+    "'no', 'not', 'without', 'never', 'nothing', 'unchanged', 'untouched' or 'still' "
+    "for a body: the generator adds whatever is named. Keep each person's posture "
+    "from the beat (seated stays seated) and give each person one small continuous "
+    "motion the beat gives them (stirring, leaning back, folding arms, smoothing hair), "
+    "so the previs never holds frozen.\n"
+    "5. EXACT FORMAT: Output ONLY numbered lines `1: <one short sentence>`, "
     "`2: <one short sentence>`, ... up to N. Keep every `@tag` or `<Subject N>` "
     "token exactly as written in the input."
 )
@@ -1861,6 +1994,25 @@ def lead_clause(beat, beat0=None, prev_text="", smooth_motion=False):
     return trimmed + "."
 
 
+# A negation in a previs moment adds the thing it names (cfg 1.0, no negative
+# branch): "no movement" in a 13.7 s seated previs stood a man up at the join (10-26).
+_NEGATION = re.compile(r"\b(?:no|not|without|never|nothing|unchanged|untouched|motionless|"
+                       r"remains? still|stays? still|holds? still)\b", re.I)
+
+
+def first_action(beat):
+    """The beat's first timed action ("At 00:00.000-00:02.000, @kai stirs his coffee"),
+    speech removed, compound tail cut. A beat's opening sentence is usually only where
+    everyone is; the compiler needs what they DO, or it writes a frozen previs."""
+    for sent in _SENT.split(_no_speech(str(beat or ""))):
+        m = re.match(r"^\s*At\s+\d+:\d+(?:\.\d+)?(?:\s*-\s*\d+:\d+(?:\.\d+)?)?,\s*(.+)$", sent)
+        if m:
+            act = _COMPOUND_TAIL.sub("", m.group(1)).rstrip(" ,;.")
+            if act:
+                return act[0].upper() + act[1:] + "."
+    return ""
+
+
 def format_previs_llm_prompt(shots):
     """Build the numbered user prompt for the Qwen3-VL previs compiler."""
     lines = []
@@ -1873,12 +2025,15 @@ def format_previs_llm_prompt(shots):
             prev_text=prev_acc if k > 1 else "", smooth_motion=(k > 1),
         )
         line_txt = clean or _no_speech(raw_beat)
+        act = first_action(raw_beat)
+        if act and act not in line_txt:
+            line_txt = line_txt.rstrip(" .") + ". " + act
         lines.append(f"{k}: {line_txt}")
         if k > 1:
             prev_acc = prev_acc + " " + line_txt
     return (
         f"Rewrite these {len(lines)} shot beats into {len(lines)} continuous "
-        "single-take previs bridge moments following all 4 laws:\n"
+        "single-take previs bridge moments following all 5 laws:\n"
         + "\n".join(lines)
     )
 
@@ -1935,8 +2090,19 @@ def parse_previs_llm_moments(reply, shots):
                 cand = _PRONOUN.sub(who.group(0), cand, count=1)
                 if who.group(0) not in cand:
                     cand = ""
+        if cand and _NEGATION.search(cand):
+            cand = ""
         if not cand:
             cand = lead_clause(beat, beat0=beat0 if k > 0 else None, prev_text=prev_acc, smooth_motion=False)
+            act = first_action(beat)
+            if act and not _NEGATION.search(act):
+                cand = cand.rstrip(" .") + ". " + act
+        # The bridge is how the hop starts; the window at its end needs where it
+        # lands. Without this the compiled moment replaced the deterministic
+        # opening + ending, and every tail was pinned to the hop's opening.
+        end = ending(beat)
+        if cand and end and end.rstrip(".").lower() not in cand.lower():
+            cand = cand.rstrip(" .") + ". " + end.rstrip(" .") + "."
         if cand:
             s["moment"] = cand
             prev_acc = prev_acc + " " + cand

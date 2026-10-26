@@ -644,7 +644,7 @@
         1.0,
         "off",
         2.0,
-        0.1,
+        0.2,
         "",
         "",
         "minimax_h3_latent_upscaler_3d_bf16.safetensors",
@@ -661,7 +661,9 @@
         5,
         "same",
         "same",
-        0
+        0,
+        "off",
+        ""
       ],
       "title": "H3 Ref2VA Chain - showcase 6x7s"
     },

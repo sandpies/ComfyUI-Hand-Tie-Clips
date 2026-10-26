@@ -9,6 +9,8 @@ Everything needed to have a language model write plans for this node.
 | **`SYSTEM_PROMPT.md`** | The same thing with the human preamble stripped, for pasting into a *System Prompt* box. Select all, paste, done. |
 | **`SCHEMA.json`** | JSON Schema for both documents, for anyone wiring this into their own tooling. Carries the rule set under `x-rules` and the duration/frame table under `x-duration-frames`. |
 | **`SWAP_PROMPT.md`** | Instruct for the SWAP tab only: one hop, identity from the rail, no `ref_plan`. Not WRITE's prompt. |
+| **`STANDARD_PROMPT.md`** + **`standard/`** | The STANDARD tab: one standard MiniMax H3 prompt (T2VA or Ref2VA) for a single generation in Simple mode, planned then written. `standard/` is the MiniMax H3 prompting skill it follows, loaded per stage; the frame says only what the node decides (mode, labels, voices, duration). |
+| **`skills/htc-music-video/`** | An agent skill (for harnesses that load skills and let the model run scripts) that directs and produces a music video or a short film with the user, from a song or a story idea to a checked plan and graph, then fixes shots after renders. See its README. GitHub only: the registry download leaves it out. |
 
 ## Using it in LM Studio (or any local chat app)
 

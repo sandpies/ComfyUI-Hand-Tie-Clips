@@ -25,6 +25,15 @@ from .video_upsampler import (
     NODE_CLASS_MAPPINGS as _VIDEO_UP_NODES,
     NODE_DISPLAY_NAME_MAPPINGS as _VIDEO_UP_NAMES,
 )
+try:
+    # PyAV is ComfyUI's own dependency; a missing or broken one costs only this node.
+    from .save_video import (
+        NODE_CLASS_MAPPINGS as _SAVE_NODES,
+        NODE_DISPLAY_NAME_MAPPINGS as _SAVE_NAMES,
+    )
+except Exception as _e:  # noqa: BLE001
+    print(f"[HandTieClips] HTC Save Video not loaded: {_e!r}", flush=True)
+    _SAVE_NODES, _SAVE_NAMES = {}, {}
 from . import refmod as _refmod
 
 NODE_CLASS_MAPPINGS.update(_PREVIEW_NODES)
@@ -41,6 +50,8 @@ NODE_DISPLAY_NAME_MAPPINGS.update(_TILED_NAMES)
 _tiled_register_folder()
 NODE_CLASS_MAPPINGS.update(_VIDEO_UP_NODES)
 NODE_DISPLAY_NAME_MAPPINGS.update(_VIDEO_UP_NAMES)
+NODE_CLASS_MAPPINGS.update(_SAVE_NODES)
+NODE_DISPLAY_NAME_MAPPINGS.update(_SAVE_NAMES)
 
 # The editor's dropdowns are served from directives.VOCAB rather than copied
 # into JS. A failure here costs the dropdowns their tooltips, not the node, so
