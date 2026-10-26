@@ -3,6 +3,15 @@
 User-facing. The files named here are in the repository, not in the installed
 pack — the published package excludes them.
 
+## 3.1.1 — 2026-10-27
+
+- **The Starter saves with HTC Save Video** (frame generation x2 inside the save, NVENC),
+  replacing RTX Video Frame Generation -> CreateVideo -> SaveVideo; the Upsample Video
+  workflow saves with it too, at the clip's own fps.
+- **The Starter and Upsample Video load the official `minimax_h3_ref2va_int8_convrot` DiT**,
+  and the Starter samples with euler / simple. The official DiT has no turbo built in: add a
+  turbo LoRA in the LoRA loader, or raise the steps (the Starter's note says so).
+
 ## 3.1.0 — 2026-10-27
 
 - **hand_tie takes `master_audio_file`** -- a music video can now run on `pin_mech=hand_tie`.
