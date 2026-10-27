@@ -10,6 +10,9 @@ can only move a rule down.
 **Join modes and form**
 - `hand_tie` + `master_audio_file` for a one-place, one-take MV: 12 hops x 15 s (2:51), lip sync
   held across all 11 joins.
+- `hand_tie` join windows kept calm (hands resting on the armrests, the camera holding, the same
+  framing sentence every hop): a 5-hop one-take rap MV held its framing and joins across three
+  previs sections (an earlier MV with hands moving at the joins blurred at three of them).
 - A music video where nobody sings on screen.
 - Three `motion_context` continuations in a row in one scene; a 12-hop, 2.5-minute film of cuts,
   tracks, arcs and holds written from a scene map.
@@ -88,11 +91,6 @@ can only move a rule down.
 
 ## Unproven (from one failure; test before a piece depends on it)
 
-- Under `hand_tie`, join windows kept calm (hands at rest, camera still): on the 12-hop MV the
-  three joins with a hand on the chest or moving on the stand blurred; joins with hands on the
-  knees were clean.
-- One framing for a whole `hand_tie` piece: one previs section of two hops came out a tight
-  close-up although every beat asked for the same medium close shot.
 - `dialogue_lock` on a `motion_context` film: safe so far (lip sync and sound bed held), never yet
   seen removing babble. Does nothing under `hand_tie`.
 - A prop sheet for a prop that changes state.
