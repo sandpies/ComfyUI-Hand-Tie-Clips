@@ -2884,6 +2884,9 @@ _BOOST_LOADERS = {}
 # while still sharp. The side node keeps the recipe's 0.2.
 UPSAMPLE_DENOISE = 0.2   # the original recipe (sigma 0.75, one step)
 
+# hand_tie: render and gate every section's previs before the first hop (see run()).
+_HT_PREVIS_FIRST = True
+
 
 def _boost_lora_choices():
     try:
@@ -4679,6 +4682,9 @@ class HandTieClips:
             audio_seed_offset=0, dialogue_lock="off", dialogue_audio_file="",
             audio_model=None,
             upsample_settings=None, unique_id=None):
+        # Every argument, as called: the hand_tie previs-first pass re-runs this
+        # same call with dry_run=previs before any hop renders.
+        _run_args = {k: v for k, v in locals().items() if k != "self"}
         # First thing, before a single model is touched: hand the writer's VRAM
         # back. The plan writer stays resident between plans now, which is the
         # right trade everywhere except here -- a 27B and an H3 render do not
@@ -5940,9 +5946,11 @@ class HandTieClips:
                                                  chained=bool(ht_chained[-1]))
                 if ht_chained[-1]:
                     _text = _ht.chain_previs_text(_text, [_pshots[j] for j in _sec], _lay, FPS)
-                # The section's framing, once, in front: the compiled moments drop it,
-                # and a previs told no shot size drifted to a close-up (10-28).
-                _text = _ht.with_framing(_text, [_pshots[j] for j in _sec])
+                # The section's framing, once, in front: the compiled moments drop it.
+                # A continuing section says "the same shot carries on" instead, so it
+                # never re-states a size its pinned frames may have drifted from (10-28).
+                _text = _ht.with_framing(_text, [_pshots[j] for j in _sec],
+                                         chained=bool(ht_chained[-1]))
                 if not _ht.previs_framing([_pshots[j] for j in _sec])[1]:
                     print(f"[{TAG}] WARNING: hand-tie section {_si + 1}: no beat names a shot size "
                           "(medium shot, close shot, wide shot ...); the previs is free to drift "
@@ -6017,8 +6025,13 @@ class HandTieClips:
                 ht_windows[_si] = None
                 return
             _chain_pin_imgs = _prev_w_end if _prev_w_end is not None else prev_imgs
+            # A muted previs never reads the hop's sound (the pin passes audio=None),
+            # so it is not in the key: a previs rendered up front (_HT_PREVIS_FIRST,
+            # where no hop has sounded yet) is then the same entry the hops load.
+            _mute_k = (bool(_ht.PREVIS_MUTE) and not any(ht_speaks[_si])) or locked is not None
             _from = ({"frames": _store.tensor_digest(_chain_pin_imgs),
-                      "sound": _store.audio_digest(prev_audio)} if _chain else None)
+                      "sound": (None if _mute_k else _store.audio_digest(prev_audio))}
+                     if _chain else None)
             if ref_plan_refs:
                 pblock = _refs.resolve_tags(
                     pblock, hop_ords, _refs.subjects(ref_plan_refs),
@@ -6351,6 +6364,22 @@ class HandTieClips:
                           "check the film there.", flush=True)
             if _in_win:
                 ht_previs_warn.append((_si + 1, _p_seed, _in_win))
+            _gate = (_ht.gate_report(_cuts, _lay["windows"], pblock, FPS)
+                     if (_ht.PREVIS_GATE and _cuts) else [])
+            if _gate:
+                self._htc_gate_fails = list(getattr(self, "_htc_gate_fails", []) or [])
+                _gmsg = (f"hand-tie previs {_si + 1} is not one take: "
+                         + "; ".join(_gate)
+                         + ". Every hop is tied to the frames on both sides of it, so the hops "
+                         "would lunge or flash at these joins. Rewrite that beat (one framing "
+                         "sentence naming the shot size; no list of what the plate shows; no "
+                         "'into the camera'; no motion word for something still), then check it "
+                         "with dry_run=previs, about two minutes, before rendering the hops.")
+                if previs_only:
+                    print(f"[{TAG}] WARNING: {_gmsg}", flush=True)
+                    self._htc_gate_fails.append(_gmsg)
+                else:
+                    raise RuntimeError(f"{TAG}: stopped before the hops: {_gmsg}")
             if int(_p_imgs.shape[0]) < _p_len:
                 raise ValueError(
                     f"{TAG}: hand-tie previs {_si + 1} decoded {int(_p_imgs.shape[0])} "
@@ -6405,6 +6434,28 @@ class HandTieClips:
             ht_previs_info.append((_si + 1, _p_len, _lay["windows"], pblock))
             if previs_only:
                 ht_previs_media.append((_p_imgs, _p_wav, _p_sr))
+
+        # Previs first (10-28). Every section's previs is rendered and gated BEFORE
+        # the first hop, by running this same call as dry_run=previs: a previs that is
+        # not one take stops the run in its first minutes, while someone is there,
+        # and a run that passes renders its hops unattended. The hops then load each
+        # previs from the cache. Only when every continuing section is muted (its
+        # previs reads no hop sound) and the hop cache is on, so nothing renders twice.
+        if (ht and _HT_PREVIS_FIRST and not previs_only and not dry and hop_store is not None
+                and not getattr(self, "_htc_previs_pass", False)
+                and all(not ht_chained[_s] or (bool(_ht.PREVIS_MUTE) and not any(ht_speaks[_s]))
+                        or locked is not None for _s in range(len(ht_sections)))):
+            print(f"[{TAG}] hand-tie: rendering all {len(ht_sections)} previs first, then the hops",
+                  flush=True)
+            self._htc_previs_pass, self._htc_gate_fails = True, []
+            try:
+                self.run(**dict(_run_args, dry_run="previs"))
+            finally:
+                self._htc_previs_pass = False
+            _fails, self._htc_gate_fails = self._htc_gate_fails, []
+            if _fails:
+                raise RuntimeError(f"{TAG}: stopped before any hop rendered: " + " | ".join(_fails))
+            print(f"[{TAG}] hand-tie: every previs is one take; rendering the hops", flush=True)
 
         assembled = []
         for i, block in enumerate(blocks):

@@ -5,6 +5,16 @@ pack — the published package excludes them.
 
 ## Unreleased
 
+- **hand_tie: every previs is rendered and checked before the first hop.** A previs that is not
+  one take (any cut, anywhere: every hop is tied to the frames on both sides of it) stops the run
+  in its first minutes and names the frame, the nearest join and the previs sentence running
+  there. A run that passes renders its hops unattended, loading each previs from the cache. Needs
+  `cache_hops` on; with `dry_run=previs` the check only warns.
+- **Fix: a continuing previs snapping back to the stated shot size.** Its first frames are pinned
+  to the previous previs's closing window; it now inherits that framing instead of re-stating a
+  size, which snapped at the frame the pin let go.
+- **Fix: a previs re-describing the place mid-take** (read as a new establishing shot). Inside a
+  previs, beats after the first keep their actions only.
 - **Fix: hand_tie join windows rendered as inserted shots.** The previs gave each 0.9 s join
   window a timed range of its own, and H3 drew that range as a separate shot (a close-up cut in
   and out, the cut at frame ~158 in every previs). Both hops tied to the window inherited it, so

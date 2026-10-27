@@ -22,6 +22,13 @@ Part 2 is this skill's lints. Each one is a failure seen on a real render:
                    have rendered two people from one reference.
   vague-camera     a camera placed on/at something with no facing direction
                    ("fixed on the dashboard" rendered as a dashcam facing out).
+  plate-inventory  a sentence naming a place tag that lists 4+ things the plate already
+                   shows: read as "show all of this", the shot goes wide.
+  still-motion     a motion word for a still thing ("the alley running away behind
+                   her"): read as movement.
+  end-state-window the last window, 2 s or less, only changes state (lips closed, a
+                   smirk, stands still): read as a new shot, it cuts. Fold it into the
+                   window before.
   into-camera      "raps / sings / looks into the camera": "into" reads as travel toward
                    the lens and pushes the shot in. Write "eyes on the lens".
   song-words       a song-structure word in a beat ("sings the hook", "the second
@@ -247,6 +254,37 @@ def main():
             lint.append(f"shot {i}: song-words: {', '.join(sw)}. The video model does not know the song's "
                         f"sections; describe what the mouth and body do (raps fast, sings long notes, "
                         f"takes turns rapping).")
+        # A plate described in the beat: a sentence naming a place tag that lists 4+
+        # things (comma clauses). The plate already shows them; listed, they read as
+        # "show all of this" and the shot goes wide (10-28).
+        _places = {r["tag"] for r in (refs.get("refs") or []) if not r.get("subject")}
+        for _s in sentences(beat):
+            _pt = [t for t in _places if re.search(rf"@{re.escape(t)}\b", _s)]
+            if (str(a.pin_mech) in ("hand_tie", "hand_tie_mc") and _pt and _s.count(",") >= 4
+                    and not re.match(r"\s*At \d", _s)):
+                lint.append(f"shot {i}: plate-inventory: the sentence naming @{_pt[0]} lists what the "
+                            f"plate already shows (\"{_s[:70]}...\"). Name the tag and only what the plate "
+                            f"cannot carry (where people stand and face, a prop in use); a list pulls the "
+                            f"shot wide.")
+                break
+        _still = re.search(r"\b(?:the|a|an)\s+[\w-]+\s+(?:running|rushing|racing|flowing|streaming|sweeping|"
+                           r"marching|stretching away)\b(?!\s+(?:fast|toward|towards))", beat, re.I)
+        if _still and not re.search(rf"@\w+\s+{re.escape(_still.group(0).split()[-1])}", beat):
+            lint.append(f"shot {i}: still-motion: \"{_still.group(0)}\" gives a still thing a motion "
+                        f"word; the model reads it as movement. Leave it out (the plate shows it) or use "
+                        f"a still word.")
+        _wins = list(re.finditer(r"\bAt (\d\d):(\d\d\.\d+)-(\d\d):(\d\d\.\d+),", beat))
+        if _wins:
+            _last = _wins[-1]
+            _len = (int(_last.group(3)) * 60 + float(_last.group(4))) - (int(_last.group(1)) * 60 + float(_last.group(2)))
+            _tail = beat[_last.end():]
+            if _len <= 2.0 and len(_wins) > 1 and re.search(
+                    r"\b(?:lips (?:closed|pressed)|closes (?:his|her) lips|stops|falls silent|stands still|"
+                    r"holds still|freezes|smirk|settles)\b", _tail, re.I):
+                lint.append(f"shot {i}: end-state-window: the last {_len:.1f} s window is only a change of "
+                            f"state (\"{_tail.strip()[:60]}...\"). A short window that only stops or settles "
+                            f"reads as a new shot and cuts; end the window before it with that state "
+                            f"(\"... then closes her lips in a smirk\").")
         into = re.search(r"\b(?:raps?|rapping|sings?|singing|performs?|performing|talks?|talking|"
                          r"looks?|looking|stares?|staring)\b[^.;]{0,40}\binto the (?:camera|lens)\b",
                          beat, re.I)

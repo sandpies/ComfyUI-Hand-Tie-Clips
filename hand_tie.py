@@ -834,9 +834,20 @@ def previs_framing(shots):
     return "", ""
 
 
-def with_framing(text, shots):
-    """`text` with the section's framing sentence in front, once."""
+# What a CONTINUING previs (a chained section) says about the shot, instead of the
+# beats' framing sentence (10-28). Its first 22 frames are pinned to the last previs's
+# closing window, which may have drifted (a slow push-in); re-stating the size there
+# made previs 3 of a one-take rap MV snap back to "knees up" at f22, the frame the
+# pin let go. It inherits the size its pinned frames show.
+CHAIN_FRAMING = "The same continuous shot carries on at exactly the framing it already has; the camera holds."
+
+
+def with_framing(text, shots, chained=False):
+    """`text` with the section's framing sentence in front, once. A chained
+    section gets CHAIN_FRAMING instead: its size comes from its pinned frames."""
     sent, _size = previs_framing(shots)
+    if chained:
+        sent = CHAIN_FRAMING if sent else ""
     if not sent or sent in str(text or ""):
         return text
     return sent.rstrip() + " " + str(text or "").lstrip()
@@ -992,7 +1003,8 @@ def chain_previs_text(text, shots, lay, fps=FPS):
         # Only the people: the place tag in a restating sentence is not someone
         # who "carries on" (10-28: "@kyo and @alley carry on").
         first = drop_restatement(first, (shots[0] or {}).get("beat") if shots else "")
-    carry = carry_text(first, previs_framing(shots)[1])
+    # No size: the pinned frames carry it (CHAIN_FRAMING).
+    carry = carry_text(first)
     return ("Continuing the same unbroken shot in the same location and lighting: "
             "At 00:00.000-%s, %s At %s-%s, %s" % (
                 w0_end, carry, w0_end, m.group("end"), m.group("rest")
@@ -1562,6 +1574,40 @@ PREVIS_RETRY_STRIDE = 104729   # the HOP retake's seed step (h3_ref_chain hop cu
 # morphs to reach the second (Carolyn's hop 1 at f171 on both seeds, the shifting
 # background). The previs is now one take, so such a cut re-rolls like any other;
 # Since 2026-10-14 the previs is one take: cuts are only logged.
+
+
+# The previs gate (10-28). A previs is the cheap part (one generate, about two minutes)
+# and decides every join; the hops are the expensive part. Every hop is tied to the
+# windows on both sides of it, so a cut ANYWHERE in a previs means two windows are
+# different shots, and the hop between them has to lunge from one to the other: on a
+# one-take rap MV the join windows were close-up inserts cut in and out of a wide, the
+# hops copied them, and every join flashed. A cut "between windows" was logged as
+# harmless ("no hop is tied there") for two weeks while it did exactly that.
+# With the gate on, such a previs stops the run before any of its hops render and
+# names the frame, the nearest join and the previs text running there.
+PREVIS_GATE = True
+
+
+def gate_report(cuts, windows, text, fps=FPS):
+    """Lines that explain why a previs failed the gate, one per cut. [] = it passes.
+
+    `text` is the compiled previs (compile_previs): the timed range covering each cut
+    is quoted, because that range's words are what to change.
+    """
+    rng = [(int(a) * 60 + float(b), int(c) * 60 + float(d), str(t).strip())
+           for a, b, c, d, t in re.findall(
+               r"At (\d+):(\d+(?:\.\d+)?)-(\d+):(\d+(?:\.\d+)?),\s*(.*?)(?=\s*\bAt \d+:\d+(?:\.\d+)?-|$)",
+               str(text or ""), re.S)]
+    out = []
+    for c in cuts or []:
+        t = c / float(fps)
+        near = min(range(len(windows or [0])), key=lambda k: abs(int((windows or [0])[k]) - c)) if windows else 0
+        span = next(((a, b, w) for a, b, w in rng if a <= t < b), None)
+        said = (" -- the previs there reads: \"%s\"" % (span[2][:140] + ("..." if len(span[2]) > 140 else ""))
+                if span else "")
+        out.append("cut at f%d (%.2f s), %d frames from join window %d%s"
+                   % (c, t, abs(int((windows or [0])[near]) - c) if windows else 0, near + 1, said))
+    return out
 
 
 def window_cuts(cuts, windows):

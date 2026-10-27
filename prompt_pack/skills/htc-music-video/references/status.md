@@ -8,6 +8,8 @@ can only move a rule down.
 ## Proven (held in at least one render after the rule was written)
 
 **Join modes and form**
+- `hand_tie` one-take rap MV, every hop opening on one framing sentence (size, person, place tag)
+  and the plate carrying the room: all four joins held at native-like motion (user-watched, 10-28).
 - `hand_tie` + `master_audio_file` for a one-place, one-take MV: 12 hops x 15 s (2:51), lip sync
   held across all 11 joins.
 - `hand_tie` join windows kept calm (hands resting on the armrests, the camera holding, the same
@@ -75,6 +77,8 @@ can only move a rule down.
 
 ## Failed (tried on purpose; do not rely on it)
 
+- A hop's end state in its own short last window ("At 00:15.800-00:17.000, @kyo stands with her lips
+  closed in a cold smirk"): a hard cut there. Fold it into the window before (lint `end-state-window`).
 - A plate's contents listed in every beat ("in the middle of the narrow night alley in @alley, the
   wet asphalt ..., the shopfronts and steam on the left, the vending machine on the right, neon
   signs ..., red lanterns ..."): the previs went wide to show it all, then drifted back in. The
