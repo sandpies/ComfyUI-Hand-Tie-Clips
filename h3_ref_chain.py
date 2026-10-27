@@ -5939,6 +5939,14 @@ class HandTieClips:
                 _text, _lay = _ht.compile_previs([_pshots[j] for j in _sec], _frames, FPS)
                 if ht_chained[-1]:
                     _text = _ht.chain_previs_text(_text, [_pshots[j] for j in _sec], _lay, FPS)
+                # The section's framing, once, in front: the compiled moments drop it,
+                # and a previs told no shot size drifted to a close-up (10-28).
+                _text = _ht.with_framing(_text, [_pshots[j] for j in _sec])
+                if not _ht.previs_framing([_pshots[j] for j in _sec])[1]:
+                    print(f"[{TAG}] WARNING: hand-tie section {_si + 1}: no beat names a shot size "
+                          "(medium shot, close shot, wide shot ...); the previs is free to drift "
+                          "closer or wider and its windows carry that into the hops. Name it in "
+                          "each beat's framing sentence.", flush=True)
                 for _w in _ht.cut_lint_report([_pshots[j] for j in _sec]):
                     print(f"[{TAG}] hand-tie section {_si + 1}: {_w}", flush=True)
                 _first, _last = _pshots[_sec[0]] or {}, _pshots[_sec[-1]] or {}

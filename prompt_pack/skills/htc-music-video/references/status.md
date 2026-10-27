@@ -107,5 +107,7 @@ can only move a rule down.
 - A chase covered from many camera places, screen direction fixed.
 - A camera device into a memory, mirrored on the way back.
 - A different reaction for every face, and blinks written.
+- No body turn in a `hand_tie` one-take hop: "turning his shoulders toward the microphone" at
+  2.0 s came with a cut there (the previs had also drifted closer; fixed in the node 10-28).
 - Any hand task finished 2 s before a performer's first vocal: with faders worked until 1 s before
   the first line, the lip sync started a second or two late.

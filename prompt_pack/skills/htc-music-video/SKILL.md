@@ -179,7 +179,8 @@ held; your own frame stats can move a rule down, never up.
 15. **Pick the join mode on purpose** ([one take or many places](#one-take-or-many-places)). Hops
     up to 15 s. Under `hand_tie`, the first and last 1.3 s of every hop are join windows two hops
     share: hands at rest on something (knees, a stand, a table), the camera still, the same
-    framing sentence in every hop, no gesture or move crossing them. A hand or camera moving
+    framing sentence in every hop naming the shot size ("the same medium shot"), no gesture,
+    body turn or move crossing them. A hand or camera moving
     through a join blurs there.
 16. **SLA `reference_protection` = Heavy Enforcement** when the graph has an `H3SLAAttention` node
     (`build_graph.py --sla-heavy`).

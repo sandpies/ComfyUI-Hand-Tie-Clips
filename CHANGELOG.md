@@ -5,6 +5,11 @@ pack — the published package excludes them.
 
 ## Unreleased
 
+- **Fix: a hand_tie previs drifting closer, then a cut.** The previs compiler drops each beat's
+  framing sentence, so a previs never said how close the shot was, and a continuing section could
+  drift into a close-up. Its join windows tied both hops to it, and the next hop snapped back to
+  its own framing a couple of seconds in. The previs now opens on the section's framing sentence
+  and every join window names the shot size; the log warns when no beat names one.
 - **STANDARD tab: notes on how a written block may play.** After a block passes the contract, it is
   read as a film (shots, timed windows, spoken lines) and the panel lists advisory notes: a line
   your brief quotes that is missing, said twice, changed or only described; a line far shorter or

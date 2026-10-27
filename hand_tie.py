@@ -813,6 +813,35 @@ def cut_lint_report(shots, sound=None):
     return lines
 
 
+# The shot size a previs must hold (10-28). The compiler rewrites each beat into a
+# moment and drops its framing sentence, so the previs text named the room, the
+# action and "the same continuous shot" but never how close: section 2 of two
+# one-take MVs drifted into a close-up, its windows tied both hops to it, and on the
+# second one the next hop snapped back to its own "same medium shot" at 2.0 s, a cut.
+_SHOT_SIZE = re.compile(r"\b(?:extreme close-up|extreme close shot|close-up|medium close shot|"
+                        r"medium close-up|medium wide shot|medium shot|close shot|wide shot|"
+                        r"full shot|long shot|two shot|cowboy shot)\b", re.I)
+
+
+def previs_framing(shots):
+    """(sentence, size) the section's beats frame it with: the first sentence, in
+    plan order, that names a shot size and is not a timed window. ("", "") if none."""
+    for sh in shots or []:
+        for sent in _SENT.split(_no_speech(str((sh or {}).get("beat") or ""))):
+            m = _SHOT_SIZE.search(sent)
+            if m and not re.match(r"\s*At\s+\d", sent) and not _NEGATION.search(sent):
+                return sent.strip(), m.group(0).lower()
+    return "", ""
+
+
+def with_framing(text, shots):
+    """`text` with the section's framing sentence in front, once."""
+    sent, _size = previs_framing(shots)
+    if not sent or sent in str(text or ""):
+        return text
+    return sent.rstrip() + " " + str(text or "").lstrip()
+
+
 def compile_previs(shots, hop_frames, fps=FPS, sound=None):
     """The previs's timed description: ONE shot written as back-to-back motion clocks.
 
@@ -842,6 +871,7 @@ def compile_previs(shots, hop_frames, fps=FPS, sound=None):
     """
     lay = layout(hop_frames)
     ms = moments(shots, PREVIS_SOUND if sound is None else sound)
+    size = previs_framing(shots)[1]
     if PREVIS_CUT_LINT:
         # The moments rewritten for one take where that is safe (smooth_moments);
         # what is left is logged by run() through cut_lint_report.
@@ -864,13 +894,13 @@ def compile_previs(shots, hop_frames, fps=FPS, sound=None):
             # room after it, so the last beat is written over its own window.
             start = int(w)
         else:
-            segs.append((int(w), carry_text(last)))
+            segs.append((int(w), carry_text(last, size)))
             start = int(w) + WINDOW
         segs.append((start, m))
         last = m
     if last is not None and len(win) > len(ms) and int(win[len(ms)]) > segs[-1][0]:
         # The closing window: the last beat carries on through it.
-        segs.append((int(win[len(ms)]), carry_text(last)))
+        segs.append((int(win[len(ms)]), carry_text(last, size)))
     rows = []
     for n, (a, txt) in enumerate(segs):
         b = segs[n + 1][0] if n + 1 < len(segs) else end
@@ -880,20 +910,22 @@ def compile_previs(shots, hop_frames, fps=FPS, sound=None):
     return " ".join(rows), lay
 
 
-def carry_text(moment):
+def carry_text(moment, size=""):
     """A window's range: the beat before it carrying on, alive, with no new action of
     its own. Never settle/hold/still/pause/stop/stare: those froze the hop's tail
     into a blank stare at camera (2026-10-14, user 22:05)."""
     # Everyone the moment names, in order: a two-person window that named one of
     # them left the other unguided for 22 frames, and "moving" stood a seated man
     # up at the join (10-26). Alive, not moving; in the same place.
+    # `size` (previs_framing) names how close that shot is, or the window drifts.
     who = list(dict.fromkeys(_WHO.findall(moment or "")))
+    shot = ("same continuous %s" % size) if size else "same continuous shot"
     if len(who) > 1:
         return ("%s and %s carry on naturally with that motion, alive and relaxed, each "
-                "in the same place, in the same continuous shot."
-                % (", ".join(who[:-1]), who[-1]))
+                "in the same place, in the %s."
+                % (", ".join(who[:-1]), who[-1], shot))
     return ("%s carries on naturally with that motion, alive and relaxed, "
-            "in the same place, in the same continuous shot." % (who[0] if who else "The subject"))
+            "in the same place, in the %s." % (who[0] if who else "The subject", shot))
 
 
 def chain_previs_text(text, shots, lay, fps=FPS):
@@ -916,7 +948,7 @@ def chain_previs_text(text, shots, lay, fps=FPS):
     m = re.match(r"^At\s+00:00\.000-(?P<end>\d\d:\d\d\.\d{3}),\s*(?P<rest>.*)$", s, re.S)
     if not m or m.group("end") <= w0_end:
         return s
-    carry = carry_text(ms[0] if ms else s)
+    carry = carry_text(ms[0] if ms else s, previs_framing(shots)[1])
     return ("Continuing the same unbroken shot in the same location and lighting: "
             "At 00:00.000-%s, %s At %s-%s, %s" % (
                 w0_end, carry, w0_end, m.group("end"), m.group("rest")
