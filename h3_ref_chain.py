@@ -5936,7 +5936,8 @@ class HandTieClips:
                 ht_sections.append(list(_sec))
                 ht_chained.append(_ht.chained(_pshots, _sec))
                 _frames = [_plens[j] for j in _sec]
-                _text, _lay = _ht.compile_previs([_pshots[j] for j in _sec], _frames, FPS)
+                _text, _lay = _ht.compile_previs([_pshots[j] for j in _sec], _frames, FPS,
+                                                 chained=bool(ht_chained[-1]))
                 if ht_chained[-1]:
                     _text = _ht.chain_previs_text(_text, [_pshots[j] for j in _sec], _lay, FPS)
                 # The section's framing, once, in front: the compiled moments drop it,

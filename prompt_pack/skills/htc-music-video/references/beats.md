@@ -82,8 +82,7 @@ Templates:
   > `@a turns from <where the last hop left him> and <new move>, still rapping, his eyes on the lens ...`
 - `hand_tie` one-take hop: the same framing sentence every hop, then timed windows clear of the
   first and last 1.3 s:
-  > `The same medium close shot, @a still seated on the stool at the microphone in @studio, <the
-  > place laid out by side>, <her hands where the last hop left them>; the camera holds. At
+  > `A medium shot of @a seated in @studio from her waist up; the camera holds. At
   > 00:01.300-00:07.000, @a <sings / acts>. At 00:07.000-00:13.700, @a <sings / acts>, <hands
   > back at rest>.`
 - Instrumental hop: only action and sound, no singing words, faces reacting, mouths closed.

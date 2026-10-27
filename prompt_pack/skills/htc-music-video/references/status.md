@@ -75,6 +75,11 @@ can only move a rule down.
 
 ## Failed (tried on purpose; do not rely on it)
 
+- A plate's contents listed in every beat ("in the middle of the narrow night alley in @alley, the
+  wet asphalt ..., the shopfronts and steam on the left, the vending machine on the right, neon
+  signs ..., red lanterns ..."): the previs went wide to show it all, then drifted back in. The
+  same plan with one sentence ("A medium shot of @kyo standing in @alley from her knees up; the
+  camera holds") held a steady medium, with the same LoRA on (user's previs A/B).
 - "Raps into the camera" as a hop's ending: on a one-take rap MV the camera moved forward at the
   end of hops 1 and 2, both ending on it (user-watched). "Into" reads as travel toward the lens.
   Write "her eyes on the lens" (rule 18).

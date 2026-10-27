@@ -74,7 +74,12 @@ the total before they queue it.
 
 ## The keynote: direct the frame
 
-A beat is a director's instruction to the camera, not a story. Write only what the lens sees:
+A beat is a director's instruction to the camera, not a story. **The plate already shows the
+place: never describe what it shows.** Name the place by its tag and add only what the plate
+cannot carry (where each person stands and faces, a prop in use, a side someone leaves by). A
+list of the room's contents reads as "show all of this" and pulls the shot wide, and a motion
+word for a still thing ("the alley running away behind her") reads as movement. Write only what
+the lens sees:
 where the camera is and which way it faces, where each person and thing sits in that frame (left
 or right, near or far, in front of or behind whom), which way each faces and where their eyes go,
 and every move in screen terms (toward the lens, across the frame left to right). The model
@@ -179,9 +184,9 @@ held; your own frame stats can move a rule down, never up.
 15. **Pick the join mode on purpose** ([one take or many places](#one-take-or-many-places)). Hops
     up to 15 s. Under `hand_tie`, the first and last 1.3 s of every hop are join windows two hops
     share: hands at rest on something (knees, a stand, a table), the camera still, the same
-    framing sentence in every hop naming the shot size ("the same medium shot"), no gesture,
-    body turn or move crossing them. A hand or camera moving
-    through a join blurs there.
+    framing sentence in every hop: size, person, place tag and nothing else ("A medium shot of @a
+    standing in @alley from her knees up; the camera holds"), no gesture, body turn or move
+    crossing them. A hand or camera moving through a join blurs there.
 16. **SLA `reference_protection` = Heavy Enforcement** when the graph has an `H3SLAAttention` node
     (`build_graph.py --sla-heavy`).
 17. **The node's own docs are the authority** (its tooltips and `prompt_pack/SYSTEM_PROMPT.md`).

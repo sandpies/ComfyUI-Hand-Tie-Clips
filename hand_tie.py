@@ -851,8 +851,31 @@ def with_framing(text, shots):
 # next beat still starts only after the window. True restores the old text exactly.
 PREVIS_CARRY_RANGES = False
 
+# A beat that re-describes the place mid-take ("@kyo remains standing in the middle
+# of the narrow night alley in @alley, wet asphalt ..., neon signs ...") is read by
+# H3 as a new establishing shot: every previs of three one-take MVs cut to a wide at
+# the start of beat 2's range (f158-159), the frame after showing the whole plate.
+# Inside a previs the take carries the place; the framing sentence states it once
+# at the top (with_framing). So from the second moment on (and from the first in a
+# chained section), sentences that put someone IN a tagged place, or restate the
+# shot, are dropped and the actions stay.
+PREVIS_DROP_RESTATE = True
+_RESTATE = re.compile(r"\b(?:in|at|on|inside|into|through|across|of)\s+(?:the\s+[\w-]+\s+)?@[A-Za-z0-9_]+"
+                      r"|^\s*(?:The same|In the same|Continuing)\b", re.I)
 
-def compile_previs(shots, hop_frames, fps=FPS, sound=None):
+
+def drop_restatement(moment, beat=""):
+    """`moment` without its sentences that re-establish the place or the shot.
+    Falls back to the beat's first timed action when nothing else is left."""
+    sents = [s for s in _SENT.split(str(moment or "")) if s.strip()]
+    keep = [s for s in sents if not _RESTATE.search(s)]
+    if keep:
+        return " ".join(keep).strip()
+    act = first_action(beat)
+    return act or str(moment or "")
+
+
+def compile_previs(shots, hop_frames, fps=FPS, sound=None, chained=False):
     """The previs's timed description: ONE shot written as back-to-back motion clocks.
 
     Previs law (2026-10-14). In H3's prompt format a bare `At MM:SS.mmm` is a camera
@@ -881,6 +904,9 @@ def compile_previs(shots, hop_frames, fps=FPS, sound=None):
     """
     lay = layout(hop_frames)
     ms = moments(shots, PREVIS_SOUND if sound is None else sound)
+    if PREVIS_DROP_RESTATE:
+        ms = [m if (k == 0 and not chained) else
+              drop_restatement(m, (shots[k] or {}).get("beat")) for k, m in enumerate(ms)]
     size = previs_framing(shots)[1]
     if PREVIS_CUT_LINT:
         # The moments rewritten for one take where that is safe (smooth_moments);
@@ -961,7 +987,12 @@ def chain_previs_text(text, shots, lay, fps=FPS):
     m = re.match(r"^At\s+00:00\.000-(?P<end>\d\d:\d\d\.\d{3}),\s*(?P<rest>.*)$", s, re.S)
     if not m or m.group("end") <= w0_end:
         return s
-    carry = carry_text(ms[0] if ms else s, previs_framing(shots)[1])
+    first = ms[0] if ms else s
+    if PREVIS_DROP_RESTATE:
+        # Only the people: the place tag in a restating sentence is not someone
+        # who "carries on" (10-28: "@kyo and @alley carry on").
+        first = drop_restatement(first, (shots[0] or {}).get("beat") if shots else "")
+    carry = carry_text(first, previs_framing(shots)[1])
     return ("Continuing the same unbroken shot in the same location and lighting: "
             "At 00:00.000-%s, %s At %s-%s, %s" % (
                 w0_end, carry, w0_end, m.group("end"), m.group("rest")
