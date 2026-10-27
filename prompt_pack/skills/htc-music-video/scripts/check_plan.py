@@ -22,6 +22,8 @@ Part 2 is this skill's lints. Each one is a failure seen on a real render:
                    have rendered two people from one reference.
   vague-camera     a camera placed on/at something with no facing direction
                    ("fixed on the dashboard" rendered as a dashcam facing out).
+  into-camera      "raps / sings / looks into the camera": "into" reads as travel toward
+                   the lens and pushes the shot in. Write "eyes on the lens".
   song-words       a song-structure word in a beat ("sings the hook", "the second
                    verse", "the last line"): the video model never hears the song's
                    sections, so the words mean nothing. Describe the delivery.
@@ -245,6 +247,13 @@ def main():
             lint.append(f"shot {i}: song-words: {', '.join(sw)}. The video model does not know the song's "
                         f"sections; describe what the mouth and body do (raps fast, sings long notes, "
                         f"takes turns rapping).")
+        into = re.search(r"\b(?:raps?|rapping|sings?|singing|performs?|performing|talks?|talking|"
+                         r"looks?|looking|stares?|staring)\b[^.;]{0,40}\binto the (?:camera|lens)\b",
+                         beat, re.I)
+        if into:
+            lint.append(f"shot {i}: into-camera: \"{into.group(0)}\". \"Into\" reads as travel toward the "
+                        f"lens and pushes the camera in; write \"her eyes on the lens\" (user-watched, "
+                        f"three hops in a row).")
         if BARRIER.search(beat) and not BARRIER_SIDE.search(beat):
             lint.append(f"shot {i}: barrier: \"{BARRIER.search(beat).group(0)}\" with no side named. Say where it sits "
                         f"in frame, which side the camera and each person are on, that it stays fixed; hands on it, "
