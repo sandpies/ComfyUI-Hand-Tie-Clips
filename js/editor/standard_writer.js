@@ -148,6 +148,9 @@ export function createStandardWriter(node, { onWritten } = {}) {
             if (stage === "write" && j.block) blockBox.value = j.block;
             saveDraft();
             const warn = (j.warnings || []).map((w) => `• ${w}`).join("\n");
+            // Notes read the finished block as a film (block_checks.py). Advisory:
+            // the block is already accepted, and the model never sees them.
+            const notes = (j.notes || []).map((w) => `• ${w}`).join("\n");
             if (!j.ok) {
                 const errs = (j.errors || []).map((e) => `• ${e}`).join("\n");
                 say((errs || j.error || "STANDARD failed")
@@ -158,7 +161,10 @@ export function createStandardWriter(node, { onWritten } = {}) {
             }
             say((stage === "plan"
                 ? `Storyboard ready (${j.mode}). Edit it, then press Write.`
-                : `Block written in ${j.attempts || 1} attempt(s), checked against the ${j.mode} contract. Press Accept.`)
+                : `Block written in ${j.attempts || 1} attempt(s). The ${j.mode} contract passed`
+                    + (notes ? `; ${(j.notes || []).length} note(s) on how it may play, below. Press Accept, or fix them by hand first.`
+                             : `, and no notes on how it may play. Press Accept.`))
+                + (notes ? "\n\n" + notes : "")
                 + (warn ? "\n\n" + warn : ""), "hint");
         } catch (e) {
             say(String(e), "error");

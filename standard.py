@@ -18,9 +18,12 @@ No ComfyUI imports: the checker runs this on the CPU with a scripted model.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 
+from . import block_checks as _bc
+from . import blockmodel as _bm
 from . import planner as _pl
 from . import refs as _refs
 
@@ -276,15 +279,7 @@ def contract_errors(block, *, mode, lab, duration_s):
 
 
 def _field(t, name):
-    i = t.find(name)
-    if i < 0:
-        return ""
-    j = len(t)
-    for f in set(REF2VA_FIELDS + T2VA_FIELDS):
-        k = t.find(f, i + len(name))
-        if k > -1:
-            j = min(j, k)
-    return t[i + len(name):j]
+    return _bm.field_text(t, name, REF2VA_FIELDS + T2VA_FIELDS)
 
 
 def parse_reply(raw, stage):
@@ -328,10 +323,14 @@ async def write(stage, brief, *, complete_fn, ref_plan="", duration_s=10.0,
                      "data_url": start_image})
     text = build_user_turn(stage, brief, mode=mode, lab=lab, duration_s=duration_s,
                            start_image=bool(start_image), plan=plan)
-    messages = [{"role": "system", "content": system_prompt(stage, mode, brief)},
+    system = system_prompt(stage, mode, brief)
+    messages = [{"role": "system", "content": system},
                 {"role": "user", "content": _pl.attach_images(text, pics)}]
     base = {"stage": stage, "mode": mode + (" + start image" if start_image else ""),
-            "files": files, "labels": _label_lines(lab), "videos": lab["videos"]}
+            "files": files, "labels": _label_lines(lab), "videos": lab["videos"],
+            # Names the exact prompt that wrote this block, so a render can be
+            # traced to it and an A/B can tell two prompts apart.
+            "system_sha": hashlib.sha256(system.encode("utf-8")).hexdigest()[:12]}
     if stage == "plan":
         reply = await complete_fn(messages, schema=None)
         out = parse_reply(reply, "plan")
@@ -341,7 +340,14 @@ async def write(stage, brief, *, complete_fn, ref_plan="", duration_s=10.0,
     def consume(reply, attempt, sch):
         blk = parse_reply(reply, "write")
         errs = contract_errors(blk, mode=mode, lab=lab, duration_s=duration_s)
-        res = dict(base, ok=not errs, block=blk, attempts=attempt, errors=errs)
+        # Notes only on a block that passed: a broken one would mostly report
+        # its own breakage. Never handed back to the model (see block_checks).
+        try:
+            notes = [] if errs else _bc.issues(blk, brief=brief, names=REF2VA_FIELDS + T2VA_FIELDS)
+        except Exception as exc:  # noqa: BLE001 -- notes must never break a write
+            print(f"[{TAG}] STANDARD notes skipped: {exc!r}", flush=True)
+            notes = []
+        res = dict(base, ok=not errs, block=blk, attempts=attempt, errors=errs, notes=notes)
         if not errs:
             return True, res, None, sch
         repair = ("The block has these problems. Fix only these and reply with the whole "

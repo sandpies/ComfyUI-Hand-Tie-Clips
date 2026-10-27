@@ -3,6 +3,16 @@
 User-facing. The files named here are in the repository, not in the installed
 pack — the published package excludes them.
 
+## Unreleased
+
+- **STANDARD tab: notes on how a written block may play.** After a block passes the contract, it is
+  read as a film (shots, timed windows, spoken lines) and the panel lists advisory notes: a line
+  your brief quotes that is missing, said twice, changed or only described; a line far shorter or
+  longer than its window; a quiet window with a face and no mouth state in a clip with lines; a
+  window with no line and no sound and no sound bed. Notes are never sent back to the model and
+  never block Accept. The prompt the model sees is unchanged. The response and the log now name
+  the exact system prompt (`system_sha`).
+
 ## 3.1.1 — 2026-10-27
 
 - **The Starter saves with HTC Save Video** (frame generation x2 inside the save, NVENC),

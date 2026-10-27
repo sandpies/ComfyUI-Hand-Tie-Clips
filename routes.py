@@ -1554,6 +1554,8 @@ def register():
                 pass
         print(f"[{TAG}] STANDARD {out.get('stage')} ({out.get('mode')}): "
               + ("ok" if out.get("ok") else f"{len(out.get('errors') or [])} error(s)")
+              + (f", {len(out['notes'])} note(s)" if out.get("notes") else "")
+              + f", system {out.get('system_sha', '?')}"
               + f", files {', '.join(out.get('files') or [])}", flush=True)
         return web.json_response(out)
 
