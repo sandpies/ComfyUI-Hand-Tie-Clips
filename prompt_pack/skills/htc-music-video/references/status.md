@@ -109,3 +109,5 @@ can only move a rule down.
 - A chase covered from many camera places, screen direction fixed.
 - A camera device into a memory, mirrored on the way back.
 - A different reaction for every face, and blinks written.
+- Any hand task finished 2 s before a performer's first vocal: with faders worked until 1 s before
+  the first line, the lip sync started a second or two late.

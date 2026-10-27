@@ -60,7 +60,9 @@ from the shot notes as what the camera sees.
 Order inside a beat:
 1. **A person acting, the place in that line** (rule 1).
 2. **Who sings, to where, and the mouth:** "raps fast and low straight into the camera, his lips
-   shaping every word".
+   shaping every word". The first line starts on a free body: finish any hand task at least 2 s
+   before the first vocal, or the model runs the task late and the lips start a second or two
+   after the words.
 3. **Everyone else's action** at the same time.
 4. **The change** (the beat hits harder, a door opens, the lights go out).
 5. **How it is delivered,** never section names: fast, low, full voice, long notes, one line each.
