@@ -75,6 +75,9 @@ can only move a rule down.
 
 ## Failed (tried on purpose; do not rely on it)
 
+- "Raps into the camera" as a hop's ending: on a one-take rap MV the camera moved forward at the
+  end of hops 1 and 2, both ending on it (user-watched). "Into" reads as travel toward the lens.
+  Write "her eyes on the lens" (rule 18).
 - A recurring prop held by words alone: the gist held, the design changed every appearance.
 - A run away from the camera without "her back to the camera": it played in reverse.
 - A run toward a place, shot from in front: the place came out behind her.
@@ -109,9 +112,5 @@ can only move a rule down.
 - A different reaction for every face, and blinks written.
 - No body turn in a `hand_tie` one-take hop: "turning his shoulders toward the microphone" at
   2.0 s came with a cut there (the previs had also drifted closer; fixed in the node 10-28).
-- "Raps into the camera" as a hop's last sentence under `hand_tie`: suspected of pulling the shot
-  in (a one-take rap MV's hop 1 ended close; "into" reads as travel toward the lens). If it holds,
-  write the eyeline with no direction of travel ("raps fast, her eyes on the lens") and fix rule
-  18 and the beat templates.
 - Any hand task finished 2 s before a performer's first vocal: with faders worked until 1 s before
   the first line, the lip sync started a second or two late.

@@ -842,6 +842,16 @@ def with_framing(text, shots):
     return sent.rstrip() + " " + str(text or "").lstrip()
 
 
+# Each join window as a range of its own (carry_text), the 10-14 layout. Off since
+# 10-28: in the cached previs of a 5-hop rap MV the 22-frame window f136-157
+# rendered as a separate close-up insert (a cut in at f136, a hard cut out at f158,
+# MAD 76 vs a 6.5 median), and both hops tied to it inherited the close-up; every
+# hand_tie previs on disk cut at f157-159. Off, each beat's range runs straight
+# through the next window, so a window is the beat carrying on in one take; the
+# next beat still starts only after the window. True restores the old text exactly.
+PREVIS_CARRY_RANGES = False
+
+
 def compile_previs(shots, hop_frames, fps=FPS, sound=None):
     """The previs's timed description: ONE shot written as back-to-back motion clocks.
 
@@ -894,12 +904,15 @@ def compile_previs(shots, hop_frames, fps=FPS, sound=None):
             # room after it, so the last beat is written over its own window.
             start = int(w)
         else:
-            segs.append((int(w), carry_text(last, size)))
+            if PREVIS_CARRY_RANGES:
+                segs.append((int(w), carry_text(last, size)))
             start = int(w) + WINDOW
         segs.append((start, m))
         last = m
-    if last is not None and len(win) > len(ms) and int(win[len(ms)]) > segs[-1][0]:
-        # The closing window: the last beat carries on through it.
+    if (PREVIS_CARRY_RANGES and last is not None and len(win) > len(ms)
+            and int(win[len(ms)]) > segs[-1][0]):
+        # The closing window: the last beat carries on through it (off: the last
+        # beat's own range already runs to the previs's end).
         segs.append((int(win[len(ms)]), carry_text(last, size)))
     rows = []
     for n, (a, txt) in enumerate(segs):

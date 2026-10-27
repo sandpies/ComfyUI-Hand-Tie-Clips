@@ -125,7 +125,8 @@ times counted from the hop's start.
 
 A face turned toward the camera is not a look into the lens.
 
-- **Music video:** the performer may sing into the lens.
+- **Music video:** the performer may sing to the lens, eyes on it; write "eyes on the lens", never
+  "into the camera" (it reads as travel toward the lens and the shot pushes in).
 - **Film:** nobody looks into the lens. Face three-quarter toward the camera, eyes on the person
   dealt with, with a direction ("his eyes on @b just left of the lens"); in a reverse shot, name
   where the listener is ("who stands just off the frame to the left").

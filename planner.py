@@ -915,7 +915,7 @@ MV_RULES = "\n".join([
     "drives every mouth. These rules replace the spoken-word targets of the "
     "length table:",
     "1. No <d> lines and no (S1) speaker tags. Say who sings or raps and how "
-    "(\"@x raps the verse straight into the lens\"); the song supplies the words.",
+    "(\"@x raps fast, eyes on the lens\"); the song supplies the words.",
     "2. Everyone else reacts with their body -- points, laughs, daps, throws an "
     "arm round a shoulder -- and the whole crew shouts the hooks together. "
     "Nobody stands posed.",

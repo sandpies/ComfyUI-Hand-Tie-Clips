@@ -59,8 +59,8 @@ from the shot notes as what the camera sees.
 
 Order inside a beat:
 1. **A person acting, the place in that line** (rule 1).
-2. **Who sings, to where, and the mouth:** "raps fast and low straight into the camera, his lips
-   shaping every word". The first line starts on a free body: finish any hand task at least 2 s
+2. **Who sings, to where, and the mouth:** "raps fast and low, his eyes on the lens, his lips
+   shaping every word" (never "into the camera", which pulls the shot in). The first line starts on a free body: finish any hand task at least 2 s
    before the first vocal, or the model runs the task late and the lips start a second or two
    after the words.
 3. **Everyone else's action** at the same time.
@@ -72,14 +72,14 @@ Order inside a beat:
 Templates:
 
 - Restart, one singer + crew:
-  > `@a <does X> in/through @place, <light detail>, and <raps fast / sings at full voice> straight
-  > into the camera, <his/her> lips shaping every word. Behind <him/her> @b <action> while @c
+  > `@a <does X> in/through @place, <light detail>, and <raps fast / sings at full voice>, <his/her>
+  > eyes on the lens, <his/her> lips shaping every word. Behind <him/her> @b <action> while @c
   > <action>. <Change>. @a <end move>, <face to the lens>.`
 - Trade between two singers:
-  > `... @a and @b take turns rapping into the camera, one line each, their lips shaping every
+  > `... @a and @b take turns rapping to the lens, one line each, their lips shaping every
   > word. While @a raps, @b <action>; while @b raps, @a <action>. <end move>.`
 - Continuation: the first sentence moves from the previous end pose:
-  > `@a turns from <where the last hop left him> and <new move>, still rapping into the camera ...`
+  > `@a turns from <where the last hop left him> and <new move>, still rapping, his eyes on the lens ...`
 - `hand_tie` one-take hop: the same framing sentence every hop, then timed windows clear of the
   first and last 1.3 s:
   > `The same medium close shot, @a still seated on the stool at the microphone in @studio, <the

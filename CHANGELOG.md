@@ -5,6 +5,14 @@ pack — the published package excludes them.
 
 ## Unreleased
 
+- **Fix: hand_tie join windows rendered as inserted shots.** The previs gave each 0.9 s join
+  window a timed range of its own, and H3 drew that range as a separate shot (a close-up cut in
+  and out, the cut at frame ~158 in every previs). Both hops tied to the window inherited it, so
+  hops ended and began too close. Each beat's range now runs straight through the next window,
+  in one take; the next beat still starts after the window. The old layout stays behind
+  `hand_tie.PREVIS_CARRY_RANGES`.
+- **WRITE music videos: "eyes on the lens" instead of "raps into the lens".** "Into" reads as
+  travel toward the camera and pushed the shot in at the end of hops.
 - **Fix: a hand_tie previs drifting closer, then a cut.** The previs compiler drops each beat's
   framing sentence, so a previs never said how close the shot was, and a continuing section could
   drift into a close-up. Its join windows tied both hops to it, and the next hop snapped back to

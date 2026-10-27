@@ -190,8 +190,9 @@ held; your own frame stats can move a rule down, never up.
 
 **Music video only**
 
-18. **No `<d>` lines.** The song drives the mouths. Write who sings and how ("raps fast straight
-    into the camera, his lips shaping every word"); a performer may look into the lens.
+18. **No `<d>` lines.** The song drives the mouths. Write who sings and how ("raps fast, his eyes on
+    the lens, his lips shaping every word"); a performer may look at the lens. Never "into the
+    camera": "into" reads as travel toward the lens and pulls the shot in.
 19. **Whoever is not singing has a concrete action.** A non-singer alone on screen over vocals
     mouths the song: put their solos on instrumental bars, or keep the singer in frame and give
     them a closed mouth.
