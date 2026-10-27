@@ -11,12 +11,15 @@ python scripts/build_graph.py TEMPLATE.json OUT.json \
     --shot shot_plan.json --ref ref_plan.json \
     --set pin_mech=motion_context "aspect=16:9 landscape" master_audio_file=<song file> \
           master_audio_start_s=<from fit_cuts> cache_hops=on \
-          "prompt_prefix=<one line of look, e.g. Cinematic heist film music video, moody teal and amber lighting>" \
+          "establish=" "prompt_prefix=<one line of look, e.g. Cinematic heist film music video, moody teal and amber lighting>" \
     --save-prefix video/HANDTIECLIPS/<project> --sla-heavy --title "<project> (MV)"
 ```
 
 - `pin_mech`: `motion_context` for many places, `hand_tie` for one take (SKILL.md). Under
   `hand_tie` also set `last_frame_guide=off` and `dialogue_lock=off`.
+- `establish` empty (`"establish="`) when `prompt_prefix` carries the look. It is added to hop 1
+  and to every `hand_tie` previs, so the same line twice doubles the look and any place words
+  in it. Its one job is the medium on hop 1 when nothing else names it.
 - `prompt_prefix` is the look only (grade, medium, lens, era), one sentence. Weather and places in
   it reach every hop, interiors included; put them in the beats. `prompt` can hold one line about
   the video.
