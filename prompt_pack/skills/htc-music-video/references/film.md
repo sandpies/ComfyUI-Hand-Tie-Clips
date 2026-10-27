@@ -1,150 +1,94 @@
 # Film: script, dialogue and sound
 
-A film or scene has no song. H3 makes every voice and sound itself, so the script carries what
-the song carries in a music video: the timing, the speech and the silence. Read this page with
-[camera](camera.md) before writing a film's beats.
+A film has no song. H3 makes every voice and sound itself, so the script carries what the song
+carries in a music video: the timing, the speech and the silence. Read with [camera](camera.md).
 
-## 1. The script (producer's pass)
+## 1. The script
 
-- **One-line story, then the turns.** A turn is anything that changes the situation: an arrival,
-  an offer, a trick, a discovery, a betrayal, a payoff. List them in order.
-- **Budget the turns against the running time.** Every turn needs at least one hop of its own,
-  plus room for the reactions around it. About three or four turns per minute plays well; five
-  in a minute plays rushed. Cut a turn or add hops rather than squeeze.
-- **End on a tease.** Resolve the story, then open one small thread in the last shot (a phone
-  that buzzes, a shadow across the table, a smile that fades) and hold it 2-3 s. Set the last
-  hop's `tail` to `hold`.
-- **Show it, don't explain it.** A repeated image (the same insert at the start and the end)
-  tells a betrayal better than a line that explains it. Keep dialogue for what only a line can do.
-- **A hop per place per moment.** Plan which hops are restarts (a new place or a time jump) and
-  which are continuations (the same moment carrying on). Most film hops are restarts with cuts
-  inside them.
+- **One-line story, then the turns:** anything that changes the situation (an arrival, an offer, a
+  trick, a discovery, a betrayal, a payoff).
+- **Budget the turns:** each needs a hop of its own plus room for reactions; three or four per
+  minute plays well, five plays rushed. Cut a turn or add hops rather than squeeze.
+- **End on a tease:** resolve, then open one small thread in the last shot (a phone that buzzes, a
+  smile that fades), held 2-3 s with the last hop's `tail: hold`.
+- **Show it, don't explain it:** a repeated image tells a betrayal better than a line.
+- **A hop per place per moment:** restarts for a new place or time, continuations for the same
+  moment carrying on. Most film hops are restarts with cuts inside them, on `motion_context`.
+  A film in one room and one take can run on `hand_tie` (SKILL.md, one take or many places).
 
 ### The viewer knows only what the screen shows
 
-The audience has no plot notes, the same way the model has no map. A film whose story reads
-only with the plot in hand fails at its cuts: a striking opening with no meaning, a jump to
-another time with no reason, a scene that resolves into a new place with nothing linking them.
+- **The opening asks the question:** who these people are to someone and what they want, or
+  something wrong. A showcase with no want reads as an advert; put the want inside it.
+- **Every cut to a new place or time carries a visible link:** a look at what the next scene
+  shows, a line naming where we go, an object carried across. By 2 s into the new scene the viewer
+  can say why we are here.
+- **A flashback has a trigger and a way back:** someone in the present sees, hears or says the
+  thing; the past opens on that same thing in its own look; it returns to the face that
+  remembered.
+- **Show the first step of every decision** (a hand taking the card, the door opening) before
+  cutting away.
 
-- **The opening asks the question.** The first hop shows who these people are to someone else
-  and what they want, or something wrong that needs an answer. A character showcase (a walk, a
-  pose, a reveal) with no want reads as an advert, and the next cut makes no sense against it.
-  Show the want inside the showcase (the walker spots, in the crowd, the person she is after),
-  or open on the trouble and bring the showcase later.
-- **Every cut to a new place or time carries a link the viewer can see:** a look at something
-  the next scene shows, a line that names where we are going, an object carried across, a
-  person leaving toward it. By the first 2 s of the new scene the viewer can say why we are
-  here now.
-- **A flashback has a trigger and a way back.** Someone in the present looks at the thing,
-  hears the name or says the line; the past opens on that same thing (a match cut, a whiteout)
-  in its own look; it returns to the face that remembered. A past scene placed before the
-  present it explains is a riddle, not a flashback.
-- **Show the first step of every decision.** After a yes, a deal or a betrayal, show what it
-  sets moving (a hand taking the card, the door opening, the crew getting up) before cutting
-  away. A cut straight from a decision to an unrelated place leaves the viewer behind.
-
-**The viewer pass.** Before writing beats, retell the film as the screen alone shows it, scene
-by scene, as someone who knows nothing. Write the question a viewer has at each cut and where
-on screen it gets answered. A cut with no answer gets a bridge (a line, an insert, an object
-carried over) or a new order.
-
-Hand the user the turn list with hop numbers and running time, plus the viewer pass, before
-writing any beats.
+**The viewer pass.** Before writing beats, retell the film as the screen alone shows it, scene by
+scene, as someone who knows nothing. Write the viewer's question at each cut and where on screen
+it gets answered; a cut with no answer gets a bridge or a new order. Hand the user the turn list
+with hop numbers and running time, plus the viewer pass, before any beats.
 
 ## 2. Cast and voices
 
-- Each speaking character gets a voice clip on their ref row (`"voice": "name_voice.mp3"`). A voice
-  clip carries timbre only, not emotion, accent or pace; write those in the beat.
-- Give each speaking character a **second, voiceless row** (same sheet, same `subject`, a different
-  tag, no `voice`) and use that tag on the hops where he does not speak. A voice riding a hop
-  where nobody says a word tends to turn into speech.
-- **One-sided features flip between angles** (a streak of colour on one side, a scar, an eyepatch):
-  name the side in the subject's `locked` text ("a white streak on her right side, over her right
-  eye"). Not yet proven to hold; check it on the first render.
-- A masked or faceless character never speaks. Give him actions and presence. On a hop where others
-  speak, his shot still needs a mouth state ("his mouth hidden behind the mask, his jaw
-  still") and a sound, and his moves start already done ("arms already folded"). Unsolved: on a hop with lines, a mask
-  with a mouth shape (a skull's teeth) that moves in a close shot got lip-synced, even after a
-  statement with a loud chord over his shot; the same figure moving on a hop with no lines did
-  not. Do not solve it by freezing him or cutting his beat. A mask with no mouth shape on the
-  sheet is the likely cure; test it. Never ask him a question or say a line
-  to him that wants a reply: a question followed by his face got an answer in a voice, mask or
-  not. Give his shot a loud sound of its own (a chord, a hit) instead of a pause.
-- Graph settings for a film: no `master_audio_file`, `voice_every_hop` = `speaking`,
-  `pin_mech` = `motion_context`, SLA `reference_protection` = Heavy Enforcement.
+- Each speaking character gets a voice clip on their ref row (`"voice": "name_voice.mp3"`). It
+  carries timbre only; write emotion, accent and pace in the beat.
+- Each speaking character also gets a **voiceless row** (same sheet, same `subject`, another tag)
+  for the hops where they do not speak: a voice riding a silent hop turns into speech.
+- **Name the side of one-sided features** in `locked` ("a white streak over her right eye"), on a
+  sheet whose every view agrees.
+- **A masked or faceless character never speaks.** On a hop with lines his shot still needs a
+  mouth state ("his mouth hidden behind the mask, his jaw still") and a loud sound of its own, and
+  his moves start already done. A mask with a mouth shape that moves in a close got lip-synced;
+  a mask with no mouth on the sheet is the likely cure. Never ask him a question.
+- Graph: no `master_audio_file`, `voice_every_hop` = `speaking`, SLA Heavy Enforcement.
+- `dialogue_lock` (`lines+hold`) on a `motion_context` hop that babbles; off by default, and it
+  does nothing under `hand_tie`.
 
 ## 3. Writing a line
 
-- **Delivery and face outside the quote, the line inside it:** `@a leans back and says in a low,
-  amused voice, his eyes on @b, 'You play like a man with nothing to lose.'`
-- **One delivery per line.** "low and amused" works; "excited, whispered and fast" fights itself.
-- **About ten words, one sentence per quote.** Two short sentences are two quotes with an action
-  between them. Single quotes, no ellipses, no dashes.
-- **Plain English spelling inside quotes.** Accented or borrowed words ("café", "naïve", "jalapeño")
-  get pronounced half one way, half another, and come out garbled. Write "cafe" or "coffee
-  shop". Names that are hard to say go outside the quote, or get spelled the way they sound.
-- **Describe behaviour, not feeling:** "lowers his gaze, jaw tight", never "he feels guilty".
-- **Every line has a visible listener in a named direction.** The speaker's eyes go to that
-  person ("his eyes on @b just left of the lens"), never into the lens. A line said to someone
-  off screen, or to nobody, invites a reply or turns into a speech to the audience.
-- **The first line goes to the freest face.** With several people in one frame the model gives
-  the opening line to whoever is most central, facing the camera and not busy (eating,
-  drinking). To choose the order, give each line its own shot with the speaker alone, and keep
-  the first speaker's mouth free when the line starts.
-- **The speaker stays in frame for the whole line.** A camera move or an exit comes after the
-  line, never during it, or the line comes out of whoever is left on screen.
-- **About 20-25 spoken words in a 12-15 s hop** at most. Leave a beat after each line for the
-  face to settle.
+- **Delivery and face outside the quote:** `@a leans back and says in a low, amused voice, his
+  eyes on @b, 'You play like a man with nothing to lose.'`
+- **One delivery per line;** "excited, whispered and fast" fights itself.
+- **About ten words, one sentence per quote,** single quotes, no ellipses or dashes, plain English
+  spelling ("cafe", not "café"); hard names go outside the quote.
+- **Behaviour, not feeling:** "lowers his gaze, jaw tight", never "he feels guilty".
+- **Every line has a visible listener in a named direction,** never the lens.
+- **The first line goes to the freest face:** the most central, frontal, not busy. To choose the
+  order, give each line its own shot with the speaker alone.
+- **The speaker stays in frame for the whole line;** moves and exits come after it.
+- **About 20-25 spoken words in a 12-15 s hop at most,** with a beat after each line.
 
 ## 4. Silence and sound
 
-**Busy frames stay quiet; empty ones talk.** The model invents speech in empty time: a face on
-screen with nothing to do. Give every silent person business with a sound of its own (a glass
-turned on the table, a coat pulled tighter, footsteps), and keep every silent stretch full of
-action and sound, not just a mouth state and a hum. Leading theory from every babble case so
-far; not yet proven on purpose.
+**Busy frames stay quiet; empty ones talk** (directing.md, fact 3). Give every silent person
+business with a sound of its own.
 
-The model fills any stretch where a face is on screen and nothing is said with invented speech.
-
-- **Every person on screen without a line has a mouth state:** "lips pressed shut", "jaw clenched,
-  lips pressed shut". Write it before the first line, between lines and after the last one.
-- **Name a sound for every silent stretch:** "the lamp humming", "rain drumming on the roof",
-  "chips clicking". Silence is a sound, never an absence.
-- **After a hop's last line, close the mouth and name the sound:** "He presses his lips shut and
-  waits, the slot machines chiming far away." Making the last line longer does not stop a babble
-  after it.
-- **Phone calls end with the call ending:** "the call clicks off, and the only sound is the rain".
-  Otherwise the other end gets a voice. A phone lifted to an ear with no line written gets talk
-  too, even from someone small behind glass; give the call a line and an end, or keep the
-  phone on the counter (she dials, the receiver still down).
-- **The model may score a reveal on its own.** A cut to a knowing look after a discovery came
-  with a single dramatic sting nobody wrote, and it landed. To get one on purpose, name it on
-  the cut ("a single low dramatic sting as the camera cuts to his face"); it lands about half a
-  second early, so write it on the cut, not after. To keep a reveal dry, name the room sound
-  across the cut instead (not yet proven).
-- **A hop with no lines in a busy place fills itself with crowd speech,** in the language the
-  faces and signs suggest (a lantern market with an East Asian cast came out full of Mandarin
-  chatter). Closed mouths do not stop voices from off screen. Give such hops a score that fills
-  the whole hop ("a fast pounding drum score drives under the whole chase, rain hissing on the
-  tarps") and keep the place empty of extras in the words and the plate. Not yet proven.
-- **Narrowband sounds over broadband ones.** "The low hum of the fridge" renders as a hum; "street
-  noise" renders as hiss.
+- **Every face without a line has a mouth state** ("lips pressed shut"), before, between and after
+  the lines.
+- **Every silent stretch has a named sound** ("the lamp humming", "rain drumming on the roof").
+- **After a hop's last line, close the mouth and name the sound.** A longer last line does not
+  stop the babble after it.
+- **Phone calls end with the call clicking off.** A phone at an ear with no line gets talk; give
+  the call a line and an end, or leave the receiver down.
+- **Stings:** the model may score a reveal by itself. For one on purpose, name it on the cut ("a
+  single low dramatic sting as the camera cuts to his face"); it lands about half a second early.
+- **A no-line hop in a busy place fills with crowd speech.** Give it a score across the whole hop
+  and keep extras out of the words and the plate. Not yet proven.
+- **Narrowband sounds** ("the low hum of the fridge") over broadband ones ("street noise" is hiss).
 
 ## 5. Bodies, props and places
 
-- **Starting postures are states, not moves:** "is already seated in the leather chair and stays
-  seated". A bare "sits" renders the sitting down.
-- **Name which way every seated or lying body faces, in every shot** (see camera.md, Bodies in
-  vehicles and rows).
-- **Car exits are unreliable.** Start the person already standing beside the car with the door
-  open, or show the side of the car to the camera and name the door that opens.
-- **Fix every prop in every shot it is in:** how many, what it shows, where it lies, and what it
-  is after it changes (camera.md, Props the model would otherwise invent). A held prop is in the
-  plate or is shown arriving.
-- **Do not mention furniture nobody uses.** A named object gets used, and one named inside a
-  moving clause moves with the person ("drags him away, the chair scraping" drags the chair too).
-- **No fast body contact.** Near misses, a grab that then holds still, a shadow falling across
-  someone: the threat reads, and nothing warps.
+- Postures are states: "is already seated in the leather chair and stays seated".
+- Name which way every seated or lying body faces, every shot (camera.md, vehicles and rows).
+- Fix every prop in every shot; a held prop is in the plate or shown arriving.
+- Don't name furniture nobody uses; one named in a moving clause moves with the person.
+- No fast body contact: near misses, a grab that holds still, a shadow across someone.
 
 ## 6. A film beat, worked
 
@@ -160,6 +104,7 @@ The model fills any stretch where a face is on screen and nothing is said with i
 > @b's hand turns his two cards face up, two black aces. At 00:09.000-00:12.000, the camera
 > holds on the cards, the lamp humming.
 
-Check with `check_plan.py ... --no-mv` (dialogue allowed). The film lints are `eyeline`, `after-line`, `no-stop`, `mouth`, `back-view`, `phone`, `outfit`, `pull-in`, `no-eye-target`,
-`prop-words` (and with `--map`: `goal-behind`, `sides`, `prop-picture`, `prop-holder`),
-`lens-address`, `shot-people`, `early-cut` and `push-in`.
+Check with `check_plan.py ... --no-mv`. Film lints: `eyeline`, `after-line`, `no-stop`, `mouth`,
+`back-view`, `phone`, `outfit`, `pull-in`, `no-eye-target`, `prop-words`, `lens-address`,
+`shot-people`, `early-cut`, `push-in`; with `--map` also `goal-behind`, `sides`, `prop-picture`,
+`prop-holder`.

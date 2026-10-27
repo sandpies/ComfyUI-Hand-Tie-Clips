@@ -29,6 +29,10 @@ Part 2 is this skill's lints. Each one is a failure seen on a real render:
                    warp through barriers whose sides were never fixed.
   pin-face         the hop before a continuation does not end on a face toward
                    the camera: the continuation rebuilds identity from that ending.
+                   motion_context only.
+  join-calm        (hand_tie) a hop ends, or the next one starts, on a raised hand
+                   or a moving camera: both hops are tied to the same previs frames
+                   there, and a moving hand or framing blurs at the join.
   two-subjects-one-mouth  (review) every beat with two or more people should give
                    the non-rapper an action; listed for a human/model read.
   outfit           two subjects whose clothing shares most of its words: alike
@@ -88,6 +92,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _htc  # noqa: E402
 
+# hand_tie join windows: a raised or working hand, or a camera move.
+UNCALM = re.compile(r"\b(?:lift\w*|rais\w*|reach\w*|adjust\w*|tuck\w*|wip(?:e|es|ing)\b|brush\w*|"
+                    r"wav(?:e|es|ing)\b|on (?:his|her) chest|hand\w* ris\w*|"
+                    r"pushes in|pulls? back|zoom\w*|arcs?\b|tracks?\b|pans?\b|tilts?\b|orbit\w*|"
+                    r"dolly\w*|crane\w*|push in)", re.I)
 FACE = re.compile(r"\b(camera|lens|face|faces|grin\w*|smil\w*|look\w* (in|at|into))\b", re.I)
 CAM_PLACE = re.compile(r"\bcamera\b[^.]{0,40}\b(fixed|mounted|placed|set|sits?|rests?)\b[^.]{0,30}\b(on|at|in)\b", re.I)
 TRAVEL = re.compile(r"\b(?:runs?|running|walks?|walking|rush(?:es)?|sprints?|charges?|dash(?:es)?|hurr(?:y|ies)|strides?)\b"
@@ -310,7 +319,17 @@ def main():
         nxt = shots[i] if i < len(shots) else None
         if nxt is not None and nxt.get("anchor") != "restart" and (nxt.get("directives") or {}).get("join") != "hard_cut":
             last = sents[-1] if sents else ""
-            if not FACE.search(last):
+            if str(a.pin_mech) in ("hand_tie", "hand_tie_mc"):
+                nb = sentences(str(nxt.get("beat") or ""))
+                first_act = next((x for x in nb if re.match(r"\s*At \d", x)), "")
+                for where, txt in (("ends", last), (f"shot {i + 1} opens", first_act)):
+                    m = UNCALM.search(txt)
+                    if m:
+                        lint.append(f"shot {i}: join-calm: the join {where} on \"{m.group(0)}\" "
+                                    f"(\"{txt[:70]}\"). Both hops are tied to the same previs frames "
+                                    f"there: keep the hands at rest and the camera still in the first and "
+                                    f"last 1.3 s, or the join blurs.")
+            elif not FACE.search(last):
                 lint.append(f"shot {i}: pin-face: shot {i + 1} continues from this ending, but the last sentence "
                             f"(\"{last[:70]}\") puts no face toward the camera.")
 
