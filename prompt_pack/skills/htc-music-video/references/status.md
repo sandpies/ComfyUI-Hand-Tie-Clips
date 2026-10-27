@@ -109,5 +109,9 @@ can only move a rule down.
 - A different reaction for every face, and blinks written.
 - No body turn in a `hand_tie` one-take hop: "turning his shoulders toward the microphone" at
   2.0 s came with a cut there (the previs had also drifted closer; fixed in the node 10-28).
+- "Raps into the camera" as a hop's last sentence under `hand_tie`: suspected of pulling the shot
+  in (a one-take rap MV's hop 1 ended close; "into" reads as travel toward the lens). If it holds,
+  write the eyeline with no direction of travel ("raps fast, her eyes on the lens") and fix rule
+  18 and the beat templates.
 - Any hand task finished 2 s before a performer's first vocal: with faders worked until 1 s before
   the first line, the lip sync started a second or two late.
