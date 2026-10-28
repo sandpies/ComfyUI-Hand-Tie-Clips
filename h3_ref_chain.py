@@ -4783,18 +4783,7 @@ class HandTieClips:
                                 "between them (any TTS or your own voice). Empty = H3 "
                                 "drafts the lines itself. Set it on the MEDIA tab."),
                 }),
-                "audio_model": ("MODEL", {
-                    "tooltip": ("Optional model for the audio pass. Unwired uses the base "
-                                "model (the refine model when hop_refine=full), never the "
-                                "realism boost model: its LoRAs colour the audio too."),
-                }),
-                # A literal, as every socket here: tools read these types from source.
-                "upsample_settings": ("HTC_UPSAMPLE", {
-                    "tooltip": ("Optional HTC Upsample Settings node: steps, schedule, noise, "
-                                "chunks, anchor, tiles and VRAM splits of the upsample. "
-                                "Unwired keeps the shipped recipe."),
-                }),
-                # APPENDED 2026-10-28, LAST. Open-H3-Regenerate-2K delivery mode.
+                # APPENDED 2026-10-28, LAST widgets. Open-H3-Regenerate-2K delivery mode.
                 "upsample_redraw": (["recipe", "regen2k"], {
                     "default": "recipe",
                     "tooltip": ("recipe: the shipped MMH3 1-step light re-draw at "
@@ -4820,6 +4809,17 @@ class HandTieClips:
                 "regen2k_seed": ("INT", {
                     "default": 42, "min": 0, "max": 0x7FFFFFFF,
                     "tooltip": "Noise seed for upsample_redraw=regen2k (default 42).",
+                }),
+                "audio_model": ("MODEL", {
+                    "tooltip": ("Optional model for the audio pass. Unwired uses the base "
+                                "model (the refine model when hop_refine=full), never the "
+                                "realism boost model: its LoRAs colour the audio too."),
+                }),
+                # A literal, as every socket here: tools read these types from source.
+                "upsample_settings": ("HTC_UPSAMPLE", {
+                    "tooltip": ("Optional HTC Upsample Settings node: steps, schedule, noise, "
+                                "chunks, anchor, tiles and VRAM splits of the upsample. "
+                                "Unwired keeps the shipped recipe."),
                 }),
             },
             "hidden": {
@@ -4934,11 +4934,10 @@ class HandTieClips:
             audio_refine="off", audio_denoise=0.50, audio_steps=5,
             audio_sampler="same", audio_scheduler="same",
             audio_seed_offset=0, dialogue_lock="off", dialogue_audio_file="",
-            audio_model=None,
-            upsample_settings=None,
             upsample_redraw="recipe", regen2k_cond="text_only",
             regen2k_model=None, regen2k_seed=42,
-            unique_id=None):
+            audio_model=None,
+            upsample_settings=None, unique_id=None):
         # Every argument, as called: the hand_tie previs-first pass re-runs this
         # same call with dry_run=previs before any hop renders.
         _run_args = {k: v for k, v in locals().items() if k != "self"}
@@ -8816,22 +8815,24 @@ class HandTieClips:
             # the boost's look lives; on the MODEL wire it painted the base's
             # texture back over it. Same sigma curve either way -- the boost
             # model is built on the shifted model -- so the recipe is intact.
-            _up_model = regen2k_model if regen2k_on else (
-                boost_model if boost_model is not None else model)
-            if not regen2k_on and upsample_dit is not None:
+            _up_model = boost_model if boost_model is not None else model
+            if upsample_dit is not None:
                 # Its own model, shifted the way the hops were so the re-draw
                 # lands on the same sigma. Nothing drawn on the MODEL wire or
                 # in the boost reaches it.
-                _up_model = _result(_core_call(
-                    MiniMaxH3SigmaShift, "the sigma shift (upsample_dit)",
-                    model=upsample_dit, shift_video=float(shift_video),
-                    shift_audio=float(shift_audio)))[0]
-                print(f"[{TAG}] upsample: re-drawing on the wired upsample_dit"
-                      + (", not the realism boost model" if boost_model is not None
-                         else ", not the MODEL wire"), flush=True)
+                if not regen2k_on:
+                    _up_model = _result(_core_call(
+                        MiniMaxH3SigmaShift, "the sigma shift (upsample_dit)",
+                        model=upsample_dit, shift_video=float(shift_video),
+                        shift_audio=float(shift_audio)))[0]
+                    print(f"[{TAG}] upsample: re-drawing on the wired upsample_dit"
+                          + (", not the realism boost model" if boost_model is not None
+                             else ", not the MODEL wire"), flush=True)
             elif not regen2k_on and boost_model is not None:
                 print(f"[{TAG}] upsample: re-drawing on the realism boost "
                       "model, not the MODEL wire", flush=True)
+            if regen2k_on:
+                _up_model = regen2k_model
             if not regen2k_on and str(upsample_lora) != "None" and float(upsample_lora_strength) != 0.0:
                 # On top of the re-draw model, so the render's own LoRAs (or the
                 # boost's) stay under it. Delivery only: no hop key sees it.
