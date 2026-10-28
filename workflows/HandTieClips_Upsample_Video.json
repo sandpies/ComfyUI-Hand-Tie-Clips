@@ -24,7 +24,7 @@
     "Node name for S&R": "MarkdownNote"
    },
    "widgets_values": [
-    "## H3 Video Upsampler: upscale a finished clip\n\n1. **Load Video**: pick the clip (put it in `ComfyUI/input`). Any size; 24 fps is what H3\n   assumes, other rates work but the soundtrack conditions the re-draw loosely.\n2. **Queue.** HTC Save Video writes it to `video/HANDTIECLIPS/upsampled` at the clip's own fps,\n   with its own soundtrack untouched (NVENC when there is a GPU). Set its `frame_gen` to x2 for\n   double the frame rate (RTX GPU + `nvidia-vfx`).\n\n### The node\n- **megapixels**: output size, aspect kept (2 = about 1920x1080).\n- **denoise**: as the chain's upsample_denoise. 0.2 is the original recipe (one re-draw step from sigma 0.75); 0 only enlarges.\n- **lora**: retired and ignored. The re-draw runs the original recipe with no LoRA.\n- **tile_tokens**: VRAM. Lower = more, smaller tiles, slower, less memory. 70000 is the\n  recipe; try 40000 or 25000 on a smaller card.\n- **audio_vae** wired = the re-draw hears the soundtrack; unwired = it hears silence.\n\nMouths and motion come from the clip; only fine detail is re-drawn."
+    "## H3 Video Upsampler: upscale a finished clip\n\n1. **Load Video**: pick the clip (put it in `ComfyUI/input`). Any size; 24 fps is what H3\n   assumes, other rates work but the soundtrack conditions the re-draw loosely.\n2. **Queue.** HTC Save Video writes it to `video/HANDTIECLIPS/upsampled` at the clip's own fps,\n   with its own soundtrack untouched (NVENC when there is a GPU). Set its `frame_gen` to x2 for\n   double the frame rate (RTX GPU + `nvidia-vfx`).\n\n### The node\n- **megapixels**: output size, aspect kept (2 = about 1920x1080).\n- **denoise**: as the chain's upsample_denoise. 0.2 is the original recipe (one re-draw step from sigma 0.75); 0 only enlarges.\n- **redraw**: `recipe` (default 1-step MMH3 light re-draw, no LoRA) or `regen2k` (Open-H3-Regenerate-2K 3-step Euler re-draw on `[0.909375, 6/7, 2/3, 0]` with zeroed-out conditioning and no references, best with `minimax_h3_fl2va_pruned_int8_convrot.safetensors` and `open_h3_regen2k_refiner_r256pp_bf16.safetensors` at `lora_strength = 0.25`).\n- **lora**: ignored in `recipe` mode; in `regen2k` mode, pick `open_h3_regen2k_refiner_r256pp_bf16.safetensors` (or leave `None` to auto-load it at `0.25`).\n- **tile_tokens**: VRAM. Lower = more, smaller tiles (or 68 f chunks in `regen2k` before tiling), slower, less memory. 70000 is the recipe; try 40000 or 25000 on a smaller card.\n- **audio_vae** wired = the re-draw hears the soundtrack; unwired = it hears silence.\n\nMouths and motion come from the clip; only fine detail is re-drawn."
    ]
   },
   {
@@ -342,7 +342,8 @@
     "None",
     1.0,
     70000,
-    "euler"
+    "euler",
+    "recipe"
    ]
   },
   {
