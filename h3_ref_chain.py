@@ -4567,6 +4567,33 @@ class HandTieClips:
                                 "chunks, anchor, tiles and VRAM splits of the upsample. "
                                 "Unwired keeps the shipped recipe."),
                 }),
+                # APPENDED 2026-10-28, LAST. Open-H3-Regenerate-2K delivery mode.
+                "upsample_redraw": (["recipe", "regen2k"], {
+                    "default": "recipe",
+                    "tooltip": ("recipe: the shipped MMH3 1-step light re-draw at "
+                                "upsample_denoise 0.2. regen2k: Open-H3-Regenerate-2K "
+                                "3-step Euler re-draw on [0.909375, 6/7, 2/3, 0] using "
+                                "regen2k_model (delivery only; requires upsample=on and "
+                                "regen2k_model wired)."),
+                }),
+                "regen2k_cond": (["text_only", "hop"], {
+                    "default": "text_only",
+                    "tooltip": ("Conditioning for regen2k re-draw. text_only strips "
+                                "minimax_refs (matching upstream FL2VA inference); "
+                                "hop keeps each hop's full conditioning."),
+                }),
+                "regen2k_model": ("MODEL", {
+                    "tooltip": ("Model for upsample_redraw=regen2k: wire UNETLoader "
+                                "(minimax_h3_fl2va_pruned_int8_convrot) -> "
+                                "OpenH3Regen2KLoader (open_h3_regenerate_2k_r256pp_bf16, "
+                                "lora_strength 0.25, sharp_strength 0)."),
+                }),
+                # Not named seed: ComfyUI hangs a randomize control on any widget
+                # called seed.
+                "regen2k_seed": ("INT", {
+                    "default": 42, "min": 0, "max": 0x7FFFFFFF,
+                    "tooltip": "Noise seed for upsample_redraw=regen2k (default 42).",
+                }),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -4681,7 +4708,10 @@ class HandTieClips:
             audio_sampler="same", audio_scheduler="same",
             audio_seed_offset=0, dialogue_lock="off", dialogue_audio_file="",
             audio_model=None,
-            upsample_settings=None, unique_id=None):
+            upsample_settings=None,
+            upsample_redraw="recipe", regen2k_cond="text_only",
+            regen2k_model=None, regen2k_seed=42,
+            unique_id=None):
         # Every argument, as called: the hand_tie previs-first pass re-runs this
         # same call with dry_run=previs before any hop renders.
         _run_args = {k: v for k, v in locals().items() if k != "self"}
