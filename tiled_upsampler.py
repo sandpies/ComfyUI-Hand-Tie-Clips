@@ -61,6 +61,7 @@ SCHEDULER, STEPS, DENOISE = "simple", 1, 0.2
 SEED = 444
 UPSCALER_DTYPE = torch.float16
 _FLUSH_S = [0.0]           # seconds spent in sample_tile's cache flush (log only)
+_LAST_OOM = [0]            # OOM retries in the most recent redraw_chunk call (log only)
 
 # --- the guided re-draw (not part of the recipe) ----------------------------
 #
@@ -1017,6 +1018,8 @@ def redraw_chunk(model, cond, sampler, sigmas, video, audio, seed, factor=1,
         nv = noise_video.to(device=nv.device, dtype=nv.dtype)
     dev, dt = video.device, video.dtype
     cur_budget = int(budget)
+    _oom_retries = 0
+    _LAST_OOM[0] = 0
 
     while True:
         tiles, grid = tile_grid(h, w, t, factor, cur_budget, overlap_px)
@@ -1079,9 +1082,13 @@ def redraw_chunk(model, cond, sampler, sigmas, video, audio, seed, factor=1,
                     del acc
                 del wsum
             _dt = time.perf_counter() - _t0
+            _LAST_OOM[0] = _oom_retries
             print(f"[{TAG}] chunk re-draw: {len(sigmas) - 1} step(s) x {len(prepared)} tile(s) "
-                  f"in {_calls} sampler call(s), {_dt:.1f} s ({_dt / max(1, _calls):.2f} s per call, "
-                  f"cache flush {_FLUSH_S[0]:.1f} s)", flush=True)
+                  f"({grid[0]}x{grid[1]}) in {_calls} sampler call(s), {_dt:.1f} s "
+                  f"({_dt / max(1, _calls):.2f} s per call, cache flush {_FLUSH_S[0]:.1f} s), "
+                  f"OOM retries {_oom_retries}"
+                  + (f" (budget -> {cur_budget})" if cur_budget != int(budget) else ""),
+                  flush=True)
             break
         except Exception as exc:
             if not _is_oom(exc) or cur_budget <= 16384:
@@ -1089,6 +1096,7 @@ def redraw_chunk(model, cond, sampler, sigmas, video, audio, seed, factor=1,
             next_budget = max(16384, int(cur_budget * 0.65))
             if next_budget >= cur_budget:
                 raise
+            _oom_retries += 1
             print(f"[{TAG}] CUDA OOM at tile budget {cur_budget} ({exc}); "
                   f"lowering tile budget to {next_budget} (more, smaller tiles) and retrying chunk...",
                   flush=True)
@@ -1258,6 +1266,8 @@ def upsample(model, conditioning, latent, sampler, upscaler, megapixels,
     upscaled_cvs = upscale_chunks_batch(raw_cvs, upscaler, w_px, h_px)
     del raw_cvs
     _tp.append(time.perf_counter())
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
 
     film_nv = None
     _c0 = upscaled_cvs[0]
@@ -1273,13 +1283,17 @@ def upsample(model, conditioning, latent, sampler, upscaler, megapixels,
                         dtype=_c0.dtype, device=_c0.device)
     out_a = torch.zeros((1, 32, 2, int(total_a)), dtype=audio.dtype, device=audio.device)
     end_v = end_a = 0
+    _redraw_s = _join_s = 0.0
+    _oom_total = 0
     for i, (k0, f0, k1, f1) in enumerate(plan):
         a0, a1 = audio_span(f0, f1)
         cv = upscaled_cvs[i]
         upscaled_cvs[i] = None
         ca = audio[:, :, :, a0:min(a1, ta)].contiguous()
         if sigmas is None:
+            _tj = time.perf_counter()
             end_v, end_a = _join_into(out_v, out_a, end_v, end_a, cv, ca, k0, f0)
+            _join_s += time.perf_counter() - _tj
             continue
         ccond = cond_for_chunk(clean_refs(conditioning(f0, f1)) if per_chunk
                                else cond, f0, f1, cv.shape[3], cv.shape[4])
@@ -1295,22 +1309,33 @@ def upsample(model, conditioning, latent, sampler, upscaler, megapixels,
                                    f"needs {want} (steps, rows, cols)")
             ccond = add_guide(ccond, glat.to(cv.device, cv.dtype), factor)
             del glat
+        _tr = time.perf_counter()
         rv = redraw_chunk(model, ccond, sampler, sigmas, cv, ca, int(seed), factor, budget,
                           overlap_px, detail_sigma=detail_sigma,
                           noise_video=(None if film_nv is None
                                        else film_nv[:, :, k0:k1]))
+        _redraw_s += time.perf_counter() - _tr
+        _oom_total += _LAST_OOM[0]
+        _tj = time.perf_counter()
         end_v, end_a = _join_into(out_v, out_a, end_v, end_a, rv, ca, k0, f0)
+        _join_s += time.perf_counter() - _tj
         del cv, rv
     if end_v < out_v.shape[2]:
         out_v = out_v[:, :, :end_v]
     if end_a < out_a.shape[-1]:
         out_a = out_a[..., :end_a]
     assert end_v == int(tv) and end_a == int(total_a), (end_v, tv, end_a, total_a)
+    _peak_mb = torch.cuda.max_memory_allocated() / 1048576.0 if torch.cuda.is_available() else 0.0
+    _lat_mb = (out_v.numel() * out_v.element_size()
+               + out_a.numel() * out_a.element_size()) / 1048576.0
     _free(model)
     _tp.append(time.perf_counter())
     print(f"[{TAG}] timing: guide prep {_tp[1] - _tp[0]:.1f} s, 3D upscale "
-          f"{_tp[2] - _tp[1]:.1f} s, re-draw + join {_tp[3] - _tp[2]:.1f} s "
-          f"({len(plan)} chunk(s))", flush=True)
+          f"{_tp[2] - _tp[1]:.1f} s, re-draw {_redraw_s:.1f} s, join {_join_s:.1f} s "
+          f"({len(plan)} chunk(s), OOM retries {_oom_total}, "
+          f"joined latent {_lat_mb:.1f} MB"
+          + (f", peak VRAM {_peak_mb:.0f} MB" if torch.cuda.is_available() else "")
+          + ")", flush=True)
     return {"samples": nt.NestedTensor((out_v, out_a))}
 
 
