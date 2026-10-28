@@ -10,9 +10,9 @@ does the rest itself:
 2. encodes them with the video VAE, and the soundtrack with the audio VAE when
    both are wired (otherwise a silent stream: the audio is frozen in the
    re-draw either way, it only conditions it);
-3. encodes the prompt as Ref2VA conditioning with no references;
-4. runs the same upsampler the chain does -- latent upscale per chunk, one
-   light re-draw step in tiles: the original recipe, no LoRA;
+3. builds zeroed-out conditioning (no prompt, no references);
+4. runs the same Open-H3-Regenerate-2K upsampler the chain does -- 3D latent
+   upscale per chunk, then 3 Euler steps in tiles (noise="per_chunk", seed 42);
 5. decodes, trims the padding off, and hands back the frames with the
    original soundtrack untouched.
 
@@ -159,6 +159,11 @@ class HTCVideoUpsampler:
                                 "chunks (down to 68 f) then more, smaller tiles: less VRAM, "
                                 f"slower. {_tu.TOKEN_BUDGET} is the default.")}),
                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "euler"}),
+                # Not named seed: ComfyUI hangs a randomize control on any
+                # widget called seed, and the default 42 should stay fixed.
+                "redraw_seed": ("INT", {
+                    "default": REGEN2K_SEED, "min": 0, "max": 0x7FFFFFFF,
+                    "tooltip": "Noise seed for the Regen2K re-draw (default: 42)."}),
             },
             "optional": {
                 "audio": ("AUDIO", {"tooltip": "The clip's soundtrack. Passed through untouched."}),
@@ -175,11 +180,12 @@ class HTCVideoUpsampler:
     DESCRIPTION = (
         "Upsamples a finished clip with Open-H3-Regenerate-2K: H3 3D latent upscale, then "
         "3 Euler steps on [0.909375, 6/7, 2/3, 0] with zeroed-out conditioning and the "
-        "soundtrack pinned clean (seed 42). tile_tokens lets a smaller card shorten chunks "
-        "or cut more tiles.")
+        "soundtrack pinned clean (noise=per_chunk, seed 42). tile_tokens lets a smaller card "
+        "shorten chunks or cut more tiles.")
 
     def run(self, model, vae, images, upscale_model, megapixels, denoise,
-            lora, tile_tokens, sampler_name, audio=None, audio_vae=None):
+            lora, tile_tokens, sampler_name, redraw_seed=REGEN2K_SEED,
+            audio=None, audio_vae=None):
         import comfy.nested_tensor as nt
         import comfy.samplers
         import folder_paths
@@ -255,7 +261,7 @@ class HTCVideoUpsampler:
                                float(megapixels), 1.0, guide=None,
                                budget=int(tile_tokens), steps=steps, start_sigma=0.0,
                                overlap_px=overlap_px, detail_sigma=0.0,
-                               seed=REGEN2K_SEED, noise="film",
+                               seed=int(redraw_seed), noise="per_chunk",
                                sigmas=_tu.REGEN2K_SIGMAS)
         _tu._free(model)
         if _tu._device().type == "cuda":

@@ -1731,10 +1731,11 @@ class HTCUpsampleSettings:
                                "[0.7, 0.4941, 0] at 2 steps). Above 0 the re-draw starts at this "
                                "sigma and follows the model's schedule down to 0 in `steps` steps."}),
                 "noise": (["per_chunk", "film"], {
-                    "default": "film",
-                    "tooltip": "film: one noise field for the whole film, so the frames two "
-                               "chunks share get the same noise from both sides (Regen2K default). "
-                               "per_chunk: every chunk draws from its own first frame."}),
+                    "default": "per_chunk",
+                    "tooltip": "per_chunk: every chunk draws from its own first frame "
+                               "(Regen2K default). film: one noise field for the whole "
+                               "film, so the frames two chunks share get the same noise "
+                               "from both sides."}),
                 # Not named seed: ComfyUI hangs a randomize control on any
                 # widget called seed, and the seed must stay fixed.
                 "redraw_seed": ("INT", {

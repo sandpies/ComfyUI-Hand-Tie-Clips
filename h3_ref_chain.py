@@ -2909,7 +2909,8 @@ def _resolve_regen2k_lora(val):
 
 def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
                               upsample_dit=None, upsample_denoise=UPSAMPLE_DENOISE,
-                              width=1344, height=768, model=None):
+                              width=1344, height=768, model=None,
+                              regen2k_seed=REGEN2K_SEED):
     """Validate upsample settings before the hop loop."""
     if str(upsample) != "on":
         return False
@@ -2927,7 +2928,7 @@ def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
               flush=True)
     print(f"[{TAG}] upsample: regen2k LoRA {lora_name} at strength "
           f"{float(upsample_denoise):g} (sigmas "
-          f"{[round(float(s), 4) for s in _tu.REGEN2K_SIGMAS]}, seed {REGEN2K_SEED})",
+          f"{[round(float(s), 4) for s in _tu.REGEN2K_SIGMAS]}, seed {int(regen2k_seed)})",
           flush=True)
     if min(int(width), int(height)) < 768:
         print(f"[{TAG}] WARNING: upsample on {int(width)}x{int(height)} "
@@ -3094,9 +3095,9 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
             and r2k_settings.get("noise") == "per_chunk"
             and r2k_settings.get("seed") == _tu.SEED):
         r2k_settings["steps"] = len(_tu.REGEN2K_SIGMAS) - 1
-        r2k_settings["noise"] = "film"
+        r2k_settings["noise"] = "per_chunk"
         r2k_settings["seed"] = int(regen2k_seed)
-    r2k_settings.setdefault("noise", "film")
+    r2k_settings.setdefault("noise", "per_chunk")
     r2k_settings.setdefault("seed", int(regen2k_seed))
     r2k_settings.setdefault("steps", len(_tu.REGEN2K_SIGMAS) - 1)
     if r2k_settings.get("chunk_frames") == _tu.CHUNK_FRAMES:
@@ -4820,7 +4821,7 @@ class HandTieClips:
                                 "between them (any TTS or your own voice). Empty = H3 "
                                 "drafts the lines itself. Set it on the MEDIA tab."),
                 }),
-                # APPENDED 2026-10-28, LAST widget. Open-H3-Regenerate-2K LoRA selector.
+                # APPENDED 2026-10-28, LAST widgets. Open-H3-Regenerate-2K LoRA selector + seed.
                 "upsample_redraw": (_regen2k_lora_choices(), {
                     "default": REGEN2K_DEFAULT_LORA,
                     "tooltip": ("Open-H3-Regenerate-2K LoRA from models/loras for the 3-step "
@@ -4832,6 +4833,12 @@ class HandTieClips:
                     "tooltip": ("Optional model for upsample: wire UNETLoader "
                                 "(minimax_h3_fl2va_pruned_int8_convrot); HTC applies the "
                                 "selected Regen2K LoRA at upsample_denoise strength."),
+                }),
+                # Not named seed: ComfyUI hangs a randomize control on any widget
+                # called seed.
+                "regen2k_seed": ("INT", {
+                    "default": REGEN2K_SEED, "min": 0, "max": 0x7FFFFFFF,
+                    "tooltip": "Noise seed for the Regen2K upsample re-draw (default 42).",
                 }),
                 "audio_model": ("MODEL", {
                     "tooltip": ("Optional model for the audio pass. Unwired uses the base "
@@ -4958,7 +4965,7 @@ class HandTieClips:
             audio_sampler="same", audio_scheduler="same",
             audio_seed_offset=0, dialogue_lock="off", dialogue_audio_file="",
             upsample_redraw=REGEN2K_DEFAULT_LORA,
-            regen2k_model=None,
+            regen2k_model=None, regen2k_seed=REGEN2K_SEED,
             audio_model=None,
             upsample_settings=None, unique_id=None):
         # Every argument, as called: the hand_tie previs-first pass re-runs this
@@ -5841,7 +5848,8 @@ class HandTieClips:
                   "Delivery only; no hop's pin changes.", flush=True)
             regen2k_on = _validate_upsample_redraw(
                 upsample, upsample_redraw, regen2k_model,
-                upsample_dit, upsample_denoise, width, height, model=model)
+                upsample_dit, upsample_denoise, width, height, model=model,
+                regen2k_seed=regen2k_seed)
             _ud = float(upsample_denoise)
             if _ud <= 0.0:
                 print(f"[{TAG}] upsample_denoise 0: no re-draw, the enlarged "
@@ -8883,7 +8891,8 @@ class HandTieClips:
                         alloc=_alloc_master, budget=_up_budget,
                         settings=upsample_settings,
                         regen2k_lora=str(upsample_redraw),
-                        lora_strength=float(upsample_denoise))
+                        lora_strength=float(upsample_denoise),
+                        regen2k_seed=int(regen2k_seed))
                 else:
                     if (upsample_guide_factor and float(upsample_denoise) > 0.0
                             and float(upsample_lora_strength) != 0.0):
