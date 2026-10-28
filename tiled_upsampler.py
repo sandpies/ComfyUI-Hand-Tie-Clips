@@ -1136,6 +1136,36 @@ def join_chunk(done_v, done_a, v, a, k0, f0):
     return out_v, out_a
 
 
+def _join_into(out_v, out_a, end_v, end_a, v, a, k0, f0):
+    """Write chunk `(v, a)` into preallocated `(out_v, out_a)` with
+    `join_chunk`'s exact crossfade arithmetic. -> `(end_v, end_a)`."""
+    if end_v == 0 and end_a == 0:
+        nv, na = int(v.shape[2]), int(a.shape[-1])
+        out_v[:, :, :nv] = v
+        out_a[..., :na] = a
+        return nv, na
+    a0 = round(f0 * FRAME_RESCALE)
+    ov = min(end_v - k0, v.shape[2])
+    if ov > 0:
+        out_v[:, :, k0:k0 + ov] = _crossfade(out_v[:, :, k0:k0 + ov].clone(),
+                                             v[:, :, :ov], 2)
+        v = v[:, :, ov:]
+    at = k0 + max(ov, 0)
+    if v.shape[2] > 0:
+        out_v[:, :, at:at + v.shape[2]] = v
+    end_v = max(end_v, at + int(v.shape[2]))
+    ova = min(end_a - a0, a.shape[-1])
+    if ova > 0:
+        out_a[..., a0:a0 + ova] = _crossfade(out_a[..., a0:a0 + ova].clone(),
+                                             a[..., :ova], 3)
+        a = a[..., ova:]
+    at = a0 + max(ova, 0)
+    if a.shape[-1] > 0:
+        out_a[..., at:at + a.shape[-1]] = a
+    end_a = max(end_a, at + int(a.shape[-1]))
+    return end_v, end_a
+
+
 def _free(model):
     import comfy.model_management as mm
     if hasattr(model, "clone_base_uuid"):
@@ -1227,25 +1257,31 @@ def upsample(model, conditioning, latent, sampler, upscaler, megapixels,
     _tp.append(time.perf_counter())
 
     film_nv = None
+    _c0 = upscaled_cvs[0]
     if str(noise) == "film" and sigmas is not None and upscaled_cvs:
-        _c0 = upscaled_cvs[0]
         film_nv = torch.randn(
             (1, int(_c0.shape[1]), tv, int(_c0.shape[3]), int(_c0.shape[4])),
             generator=torch.Generator().manual_seed(int(seed)),
             dtype=torch.float32, device="cpu").to(dtype=_c0.dtype)
-    done_v = done_a = None
+    total_a = max((a0 + max(0, min(a1, int(ta)) - a0)
+                   for (_k0, f0, _k1, f1) in plan
+                   for a0, a1 in (audio_span(f0, f1),)), default=0)
+    out_v = torch.zeros((1, int(_c0.shape[1]), int(tv), int(_c0.shape[3]), int(_c0.shape[4])),
+                        dtype=_c0.dtype, device=_c0.device)
+    out_a = torch.zeros((1, 32, 2, int(total_a)), dtype=audio.dtype, device=audio.device)
+    end_v = end_a = 0
     for i, (k0, f0, k1, f1) in enumerate(plan):
         a0, a1 = audio_span(f0, f1)
         cv = upscaled_cvs[i]
         upscaled_cvs[i] = None
         ca = audio[:, :, :, a0:min(a1, ta)].contiguous()
         if sigmas is None:
-            done_v, done_a = join_chunk(done_v, done_a, cv, ca, k0, f0)
+            end_v, end_a = _join_into(out_v, out_a, end_v, end_a, cv, ca, k0, f0)
             continue
         ccond = cond_for_chunk(clean_refs(conditioning(f0, f1)) if per_chunk
                                else cond, f0, f1, cv.shape[3], cv.shape[4])
         if i > 0:
-            ccond = pin_chunk_start(ccond, done_v, f0, anchor)
+            ccond = pin_chunk_start(ccond, out_v[:, :, :end_v], f0, anchor)
         glat = glats[i]
         glats[i] = None
         if glat is not None:
@@ -1256,18 +1292,23 @@ def upsample(model, conditioning, latent, sampler, upscaler, megapixels,
                                    f"needs {want} (steps, rows, cols)")
             ccond = add_guide(ccond, glat.to(cv.device, cv.dtype), factor)
             del glat
-        out_v = redraw_chunk(model, ccond, sampler, sigmas, cv, ca, int(seed), factor, budget,
-                             overlap_px, detail_sigma=detail_sigma,
-                             noise_video=(None if film_nv is None
-                                          else film_nv[:, :, k0:k1]))
-        done_v, done_a = join_chunk(done_v, done_a, out_v, ca, k0, f0)
-        del cv, out_v
+        rv = redraw_chunk(model, ccond, sampler, sigmas, cv, ca, int(seed), factor, budget,
+                          overlap_px, detail_sigma=detail_sigma,
+                          noise_video=(None if film_nv is None
+                                       else film_nv[:, :, k0:k1]))
+        end_v, end_a = _join_into(out_v, out_a, end_v, end_a, rv, ca, k0, f0)
+        del cv, rv
+    if end_v < out_v.shape[2]:
+        out_v = out_v[:, :, :end_v]
+    if end_a < out_a.shape[-1]:
+        out_a = out_a[..., :end_a]
+    assert end_v == int(tv) and end_a == int(total_a), (end_v, tv, end_a, total_a)
     _free(model)
     _tp.append(time.perf_counter())
     print(f"[{TAG}] timing: guide prep {_tp[1] - _tp[0]:.1f} s, 3D upscale "
           f"{_tp[2] - _tp[1]:.1f} s, re-draw + join {_tp[3] - _tp[2]:.1f} s "
           f"({len(plan)} chunk(s))", flush=True)
-    return {"samples": nt.NestedTensor((done_v, done_a))}
+    return {"samples": nt.NestedTensor((out_v, out_a))}
 
 
 # --- inside the chain -------------------------------------------------------
