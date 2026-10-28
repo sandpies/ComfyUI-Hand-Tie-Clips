@@ -2910,10 +2910,12 @@ def _resolve_regen2k_lora(val):
 def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
                               upsample_dit=None, upsample_denoise=UPSAMPLE_DENOISE,
                               width=1344, height=768, model=None,
-                              regen2k_seed=REGEN2K_SEED):
+                              regen2k_seed=REGEN2K_SEED,
+                              regen2k_preset="realistic"):
     """Validate upsample settings before the hop loop."""
     if str(upsample) != "on":
         return False
+    r2k_sig = _tu.regen2k_sigmas_for_preset(regen2k_preset)
     base_m = (regen2k_model if regen2k_model is not None
               else upsample_dit if upsample_dit is not None
               else model)
@@ -2927,8 +2929,8 @@ def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
         print(f"[{TAG}] upsample: regen2k_model wins over the wired upsample_dit",
               flush=True)
     print(f"[{TAG}] upsample: regen2k LoRA {lora_name} at strength "
-          f"{float(upsample_denoise):g} (sigmas "
-          f"{[round(float(s), 4) for s in _tu.REGEN2K_SIGMAS]}, seed {int(regen2k_seed)})",
+          f"{float(upsample_denoise):g} (preset={str(regen2k_preset)}, sigmas "
+          f"{[round(float(s), 4) for s in r2k_sig]}, seed {int(regen2k_seed)})",
           flush=True)
     if min(int(width), int(height)) < 768:
         print(f"[{TAG}] WARNING: upsample on {int(width)}x{int(height)} "
@@ -3070,8 +3072,11 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
                           alloc=None, budget=_tu.TOKEN_BUDGET, settings=None,
                           regen2k_lora=REGEN2K_DEFAULT_LORA,
                           lora_strength=UPSAMPLE_DENOISE,
-                          regen2k_seed=REGEN2K_SEED):
+                          regen2k_seed=REGEN2K_SEED,
+                          regen2k_preset="realistic"):
     """Run the delivery-only Open-H3-Regenerate-2K stage over stitched pre-VAE hop latents."""
+    preset_sigmas = _tu.regen2k_sigmas_for_preset(regen2k_preset)
+    preset_name = str(regen2k_preset or "realistic").strip().lower()
     snap = _snapshot_model_state(regen2k_model)
     work_model = (regen2k_model.clone() if hasattr(regen2k_model, "clone")
                   else regen2k_model)
@@ -3116,7 +3121,7 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
     elif int(r2k_settings["steps"]) == 2:
         r2k_sigmas = _tu.REGEN2K_SIGMAS_2STEP
     else:
-        r2k_sigmas = _tu.REGEN2K_SIGMAS
+        r2k_sigmas = preset_sigmas
     n_chunks = 0
     for seg in _tu.segments(r2k_hops):
         sv, _sa = _tu.stitch(seg)
@@ -3136,7 +3141,7 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
     sig_list = ([round(float(s), 4) for s in r2k_sigmas]
                 if r2k_sigmas is not None else "schedule")
     r2k_line = (f"upsample: regen2k on {m_label} ({n_patches} patched targets, "
-                f"lora={lora_name}@{strength:g}), "
+                f"lora={lora_name}@{strength:g}, preset={preset_name}), "
                 f"seed={int(r2k_settings['seed'])}, "
                 f"sigmas {sig_list}, chunks {n_chunks}")
     print(f"[{TAG}] {r2k_line}", flush=True)
@@ -4840,6 +4845,13 @@ class HandTieClips:
                     "default": REGEN2K_SEED, "min": 0, "max": 0x7FFFFFFF,
                     "tooltip": "Noise seed for the Regen2K upsample re-draw (default 42).",
                 }),
+                "regen2k_preset": (list(_tu.REGEN2K_PRESETS), {
+                    "default": "realistic",
+                    "tooltip": ("Regen2K sigma schedule preset: 'realistic' runs "
+                                "[0.909375, 6/7, 2/3, 0] (3 Euler steps); 'stylized' runs "
+                                "[0.6, 0.4, 0.2, 0.0] (3 Euler steps, lighter re-draw for "
+                                "2.5D/animated content to reduce new detail and character drift)."),
+                }),
                 "audio_model": ("MODEL", {
                     "tooltip": ("Optional model for the audio pass. Unwired uses the base "
                                 "model (the refine model when hop_refine=full), never the "
@@ -4966,6 +4978,7 @@ class HandTieClips:
             audio_seed_offset=0, dialogue_lock="off", dialogue_audio_file="",
             upsample_redraw=REGEN2K_DEFAULT_LORA,
             regen2k_model=None, regen2k_seed=REGEN2K_SEED,
+            regen2k_preset="realistic",
             audio_model=None,
             upsample_settings=None, unique_id=None):
         # Every argument, as called: the hand_tie previs-first pass re-runs this
@@ -5849,7 +5862,7 @@ class HandTieClips:
             regen2k_on = _validate_upsample_redraw(
                 upsample, upsample_redraw, regen2k_model,
                 upsample_dit, upsample_denoise, width, height, model=model,
-                regen2k_seed=regen2k_seed)
+                regen2k_seed=regen2k_seed, regen2k_preset=regen2k_preset)
             _ud = float(upsample_denoise)
             if _ud <= 0.0:
                 print(f"[{TAG}] upsample_denoise 0: no re-draw, the enlarged "
@@ -8892,7 +8905,8 @@ class HandTieClips:
                         settings=upsample_settings,
                         regen2k_lora=str(upsample_redraw),
                         lora_strength=float(upsample_denoise),
-                        regen2k_seed=int(regen2k_seed))
+                        regen2k_seed=int(regen2k_seed),
+                        regen2k_preset=str(regen2k_preset))
                 else:
                     if (upsample_guide_factor and float(upsample_denoise) > 0.0
                             and float(upsample_lora_strength) != 0.0):
