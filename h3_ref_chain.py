@@ -2979,22 +2979,40 @@ def _verify_model_unmutated(m, snap):
             f"{len(snap['patches_keys'])} -> {len(cur['patches_keys'])}")
 
 
-def _prepare_regen2k_hops(upsample_hops, regen2k_cond="text_only"):
-    """Prepare hop dicts for Regen2K: strip minimax_refs when regen2k_cond='text_only'."""
-    mode = str(regen2k_cond or "text_only")
-    if mode not in ("text_only", "hop"):
-        raise RuntimeError(
-            f"{TAG}: unknown regen2k_cond {mode!r} (expected text_only or hop).")
+REGEN2K_TEXT_DIM = 5120
+
+
+def _zero_out_cond(cond=None):
+    """Zeroed-out conditioning (equivalent to ConditioningZeroOut on an empty text
+    encode), with no prompt and no minimax_refs."""
+    if cond:
+        out = []
+        for emb, d in cond:
+            d2 = dict(d)
+            d2.pop("minimax_refs", None)
+            for k in ("pooled_output", "conditioning_lyrics",
+                      "conditioning_scale", "direct_context"):
+                v = d2.get(k, None)
+                if isinstance(v, torch.Tensor):
+                    d2[k] = torch.zeros_like(v)
+            if "minimax_token_tags" in d2:
+                d2["minimax_token_tags"] = torch.ones(1, dtype=torch.long)
+            z_emb = (torch.zeros_like(emb[:, :1, :])
+                     if (isinstance(emb, torch.Tensor) and emb.ndim == 3 and emb.shape[1] >= 1)
+                     else torch.zeros((1, 1, REGEN2K_TEXT_DIM), dtype=torch.float32))
+            out.append([z_emb, d2])
+        return out
+    return [[torch.zeros((1, 1, REGEN2K_TEXT_DIM), dtype=torch.float32),
+             {"pooled_output": None,
+              "minimax_token_tags": torch.ones(1, dtype=torch.long)}]]
+
+
+def _prepare_regen2k_hops(upsample_hops):
+    """Prepare hop dicts for Regen2K: always zeroed-out conditioning with no refs."""
     out = []
     for h in upsample_hops:
         hc = dict(h)
-        if mode == "text_only" and hc.get("cond"):
-            stripped = []
-            for emb, d in hc["cond"]:
-                d2 = dict(d)
-                d2.pop("minimax_refs", None)
-                stripped.append([emb, d2])
-            hc["cond"] = stripped
+        hc["cond"] = _zero_out_cond(hc.get("cond"))
         out.append(hc)
     return out
 
@@ -3034,12 +3052,12 @@ def _log_upsample_resources(total_frames, uw, uh, regen2k=False):
 def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels,
                           master=None, upscaler=_tu.UPSCALER_FILE, decode=None,
                           alloc=None, budget=_tu.TOKEN_BUDGET, settings=None,
-                          regen2k_cond="text_only", regen2k_seed=42):
+                          regen2k_seed=42):
     """Run the delivery-only Open-H3-Regenerate-2K stage over stitched pre-VAE hop latents."""
     snap = _snapshot_model_state(regen2k_model)
     work_model = (regen2k_model.clone() if hasattr(regen2k_model, "clone")
                   else regen2k_model)
-    r2k_hops = _prepare_regen2k_hops(upsample_hops, regen2k_cond)
+    r2k_hops = _prepare_regen2k_hops(upsample_hops)
     r2k_settings = dict(settings) if settings is not None else {}
     r2k_settings.setdefault("noise", "film")
     r2k_settings.setdefault("seed", int(regen2k_seed))
@@ -3068,7 +3086,7 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
     n_patches = len(getattr(regen2k_model, "patches", None) or {})
     sig_list = [round(float(s), 4) for s in _tu.REGEN2K_SIGMAS]
     r2k_line = (f"upsample: regen2k on {m_label} ({n_patches} patched targets), "
-                f"cond={regen2k_cond}, seed={int(r2k_settings['seed'])}, "
+                f"seed={int(r2k_settings['seed'])}, "
                 f"sigmas {sig_list}, chunks {n_chunks}")
     print(f"[{TAG}] {r2k_line}", flush=True)
     upsample_settings = r2k_settings
@@ -4758,14 +4776,9 @@ class HandTieClips:
                     "tooltip": ("recipe: the shipped MMH3 1-step light re-draw at "
                                 "upsample_denoise 0.2. regen2k: Open-H3-Regenerate-2K "
                                 "3-step Euler re-draw on [0.909375, 6/7, 2/3, 0] using "
-                                "regen2k_model (delivery only; requires upsample=on and "
+                                "regen2k_model with zeroed-out conditioning and no "
+                                "references (delivery only; requires upsample=on and "
                                 "regen2k_model wired)."),
-                }),
-                "regen2k_cond": (["text_only", "hop"], {
-                    "default": "text_only",
-                    "tooltip": ("Conditioning for regen2k re-draw. text_only strips "
-                                "minimax_refs (matching upstream FL2VA inference); "
-                                "hop keeps each hop's full conditioning."),
                 }),
                 "regen2k_model": ("MODEL", {
                     "tooltip": ("Model for upsample_redraw=regen2k: wire UNETLoader "
@@ -4903,7 +4916,7 @@ class HandTieClips:
             audio_refine="off", audio_denoise=0.50, audio_steps=5,
             audio_sampler="same", audio_scheduler="same",
             audio_seed_offset=0, dialogue_lock="off", dialogue_audio_file="",
-            upsample_redraw="recipe", regen2k_cond="text_only",
+            upsample_redraw="recipe",
             regen2k_model=None, regen2k_seed=42,
             audio_model=None,
             upsample_settings=None, unique_id=None):
@@ -7568,9 +7581,9 @@ class HandTieClips:
                 if upsample_on:
                     # A cached hop kept its latent but not its conditioning;
                     # the upsampler's re-draw wants the one that made it (unless
-                    # a guide LoRA or denoise=0 is active, which never reads up_cond).
+                    # a guide LoRA, denoise=0, or regen2k is active, which never reads up_cond).
                     up_latent = cached_latent
-                    if float(upsample_denoise) > 0.0 and not upsample_guide_factor:
+                    if float(upsample_denoise) > 0.0 and not upsample_guide_factor and not regen2k_on:
                         up_cond = _cond_cpu(_hop_ref2va()[0], keep_refs=True)
                         _offload_text_encoder(clip, model)
                     else:
@@ -8351,7 +8364,7 @@ class HandTieClips:
                     up_latent = (this_sampled if refined_for_pin is None
                                  else _latent_cpu(sampled))
                     up_cond = (_cond_cpu(base_cond, keep_refs=True)
-                               if (float(upsample_denoise) > 0.0 and not upsample_guide_factor)
+                               if (float(upsample_denoise) > 0.0 and not upsample_guide_factor and not regen2k_on)
                                else None)
 
                 # base_cond is deleted with cond because it is usually the
@@ -8829,7 +8842,6 @@ class HandTieClips:
                         upscaler=str(upsample_model),
                         alloc=_alloc_master, budget=_up_budget,
                         settings=upsample_settings,
-                        regen2k_cond=str(regen2k_cond),
                         regen2k_seed=int(regen2k_seed))
                 else:
                     if (upsample_guide_factor and float(upsample_denoise) > 0.0
