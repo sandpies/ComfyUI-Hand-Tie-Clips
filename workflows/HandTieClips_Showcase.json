@@ -644,7 +644,7 @@
         1.0,
         "off",
         2.0,
-        0.2,
+        0.25,
         "",
         "",
         "minimax_h3_latent_upscaler_3d_bf16.safetensors",

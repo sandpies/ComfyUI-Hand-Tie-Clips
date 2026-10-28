@@ -97,7 +97,7 @@ const GROUPS = [
     ["upsample", ["upsample", "upsample_model", "upsample_megapixels",
                   "upsample_denoise", "upsample_lora", "upsample_lora_strength",
                   "upsample_tile_tokens",
-                  "upsample_redraw", "regen2k_seed"]],
+                  "upsample_redraw"]],
     // Wrap every hop's finished prompt: LoRA trigger words first, a trailing
     // camera/body clause last, outside everything the chain adds.
     ["prompt wrap", ["prompt_prefix", "prompt_suffix"]],
@@ -192,7 +192,7 @@ function commitWidget(node, w, value, onChange) {
 }
 
 // Display names that differ from the widget name with underscores spaced.
-const LABELS = { ht_seam_fix: "seam fix" };
+const LABELS = { ht_seam_fix: "seam fix", upsample_redraw: "regen2k lora" };
 
 // Redundant v1 refine plumbing dials hidden in the RUN panel under Universal
 // Refine v2 (their native widgets remain owned/hidden and keep their optimal
@@ -224,9 +224,14 @@ const REFINE_V2_HIDDEN = new Set([
 // still validate cleanly.
 const HIDDEN_COMBO_OPTIONS = {
     pin_mech: new Set(["addguide", "hand_tie_mc"]),
+    upsample_redraw: new Set(["regen2k", "recipe"]),
 };
 const COMBO_UI_ALIAS = {
     pin_mech: { hand_tie_mc: "hand_tie", addguide: "auto" },
+    upsample_redraw: {
+        regen2k: "open_h3_regen2k_refiner_r256pp_bf16.safetensors",
+        recipe: "open_h3_regen2k_refiner_r256pp_bf16.safetensors",
+    },
 };
 
 export function labelFor(w) {

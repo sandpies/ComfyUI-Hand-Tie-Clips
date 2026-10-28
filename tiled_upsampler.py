@@ -71,7 +71,9 @@ class _DefaultInt(int):
 
 _DEFAULT_CHUNK_FRAMES = _DefaultInt(CHUNK_FRAMES)
 REGEN2K_MIN_CHUNK_FRAMES = 68
+REGEN2K_SEED = 42
 REGEN2K_SIGMAS = torch.tensor([0.909375, 6.0 / 7.0, 2.0 / 3.0, 0.0], dtype=torch.float32)
+REGEN2K_SIGMAS_2STEP = torch.tensor([0.7, 0.494118, 0.0], dtype=torch.float32)
 
 # --- the guided re-draw (not part of the recipe) ----------------------------
 #
@@ -1719,29 +1721,25 @@ class HTCUpsampleSettings:
         return {
             "required": {
                 "steps": ("INT", {
-                    "default": d["steps"], "min": 1, "max": 8,
-                    "tooltip": "Re-draw steps per chunk. 1 = the original recipe (one "
-                               "jump from sigma 0.75 at upsample_denoise 0.2). Each step "
-                               "is one more DiT pass over the chunk."}),
+                    "default": 3, "min": 1, "max": 8,
+                    "tooltip": "Re-draw steps per chunk. 3 = the Regen2K 3-step schedule "
+                               "[0.9094, 6/7, 2/3, 0]; 2 = the 2-step schedule [0.7, 0.4941, 0]; "
+                               "1 = 1-step schedule."}),
                 "start_sigma": ("FLOAT", {
                     "default": d["start_sigma"], "min": 0.0, "max": 1.0, "step": 0.01,
-                    "tooltip": "0 = the schedule from upsample_denoise (0.2 at 1 step "
-                               "gives 0.75 -> 0, the recipe). Above 0 the re-draw starts at this "
-                               "sigma and follows the model's schedule down to 0 in "
-                               "`steps` steps: 0.57 at 2 steps is 3.0.0's schedule, "
-                               "0.57 at 3 steps ends 0.29 -> 0, 0.45 at 2 ends 0.28 -> 0. "
-                               "upsample_denoise must still be above 0."}),
+                    "tooltip": "0 = the Regen2K schedule ([0.9094, 6/7, 2/3, 0] at 3 steps, or "
+                               "[0.7, 0.4941, 0] at 2 steps). Above 0 the re-draw starts at this "
+                               "sigma and follows the model's schedule down to 0 in `steps` steps."}),
                 "noise": (["per_chunk", "film"], {
-                    "default": d["noise"],
-                    "tooltip": "per_chunk: every chunk draws the same noise from its own "
-                               "first frame (the original recipe). film: one noise field "
-                               "for the whole film, so the frames two chunks share get "
-                               "the same noise from both sides."}),
+                    "default": "film",
+                    "tooltip": "film: one noise field for the whole film, so the frames two "
+                               "chunks share get the same noise from both sides (Regen2K default). "
+                               "per_chunk: every chunk draws from its own first frame."}),
                 # Not named seed: ComfyUI hangs a randomize control on any
-                # widget called seed, and the recipe's 444 must stay fixed.
+                # widget called seed, and the seed must stay fixed.
                 "redraw_seed": ("INT", {
-                    "default": d["seed"], "min": 0, "max": 0x7FFFFFFF,
-                    "tooltip": "Noise seed of the re-draw (the recipe uses 444). Fixed: "
+                    "default": REGEN2K_SEED, "min": 0, "max": 0x7FFFFFFF,
+                    "tooltip": "Noise seed of the re-draw (Regen2K default: 42). Fixed: "
                                "it does not change between runs."}),
                 "chunk_frames": ("INT", {
                     "default": int(d["chunk_frames"]), "min": 34, "max": 1020, "step": 17,
@@ -1780,7 +1778,7 @@ class HTCUpsampleSettings:
             },
             "optional": {
                 "sampler": ("SAMPLER", {
-                    "tooltip": "Sampler for the re-draw. Unwired uses the chain's. "
+                    "tooltip": "Sampler for the re-draw. Unwired uses euler for Regen2K. "
                                "Multistep samplers only keep their history when a chunk "
                                "is one tile."}),
             },
@@ -1795,7 +1793,9 @@ class HTCUpsampleSettings:
 
     def build(self, sampler=None, **kw):
         out = dict(kw)
-        out["seed"] = out.pop("redraw_seed", SEED)
+        out["seed"] = out.pop("redraw_seed", REGEN2K_SEED)
+        if out.get("chunk_frames") == CHUNK_FRAMES:
+            out["chunk_frames"] = _DEFAULT_CHUNK_FRAMES
         out["sampler"] = sampler
         resolve_settings(out)
         return (out,)
