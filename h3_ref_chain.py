@@ -2883,9 +2883,71 @@ _BOOST_LOADERS = {}
 # repaints skin texture, 0.075 smeared mid-distance faces, 0.1 textured least
 # while still sharp. The side node keeps the recipe's 0.2.
 UPSAMPLE_DENOISE = 0.2   # the original recipe (sigma 0.75, one step)
+REGEN2K_DEFAULT_LORA = "open_h3_regenerate_2k_r256pp_bf16.safetensors"
+REGEN2K_REFERENCE_LORA = "open_h3_regenerate_2k_bf16.safetensors"
 
 # hand_tie: render and gate every section's previs before the first hop (see run()).
 _HT_PREVIS_FIRST = True
+
+
+def _check_regen2k_no_sharp(regen2k_model):
+    """Refuse a Regen2K model with Sharp curve patches or a widened adaln_t_table."""
+    if regen2k_model is None:
+        return
+    obj_patches = getattr(regen2k_model, "object_patches", None) or {}
+    for k, v in obj_patches.items():
+        if "adaln_proj" in k or "time_embedder" in k:
+            raise RuntimeError(
+                f"{TAG}: regen2k_model has Sharp curve patches ({k}); set "
+                "sharp_strength=0 on OpenH3Regen2KLoader (published curve_B is a no-op).")
+        if k == "diffusion_model.adaln_t_table" and hasattr(v, "shape") and int(v.shape[1]) != 8:
+            raise RuntimeError(
+                f"{TAG}: regen2k_model has widened adaln_t_table {tuple(v.shape)}; "
+                "set sharp_strength=0 on OpenH3Regen2KLoader.")
+    dm = None
+    if hasattr(regen2k_model, "get_model_object"):
+        try:
+            dm = regen2k_model.get_model_object("diffusion_model")
+        except Exception:
+            dm = None
+    if dm is None:
+        dm = getattr(getattr(regen2k_model, "model", None), "diffusion_model", None)
+    tab = getattr(dm, "adaln_t_table", None)
+    if tab is not None and hasattr(tab, "shape") and int(tab.shape[1]) != 8:
+        raise RuntimeError(
+            f"{TAG}: regen2k_model adaln_t_table has shape {tuple(tab.shape)}, "
+            "expected (1025, 8); set sharp_strength=0 on OpenH3Regen2KLoader.")
+
+
+def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
+                              upsample_dit=None, upsample_denoise=UPSAMPLE_DENOISE,
+                              width=1344, height=768):
+    """Validate upsample_redraw before the hop loop."""
+    mode = str(upsample_redraw or "recipe")
+    if mode not in ("recipe", "regen2k"):
+        raise RuntimeError(
+            f"{TAG}: unknown upsample_redraw {mode!r} (expected recipe or regen2k).")
+    if mode != "regen2k":
+        return False
+    if str(upsample) != "on":
+        raise RuntimeError(
+            f"{TAG}: upsample_redraw=regen2k requires upsample=on.")
+    if regen2k_model is None:
+        raise RuntimeError(
+            f"{TAG}: upsample_redraw=regen2k requires regen2k_model wired "
+            f"(UNETLoader -> OpenH3Regen2KLoader with {REGEN2K_DEFAULT_LORA}, "
+            "lora_strength 0.25, sharp_strength 0).")
+    _check_regen2k_no_sharp(regen2k_model)
+    if upsample_dit is not None:
+        print(f"[{TAG}] upsample: regen2k_model wins over the wired upsample_dit",
+              flush=True)
+    print(f"[{TAG}] upsample: upsample_denoise ({float(upsample_denoise):g}) is "
+          "ignored in regen2k mode (using REGEN2K_SIGMAS "
+          f"{[round(float(s), 4) for s in _tu.REGEN2K_SIGMAS]})", flush=True)
+    if min(int(width), int(height)) < 768:
+        print(f"[{TAG}] WARNING: upsample_redraw=regen2k on {int(width)}x{int(height)} "
+              "(< 768p); Regen2K was trained on 768p drafts", flush=True)
+    return True
 
 
 def _boost_lora_choices():
@@ -5572,7 +5634,11 @@ class HandTieClips:
         # Upsample: the tiled upsampler's recipe once over the finished film,
         # after the last hop. Refused NOW if the upscaler file is missing,
         # rather than after every hop has rendered.
+        if not dry and not previs_only and str(upsample_redraw) == "regen2k" and str(upsample) != "on":
+            _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
+                                      upsample_dit, upsample_denoise, width, height)
         upsample_on = str(upsample) == "on" and not dry and not previs_only
+        regen2k_on = False
         upsample_hops = []
         upsample_guide_factor = 0
         if upsample_on:
@@ -5589,8 +5655,11 @@ class HandTieClips:
                   f"{int(width)}x{int(height)} -> {_uw}x{_uh} "
                   f"({float(upsample_megapixels):g} MP) with {upsample_model}. "
                   "Delivery only; no hop's pin changes.", flush=True)
+            regen2k_on = _validate_upsample_redraw(
+                upsample, upsample_redraw, regen2k_model,
+                upsample_dit, upsample_denoise, width, height)
             _ud = float(upsample_denoise)
-            if _ud <= 0.0:
+            if _ud <= 0.0 and not regen2k_on:
                 print(f"[{TAG}] upsample_denoise 0: no re-draw, the enlarged "
                       "latent is decoded as is", flush=True)
                 if upsample_dit is not None:
