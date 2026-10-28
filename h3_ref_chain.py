@@ -2883,40 +2883,11 @@ _BOOST_LOADERS = {}
 # repaints skin texture, 0.075 smeared mid-distance faces, 0.1 textured least
 # while still sharp. The side node keeps the recipe's 0.2.
 UPSAMPLE_DENOISE = 0.2   # the original recipe (sigma 0.75, one step)
-REGEN2K_DEFAULT_LORA = "open_h3_regenerate_2k_r256pp_bf16.safetensors"
+REGEN2K_DEFAULT_LORA = "open_h3_regen2k_refiner_r256pp_bf16.safetensors"
 REGEN2K_REFERENCE_LORA = "open_h3_regenerate_2k_bf16.safetensors"
 
 # hand_tie: render and gate every section's previs before the first hop (see run()).
 _HT_PREVIS_FIRST = True
-
-
-def _check_regen2k_no_sharp(regen2k_model):
-    """Refuse a Regen2K model with Sharp curve patches or a widened adaln_t_table."""
-    if regen2k_model is None:
-        return
-    obj_patches = getattr(regen2k_model, "object_patches", None) or {}
-    for k, v in obj_patches.items():
-        if "adaln_proj" in k or "time_embedder" in k:
-            raise RuntimeError(
-                f"{TAG}: regen2k_model has Sharp curve patches ({k}); set "
-                "sharp_strength=0 on OpenH3Regen2KLoader (published curve_B is a no-op).")
-        if k == "diffusion_model.adaln_t_table" and hasattr(v, "shape") and int(v.shape[1]) != 8:
-            raise RuntimeError(
-                f"{TAG}: regen2k_model has widened adaln_t_table {tuple(v.shape)}; "
-                "set sharp_strength=0 on OpenH3Regen2KLoader.")
-    dm = None
-    if hasattr(regen2k_model, "get_model_object"):
-        try:
-            dm = regen2k_model.get_model_object("diffusion_model")
-        except Exception:
-            dm = None
-    if dm is None:
-        dm = getattr(getattr(regen2k_model, "model", None), "diffusion_model", None)
-    tab = getattr(dm, "adaln_t_table", None)
-    if tab is not None and hasattr(tab, "shape") and int(tab.shape[1]) != 8:
-        raise RuntimeError(
-            f"{TAG}: regen2k_model adaln_t_table has shape {tuple(tab.shape)}, "
-            "expected (1025, 8); set sharp_strength=0 on OpenH3Regen2KLoader.")
 
 
 def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
@@ -2936,8 +2907,7 @@ def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
         raise RuntimeError(
             f"{TAG}: upsample_redraw=regen2k requires regen2k_model wired "
             f"(UNETLoader -> OpenH3Regen2KLoader with {REGEN2K_DEFAULT_LORA}, "
-            "lora_strength 0.25, sharp_strength 0).")
-    _check_regen2k_no_sharp(regen2k_model)
+            "lora_strength 0.25).")
     if upsample_dit is not None:
         print(f"[{TAG}] upsample: regen2k_model wins over the wired upsample_dit",
               flush=True)
@@ -3066,7 +3036,6 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
                           alloc=None, budget=_tu.TOKEN_BUDGET, settings=None,
                           regen2k_cond="text_only", regen2k_seed=42):
     """Run the delivery-only Open-H3-Regenerate-2K stage over stitched pre-VAE hop latents."""
-    _check_regen2k_no_sharp(regen2k_model)
     snap = _snapshot_model_state(regen2k_model)
     work_model = (regen2k_model.clone() if hasattr(regen2k_model, "clone")
                   else regen2k_model)
@@ -4801,8 +4770,8 @@ class HandTieClips:
                 "regen2k_model": ("MODEL", {
                     "tooltip": ("Model for upsample_redraw=regen2k: wire UNETLoader "
                                 "(minimax_h3_fl2va_pruned_int8_convrot) -> "
-                                "OpenH3Regen2KLoader (open_h3_regenerate_2k_r256pp_bf16, "
-                                "lora_strength 0.25, sharp_strength 0)."),
+                                "OpenH3Regen2KLoader (open_h3_regen2k_refiner_r256pp_bf16, "
+                                "lora_strength 0.25)."),
                 }),
                 # Not named seed: ComfyUI hangs a randomize control on any widget
                 # called seed.
