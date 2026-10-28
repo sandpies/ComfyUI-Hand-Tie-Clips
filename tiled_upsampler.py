@@ -1057,10 +1057,13 @@ def redraw_chunk(model, cond, sampler, sigmas, video, audio, seed, factor=1,
                 x = ot.to(device=dev, dtype=dt)
                 del ot, xt
             else:
+                wsum = torch.zeros((1, 1, 1, h, w), device=dev, dtype=torch.float32)
+                for r0, c0, rows, cols, _tcond, m in prepared:
+                    wsum[:, :, :, r0:r0 + rows, c0:c0 + cols] += m[:, :, 0]
+                wsum = wsum.clamp(min=1e-8)
                 for step in range(len(sigmas) - 1):
                     two = sigmas[step:step + 2]
                     acc = torch.zeros_like(x, dtype=torch.float32)
-                    wsum = torch.zeros((1, 1, 1, h, w), device=dev, dtype=torch.float32)
                     for r0, c0, rows, cols, tcond, m in prepared:
                         xt = x[:, :, :, r0:r0 + rows, c0:c0 + cols].contiguous()
                         if step == 0:
@@ -1071,10 +1074,10 @@ def redraw_chunk(model, cond, sampler, sigmas, video, audio, seed, factor=1,
                         _calls += 1
                         acc[:, :, :, r0:r0 + rows, c0:c0 + cols] += \
                             ot.to(device=dev, dtype=torch.float32) * m
-                        wsum[:, :, :, r0:r0 + rows, c0:c0 + cols] += m[:, :, 0]
                         del ot, xt
-                    x = (acc / wsum.clamp(min=1e-8)).to(dtype=dt)
-                    del acc, wsum
+                    x = (acc / wsum).to(dtype=dt)
+                    del acc
+                del wsum
             _dt = time.perf_counter() - _t0
             print(f"[{TAG}] chunk re-draw: {len(sigmas) - 1} step(s) x {len(prepared)} tile(s) "
                   f"in {_calls} sampler call(s), {_dt:.1f} s ({_dt / max(1, _calls):.2f} s per call, "
