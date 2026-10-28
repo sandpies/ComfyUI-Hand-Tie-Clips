@@ -64,6 +64,15 @@ _FLUSH_S = [0.0]           # seconds spent in sample_tile's cache flush (log onl
 _LAST_OOM = [0]            # OOM retries in the most recent redraw_chunk call (log only)
 _LAST_BUDGET = [TOKEN_BUDGET]  # budget redraw_chunk / upsample finished at
 
+
+class _DefaultInt(int):
+    """Sentinel int equal to CHUNK_FRAMES that marks an un-overridden default."""
+
+
+_DEFAULT_CHUNK_FRAMES = _DefaultInt(CHUNK_FRAMES)
+REGEN2K_MIN_CHUNK_FRAMES = 68
+REGEN2K_SIGMAS = torch.tensor([0.909375, 6.0 / 7.0, 2.0 / 3.0, 0.0], dtype=torch.float32)
+
 # --- the guided re-draw (not part of the recipe) ----------------------------
 #
 # With an h3upscale LoRA on the re-draw model, the same one step also gets the
@@ -1186,12 +1195,41 @@ def _free(model):
         mm.soft_empty_cache()
 
 
+def _regen2k_chunk_frames(w_px, h_px, budget, chunk_frames=_DEFAULT_CHUNK_FRAMES,
+                          overlap_px=TILE_OVERLAP_PX, explicit=None):
+    """Pick chunk length from `budget` for regen2k mode (R0).
+
+    If `chunk_frames` was not explicitly set on `HTCUpsampleSettings` and a
+    102 f full-frame chunk exceeds `budget`, shorten `chunk_frames` in steps
+    of 17 down to a floor of 68 f (20 steps) before allowing spatial tiles.
+    """
+    if explicit is None:
+        explicit = not isinstance(chunk_frames, _DefaultInt)
+    cf = int(chunk_frames)
+    if not explicit and cf > REGEN2K_MIN_CHUNK_FRAMES:
+        while cf > REGEN2K_MIN_CHUNK_FRAMES:
+            steps = max(1, (cf // 17) * 5)
+            if seq_len(w_px, h_px, steps) <= int(budget):
+                break
+            cf = max(REGEN2K_MIN_CHUNK_FRAMES, cf - 17)
+    steps = max(1, (cf // 17) * 5)
+    grid = solve_grid(w_px, h_px, steps, overlap_px=snap_overlap(overlap_px),
+                      budget=int(budget))
+    if grid is not None and grid[0] == 1 and grid[1] == 1:
+        print(f"[{TAG}] regen2k: budget {int(budget)} -> chunk {cf} f full-frame",
+              flush=True)
+    elif grid is not None:
+        print(f"[{TAG}] regen2k: budget {int(budget)} -> chunk {cf} f "
+              f"-> {grid[0]}x{grid[1]} tiles", flush=True)
+    return cf, grid
+
+
 def upsample(model, conditioning, latent, sampler, upscaler, megapixels,
              denoise=DENOISE, guide=None, budget=TOKEN_BUDGET, steps=STEPS,
              start_sigma=0.0, overlap_px=TILE_OVERLAP_PX, detail_sigma=0.0,
-             chunk_frames=CHUNK_FRAMES, chunk_overlap=CHUNK_OVERLAP,
+             chunk_frames=_DEFAULT_CHUNK_FRAMES, chunk_overlap=CHUNK_OVERLAP,
              anchor=ANCHOR_AUG, seed=SEED, noise="per_chunk",
-             attn_chunks=4, ffn_chunks=2):
+             attn_chunks=4, ffn_chunks=2, sigmas=None):
     """The whole recipe on an H3 AV latent. -> the upsampled AV latent dict.
 
     `conditioning` is one conditioning for the whole clip, or a callable
@@ -1230,7 +1268,12 @@ def upsample(model, conditioning, latent, sampler, upscaler, megapixels,
         w_px, h_px = target_size(video.shape[4] * SPATIAL, video.shape[3] * SPATIAL,
                                  megapixels)
     model = _apply_low_vram_patches(model, attn_chunks, ffn_chunks)
-    sigmas = recipe_sigmas(model, denoise, steps, start_sigma)
+    if sigmas is not None:
+        sigmas = (sigmas.detach().cpu().float() if isinstance(sigmas, torch.Tensor)
+                  else torch.tensor(list(sigmas), dtype=torch.float32))
+        chunk_frames, _ = _regen2k_chunk_frames(w_px, h_px, budget, chunk_frames, overlap_px)
+    else:
+        sigmas = recipe_sigmas(model, denoise, steps, start_sigma)
     plan = chunks(tv, int(chunk_frames), int(chunk_overlap))
     print(f"[{TAG}] {video.shape[4] * SPATIAL}x{video.shape[3] * SPATIAL} -> "
           f"{w_px}x{h_px} ({w_px * h_px / 1048576.0:.2f} MP), {len(plan)} "
@@ -1472,7 +1515,8 @@ def match_levels(frames, ref, chunk=16, in_place=False):
 
 def upsample_chain(model, sampler, vae, hops, megapixels, master=None,
                    upscaler=UPSCALER_FILE, decode=None, denoise=DENOISE,
-                   alloc=None, guide=None, budget=TOKEN_BUDGET, settings=None):
+                   alloc=None, guide=None, budget=TOKEN_BUDGET, settings=None,
+                   sigmas=None):
     """The recipe over a finished chain. -> (IMAGE [N,H,W,3], note).
 
     `hops` are per-hop dicts: video/audio (the hop's delivered sampler
@@ -1508,18 +1552,28 @@ def upsample_chain(model, sampler, vae, hops, megapixels, master=None,
     want = sum(int(h["frames"]) for h in hops)
     frames, at, runs = None, 0, 0
     _segs = segments(hops)
+    _cur_budget = budget
     for seg in _segs:
         _t0 = time.perf_counter()
         v, a = stitch(seg)
         lat = {"samples": nt.NestedTensor((v, a))}
+        if _cur_budget is not None:
+            _LAST_BUDGET[0] = int(_cur_budget)
+        _ukw = dict(
+            steps=_chain_steps,
+            start_sigma=(st["start_sigma"] if float(denoise) > 0.0 else 0.0),
+            overlap_px=st["tile_overlap_px"], detail_sigma=st["detail_sigma"],
+            chunk_frames=st["chunk_frames"], chunk_overlap=st["chunk_overlap"],
+            anchor=st["anchor_strength"], seed=st["seed"], noise=st["noise"],
+            attn_chunks=st["attn_chunks"], ffn_chunks=st["ffn_chunks"],
+        )
+        if sigmas is not None:
+            _ukw["sigmas"] = sigmas
         out = upsample(model, cond_by_frame(seg), lat, sampler, upscaler,
-                       megapixels, denoise, guide=guide, budget=budget,
-                       steps=_chain_steps,
-                       start_sigma=(st["start_sigma"] if float(denoise) > 0.0 else 0.0),
-                       overlap_px=st["tile_overlap_px"], detail_sigma=st["detail_sigma"],
-                       chunk_frames=st["chunk_frames"], chunk_overlap=st["chunk_overlap"],
-                       anchor=st["anchor_strength"], seed=st["seed"], noise=st["noise"],
-                       attn_chunks=st["attn_chunks"], ffn_chunks=st["ffn_chunks"])
+                       megapixels, denoise, guide=guide, budget=_cur_budget,
+                       **_ukw)
+        if _cur_budget is not None and _LAST_BUDGET[0] < int(_cur_budget):
+            _cur_budget = int(_LAST_BUDGET[0])
         vid = out["samples"].tensors[0]
         _free(model)
         if _device().type == "cuda":
@@ -1638,7 +1692,7 @@ class HTCTiledUpsampler:
 SETTINGS_TYPE = "HTC_UPSAMPLE"
 CHAIN_DEFAULTS = {
     "steps": STEPS, "start_sigma": 0.0, "noise": "per_chunk", "seed": SEED,
-    "chunk_frames": CHUNK_FRAMES, "chunk_overlap": CHUNK_OVERLAP,
+    "chunk_frames": _DEFAULT_CHUNK_FRAMES, "chunk_overlap": CHUNK_OVERLAP,
     "anchor_strength": ANCHOR_AUG, "tile_overlap_px": TILE_OVERLAP_PX, "detail_sigma": 0.0,
     "attn_chunks": 4, "ffn_chunks": 2, "sampler": None,
 }
@@ -1690,7 +1744,7 @@ class HTCUpsampleSettings:
                     "tooltip": "Noise seed of the re-draw (the recipe uses 444). Fixed: "
                                "it does not change between runs."}),
                 "chunk_frames": ("INT", {
-                    "default": d["chunk_frames"], "min": 34, "max": 1020, "step": 17,
+                    "default": int(d["chunk_frames"]), "min": 34, "max": 1020, "step": 17,
                     "tooltip": "Frames per time chunk, a multiple of 17. Longer chunks "
                                "mean fewer joins but more tokens per pass (more tiles "
                                "or more VRAM)."}),
