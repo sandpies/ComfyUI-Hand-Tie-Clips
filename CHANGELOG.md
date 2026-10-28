@@ -5,6 +5,7 @@ pack — the published package excludes them.
 
 ## Unreleased
 
+- **Upsampler:** chunks join into one preallocated latent (no film copy per chunk; output unchanged); log shows OOM retries, join time and peak VRAM.
 - **hand_tie: every previs is rendered and checked before the first hop.** A previs that is not
   one take (any cut, anywhere: every hop is tied to the frames on both sides of it) stops the run
   in its first minutes and names the frame, the nearest join and the previs sentence running
