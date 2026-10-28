@@ -2950,6 +2950,171 @@ def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
     return True
 
 
+def _snapshot_model_state(m):
+    """Record adaln_t_table shape/values and object/weight patch sets before upsample."""
+    if m is None:
+        return None
+    obj_p = dict(getattr(m, "object_patches", None) or {})
+    obj_meta = {
+        k: (tuple(int(x) for x in v.shape) if hasattr(v, "shape") else id(v))
+        for k, v in obj_p.items()
+    }
+    w_keys = set((getattr(m, "patches", None) or {}).keys())
+    w_counts = {
+        k: len(v) if isinstance(v, (list, tuple)) else 1
+        for k, v in (getattr(m, "patches", None) or {}).items()
+    }
+    dm = None
+    if hasattr(m, "get_model_object"):
+        try:
+            dm = m.get_model_object("diffusion_model")
+        except Exception:
+            dm = None
+    if dm is None:
+        dm = getattr(getattr(m, "model", None), "diffusion_model", None)
+    tab = getattr(dm, "adaln_t_table", None)
+    tab_shape = (tuple(int(x) for x in tab.shape)
+                 if (tab is not None and hasattr(tab, "shape")) else None)
+    tab_clone = tab.detach().cpu().clone() if isinstance(tab, torch.Tensor) else None
+    return {
+        "object_patches": obj_meta,
+        "patches_keys": w_keys,
+        "patches_counts": w_counts,
+        "adaln_shape": tab_shape,
+        "adaln_tensor": tab_clone,
+    }
+
+
+def _verify_model_unmutated(m, snap):
+    """Raise RuntimeError if `m`'s adaln_t_table, object_patches, or patches changed."""
+    if m is None or snap is None:
+        return
+    cur = _snapshot_model_state(m)
+    if cur["adaln_shape"] != snap["adaln_shape"]:
+        raise RuntimeError(
+            f"{TAG}: regen2k_model adaln_t_table shape mutated: "
+            f"{snap['adaln_shape']} -> {cur['adaln_shape']}")
+    if (cur["adaln_tensor"] is not None and snap["adaln_tensor"] is not None
+            and not torch.equal(cur["adaln_tensor"], snap["adaln_tensor"])):
+        raise RuntimeError(
+            f"{TAG}: regen2k_model adaln_t_table values were mutated in place")
+    if cur["object_patches"] != snap["object_patches"]:
+        raise RuntimeError(
+            f"{TAG}: regen2k_model object_patches mutated: "
+            f"{snap['object_patches']} -> {cur['object_patches']}")
+    if (cur["patches_keys"] != snap["patches_keys"]
+            or cur["patches_counts"] != snap["patches_counts"]):
+        raise RuntimeError(
+            f"{TAG}: regen2k_model weight patches mutated: "
+            f"{len(snap['patches_keys'])} -> {len(cur['patches_keys'])}")
+
+
+def _prepare_regen2k_hops(upsample_hops, regen2k_cond="text_only"):
+    """Prepare hop dicts for Regen2K: strip minimax_refs when regen2k_cond='text_only'."""
+    mode = str(regen2k_cond or "text_only")
+    if mode not in ("text_only", "hop"):
+        raise RuntimeError(
+            f"{TAG}: unknown regen2k_cond {mode!r} (expected text_only or hop).")
+    out = []
+    for h in upsample_hops:
+        hc = dict(h)
+        if mode == "text_only" and hc.get("cond"):
+            stripped = []
+            for emb, d in hc["cond"]:
+                d2 = dict(d)
+                d2.pop("minimax_refs", None)
+                stripped.append([emb, d2])
+            hc["cond"] = stripped
+        out.append(hc)
+    return out
+
+
+def _log_upsample_resources(total_frames, uw, uh, regen2k=False):
+    """Log free RAM (R1) and temp-dir disk vs float16 memmap size (§5d)."""
+    memmap_gb = (int(total_frames) * int(uh) * int(uw) * 3 * 2) / float(1024 ** 3)
+    try:
+        import folder_paths
+        import shutil as _shutil
+        tdir = folder_paths.get_temp_directory()
+        os.makedirs(tdir, exist_ok=True)
+        free_disk_gb = _shutil.disk_usage(tdir).free / float(1024 ** 3)
+        print(f"[{TAG}] upsample temp disk ({tdir}): {free_disk_gb:.1f} GB free, "
+              f"master memmap {memmap_gb:.1f} GB (float16)", flush=True)
+        if free_disk_gb < memmap_gb:
+            print(f"[{TAG}] WARNING: temp disk free ({free_disk_gb:.1f} GB) is below "
+                  f"the master memmap size ({memmap_gb:.1f} GB)", flush=True)
+    except Exception:
+        pass
+    try:
+        import psutil
+        vm = psutil.virtual_memory()
+        avail_gb = vm.available / float(1024 ** 3)
+        total_gb = vm.total / float(1024 ** 3)
+        print(f"[{TAG}] upsample RAM: {avail_gb:.1f} / {total_gb:.1f} GB available",
+              flush=True)
+        if regen2k and avail_gb < 48.0:
+            print(f"[{TAG}] WARNING: < 48 GB RAM available ({avail_gb:.1f} GB) with "
+                  "two DiTs (hop + Regen2K FL2VA); on low-RAM boxes you can wire "
+                  "the hop base + OpenH3Regen2KLoader as regen2k_model (~4% darker)",
+                  flush=True)
+    except Exception:
+        pass
+
+
+def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels,
+                          master=None, upscaler=_tu.UPSCALER_FILE, decode=None,
+                          alloc=None, budget=_tu.TOKEN_BUDGET, settings=None,
+                          regen2k_cond="text_only", regen2k_seed=42):
+    """Run the delivery-only Open-H3-Regenerate-2K stage over stitched pre-VAE hop latents."""
+    _check_regen2k_no_sharp(regen2k_model)
+    snap = _snapshot_model_state(regen2k_model)
+    work_model = (regen2k_model.clone() if hasattr(regen2k_model, "clone")
+                  else regen2k_model)
+    r2k_hops = _prepare_regen2k_hops(upsample_hops, regen2k_cond)
+    r2k_settings = dict(settings) if settings is not None else {}
+    r2k_settings.setdefault("noise", "film")
+    r2k_settings.setdefault("seed", int(regen2k_seed))
+    r2k_settings["steps"] = len(_tu.REGEN2K_SIGMAS) - 1
+    r2k_sampler = sampler
+    if r2k_settings.get("sampler") is None:
+        try:
+            import comfy.samplers as _cs
+            r2k_sampler = _cs.sampler_object("euler")
+        except Exception:
+            r2k_sampler = sampler
+    n_chunks = 0
+    for seg in _tu.segments(r2k_hops):
+        sv, _sa = _tu.stitch(seg)
+        cf_plan = int(r2k_settings.get("chunk_frames", _tu.CHUNK_FRAMES))
+        co_plan = int(r2k_settings.get("chunk_overlap", _tu.CHUNK_OVERLAP))
+        if "chunk_frames" not in r2k_settings:
+            w_px, h_px = _tu.target_size(int(sv.shape[4]) * _tu.SPATIAL,
+                                         int(sv.shape[3]) * _tu.SPATIAL,
+                                         float(megapixels))
+            cf_plan, _ = _tu._regen2k_chunk_frames(
+                w_px, h_px, budget,
+                overlap_px=r2k_settings.get("tile_overlap_px", _tu.TILE_OVERLAP_PX))
+        n_chunks += len(_tu.chunks(int(sv.shape[2]), cf_plan, co_plan))
+    m_label = getattr(regen2k_model, "htc_name", None) or type(regen2k_model).__name__
+    n_patches = len(getattr(regen2k_model, "patches", None) or {})
+    sig_list = [round(float(s), 4) for s in _tu.REGEN2K_SIGMAS]
+    r2k_line = (f"upsample: regen2k on {m_label} ({n_patches} patched targets), "
+                f"cond={regen2k_cond}, seed={int(r2k_settings['seed'])}, "
+                f"sigmas {sig_list}, chunks {n_chunks}")
+    print(f"[{TAG}] {r2k_line}", flush=True)
+    upsample_settings = r2k_settings
+    try:
+        frames, note = _tu.upsample_chain(
+            work_model, r2k_sampler, vae, r2k_hops, float(megapixels),
+            master=master, upscaler=str(upscaler), decode=decode,
+            denoise=1.0, alloc=alloc, guide=None, budget=budget,
+            settings=upsample_settings, sigmas=_tu.REGEN2K_SIGMAS)
+    finally:
+        _tu._free(work_model)
+        _verify_model_unmutated(regen2k_model, snap)
+    return frames, f"{note} ({r2k_line})"
+
+
 def _boost_lora_choices():
     try:
         import folder_paths
@@ -8644,13 +8809,16 @@ class HandTieClips:
                 print(f"[{TAG}] upsample: hop_refine=pin_only cached the "
                       "refined latent, not the delivered one; cached hops are "
                       "upsampled from the refined version", flush=True)
+            _log_upsample_resources(int(master_imgs.shape[0]), _uw, _uh,
+                                    regen2k=regen2k_on)
             # Under realism_boost the re-draw runs on the boost model. At
             # denoise 0.2 the re-draw repaints the fine band, which is where
             # the boost's look lives; on the MODEL wire it painted the base's
             # texture back over it. Same sigma curve either way -- the boost
             # model is built on the shifted model -- so the recipe is intact.
-            _up_model = boost_model if boost_model is not None else model
-            if upsample_dit is not None:
+            _up_model = regen2k_model if regen2k_on else (
+                boost_model if boost_model is not None else model)
+            if not regen2k_on and upsample_dit is not None:
                 # Its own model, shifted the way the hops were so the re-draw
                 # lands on the same sigma. Nothing drawn on the MODEL wire or
                 # in the boost reaches it.
@@ -8661,10 +8829,10 @@ class HandTieClips:
                 print(f"[{TAG}] upsample: re-drawing on the wired upsample_dit"
                       + (", not the realism boost model" if boost_model is not None
                          else ", not the MODEL wire"), flush=True)
-            elif boost_model is not None:
+            elif not regen2k_on and boost_model is not None:
                 print(f"[{TAG}] upsample: re-drawing on the realism boost "
                       "model, not the MODEL wire", flush=True)
-            if str(upsample_lora) != "None" and float(upsample_lora_strength) != 0.0:
+            if not regen2k_on and str(upsample_lora) != "None" and float(upsample_lora_strength) != 0.0:
                 # On top of the re-draw model, so the render's own LoRAs (or the
                 # boost's) stay under it. Delivery only: no hop key sees it.
                 import nodes as nodes_mod  # noqa: PLC0415
@@ -8683,31 +8851,42 @@ class HandTieClips:
                       f"{_tu.TOKEN_BUDGET}): more, smaller tiles", flush=True)
             try:
                 _up_guide = None
-                if (upsample_guide_factor and float(upsample_denoise) > 0.0
-                        and float(upsample_lora_strength) != 0.0):
-                    _ug.install()
-                    # The caption alone, no references: what the LoRA learned
-                    # the guide under. Width/height/length only size the
-                    # latent this discards.
-                    _cap_cond = _cond_cpu(_result(_core_call(
-                        MiniMaxH3ReferenceToVideo, "the h3upscale caption",
-                        clip=clip, vae=ref_vae, audio_vae=ref_audio_vae,
-                        prompt=_ug.CAPTION, width=int(width),
-                        height=int(height), length=5,
-                        ref_image_size=ref_image_size))[0], keep_refs=True)
-                    _offload_text_encoder(clip, _up_model)
-                    _up_guide = _tu.Guide(
-                        factor=int(upsample_guide_factor), cond=_cap_cond,
-                        decode=None, encode=vae.encode, pixels=_ug.guide_pixels)
-                    del _cap_cond
-                _up_imgs, upsample_note = _tu.upsample_chain(
-                    _up_model, sampler, vae, upsample_hops,
-                    float(upsample_megapixels),
-                    master=(master_imgs if (tone_on or anchor_on) else None),
-                    upscaler=str(upsample_model),
-                    denoise=float(upsample_denoise),
-                    alloc=_alloc_master, guide=_up_guide,
-                    budget=_up_budget, settings=upsample_settings)
+                if regen2k_on:
+                    _up_imgs, upsample_note = _run_regen2k_upsample(
+                        regen2k_model, sampler, vae, upsample_hops,
+                        float(upsample_megapixels),
+                        master=(master_imgs if (tone_on or anchor_on) else None),
+                        upscaler=str(upsample_model),
+                        alloc=_alloc_master, budget=_up_budget,
+                        settings=upsample_settings,
+                        regen2k_cond=str(regen2k_cond),
+                        regen2k_seed=int(regen2k_seed))
+                else:
+                    if (upsample_guide_factor and float(upsample_denoise) > 0.0
+                            and float(upsample_lora_strength) != 0.0):
+                        _ug.install()
+                        # The caption alone, no references: what the LoRA learned
+                        # the guide under. Width/height/length only size the
+                        # latent this discards.
+                        _cap_cond = _cond_cpu(_result(_core_call(
+                            MiniMaxH3ReferenceToVideo, "the h3upscale caption",
+                            clip=clip, vae=ref_vae, audio_vae=ref_audio_vae,
+                            prompt=_ug.CAPTION, width=int(width),
+                            height=int(height), length=5,
+                            ref_image_size=ref_image_size))[0], keep_refs=True)
+                        _offload_text_encoder(clip, _up_model)
+                        _up_guide = _tu.Guide(
+                            factor=int(upsample_guide_factor), cond=_cap_cond,
+                            decode=None, encode=vae.encode, pixels=_ug.guide_pixels)
+                        del _cap_cond
+                    _up_imgs, upsample_note = _tu.upsample_chain(
+                        _up_model, sampler, vae, upsample_hops,
+                        float(upsample_megapixels),
+                        master=(master_imgs if (tone_on or anchor_on) else None),
+                        upscaler=str(upsample_model),
+                        denoise=float(upsample_denoise),
+                        alloc=_alloc_master, guide=_up_guide,
+                        budget=_up_budget, settings=upsample_settings)
                 master_imgs = _up_imgs
                 del _up_imgs
                 print(f"[{TAG}] {upsample_note}", flush=True)
