@@ -62,6 +62,7 @@ SEED = 444
 UPSCALER_DTYPE = torch.float16
 _FLUSH_S = [0.0]           # seconds spent in sample_tile's cache flush (log only)
 _LAST_OOM = [0]            # OOM retries in the most recent redraw_chunk call (log only)
+_LAST_BUDGET = [TOKEN_BUDGET]  # budget redraw_chunk / upsample finished at
 
 # --- the guided re-draw (not part of the recipe) ----------------------------
 #
@@ -1105,7 +1106,8 @@ def redraw_chunk(model, cond, sampler, sigmas, video, audio, seed, factor=1,
 
     if float(detail_sigma or 0.0) > 0.0:
         x = _highpass_detail_merge(video, x, sigma=float(detail_sigma))
-    return x
+    _LAST_BUDGET[0] = cur_budget
+    return x, cur_budget
 
 
 def _crossfade(a, b, dim):
@@ -1285,6 +1287,7 @@ def upsample(model, conditioning, latent, sampler, upscaler, megapixels,
     end_v = end_a = 0
     _redraw_s = _join_s = 0.0
     _oom_total = 0
+    init_budget = cur_budget = int(budget)
     for i, (k0, f0, k1, f1) in enumerate(plan):
         a0, a1 = audio_span(f0, f1)
         cv = upscaled_cvs[i]
@@ -1309,17 +1312,42 @@ def upsample(model, conditioning, latent, sampler, upscaler, megapixels,
                                    f"needs {want} (steps, rows, cols)")
             ccond = add_guide(ccond, glat.to(cv.device, cv.dtype), factor)
             del glat
+        if cur_budget < init_budget:
+            _gi = solve_grid(int(cv.shape[4]) * SPATIAL, int(cv.shape[3]) * SPATIAL,
+                             int(cv.shape[2]), overlap_px=snap_overlap(overlap_px),
+                             budget=init_budget, factor=factor)
+            _gc = solve_grid(int(cv.shape[4]) * SPATIAL, int(cv.shape[3]) * SPATIAL,
+                             int(cv.shape[2]), overlap_px=snap_overlap(overlap_px),
+                             budget=cur_budget, factor=factor)
+            if _gi is not None and _gc is not None and _gi[:2] != _gc[:2]:
+                print(f"[{TAG}] chunk {i + 1}/{len(plan)}: keeping lowered budget "
+                      f"{cur_budget} ({_gc[0]}x{_gc[1]} tiles; would fit "
+                      f"{_gi[0]}x{_gi[1]} at {init_budget})", flush=True)
         _tr = time.perf_counter()
-        rv = redraw_chunk(model, ccond, sampler, sigmas, cv, ca, int(seed), factor, budget,
-                          overlap_px, detail_sigma=detail_sigma,
-                          noise_video=(None if film_nv is None
-                                       else film_nv[:, :, k0:k1]))
+        _rc = redraw_chunk(model, ccond, sampler, sigmas, cv, ca, int(seed), factor,
+                           cur_budget, overlap_px, detail_sigma=detail_sigma,
+                           noise_video=(None if film_nv is None
+                                        else film_nv[:, :, k0:k1]))
+        rv, cur_budget = (_rc if isinstance(_rc, tuple) else (_rc, cur_budget))
         _redraw_s += time.perf_counter() - _tr
         _oom_total += _LAST_OOM[0]
+        if i == 0:
+            _, _g0 = tile_grid(int(cv.shape[3]), int(cv.shape[4]), int(cv.shape[2]),
+                               factor, cur_budget, overlap_px)
+            _tok0 = (seq_len(_g0[2], _g0[3], int(cv.shape[2])) if int(factor) <= 1
+                     else guided_seq_len(_g0[2], _g0[3], int(cv.shape[2]), factor))
+            _vram0 = (f"{torch.cuda.max_memory_allocated() / 1048576.0:.0f} MB"
+                      if torch.cuda.is_available() else "0 MB")
+            print(f"[{TAG}] chunk 1: peak VRAM {_vram0}, {_tok0} tokens/forward, "
+                  f"budget {cur_budget}"
+                  + (f"; set upsample_tile_tokens to {cur_budget} to skip the OOM next run"
+                     if cur_budget < init_budget else ""),
+                  flush=True)
         _tj = time.perf_counter()
         end_v, end_a = _join_into(out_v, out_a, end_v, end_a, rv, ca, k0, f0)
         _join_s += time.perf_counter() - _tj
         del cv, rv
+    _LAST_BUDGET[0] = cur_budget
     if end_v < out_v.shape[2]:
         out_v = out_v[:, :, :end_v]
     if end_a < out_a.shape[-1]:
