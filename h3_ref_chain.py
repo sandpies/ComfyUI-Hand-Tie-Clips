@@ -2907,16 +2907,26 @@ def _resolve_regen2k_lora(val):
     return s
 
 
+REGEN2K_TEXT_DIM = 5120
+REGEN2K_COND_MODES = ("none", "hop_text")
+
+
 def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
                               upsample_dit=None, upsample_denoise=UPSAMPLE_DENOISE,
                               width=1344, height=768, model=None,
                               regen2k_seed=REGEN2K_SEED,
                               regen2k_preset="realistic",
-                              refine_model=None):
+                              refine_model=None,
+                              regen2k_cond="none"):
     """Validate upsample settings before the hop loop."""
     if str(upsample) != "on":
         return False
     r2k_sig = _tu.regen2k_sigmas_for_preset(regen2k_preset)
+    cond_mode = str(regen2k_cond or "none").strip().lower()
+    if cond_mode not in REGEN2K_COND_MODES:
+        raise ValueError(
+            f"{TAG}: unknown regen2k_cond {regen2k_cond!r} "
+            f"(expected one of {list(REGEN2K_COND_MODES)})")
     base_m = (regen2k_model if regen2k_model is not None
               else upsample_dit if upsample_dit is not None
               else refine_model if refine_model is not None
@@ -2931,7 +2941,8 @@ def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
         print(f"[{TAG}] upsample: regen2k_model wins over the wired upsample_dit",
               flush=True)
     print(f"[{TAG}] upsample: regen2k LoRA {lora_name} at strength "
-          f"{float(upsample_denoise):g} (preset={str(regen2k_preset)}, sigmas "
+          f"{float(upsample_denoise):g} (preset={str(regen2k_preset)}, "
+          f"cond={cond_mode}, sigmas "
           f"{[round(float(s), 4) for s in r2k_sig]}, seed {int(regen2k_seed)})",
           flush=True)
     if min(int(width), int(height)) < 768:
@@ -3030,12 +3041,32 @@ def _zero_out_cond(cond=None):
               "minimax_token_tags": torch.ones(1, dtype=torch.long)}]]
 
 
-def _prepare_regen2k_hops(upsample_hops):
-    """Prepare hop dicts for Regen2K: always zeroed-out conditioning with no refs."""
+def _prepare_regen2k_hops(upsample_hops, regen2k_cond="none"):
+    """Prepare hop dicts for Regen2K:
+    - 'none': zeroed-out conditioning (no prompt, no refs, no keyframes).
+    - 'hop_text': keep each hop's encoded text prompt, stripping minimax_refs
+      and minimax_keyframes.
+    """
+    mode = str(regen2k_cond or "none").strip().lower()
+    if mode not in REGEN2K_COND_MODES:
+        raise ValueError(
+            f"{TAG}: unknown regen2k_cond {regen2k_cond!r} "
+            f"(expected one of {list(REGEN2K_COND_MODES)})")
     out = []
     for h in upsample_hops:
         hc = dict(h)
-        hc["cond"] = _zero_out_cond(hc.get("cond"))
+        if mode == "hop_text" and hc.get("cond"):
+            stripped = []
+            for emb, d in hc["cond"]:
+                d2 = dict(d)
+                d2.pop("minimax_refs", None)
+                d2.pop("minimax_keyframes", None)
+                d2.pop("minimax_visual_cond_noise_aug", None)
+                d2.pop("minimax_audio_cond_noise_aug", None)
+                stripped.append([emb, d2])
+            hc["cond"] = stripped
+        else:
+            hc["cond"] = _zero_out_cond(hc.get("cond"))
         out.append(hc)
     return out
 
@@ -3079,10 +3110,16 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
                           lora_strength=UPSAMPLE_DENOISE,
                           regen2k_seed=REGEN2K_SEED,
                           regen2k_preset="realistic",
-                          strip_existing_loras=False):
+                          strip_existing_loras=False,
+                          regen2k_cond="none"):
     """Run the delivery-only Open-H3-Regenerate-2K stage over stitched pre-VAE hop latents."""
     preset_sigmas = _tu.regen2k_sigmas_for_preset(regen2k_preset)
     preset_name = str(regen2k_preset or "realistic").strip().lower()
+    cond_mode = str(regen2k_cond or "none").strip().lower()
+    if cond_mode not in REGEN2K_COND_MODES:
+        raise ValueError(
+            f"{TAG}: unknown regen2k_cond {regen2k_cond!r} "
+            f"(expected one of {list(REGEN2K_COND_MODES)})")
     snap = _snapshot_model_state(regen2k_model)
     work_model = (regen2k_model.clone() if hasattr(regen2k_model, "clone")
                   else regen2k_model)
@@ -3103,7 +3140,7 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
         except Exception as _le:
             print(f"[{TAG}] WARNING: could not load Regen2K LoRA {lora_name}: {_le}",
                   flush=True)
-    r2k_hops = _prepare_regen2k_hops(upsample_hops)
+    r2k_hops = _prepare_regen2k_hops(upsample_hops, regen2k_cond=cond_mode)
     r2k_settings = dict(settings) if settings is not None else {}
     # Upgrade untouched legacy recipe defaults from a pre-existing settings node on canvas
     if (r2k_settings.get("steps") == 1
@@ -3152,7 +3189,7 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
     sig_list = ([round(float(s), 4) for s in r2k_sigmas]
                 if r2k_sigmas is not None else "schedule")
     r2k_line = (f"upsample: regen2k on {m_label} ({n_patches} patched targets, "
-                f"lora={lora_name}@{strength:g}, preset={preset_name}), "
+                f"lora={lora_name}@{strength:g}, preset={preset_name}, cond={cond_mode}), "
                 f"seed={int(r2k_settings['seed'])}, "
                 f"sigmas {sig_list}, chunks {n_chunks}")
     print(f"[{TAG}] {r2k_line}", flush=True)
@@ -4864,6 +4901,12 @@ class HandTieClips:
                                 "'stylized' runs [0.6, 0.4, 0.2, 0.0] (lighter re-draw for "
                                 "2.5D/animated content to reduce new detail and character drift)."),
                 }),
+                "regen2k_cond": (list(REGEN2K_COND_MODES), {
+                    "default": "none",
+                    "tooltip": ("Conditioning for the Regen2K upsample re-draw: 'none' uses "
+                                "zeroed-out conditioning (no prompt, no refs); 'hop_text' uses "
+                                "each hop's encoded text prompt with image/video/keyframe refs stripped."),
+                }),
                 "audio_model": ("MODEL", {
                     "tooltip": ("Optional model for the audio pass. Unwired uses the base "
                                 "model (the refine model when hop_refine=full), never the "
@@ -4990,7 +5033,7 @@ class HandTieClips:
             audio_seed_offset=0, dialogue_lock="off", dialogue_audio_file="",
             upsample_redraw=REGEN2K_DEFAULT_LORA,
             regen2k_model=None, regen2k_seed=REGEN2K_SEED,
-            regen2k_preset="realistic",
+            regen2k_preset="realistic", regen2k_cond="none",
             audio_model=None,
             upsample_settings=None, unique_id=None):
         # Every argument, as called: the hand_tie previs-first pass re-runs this
@@ -5875,7 +5918,7 @@ class HandTieClips:
                 upsample, upsample_redraw, regen2k_model,
                 upsample_dit, upsample_denoise, width, height, model=model,
                 regen2k_seed=regen2k_seed, regen2k_preset=regen2k_preset,
-                refine_model=refine_model)
+                refine_model=refine_model, regen2k_cond=regen2k_cond)
             _ud = float(upsample_denoise)
             if _ud <= 0.0:
                 print(f"[{TAG}] upsample_denoise 0: no re-draw, the enlarged "
@@ -7655,10 +7698,19 @@ class HandTieClips:
                 if upsample_on:
                     # A cached hop kept its latent but not its conditioning;
                     # the upsampler's re-draw wants the one that made it (unless
-                    # a guide LoRA, denoise=0, or regen2k is active, which never reads up_cond).
+                    # a guide LoRA, denoise=0, or regen2k_cond=none is active).
                     up_latent = cached_latent
-                    if float(upsample_denoise) > 0.0 and not upsample_guide_factor and not regen2k_on:
-                        up_cond = _cond_cpu(_hop_ref2va()[0], keep_refs=True)
+                    if float(upsample_denoise) > 0.0 and not upsample_guide_factor and (
+                            not regen2k_on or str(regen2k_cond) == "hop_text"):
+                        if regen2k_on:
+                            _tc = _result(_core_call(
+                                MiniMaxH3ReferenceToVideo, "the regen2k hop_text conditioning",
+                                clip=clip, vae=None, audio_vae=None, prompt=block,
+                                width=int(width), height=int(height), length=5,
+                                ref_image_size=ref_image_size))[0]
+                            up_cond = _cond_cpu(_tc, keep_refs=False)
+                        else:
+                            up_cond = _cond_cpu(_hop_ref2va()[0], keep_refs=True)
                         _offload_text_encoder(clip, model)
                     else:
                         up_cond = None
@@ -8437,8 +8489,9 @@ class HandTieClips:
                     # differ, and the upsampler redraws what was delivered.
                     up_latent = (this_sampled if refined_for_pin is None
                                  else _latent_cpu(sampled))
-                    up_cond = (_cond_cpu(base_cond, keep_refs=True)
-                               if (float(upsample_denoise) > 0.0 and not upsample_guide_factor and not regen2k_on)
+                    up_cond = (_cond_cpu(base_cond, keep_refs=(not regen2k_on))
+                               if (float(upsample_denoise) > 0.0 and not upsample_guide_factor
+                                   and (not regen2k_on or str(regen2k_cond) == "hop_text"))
                                else None)
 
                 # base_cond is deleted with cond because it is usually the
@@ -8923,7 +8976,8 @@ class HandTieClips:
                         lora_strength=float(upsample_denoise),
                         regen2k_seed=int(regen2k_seed),
                         regen2k_preset=str(regen2k_preset),
-                        strip_existing_loras=(regen2k_model is None))
+                        strip_existing_loras=(regen2k_model is None),
+                        regen2k_cond=str(regen2k_cond))
                 else:
                     if (upsample_guide_factor and float(upsample_denoise) > 0.0
                             and float(upsample_lora_strength) != 0.0):

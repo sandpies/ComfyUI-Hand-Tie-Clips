@@ -97,7 +97,7 @@ const GROUPS = [
     ["upsample", ["upsample", "upsample_model", "upsample_megapixels",
                   "upsample_denoise", "upsample_lora", "upsample_lora_strength",
                   "upsample_tile_tokens",
-                  "upsample_redraw", "regen2k_seed", "regen2k_preset"]],
+                  "upsample_redraw", "regen2k_seed", "regen2k_preset", "regen2k_cond"]],
     // Wrap every hop's finished prompt: LoRA trigger words first, a trailing
     // camera/body clause last, outside everything the chain adds.
     ["prompt wrap", ["prompt_prefix", "prompt_suffix"]],
