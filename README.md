@@ -81,14 +81,16 @@ tags:
 - **The honest truth on chain length:** `Refine` holds back relay degradation and keeps joins clean, pushing continuous `motion_context` chains to **5–6 clips on Turbo** before very visible texture changes appear, and **7–8 clips on non-Turbo**. Under `motion_context`, plan to transition to a cut (`anchor: "restart"`) every 4–5 clips or so to maintain the integrity of your textures (or use `pin_mech: hand_tie` for continuous single-take sequences).
 
 ### 3. Tiled Upsampler (`upsample: on`) & Standalone Node
-Enlarges the finished film to 1.5–2.0 MP in latent chunks and runs the original MMH3 Ultimate Upscale recipe: one tiled re-draw step from sigma 0.75 (`upsample_denoise` 0.2), 102-frame chunks with 17 shared, 70000-token tiles with 128 px overlap. An optional **HTC Upsample Settings** node on the `upsample_settings` socket exposes every one of those numbers. Toggling `upsample` on a cached chain skips hop generation and runs only the upscaler.
+Enlarges the finished film to 2.0 MP in latent chunks and re-draws it with the **Open-H3-Regenerate-2K** LoRA: 3 Euler steps on `[0.8, 24/35, 0.48, 0]` at LoRA strength `upsample_denoise` 0.8 (0 only enlarges), each hop's own text prompt as conditioning (`regen2k_cond`), seed 42, 102-frame chunks with 17 shared, 70000-token tiles (lower `upsample_tile_tokens` on smaller cards). On by default in the shipped workflows. An optional **HTC Upsample Settings** node on the `upsample_settings` socket exposes every one of those numbers. Toggling `upsample` on a cached chain skips hop generation and runs only the upscaler.
 
 **Required Files for Upsampling:**
 1. **Latent Upscaler (`ComfyUI/models/latent_upscale_models/`):**
    Download `minimax_h3_latent_upscaler_3d_bf16.safetensors` from [LBH-123-AI/Minimax_h3_latent_Upscaler](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) (or `h3_upscaler_lms_v0.1.safetensors`).
-2. **`upsample_dit` wire (optional):** a separate model for the re-draw, e.g. a plain H3 UNETLoader with no LoRAs. Unwired, the re-draw uses the boost model or the MODEL wire.
+2. **Regen2K LoRA (`ComfyUI/models/loras/`):**
+   Download [`open_h3_regenerate_2k_r256pp_bf16.safetensors`](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/blob/main/lora/open_h3_regenerate_2k_r256pp_bf16.safetensors) (3.77 GB, a rank-256 compression of NVlabs' [Open-H3-Regenerate-2K](https://huggingface.co/Efficient-Large-Model/Open-H3-Regenerate-2K) LoRA). Pick it (or another Regen2K LoRA) in `upsample_redraw`.
+3. **`upsample_dit` wire (optional):** a separate model for the re-draw, e.g. a plain H3 UNETLoader with no LoRAs. Unwired, the re-draw uses the boost model or the MODEL wire, with hop LoRAs stripped.
 
-No upscale LoRA is needed. `upsample_lora` is retired and ignored: the h3upscale guide cost fine detail and drew tile grids against the plain recipe.
+The old h3upscale x2 LoRA is retired: `upsample_lora` is ignored.
 
 *Want to upscale any existing video outside a chain? Use the included **H3 Video Upsampler (finished clip)** node (`workflows/HandTieClips_Upsample_Video.json`) or the standalone repo: [sandpies/ComfyUI-H3-Video-Upsampler](https://github.com/sandpies/ComfyUI-H3-Video-Upsampler).*
 
