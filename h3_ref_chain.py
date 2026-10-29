@@ -2880,7 +2880,7 @@ _BOOST_LOADERS = {}
 
 # The chain's upsample re-draw: Open-H3-Regenerate-2K LoRA strength (0.25 by
 # default; 0 skips the re-draw and only enlarges with the 3D latent upscaler).
-UPSAMPLE_DENOISE = 0.25
+UPSAMPLE_DENOISE = 0.8
 REGEN2K_DEFAULT_LORA = "open_h3_regenerate_2k_r256pp_bf16.safetensors"
 REGEN2K_REFERENCE_LORA = "open_h3_regenerate_2k_bf16.safetensors"
 REGEN2K_SEED = 42
@@ -2909,6 +2909,7 @@ def _resolve_regen2k_lora(val):
 
 REGEN2K_TEXT_DIM = 5120
 REGEN2K_COND_MODES = ("none", "hop_text")
+REGEN2K_DEFAULT_COND = "hop_text"
 
 
 def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
@@ -2916,11 +2917,11 @@ def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
                               width=1344, height=768, model=None,
                               regen2k_seed=REGEN2K_SEED,
                               refine_model=None,
-                              regen2k_cond="none"):
+                              regen2k_cond=REGEN2K_DEFAULT_COND):
     """Validate upsample settings before the hop loop."""
     if str(upsample) != "on":
         return False
-    cond_mode = str(regen2k_cond or "none").strip().lower()
+    cond_mode = str(regen2k_cond or REGEN2K_DEFAULT_COND).strip().lower()
     if cond_mode not in REGEN2K_COND_MODES:
         raise ValueError(
             f"{TAG}: unknown regen2k_cond {regen2k_cond!r} "
@@ -2933,7 +2934,7 @@ def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
         raise RuntimeError(
             f"{TAG}: upsample requires regen2k_model wired "
             f"(UNETLoader with minimax_h3_fl2va_pruned_int8_convrot, "
-            f"{REGEN2K_DEFAULT_LORA}, lora_strength 0.25).")
+            f"{REGEN2K_DEFAULT_LORA}, lora_strength {UPSAMPLE_DENOISE:g}).")
     lora_name = _resolve_regen2k_lora(upsample_redraw)
     if regen2k_model is not None and upsample_dit is not None:
         print(f"[{TAG}] upsample: regen2k_model wins over the wired upsample_dit",
@@ -3038,13 +3039,13 @@ def _zero_out_cond(cond=None):
               "minimax_token_tags": torch.ones(1, dtype=torch.long)}]]
 
 
-def _prepare_regen2k_hops(upsample_hops, regen2k_cond="none"):
+def _prepare_regen2k_hops(upsample_hops, regen2k_cond=REGEN2K_DEFAULT_COND):
     """Prepare hop dicts for Regen2K:
     - 'none': zeroed-out conditioning (no prompt, no refs, no keyframes).
     - 'hop_text': keep each hop's encoded text prompt, stripping minimax_refs
       and minimax_keyframes.
     """
-    mode = str(regen2k_cond or "none").strip().lower()
+    mode = str(regen2k_cond or REGEN2K_DEFAULT_COND).strip().lower()
     if mode not in REGEN2K_COND_MODES:
         raise ValueError(
             f"{TAG}: unknown regen2k_cond {regen2k_cond!r} "
@@ -3107,9 +3108,9 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
                           lora_strength=UPSAMPLE_DENOISE,
                           regen2k_seed=REGEN2K_SEED,
                           strip_existing_loras=False,
-                          regen2k_cond="none"):
+                          regen2k_cond=REGEN2K_DEFAULT_COND):
     """Run the delivery-only Open-H3-Regenerate-2K stage over stitched pre-VAE hop latents."""
-    cond_mode = str(regen2k_cond or "none").strip().lower()
+    cond_mode = str(regen2k_cond or REGEN2K_DEFAULT_COND).strip().lower()
     if cond_mode not in REGEN2K_COND_MODES:
         raise ValueError(
             f"{TAG}: unknown regen2k_cond {regen2k_cond!r} "
@@ -4710,7 +4711,7 @@ class HandTieClips:
                 "upsample_denoise": ("FLOAT", {
                     "default": UPSAMPLE_DENOISE, "min": 0.0, "max": 1.0, "step": 0.005,
                     "tooltip": ("Regen2K LoRA strength for the 3-step upsample re-draw "
-                                "(0.25 is the default; 0 skips the re-draw and only "
+                                "(0.8 is the default; 0 skips the re-draw and only "
                                 "enlarges with the 3D latent upscaler)."),
                 }),
                 # APPENDED 2026-09-30, LAST, same positional reason.
@@ -4879,7 +4880,7 @@ class HandTieClips:
                     "tooltip": ("Open-H3-Regenerate-2K LoRA from models/loras for the 3-step "
                                 "Euler re-draw on [0.8, 24/35, 0.48, 0] "
                                 f"(default: {REGEN2K_DEFAULT_LORA} "
-                                "at upsample_denoise 0.25, seed 42)."),
+                                "at upsample_denoise 0.8, seed 42)."),
                 }),
                 "regen2k_model": ("MODEL", {
                     "tooltip": ("Optional model for upsample: wire UNETLoader "
@@ -4893,7 +4894,7 @@ class HandTieClips:
                     "tooltip": "Noise seed for the Regen2K upsample re-draw (default 42).",
                 }),
                 "regen2k_cond": (list(REGEN2K_COND_MODES), {
-                    "default": "none",
+                    "default": REGEN2K_DEFAULT_COND,
                     "tooltip": ("Conditioning for the Regen2K upsample re-draw: 'none' uses "
                                 "zeroed-out conditioning (no prompt, no refs); 'hop_text' uses "
                                 "each hop's encoded text prompt with image/video/keyframe refs stripped."),
@@ -5024,7 +5025,7 @@ class HandTieClips:
             audio_seed_offset=0, dialogue_lock="off", dialogue_audio_file="",
             upsample_redraw=REGEN2K_DEFAULT_LORA,
             regen2k_model=None, regen2k_seed=REGEN2K_SEED,
-            regen2k_cond="none",
+            regen2k_cond=REGEN2K_DEFAULT_COND,
             audio_model=None,
             upsample_settings=None, unique_id=None):
         # Every argument, as called: the hand_tie previs-first pass re-runs this

@@ -1304,6 +1304,56 @@
             "name": "audio_seed_offset"
           },
           "link": null
+        },
+        {
+          "localized_name": "dialogue_lock",
+          "name": "dialogue_lock",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "dialogue_lock"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "dialogue_audio_file",
+          "name": "dialogue_audio_file",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "dialogue_audio_file"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "upsample_redraw",
+          "name": "upsample_redraw",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "upsample_redraw"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "regen2k_seed",
+          "name": "regen2k_seed",
+          "shape": 7,
+          "type": "INT",
+          "widget": {
+            "name": "regen2k_seed"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "regen2k_cond",
+          "name": "regen2k_cond",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "regen2k_cond"
+          },
+          "link": null
         }
       ],
       "outputs": [
@@ -1439,9 +1489,9 @@
         1,
         "None",
         1,
-        "off",
+        "on",
         2.0,
-        0.25,
+        0.8,
         "",
         "",
         "minimax_h3_latent_upscaler_3d_bf16.safetensors",
@@ -1460,7 +1510,10 @@
         "same",
         0,
         "off",
-        ""
+        "",
+        "open_h3_regenerate_2k_r256pp_bf16.safetensors",
+        42,
+        "hop_text"
       ]
     },
     {
