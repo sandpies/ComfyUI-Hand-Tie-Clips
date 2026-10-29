@@ -948,8 +948,9 @@ def _format_rail_rows(pinned):
             bit += f"  retention={p['retention']}"
         if p.get("source") == "refmod":
             bit += "  source=refmod"
-        if p.get("voice"):
-            bit += f"  voice={p['voice']}"
+        voice = p.get("voice") or p.get("inherited_voice")
+        if voice:
+            bit += f"  voice={voice}"
         desc = str(p.get("desc") or "").strip()
         if desc:
             bit += f"  desc={json.dumps(desc)}"

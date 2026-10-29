@@ -386,7 +386,8 @@ def _check_hop_load(refs):
     never accept one that would overflow -- and the ceiling is a hard encoder
     limit, so erring toward refusing is the right direction.
     """
-    picture_refs = [r for r in refs if r.get("source") != "refmod"]
+    picture_refs = [r for r in refs if r.get("source") != "refmod"
+                    and (r.get("file") or not r.get("voice"))]
     refs = picture_refs
     always = [r for r in refs if r["shots"] is None]
     by_shot = {}
@@ -424,7 +425,8 @@ def check_kind_caps(refs, media_videos=0):
     video slots on every hop.
     """
     media_videos = int(media_videos or 0)
-    pictures = [r for r in refs if not _is_video(r)]
+    pictures = [r for r in refs if not _is_video(r)
+                and (r.get("file") or not r.get("voice"))]
     videos = [r for r in refs if _is_video(r)]
 
     def _worst(rows):
@@ -880,7 +882,8 @@ def describe(plan):
         when = "all shots" if r["shots"] is None else "shots " + ",".join(
             str(s) for s in r["shots"])
         src = r["file"] or (f"(was slot {r['legacy_slot']}, no file)"
-                            if r["legacy_slot"] else "(no file)")
+                            if r["legacy_slot"]
+                            else ("(audio only)" if r.get("voice") else "(no file)"))
         if r.get("source") == "refmod":
             src = "refmod:" + src
             if float(r.get("strength") or 1.0) != 1.0:
@@ -944,9 +947,11 @@ def check(plan, wired_slots):
                 f"@{r['tag']} was wired to ref_image_{r['legacy_slot']}, which no "
                 f"longer exists. Pick its picture in the REFERENCES rail -- this "
                 f"ref is inactive until you do.")
-        elif not r["file"]:
+        elif not r["file"] and not r.get("voice"):
             warnings.append(
                 f"@{r['tag']} has no picture chosen. This ref is inactive.")
+        elif not r["file"]:
+            continue
         else:
             folder = ("models/refmods" if r.get("source") == "refmod"
                       else "the reference folder")

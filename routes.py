@@ -152,7 +152,8 @@ def _pinned_refs(raw, limit):
             continue
         tag = str(r.get("tag") or "").lstrip("@").strip()
         fname = str(r.get("file") or "").strip()
-        if not tag or not fname:
+        voice = str(r.get("voice") or "").strip() or None
+        if not tag or (not fname and not voice):
             continue
         subj = r.get("subject")
         try:
@@ -178,6 +179,15 @@ def _pinned_refs(raw, limit):
             strength = None
         if strength == 1.0:
             strength = None
+        inherited_voice = str(r.get("inherited_voice") or "").strip() or None
+        if not voice and not inherited_voice and source == "refmod" and fname:
+            try:
+                from . import refmod as _refmod
+                inherited_voice = str(
+                    (_refmod.stored_voice(fname) or {}).get("file") or ""
+                ).strip() or None
+            except Exception:
+                inherited_voice = None
         out.append({
             "tag": tag,
             "file": fname,
@@ -187,7 +197,8 @@ def _pinned_refs(raw, limit):
             "mp": mp,
             "source": source,
             "strength": strength,
-            "voice": str(r.get("voice") or "").strip() or None,
+            "voice": voice,
+            "inherited_voice": inherited_voice,
             # None rather than 0, as for `mp`: 0 is "untrimmed", and an unset
             # field must come back absent, not written as a zero.
             "voice_start": _secs_or_none(r.get("voice_start")),
@@ -1477,6 +1488,12 @@ def register():
         plan = str(body.get("plan") or "").strip()
         ref_plan = str(body.get("ref_plan") or "")
         start_file = str(body.get("start_image_file") or "").strip()
+        raw_vf = body.get("voice_files")
+        if isinstance(raw_vf, list):
+            voice_files = [str(v or "").strip() for v in raw_vf if str(v or "").strip()]
+        else:
+            vf1 = str(body.get("voice_file") or "").strip()
+            voice_files = [vf1] if vf1 else []
         dur_label = str(body.get("duration") or "10 s").strip()
         if not brief and stage == "plan":
             return web.json_response({"ok": False, "error": "write a brief first"})
@@ -1501,9 +1518,9 @@ def register():
 
         def encode():
             try:
-                lab = _std.labels(ref_plan)
+                lab = _std.labels(ref_plan, voice_files=voice_files)
             except Exception:
-                lab = {"pictures": []}
+                lab = {"pictures": [], "audios": []}
             ims = []
             for p in lab.get("pictures") or []:
                 url = _media.vision_data_url(p["file"]) if p.get("file") else None
@@ -1538,7 +1555,8 @@ def register():
         try:
             out = await _std.write(stage, brief, complete_fn=complete_fn,
                                    ref_plan=ref_plan, duration_s=duration_s,
-                                   images=images, start_image=start_url, plan=plan)
+                                   images=images, start_image=start_url, plan=plan,
+                                   voice_files=voice_files)
         except _llm.LLMError as exc:
             return web.json_response({"ok": False, "error": str(exc)})
         except Exception as exc:

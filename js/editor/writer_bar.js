@@ -17,7 +17,7 @@
  * the format to someone reading it.
  */
 import { el, button, widgetByName } from "./widget_utils.js";
-import { parseRefPlan } from "./ref_rail.js";
+import { parseRefPlan, refmodVoice } from "./ref_rail.js";
 
 const LLM_URL = "/h3_ref_chain/llm";
 
@@ -581,7 +581,8 @@ function writeThread(t) {
             for (const r of refs) {
                 const bits = [
                     "@" + String(r.tag || "").replace(/^@/, ""),
-                    r.file || "(no file)",
+                    r.file || (r.voice ? "(audio only)" : "(no file)"),
+                    r.voice ? `voice ${r.voice}` : "",
                     r.subject != null ? `subject ${r.subject}` : "",
                     r.retention || "",
                     Array.isArray(r.shots) ? `shots ${r.shots.join(",")}`
@@ -968,26 +969,33 @@ const patch = { server_url: url.value, keep_warm: unload.checked };
         const plan = parseRefPlan(widgetByName(node, "ref_plan")?.value);
         if (!plan) return [];
         return (plan.refs || [])
-            .filter((r) => String(r.file || "").trim())
-            .map((r) => ({
-                tag: String(r.tag || "").replace(/^@/, ""),
-                file: String(r.file || "").trim(),
-                subject: r.subject == null ? null : Number(r.subject),
-                retention: String(r.retention || ""),
-                desc: String(r.desc || ""),
-                // The writer never sees `mp` and cannot author one, but Accept
-                // replaces the whole register with what comes back. Send it up
-                // so the server can put it back, or every write silently
-                // resets every row to "full".
-                mp: r.mp ? Number(r.mp) : null,
-                // Same reason: the rail owns these and the writer never sees
-                // them. Without them Accept turned every RefMod row back into
-                // a still.
-                source: r.source === "refmod" ? "refmod" : null,
-                strength: r.strength == null || r.strength === ""
-                    ? null : Number(r.strength),
-                voice: r.voice ? String(r.voice) : null,
-            }));
+            .filter((r) => String(r.file || "").trim() || String(r.voice || "").trim())
+            .map((r) => {
+                const modVoice = r.source === "refmod" && r.file && !r.voice
+                    ? refmodVoice(r.file)?.file || null : null;
+                return {
+                    tag: String(r.tag || "").replace(/^@/, ""),
+                    file: String(r.file || "").trim(),
+                    subject: r.subject == null ? null : Number(r.subject),
+                    retention: String(r.retention || ""),
+                    desc: String(r.desc || ""),
+                    // The writer never sees `mp` and cannot author one, but Accept
+                    // replaces the whole register with what comes back. Send it up
+                    // so the server can put it back, or every write silently
+                    // resets every row to "full".
+                    mp: r.mp ? Number(r.mp) : null,
+                    // Same reason: the rail owns these and the writer never sees
+                    // them. Without them Accept turned every RefMod row back into
+                    // a still.
+                    source: r.source === "refmod" ? "refmod" : null,
+                    strength: r.strength == null || r.strength === ""
+                        ? null : Number(r.strength),
+                    voice: r.voice ? String(r.voice) : null,
+                    inherited_voice: modVoice,
+                    voice_start: r.voice_start ? Number(r.voice_start) : null,
+                    voice_end: r.voice_end ? Number(r.voice_end) : null,
+                };
+            });
     }
 
     function scenePrompt(canned) {

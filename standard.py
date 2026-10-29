@@ -7,11 +7,12 @@ that skill's own Context load table says; `prompt_pack/STANDARD_PROMPT.md` is th
 thin frame that tells the model what the node has already decided.
 
 What the node decides, so the model never guesses it:
-- the mode, from what is wired (rail pictures -> Ref2VA, none -> T2VA, a MEDIA
-  start image is pinned as frame 0 by the node and has no label);
+- the mode, from what is wired (rail pictures or audio references -> Ref2VA,
+  none -> T2VA, a MEDIA start image is pinned as frame 0 by the node and has no
+  label);
 - the labels, from the node's own ref code (`refs.active_refs` on hop 1, pictures
-  numbered in rail order), so `<Picture N>` in the block is the picture the model
-  is handed;
+  and audio references numbered in rail order), so `<Picture N>` and `<Audio N>`
+  in the block match what the model is handed;
 - which skill files are attached.
 
 No ComfyUI imports: the checker runs this on the CPU with a scripted model.
@@ -105,17 +106,34 @@ def system_prompt(stage, mode, brief=""):
     return "\n".join(parts) + "\n"
 
 
-def labels(ref_plan_text):
+def _row_voice(r):
+    """Voice filename on a rail row, including a RefMod's stored voice when unset."""
+    v = str(r.get("voice") or "").strip()
+    if v:
+        return v
+    if r.get("source") == "refmod" and str(r.get("file") or "").strip():
+        try:
+            from . import refmod as _refmod
+            return str((_refmod.stored_voice(r["file"]) or {}).get("file") or "").strip()
+        except Exception:
+            return ""
+    return ""
+
+
+def labels(ref_plan_text, voice_files=()):
     """Hop 1's reference labels, by the node's own ref code. -> dict.
 
     `pictures`: [{label, n, tag, file, desc, subject}] in the order the node
-    hands them to the model; `subjects`: {n: {name, pictures}}; `videos`: rail
-    clips (the Standard writer does not cite them, it reports them).
+    hands them to the model; `audios`: [{label, n, tag, file, desc, subject,
+    picture}] in `<Audio N>` order (`MEDIA` `voice_file`s first, then hop-1 rail
+    voices in rail order); `subjects`: {n: {name, pictures, audios}}; `videos`:
+    rail clips (the Standard writer does not cite them, it reports them).
     """
     text = str(ref_plan_text or "").strip()
-    if not text:
-        return {"pictures": [], "subjects": {}, "videos": []}
-    plan = _refs.parse_ref_plan(text)
+    media_vf = [str(v or "").strip() for v in (voice_files or ()) if str(v or "").strip()]
+    if not text and not media_vf:
+        return {"pictures": [], "subjects": {}, "videos": [], "audios": []}
+    plan = _refs.parse_ref_plan(text) if text else {"refs": [], "subjects": {}}
     rows = plan["refs"]
     wired = {r["slot"] for r in rows if str(r.get("file") or "").strip()}
     active = _refs.active_refs(rows, 0, wired)
@@ -127,31 +145,67 @@ def labels(ref_plan_text):
         out.append({"label": f"<Picture {ords[r['tag']]}>", "n": ords[r["tag"]],
                     "tag": r["tag"], "file": r.get("file") or "",
                     "desc": r.get("desc") or "", "subject": r.get("subject")})
+    audios = []
+    for vf in media_vf:
+        n = len(audios) + 1
+        audios.append({"label": f"<Audio {n}>", "n": n, "tag": "", "file": vf,
+                       "desc": "", "subject": None, "picture": None})
+    for r in rows:
+        if r.get("shots") is not None and 1 not in r["shots"]:
+            continue
+        vf = _row_voice(r)
+        if not vf:
+            continue
+        n = len(audios) + 1
+        pic_lbl = f"<Picture {ords[r['tag']]}>" if r["tag"] in ords else None
+        audios.append({"label": f"<Audio {n}>", "n": n, "tag": r["tag"],
+                       "file": vf, "desc": r.get("desc") or "",
+                       "subject": r.get("subject"), "picture": pic_lbl})
     subs = {}
     for p in out:
         s = p["subject"]
         if s is None:
             continue
         meta = (plan.get("subjects") or {}).get(s) or {}
-        subs.setdefault(s, {"name": meta.get("name") or "", "pictures": []})
+        subs.setdefault(s, {"name": meta.get("name") or "", "pictures": [], "audios": []})
         subs[s]["pictures"].append(p["label"])
+    for a in audios:
+        s = a["subject"]
+        if s is None:
+            continue
+        meta = (plan.get("subjects") or {}).get(s) or {}
+        subs.setdefault(s, {"name": meta.get("name") or "", "pictures": [], "audios": []})
+        subs[s]["audios"].append(a["label"])
     return {"pictures": out, "subjects": dict(sorted(subs.items())),
-            "videos": [r["tag"] for r in vids]}
+            "videos": [r["tag"] for r in vids], "audios": audios}
 
 
 def mode_for(lab):
-    return "Ref2VA" if (lab or {}).get("pictures") else "T2VA"
+    return "Ref2VA" if ((lab or {}).get("pictures") or (lab or {}).get("audios")) else "T2VA"
 
 
 def _label_lines(lab):
     lines = []
     for n, s in (lab.get("subjects") or {}).items():
         nm = f" ({s['name']})" if s.get("name") else ""
-        lines.append(f"<Subject {n}>{nm}: in {', '.join(s['pictures'])}")
+        where = list(s.get("pictures") or []) + [
+            f"voice {a}" for a in (s.get("audios") or [])
+        ]
+        lines.append(f"<Subject {n}>{nm}: in {', '.join(where)}")
     for p in lab.get("pictures") or []:
         who = f", <Subject {p['subject']}>" if p.get("subject") is not None else ""
         desc = f": {p['desc']}" if p.get("desc") else ""
         lines.append(f"{p['label']} = @{p['tag']}{who}{desc}")
+    for a in lab.get("audios") or []:
+        src = f"@{a['tag']} ({a['file']})" if a.get("tag") else (a.get("file") or "voice")
+        if a.get("subject") is not None:
+            role = f", voice for <Subject {a['subject']}>"
+        elif a.get("picture"):
+            role = f", paired with {a['picture']}"
+        else:
+            role = ""
+        desc = f": {a['desc']}" if a.get("desc") and not a.get("picture") else ""
+        lines.append(f"{a['label']} = {src}{role}{desc}")
     return lines
 
 
@@ -215,15 +269,20 @@ def contract_errors(block, *, mode, lab, duration_s):
     else:
         pics = {p["n"] for p in lab.get("pictures") or []}
         subs = set((lab.get("subjects") or {}).keys())
+        auds = {a["n"] for a in lab.get("audios") or []}
         used = {(k, int(n)) for k, n in _LABEL.findall(t)}
         for k, n in sorted(used):
             if k == "Picture" and n not in pics:
                 errs.append(f"<Picture {n}> is not on the rail; the pictures are "
-                            + ", ".join(f"<Picture {x}>" for x in sorted(pics)))
+                            + (", ".join(f"<Picture {x}>" for x in sorted(pics)) or "none"))
             if k == "Subject" and n not in subs:
                 errs.append(f"<Subject {n}> is not defined by the rail")
-            if k == "Audio":
-                errs.append(f"remove <Audio {n}>: the node binds voices itself")
+            if k == "Audio" and n not in auds:
+                errs.append(
+                    (f"<Audio {n}> is not on the rail; the audios are "
+                     + ", ".join(f"<Audio {x}>" for x in sorted(auds)))
+                    if auds else f"remove <Audio {n}>: no audio reference is on the rail"
+                )
             if k == "Video":
                 errs.append(f"remove <Video {n}>: the Standard writer cites no clips")
         for n in sorted(pics):
@@ -232,6 +291,9 @@ def contract_errors(block, *, mode, lab, duration_s):
         for n in sorted(subs):
             if ("Subject", n) not in used:
                 errs.append(f"<Subject {n}> is defined by the rail but never cited")
+        for n in sorted(auds):
+            if ("Audio", n) not in used:
+                errs.append(f"<Audio {n}> is on the rail but never cited")
         summ = _field(t, "summary:")
         if summ and not re.match(r"\s*\[[^\]]+\]", summ):
             errs.append("summary must open with its [task type], e.g. [reference generation]")
@@ -242,6 +304,9 @@ def contract_errors(block, *, mode, lab, duration_s):
         for p in lab.get("pictures") or []:
             if p.get("subject") is None and not re.search(rf"^\s*<Picture {p['n']}>", ret, re.M):
                 errs.append(f"retention_analysis needs its own line for <Picture {p['n']}>")
+        for a in lab.get("audios") or []:
+            if not re.search(rf"^\s*<Audio {a['n']}>", ret, re.M):
+                errs.append(f"retention_analysis needs its own line for <Audio {a['n']}>")
     if re.search(r"(?<![\w<])@\w", t):
         errs.append("no @tags in the block: use the labels the node listed")
     body = _field(t, "detailed_description:" if mode == "Ref2VA"
@@ -297,12 +362,12 @@ def parse_reply(raw, stage):
 
 
 async def write(stage, brief, *, complete_fn, ref_plan="", duration_s=10.0,
-                images=None, start_image=None, plan="", attempts=None,
-                on_step=None):
+                images=None, start_image=None, plan="", voice_files=(),
+                attempts=None, on_step=None):
     """One stage. -> {ok, stage, mode, plan|block, errors, attempts, files}."""
     stage = stage if stage in STAGES else "plan"
     try:
-        lab = labels(ref_plan)
+        lab = labels(ref_plan, voice_files=voice_files)
     except Exception as exc:
         return {"ok": False, "stage": stage, "errors": [f"the rail's ref_plan does not parse: {exc}"]}
     mode = mode_for(lab)
@@ -328,6 +393,7 @@ async def write(stage, brief, *, complete_fn, ref_plan="", duration_s=10.0,
                 {"role": "user", "content": _pl.attach_images(text, pics)}]
     base = {"stage": stage, "mode": mode + (" + start image" if start_image else ""),
             "files": files, "labels": _label_lines(lab), "videos": lab["videos"],
+            "audios": [a["label"] for a in lab.get("audios") or []],
             # Names the exact prompt that wrote this block, so a render can be
             # traced to it and an A/B can tell two prompts apart.
             "system_sha": hashlib.sha256(system.encode("utf-8")).hexdigest()[:12]}

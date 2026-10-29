@@ -30,6 +30,13 @@ pack — the published package excludes them.
   drift into a close-up. Its join windows tied both hops to it, and the next hop snapped back to
   its own framing a couple of seconds in. The previs now opens on the section's framing sentence
   and every join window names the shot size; the log warns when no beat names one.
+- **STANDARD tab: audio references (`<Audio N>`) detected on the rail and `MEDIA` voice slots.**
+  Rail rows with a `voice` (or a RefMod's stored voice, or an audio-only rail row) and `MEDIA`
+  `voice_file` slots are now numbered as `<Audio 1>`, `<Audio 2>`, ... in the exact order the node
+  hands them to the model, shown in the `STANDARD` mode line (`Ref2VA, N picture(s), M audio(s)`),
+  passed to the writer in both `plan` and `write` turns, and validated by the `Ref2VA` contract
+  (`subject_definitions`, `summary`, `retention_analysis`, and `detailed_description` / audio
+  sections).
 - **STANDARD tab: notes on how a written block may play.** After a block passes the contract, it is
   read as a film (shots, timed windows, spoken lines) and the panel lists advisory notes: a line
   your brief quotes that is missing, said twice, changed or only described; a line far shorter or

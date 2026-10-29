@@ -5592,7 +5592,7 @@ class HandTieClips:
         slot_voices = {}
         for _r in ref_plan_refs:
             _vf = str(_r.get("voice") or "")
-            if not _vf or _r["slot"] not in _wired_slots:
+            if not _vf or (_r["slot"] not in _wired_slots and _r.get("file")):
                 continue
             _wav, _vauto = _media.load_voice(
                 _vf, start=float(_r.get("voice_start") or 0.0),
@@ -7193,7 +7193,24 @@ class HandTieClips:
                              or _voice_lift)
             _hop_voice_tags = []
             _row_slot = {r["tag"]: r["slot"] for r in (hop_active or [])}
-            for _pr in list(hop_pictures) + list(hop_mod_videos):
+            _audio_only_slots = set(slot_voices) - _wired_slots
+            if _audio_only_slots and ref_plan_refs:
+                if shot.get("refs") is not None:
+                    _hop_audio_only = _refs.select_for_shot(
+                        ref_plan_refs, shot["refs"], _audio_only_slots)
+                else:
+                    _hop_audio_only = _refs.active_refs(
+                        ref_plan_refs, i, _audio_only_slots)
+                    if not hop_is_start and str(hop_script) == "next":
+                        _hop_audio_only = [
+                            r for r in _hop_audio_only if r.get("shots") is not None
+                        ]
+            else:
+                _hop_audio_only = []
+            _hop_voice_rows = (
+                list(hop_pictures) + list(hop_mod_videos) + list(_hop_audio_only)
+            )
+            for _pr in _hop_voice_rows:
                 _rv = slot_voices.get(_pr["slot"])
                 if _rv is None:
                     continue
@@ -7227,7 +7244,7 @@ class HandTieClips:
             # guess which of two faces owns which of two recordings. Where
             # it goes, and the speaker IDs it carries: `refs.bind_voices`.
             _bindings = []
-            for _rr in hop_active:
+            for _rr in list(hop_active) + list(_hop_audio_only):
                 _ord = _voice_ords.get(_rr["tag"])
                 if not _ord or f"<Audio {_ord}>" in block:
                     continue
@@ -7235,8 +7252,10 @@ class HandTieClips:
                     _who = f"<Subject {_rr['subject']}>"
                 elif _rr["tag"] in video_ords:
                     _who = f"<Video {video_ords[_rr['tag']]}>"
+                elif _rr["tag"] in hop_ords:
+                    _who = f"<Picture {hop_ords[_rr['tag']]}>"
                 else:
-                    _who = f"<Picture {hop_ords.get(_rr['tag'], 0)}>"
+                    _who = "The speaker"
                 _bindings.append({"audio": _ord, "subject": _rr.get("subject"),
                                   "who": _who})
             if _bindings:

@@ -12,7 +12,7 @@
  * the pictures the model is handed.
  */
 import { el, button, widgetByName } from "./widget_utils.js";
-import { parseRefPlan } from "./ref_rail.js";
+import { parseRefPlan, refmodVoice } from "./ref_rail.js";
 
 const STANDARD_URL = "/h3_ref_chain/standard";
 const MODE_PROP = "h3_editor_mode";
@@ -92,11 +92,33 @@ export function createStandardWriter(node, { onWritten } = {}) {
         syncButtons();
     }
 
-    function railPictures() {
+    function hop1Rows() {
         const plan = parseRefPlan(widgetByName(node, "ref_plan")?.value);
-        if (!plan) return 0;
-        return (plan.refs || []).filter((r) => String(r.file || "").trim()
+        if (!plan) return [];
+        return (plan.refs || []).filter((r) => !Array.isArray(r.shots)
+            || !r.shots.length || r.shots.includes(1));
+    }
+
+    function railPictures() {
+        return hop1Rows().filter((r) => String(r.file || "").trim()
             && String(r.kind || "") !== "video").length;
+    }
+
+    function voiceFiles() {
+        return ["voice_file", "voice_2_file", "voice_3_file"]
+            .map((k) => String(widgetByName(node, k)?.value || "").trim())
+            .filter(Boolean);
+    }
+
+    function railAudios() {
+        const rowAudios = hop1Rows().filter((r) => {
+            if (String(r.voice || "").trim()) return true;
+            if (r.source === "refmod" && String(r.file || "").trim()) {
+                return Boolean(refmodVoice(r.file)?.file);
+            }
+            return false;
+        }).length;
+        return voiceFiles().length + rowAudios;
     }
 
     function startImage() {
@@ -105,11 +127,15 @@ export function createStandardWriter(node, { onWritten } = {}) {
 
     function renderMode() {
         const n = railPictures();
-        const mode = n ? `Ref2VA, ${n} picture${n > 1 ? "s" : ""}` : "T2VA, no pictures";
+        const a = railAudios();
+        const parts = [];
+        if (n) parts.push(`${n} picture${n > 1 ? "s" : ""}`);
+        if (a) parts.push(`${a} audio${a > 1 ? "s" : ""}`);
+        const mode = parts.length ? `Ref2VA, ${parts.join(", ")}` : "T2VA, no pictures";
         const dur = String(widgetByName(node, "duration")?.value || "");
         modeLine.textContent = `Mode: ${mode}${startImage() ? " + start image" : ""}`
             + (dur ? ` · ${dur}` : "");
-        badge.textContent = n ? "Ref2VA" : "T2VA";
+        badge.textContent = parts.length ? "Ref2VA" : "T2VA";
     }
 
     function syncButtons() {
@@ -141,6 +167,7 @@ export function createStandardWriter(node, { onWritten } = {}) {
                     duration: String(widgetByName(node, "duration")?.value || ""),
                     ref_plan: String(widgetByName(node, "ref_plan")?.value || ""),
                     start_image_file: startImage(),
+                    voice_files: voiceFiles(),
                 }),
             });
             const j = await r.json();

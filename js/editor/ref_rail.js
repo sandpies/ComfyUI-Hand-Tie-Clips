@@ -74,7 +74,7 @@ function refmodNames() {
 }
 /** The voice a mod's header names, `{file, start, end}`, or null. A row that
  *  cites the mod with no voice of its own inherits exactly this. */
-function refmodVoice(name) {
+export function refmodVoice(name) {
     const row = (_refmods || []).find((f) => f.name === name);
     return row?.voice?.file ? row.voice : null;
 }
@@ -274,7 +274,7 @@ function validate(plan, wired) {
         // The picture, not the slot. `wired` is derived from row index; a
         // freshly clicked-in row used to have file set and slot unset, so
         // this branch fired "no picture chosen" over a visible thumbnail.
-        if (!String(r.file || "")) {
+        if (!String(r.file || "") && !String(r.voice || "")) {
             problems.set(r, r.legacy_slot
                 ? `was wired to ref_image_${r.legacy_slot}, which no longer exists `
                   + `— pick its picture to bring this ref back`
@@ -431,13 +431,15 @@ export function createRefRail(node, { getPlan, setPlan, onChange, hopCount,
             const row = el("div", "h3e-ref");
             const bad = problems.get(r);
             if (bad) row.classList.add("h3e-bad");
-            if (!wired.has(r.slot)) row.classList.add("h3e-inactive");
+            if (!wired.has(r.slot) && !String(r.voice || "")) row.classList.add("h3e-inactive");
 
             const ord = ords.get(r.tag);
-            const badge = el("span", "h3e-ord", ord ? String(ord) : "–");
+            const badge = el("span", "h3e-ord", ord ? String(ord) : (r.voice ? "♪" : "–"));
             badge.title = ord
                 ? `Resolves to <Picture ${ord}> on every hop this ref is active.`
-                : "No picture, so it takes no ordinal this run.";
+                : (r.voice
+                    ? "Audio-only reference (<Audio N> on the hops it rides); takes no <Picture N> ordinal."
+                    : "No picture, so it takes no ordinal this run.");
             row.appendChild(badge);
 
             const tag = el("input", "h3e-input h3e-tag");

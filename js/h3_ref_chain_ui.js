@@ -171,6 +171,7 @@ function mountEditor(node) {
         onChange: () => {
             syncBadges();
             node._h3Editor?.swap?.render?.();
+            node._h3Editor?.standard?.render?.();
             node.graph?.setDirtyCanvas?.(true, true);
         },
         hopCount,
@@ -272,7 +273,10 @@ function mountEditor(node) {
     });
 
     mediaStrip = createMediaStrip(node, {
-        onChange: () => node.graph?.setDirtyCanvas?.(true, true),
+        onChange: () => {
+            node._h3Editor?.standard?.render?.();
+            node.graph?.setDirtyCanvas?.(true, true);
+        },
         // The master-audio window is drawn the width of the chain, so it has
         // to ask the editor rather than the widgets: `duration` is only the
         // default, a shot may override it, and the count comes from the cards.
@@ -655,6 +659,7 @@ node._h3PaintPin = paintPin;
             writer.restore();
             writer.syncHops();
             videoSwap.render?.();
+            standard.render?.();
             timeline.render();
             applyVisibility();   // syncs the run panel on the way through
             syncBadges();
@@ -664,6 +669,7 @@ node._h3PaintPin = paintPin;
         runPanel,
         writer,
         swap: videoSwap,
+        standard,
         timeline,
 tabs,
         // A4: lets the surface be driven from outside the panel (and lets a
