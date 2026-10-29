@@ -2915,13 +2915,11 @@ def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
                               upsample_dit=None, upsample_denoise=UPSAMPLE_DENOISE,
                               width=1344, height=768, model=None,
                               regen2k_seed=REGEN2K_SEED,
-                              regen2k_preset="realistic",
                               refine_model=None,
                               regen2k_cond="none"):
     """Validate upsample settings before the hop loop."""
     if str(upsample) != "on":
         return False
-    r2k_sig = _tu.regen2k_sigmas_for_preset(regen2k_preset)
     cond_mode = str(regen2k_cond or "none").strip().lower()
     if cond_mode not in REGEN2K_COND_MODES:
         raise ValueError(
@@ -2941,9 +2939,8 @@ def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
         print(f"[{TAG}] upsample: regen2k_model wins over the wired upsample_dit",
               flush=True)
     print(f"[{TAG}] upsample: regen2k LoRA {lora_name} at strength "
-          f"{float(upsample_denoise):g} (preset={str(regen2k_preset)}, "
-          f"cond={cond_mode}, sigmas "
-          f"{[round(float(s), 4) for s in r2k_sig]}, seed {int(regen2k_seed)})",
+          f"{float(upsample_denoise):g} (cond={cond_mode}, sigmas "
+          f"{[round(float(s), 4) for s in _tu.REGEN2K_SIGMAS]}, seed {int(regen2k_seed)})",
           flush=True)
     if min(int(width), int(height)) < 768:
         print(f"[{TAG}] WARNING: upsample on {int(width)}x{int(height)} "
@@ -3109,12 +3106,9 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
                           regen2k_lora=REGEN2K_DEFAULT_LORA,
                           lora_strength=UPSAMPLE_DENOISE,
                           regen2k_seed=REGEN2K_SEED,
-                          regen2k_preset="realistic",
                           strip_existing_loras=False,
                           regen2k_cond="none"):
     """Run the delivery-only Open-H3-Regenerate-2K stage over stitched pre-VAE hop latents."""
-    preset_sigmas = _tu.regen2k_sigmas_for_preset(regen2k_preset)
-    preset_name = str(regen2k_preset or "realistic").strip().lower()
     cond_mode = str(regen2k_cond or "none").strip().lower()
     if cond_mode not in REGEN2K_COND_MODES:
         raise ValueError(
@@ -3169,27 +3163,32 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
     elif int(r2k_settings["steps"]) == 2:
         r2k_sigmas = _tu.REGEN2K_SIGMAS_2STEP
     else:
-        r2k_sigmas = preset_sigmas
+        r2k_sigmas = _tu.REGEN2K_SIGMAS
     n_chunks = 0
     for seg in _tu.segments(r2k_hops):
         sv, _sa = _tu.stitch(seg)
         cf_val = r2k_settings.get("chunk_frames", _tu._DEFAULT_CHUNK_FRAMES)
         cf_plan = int(cf_val)
         co_plan = int(r2k_settings.get("chunk_overlap", _tu.CHUNK_OVERLAP))
+        ov_px = r2k_settings.get("tile_overlap_px", _tu.TILE_OVERLAP_PX)
+        w_px, h_px = _tu.target_size(int(sv.shape[4]) * _tu.SPATIAL,
+                                     int(sv.shape[3]) * _tu.SPATIAL,
+                                     float(megapixels))
         if isinstance(cf_val, _tu._DefaultInt) and r2k_sigmas is not None:
-            w_px, h_px = _tu.target_size(int(sv.shape[4]) * _tu.SPATIAL,
-                                         int(sv.shape[3]) * _tu.SPATIAL,
-                                         float(megapixels))
             cf_plan, _ = _tu._regen2k_chunk_frames(
-                w_px, h_px, budget,
-                overlap_px=r2k_settings.get("tile_overlap_px", _tu.TILE_OVERLAP_PX))
-        n_chunks += len(_tu.chunks(int(sv.shape[2]), cf_plan, co_plan))
+                w_px, h_px, budget, overlap_px=ov_px)
+        if r2k_sigmas is not None:
+            n_chunks += len(_tu.regen2k_chunks(
+                int(sv.shape[2]), cf_plan, co_plan,
+                w_px=w_px, h_px=h_px, budget=budget, overlap_px=ov_px))
+        else:
+            n_chunks += len(_tu.chunks(int(sv.shape[2]), cf_plan, co_plan))
     m_label = getattr(regen2k_model, "htc_name", None) or type(regen2k_model).__name__
     n_patches = len(getattr(work_model, "patches", None) or {})
     sig_list = ([round(float(s), 4) for s in r2k_sigmas]
                 if r2k_sigmas is not None else "schedule")
     r2k_line = (f"upsample: regen2k on {m_label} ({n_patches} patched targets, "
-                f"lora={lora_name}@{strength:g}, preset={preset_name}, cond={cond_mode}), "
+                f"lora={lora_name}@{strength:g}, cond={cond_mode}), "
                 f"seed={int(r2k_settings['seed'])}, "
                 f"sigmas {sig_list}, chunks {n_chunks}")
     print(f"[{TAG}] {r2k_line}", flush=True)
@@ -4874,12 +4873,12 @@ class HandTieClips:
                                 "between them (any TTS or your own voice). Empty = H3 "
                                 "drafts the lines itself. Set it on the MEDIA tab."),
                 }),
-                # APPENDED 2026-10-28, LAST widgets. Open-H3-Regenerate-2K LoRA selector + seed.
+                # APPENDED 2026-10-28, LAST widgets. Open-H3-Regenerate-2K LoRA selector + seed + cond.
                 "upsample_redraw": (_regen2k_lora_choices(), {
                     "default": REGEN2K_DEFAULT_LORA,
                     "tooltip": ("Open-H3-Regenerate-2K LoRA from models/loras for the 3-step "
-                                "Euler re-draw on [0.909375, 6/7, 2/3, 0] with zeroed-out "
-                                f"conditioning and no references (default: {REGEN2K_DEFAULT_LORA} "
+                                "Euler re-draw on [0.8, 24/35, 0.48, 0] "
+                                f"(default: {REGEN2K_DEFAULT_LORA} "
                                 "at upsample_denoise 0.25, seed 42)."),
                 }),
                 "regen2k_model": ("MODEL", {
@@ -4892,14 +4891,6 @@ class HandTieClips:
                 "regen2k_seed": ("INT", {
                     "default": REGEN2K_SEED, "min": 0, "max": 0x7FFFFFFF,
                     "tooltip": "Noise seed for the Regen2K upsample re-draw (default 42).",
-                }),
-                "regen2k_preset": (list(_tu.REGEN2K_PRESETS), {
-                    "default": "realistic",
-                    "tooltip": ("Regen2K sigma schedule preset: 'realistic' runs "
-                                "[0.909375, 6/7, 2/3, 0] (3 Euler steps); 'start_08' runs "
-                                "[0.8, 24/35, 0.48, 0] (shift-6 from 0.8 to stay closer to draft); "
-                                "'stylized' runs [0.6, 0.4, 0.2, 0.0] (lighter re-draw for "
-                                "2.5D/animated content to reduce new detail and character drift)."),
                 }),
                 "regen2k_cond": (list(REGEN2K_COND_MODES), {
                     "default": "none",
@@ -5033,7 +5024,7 @@ class HandTieClips:
             audio_seed_offset=0, dialogue_lock="off", dialogue_audio_file="",
             upsample_redraw=REGEN2K_DEFAULT_LORA,
             regen2k_model=None, regen2k_seed=REGEN2K_SEED,
-            regen2k_preset="realistic", regen2k_cond="none",
+            regen2k_cond="none",
             audio_model=None,
             upsample_settings=None, unique_id=None):
         # Every argument, as called: the hand_tie previs-first pass re-runs this
@@ -5917,7 +5908,7 @@ class HandTieClips:
             regen2k_on = _validate_upsample_redraw(
                 upsample, upsample_redraw, regen2k_model,
                 upsample_dit, upsample_denoise, width, height, model=model,
-                regen2k_seed=regen2k_seed, regen2k_preset=regen2k_preset,
+                regen2k_seed=regen2k_seed,
                 refine_model=refine_model, regen2k_cond=regen2k_cond)
             _ud = float(upsample_denoise)
             if _ud <= 0.0:
@@ -8975,7 +8966,6 @@ class HandTieClips:
                         regen2k_lora=str(upsample_redraw),
                         lora_strength=float(upsample_denoise),
                         regen2k_seed=int(regen2k_seed),
-                        regen2k_preset=str(regen2k_preset),
                         strip_existing_loras=(regen2k_model is None),
                         regen2k_cond=str(regen2k_cond))
                 else:
