@@ -2911,13 +2911,15 @@ def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
                               upsample_dit=None, upsample_denoise=UPSAMPLE_DENOISE,
                               width=1344, height=768, model=None,
                               regen2k_seed=REGEN2K_SEED,
-                              regen2k_preset="realistic"):
+                              regen2k_preset="realistic",
+                              refine_model=None):
     """Validate upsample settings before the hop loop."""
     if str(upsample) != "on":
         return False
     r2k_sig = _tu.regen2k_sigmas_for_preset(regen2k_preset)
     base_m = (regen2k_model if regen2k_model is not None
               else upsample_dit if upsample_dit is not None
+              else refine_model if refine_model is not None
               else model)
     if base_m is None:
         raise RuntimeError(
@@ -3002,12 +3004,15 @@ REGEN2K_TEXT_DIM = 5120
 
 def _zero_out_cond(cond=None):
     """Zeroed-out conditioning (equivalent to ConditioningZeroOut on an empty text
-    encode), with no prompt and no minimax_refs."""
+    encode), with no prompt, no minimax_refs, and no minimax_keyframes."""
     if cond:
         out = []
         for emb, d in cond:
             d2 = dict(d)
             d2.pop("minimax_refs", None)
+            d2.pop("minimax_keyframes", None)
+            d2.pop("minimax_visual_cond_noise_aug", None)
+            d2.pop("minimax_audio_cond_noise_aug", None)
             for k in ("pooled_output", "conditioning_lyrics",
                       "conditioning_scale", "direct_context"):
                 v = d2.get(k, None)
@@ -3073,13 +3078,19 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
                           regen2k_lora=REGEN2K_DEFAULT_LORA,
                           lora_strength=UPSAMPLE_DENOISE,
                           regen2k_seed=REGEN2K_SEED,
-                          regen2k_preset="realistic"):
+                          regen2k_preset="realistic",
+                          strip_existing_loras=False):
     """Run the delivery-only Open-H3-Regenerate-2K stage over stitched pre-VAE hop latents."""
     preset_sigmas = _tu.regen2k_sigmas_for_preset(regen2k_preset)
     preset_name = str(regen2k_preset or "realistic").strip().lower()
     snap = _snapshot_model_state(regen2k_model)
     work_model = (regen2k_model.clone() if hasattr(regen2k_model, "clone")
                   else regen2k_model)
+    if strip_existing_loras and getattr(work_model, "patches", None):
+        n_stripped = len(work_model.patches)
+        work_model.patches = {}
+        print(f"[{TAG}] upsample: stripped {n_stripped} hop LoRA patch target(s) "
+              "from fallback model before loading Regen2K LoRA", flush=True)
     lora_name = _resolve_regen2k_lora(regen2k_lora)
     strength = float(lora_strength)
     if strength > 0.0 and lora_name != "None" and not getattr(work_model, "patches", None):
@@ -4848,8 +4859,9 @@ class HandTieClips:
                 "regen2k_preset": (list(_tu.REGEN2K_PRESETS), {
                     "default": "realistic",
                     "tooltip": ("Regen2K sigma schedule preset: 'realistic' runs "
-                                "[0.909375, 6/7, 2/3, 0] (3 Euler steps); 'stylized' runs "
-                                "[0.6, 0.4, 0.2, 0.0] (3 Euler steps, lighter re-draw for "
+                                "[0.909375, 6/7, 2/3, 0] (3 Euler steps); 'start_08' runs "
+                                "[0.8, 24/35, 0.48, 0] (shift-6 from 0.8 to stay closer to draft); "
+                                "'stylized' runs [0.6, 0.4, 0.2, 0.0] (lighter re-draw for "
                                 "2.5D/animated content to reduce new detail and character drift)."),
                 }),
                 "audio_model": ("MODEL", {
@@ -5862,7 +5874,8 @@ class HandTieClips:
             regen2k_on = _validate_upsample_redraw(
                 upsample, upsample_redraw, regen2k_model,
                 upsample_dit, upsample_denoise, width, height, model=model,
-                regen2k_seed=regen2k_seed, regen2k_preset=regen2k_preset)
+                regen2k_seed=regen2k_seed, regen2k_preset=regen2k_preset,
+                refine_model=refine_model)
             _ud = float(upsample_denoise)
             if _ud <= 0.0:
                 print(f"[{TAG}] upsample_denoise 0: no re-draw, the enlarged "
@@ -5902,6 +5915,8 @@ class HandTieClips:
         boost_model = None
         refine_sampler_obj = refine_sched = None
         sigma_cache = {}
+        _raw_model = model
+        _raw_refine_model = refine_model
         if not dry:
             model = _result(_core_call(
                 MiniMaxH3SigmaShift, "the sigma shift",
@@ -8875,7 +8890,8 @@ class HandTieClips:
             if regen2k_on:
                 _up_model = (regen2k_model if regen2k_model is not None
                              else upsample_dit if upsample_dit is not None
-                             else model)
+                             else _raw_refine_model if _raw_refine_model is not None
+                             else _raw_model)
             if not regen2k_on and str(upsample_lora) != "None" and float(upsample_lora_strength) != 0.0:
                 # On top of the re-draw model, so the render's own LoRAs (or the
                 # boost's) stay under it. Delivery only: no hop key sees it.
@@ -8906,7 +8922,8 @@ class HandTieClips:
                         regen2k_lora=str(upsample_redraw),
                         lora_strength=float(upsample_denoise),
                         regen2k_seed=int(regen2k_seed),
-                        regen2k_preset=str(regen2k_preset))
+                        regen2k_preset=str(regen2k_preset),
+                        strip_existing_loras=(regen2k_model is None))
                 else:
                     if (upsample_guide_factor and float(upsample_denoise) > 0.0
                             and float(upsample_lora_strength) != 0.0):
