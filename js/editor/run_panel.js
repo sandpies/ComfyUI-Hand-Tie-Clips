@@ -229,8 +229,8 @@ const HIDDEN_COMBO_OPTIONS = {
 const COMBO_UI_ALIAS = {
     pin_mech: { hand_tie_mc: "hand_tie", addguide: "auto" },
     upsample_redraw: {
-        regen2k: "open_h3_regen2k_refiner_r256pp_bf16.safetensors",
-        recipe: "open_h3_regen2k_refiner_r256pp_bf16.safetensors",
+        regen2k: "open_h3_regenerate_2k_r256pp_bf16.safetensors",
+        recipe: "open_h3_regenerate_2k_r256pp_bf16.safetensors",
     },
 };
 

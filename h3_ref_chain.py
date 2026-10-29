@@ -2881,7 +2881,7 @@ _BOOST_LOADERS = {}
 # The chain's upsample re-draw: Open-H3-Regenerate-2K LoRA strength (0.25 by
 # default; 0 skips the re-draw and only enlarges with the 3D latent upscaler).
 UPSAMPLE_DENOISE = 0.25
-REGEN2K_DEFAULT_LORA = "open_h3_regen2k_refiner_r256pp_bf16.safetensors"
+REGEN2K_DEFAULT_LORA = "open_h3_regenerate_2k_r256pp_bf16.safetensors"
 REGEN2K_REFERENCE_LORA = "open_h3_regenerate_2k_bf16.safetensors"
 REGEN2K_SEED = 42
 
