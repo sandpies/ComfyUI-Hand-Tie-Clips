@@ -144,6 +144,7 @@ Full authoring guide: **[PROMPTING.md](PROMPTING.md)** · Release history: **[CH
 - **H3 Chain Preview (`HTCChainPreview`):** Live progress, seam side-by-side viewer, and end-of-run A/V drift monitor.
 - **H3 Video Upsampler (`HTCVideoUpsampler`):** Standalone node to upscale any finished video clip with the same tiled latent upsampler recipe.
 - **H3 Video Upsampler (file to file) (`HTCVideoUpsamplerToFile`):** The same upsampler from Load Video straight to an MP4, read, encoded, re-drawn, decoded and saved a chunk at a time so RAM stays flat at any length.
+- **HTC Video Frames (lean) (`HTCVideoFrames`):** Drop-in for Get Video Components with half its peak RAM; `start_seconds`, `max_frames`, a 24 fps re-time and a resize applied while decoding.
 - **H3 Tiled Upsampler (`HTCTiledUpsampler`):** Latent-input tiled upsampler for custom graphs.
 - **HTC Upsample Settings (`HTCUpsampleSettings`):** Every number of the chain's upsample, on its optional `upsample_settings` socket; unwired, the original recipe.
 - **HTC Save Video (long-form) (`HTCSaveVideo`):** Replaces RTX Frame Generation -> CreateVideo -> SaveVideo for long films: streams the frames, frame generation per pair on the GPU, NVENC constant quality, a keyframe on every cut.
