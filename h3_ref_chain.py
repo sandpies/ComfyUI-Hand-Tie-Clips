@@ -3178,7 +3178,11 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
         if isinstance(cf_val, _tu._DefaultInt) and r2k_sigmas is not None:
             cf_plan, _ = _tu._regen2k_chunk_frames(
                 w_px, h_px, budget, overlap_px=ov_px)
-        if r2k_sigmas is not None:
+        if (r2k_settings.get("chunking") is False
+                and _tu.seq_len(w_px, h_px, int(sv.shape[2]))
+                <= _tu.WHOLE_CLIP_MAX * int(budget or _tu.TOKEN_BUDGET)):
+            n_chunks += 1
+        elif r2k_sigmas is not None:
             n_chunks += len(_tu.regen2k_chunks(
                 int(sv.shape[2]), cf_plan, co_plan,
                 w_px=w_px, h_px=h_px, budget=budget, overlap_px=ov_px))
