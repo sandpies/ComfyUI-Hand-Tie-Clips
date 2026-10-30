@@ -92,7 +92,7 @@ Enlarges the finished film to 2.0 MP in latent chunks and re-draws it with the *
 
 The old h3upscale x2 LoRA is retired: `upsample_lora` is ignored.
 
-*Want to upscale any existing video outside a chain? Use the included **H3 Video Upsampler (finished clip)** node (`workflows/HandTieClips_Upsample_Video.json`) or the standalone repo: [sandpies/ComfyUI-H3-Video-Upsampler](https://github.com/sandpies/ComfyUI-H3-Video-Upsampler).*
+*Want to upscale any existing video outside a chain? Use the included **H3 Video Upsampler (file to file)** node (`workflows/HandTieClips_Upsample_Video_File.json`, flat RAM at any length) or **H3 Video Upsampler (finished clip)** (`workflows/HandTieClips_Upsample_Video.json`) or the standalone repo: [sandpies/ComfyUI-H3-Video-Upsampler](https://github.com/sandpies/ComfyUI-H3-Video-Upsampler).*
 
 ---
 
@@ -143,6 +143,7 @@ Full authoring guide: **[PROMPTING.md](PROMPTING.md)** · Release history: **[CH
 - **H3 Ref2VA Chain (`HandTieClips`):** The main studio node (`images`, `audio`, `info`, `contact_sheet`).
 - **H3 Chain Preview (`HTCChainPreview`):** Live progress, seam side-by-side viewer, and end-of-run A/V drift monitor.
 - **H3 Video Upsampler (`HTCVideoUpsampler`):** Standalone node to upscale any finished video clip with the same tiled latent upsampler recipe.
+- **H3 Video Upsampler (file to file) (`HTCVideoUpsamplerToFile`):** The same upsampler from Load Video straight to an MP4, read, encoded, re-drawn, decoded and saved a chunk at a time so RAM stays flat at any length.
 - **H3 Tiled Upsampler (`HTCTiledUpsampler`):** Latent-input tiled upsampler for custom graphs.
 - **HTC Upsample Settings (`HTCUpsampleSettings`):** Every number of the chain's upsample, on its optional `upsample_settings` socket; unwired, the original recipe.
 - **HTC Save Video (long-form) (`HTCSaveVideo`):** Replaces RTX Frame Generation -> CreateVideo -> SaveVideo for long films: streams the frames, frame generation per pair on the GPU, NVENC constant quality, a keyframe on every cut.
