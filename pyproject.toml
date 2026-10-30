@@ -1,6 +1,6 @@
 [project]
 name = "comfyui-hand-tie-clips"
-version = "3.2.0"
+version = "3.3.0"
 description = "Native MiniMax H3 Ref2VA chain: persistent references, previous-segment clip+audio pin, one queue."
 readme = "README.md"
 # SPDX string, not `{ file = "LICENSE" }`. The registry does not resolve the file
@@ -30,11 +30,17 @@ Documentation = "https://github.com/sandpies/ComfyUI-Hand-Tie-Clips/blob/main/PR
 # two Core nodes this pack calls go back to v0.30.0, where H3 support landed, but
 # AddGuide is the binding one.
 #
+# 3.3.0 raises it to 0.38.0: the upsampler nodes retime a clip's soundtrack for
+# H3's 24 fps clock with comfy.audio.resample, and comfy/audio.py first ships in
+# v0.38.0. Core's own H3 latent upscaler (PR #17412) and the sol-VAE are newer
+# still (master from 28 Oct 2026), but optional: without them the bundled
+# upscaler and the standard VAE run.
+#
 # No upper bound. Core's parameter ORDER is not a contract and has already moved
 # once -- master reorders MiniMaxH3ReferenceToVideo so vae/audio_vae come last
 # and optional -- but every call here is by NAME, and the names have been stable
 # from v0.30.0 through master. tools/check_core_calls.py is what keeps that true.
-requires-comfyui = ">=0.34.0"
+requires-comfyui = ">=0.38.0"
 PublisherId = "sandpies"
 DisplayName = "Hand Tie Clips"
 # Square, 400x400. The specifications page requires square and <=400x400; the
