@@ -2940,8 +2940,8 @@ def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
         print(f"[{TAG}] upsample: regen2k_model wins over the wired upsample_dit",
               flush=True)
     print(f"[{TAG}] upsample: regen2k LoRA {lora_name} at strength "
-          f"{float(upsample_denoise):g} (cond={cond_mode}, sigmas "
-          f"{[round(float(s), 4) for s in _tu.REGEN2K_SIGMAS]}, seed {int(regen2k_seed)})",
+          f"{float(upsample_denoise):g} (cond={cond_mode}, seed {int(regen2k_seed)}; "
+          "sigmas in the upsample log)",
           flush=True)
     if min(int(width), int(height)) < 768:
         print(f"[{TAG}] WARNING: upsample on {int(width)}x{int(height)} "
@@ -3161,9 +3161,11 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
         r2k_sigmas = None
     elif float(r2k_settings.get("start_sigma", 0.0)) > 0.0:
         r2k_sigmas = None
-    elif abs(float(r2k_settings.get("redraw_start", 0.8)) - 0.8) > 1e-6:
+    elif abs(float(r2k_settings.get("redraw_start", _tu.CHAIN_DEFAULTS["redraw_start"]))
+             - 0.8) > 1e-6:
         # redraw_start (HTC Upsample Settings): Regen2K's grid from another start.
-        r2k_sigmas = _tu.regen2k_sigmas(float(r2k_settings["redraw_start"]),
+        r2k_sigmas = _tu.regen2k_sigmas(float(r2k_settings.get(
+            "redraw_start", _tu.CHAIN_DEFAULTS["redraw_start"])),
                                         max(1, int(r2k_settings["steps"])))
     elif int(r2k_settings["steps"]) == 2:
         r2k_sigmas = _tu.REGEN2K_SIGMAS_2STEP

@@ -81,7 +81,7 @@ tags:
 - **The honest truth on chain length:** `Refine` holds back relay degradation and keeps joins clean, pushing continuous `motion_context` chains to **5–6 clips on Turbo** before very visible texture changes appear, and **7–8 clips on non-Turbo**. Under `motion_context`, plan to transition to a cut (`anchor: "restart"`) every 4–5 clips or so to maintain the integrity of your textures (or use `pin_mech: hand_tie` for continuous single-take sequences).
 
 ### 3. Tiled Upsampler (`upsample: on`) & Standalone Node
-Enlarges the finished film to 2.0 MP in latent chunks and re-draws it with the **Open-H3-Regenerate-2K** LoRA: 3 Euler steps on `[0.8, 24/35, 0.48, 0]` at LoRA strength `upsample_denoise` 0.8 (0 only enlarges), each hop's own text prompt as conditioning (`regen2k_cond`), seed 42, 102-frame chunks with 17 shared, 70000-token tiles (lower `upsample_tile_tokens` on smaller cards). On by default in the shipped workflows. An optional **HTC Upsample Settings** node on the `upsample_settings` socket exposes every one of those numbers. Toggling `upsample` on a cached chain skips hop generation and runs only the upscaler.
+Enlarges the finished film to 2.0 MP in latent chunks and re-draws it with the **Open-H3-Regenerate-2K** LoRA: 3 Euler steps from sigma 0.6 on Regen2K's schedule (`[0.6, 0.48, 0.3, 0]`; 0.8 is the original recipe, sharper but faces drift more), overlapping chunks re-drawn together so joins don't show, at LoRA strength `upsample_denoise` 0.8 (0 only enlarges), each hop's own text prompt as conditioning (`regen2k_cond`), seed 42, 102-frame chunks with 17 shared, 70000-token tiles (lower `upsample_tile_tokens` on smaller cards). On by default in the shipped workflows. An optional **HTC Upsample Settings** node on the `upsample_settings` socket exposes every one of those numbers. Toggling `upsample` on a cached chain skips hop generation and runs only the upscaler.
 
 **Required Files for Upsampling:**
 1. **Latent Upscaler (`ComfyUI/models/latent_upscale_models/`):**
@@ -147,7 +147,7 @@ Full authoring guide: **[PROMPTING.md](PROMPTING.md)** · Release history: **[CH
 - **HTC Video Frames (lean) (`HTCVideoFrames`):** Drop-in for Get Video Components with half its peak RAM; `start_seconds`, `duration_seconds`, a 24 fps re-time and a resize applied while decoding.
 - **HTC Load Video (path) (`HTCLoadVideoPath`):** Load Video from a file path: no upload, no copy, no 100 MB upload limit; reports resolution, fps (variable-rate flagged), length, codec and audio.
 - **H3 Tiled Upsampler (`HTCTiledUpsampler`):** Latent-input tiled upsampler for custom graphs.
-- **HTC Upsample Settings (`HTCUpsampleSettings`):** Every number of the chain's upsample, on its optional `upsample_settings` socket; unwired, the original recipe.
+- **HTC Upsample Settings (`HTCUpsampleSettings`):** Every number of the chain's upsample, on its optional `upsample_settings` socket; unwired, the defaults (Regen2K from 0.6, stepped joins).
 - **HTC Save Video (long-form) (`HTCSaveVideo`):** Replaces RTX Frame Generation -> CreateVideo -> SaveVideo for long films: streams the frames, frame generation per pair on the GPU, NVENC constant quality, a keyframe on every cut.
 - **H3 RefMod Builder (`HTCRefModBuilder`):** Builds reusable visual/voice reference modules for the REFS rail.
 - **H3 Cache (`HTCH3Cache`):** Residual step cache on the MODEL wire ([silveroxides](https://github.com/silveroxides) / [PlagueKind](https://github.com/PlagueKind); see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)).
