@@ -197,7 +197,7 @@ def spacing(hop_frames):
     return max(MIN_SPACING, q * GRID)
 
 
-def layout(hop_frames):
+def layout(hop_frames, max_frames=None):
     """Window starts and previs length for one section's hops.
 
     -> {"windows": [w0, ..., w(n-1)(, wn)], "spacings": [...], "previs": frames,
@@ -218,7 +218,8 @@ def layout(hop_frames):
     w = [0]
     for s in sp[:-1]:
         w.append(w[-1] + s)
-    closing = w[-1] + sp[-1] + WINDOW <= PREVIS_MAX
+    # `max_frames`: a windowed previs (ht_windows) is not one generate, so its cap is not PREVIS_MAX.
+    closing = w[-1] + sp[-1] + WINDOW <= (PREVIS_MAX if max_frames is None else int(max_frames))
     if closing:
         w.append(w[-1] + sp[-1])
     else:
@@ -886,7 +887,7 @@ def drop_restatement(moment, beat=""):
     return act or str(moment or "")
 
 
-def compile_previs(shots, hop_frames, fps=FPS, sound=None, chained=False):
+def compile_previs(shots, hop_frames, fps=FPS, sound=None, chained=False, max_frames=None):
     """The previs's timed description: ONE shot written as back-to-back motion clocks.
 
     Previs law (2026-10-14). In H3's prompt format a bare `At MM:SS.mmm` is a camera
@@ -913,7 +914,7 @@ def compile_previs(shots, hop_frames, fps=FPS, sound=None, chained=False):
     `sound` defaults to PREVIS_SOUND and appends each beat's sound sentence to its
     own moment. Beat text is used as written (`moments`); nothing is reworded.
     """
-    lay = layout(hop_frames)
+    lay = layout(hop_frames, max_frames)
     ms = moments(shots, PREVIS_SOUND if sound is None else sound)
     if PREVIS_DROP_RESTATE:
         ms = [m if (k == 0 and not chained) else
@@ -1586,6 +1587,13 @@ PREVIS_RETRY_STRIDE = 104729   # the HOP retake's seed step (h3_ref_chain hop cu
 # With the gate on, such a previs stops the run before any of its hops render and
 # names the frame, the nearest join and the previs text running there.
 PREVIS_GATE = True
+
+# One previs per take (10-31, unproven). A take is only split at anchor=restart; a
+# take past PREVIS_MAX is sampled in overlapping context windows of two hops each
+# (ht_windows.py, needs ComfyUI with Comfy-Org/ComfyUI#17425), not as CHAINED
+# sections pinned on the last one: the section pin is where a chained previs snapped
+# at f22 and where section 2 drifted closer. Off, or on an older core: as before.
+PREVIS_WINDOWS = True
 
 
 def gate_report(cuts, windows, text, fps=FPS):

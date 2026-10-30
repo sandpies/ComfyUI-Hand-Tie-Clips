@@ -87,6 +87,7 @@ from . import tiled_upsampler as _tu
 from . import upscale_guide as _ug
 from . import hear as _hear
 from . import hand_tie as _ht
+from . import ht_windows as _htw
 # One definition, in refs.py -- routes.py publishes that copy to the editor, so
 # a second constant here meant the node's slot count and the number the UI was
 # told could drift apart.
@@ -6275,6 +6276,8 @@ class HandTieClips:
         ht_previs_keys = {}  # section -> _p_key used
         ht_layouts = []
         ht_previs_raw = []
+        ht_wplans = []       # section -> ht_windows.plan when its previs is windowed, else None
+        ht_previs_wraw = []  # section -> [previs block per context window] or None
         ht_windows = {}      # section -> (window pictures, window sounds)
         ht_warm_windows = {}  # section -> {win_idx: 39f (17f warm-up + 22f window)}
         ht_previs_info = []
@@ -6309,12 +6312,25 @@ class HandTieClips:
                 print(f"[{TAG}] note: {_w}", flush=True)
             ht_chained = []      # section -> continues the hop before it
             ht_speaks = []       # section -> [window carries a planned line]
-            for _si, _sec in enumerate(_ht.sections(_pshots, _plens)):
+            # One previs per take, sampled in context windows (hand_tie.PREVIS_WINDOWS).
+            _pv_win = bool(_ht.PREVIS_WINDOWS)
+            if _pv_win and not _htw.available():
+                print(f"[{TAG}] hand-tie: PREVIS_WINDOWS is on but this ComfyUI has no MiniMax "
+                      "H3 context windows (Comfy-Org/ComfyUI#17425): chained sections as before",
+                      flush=True)
+                _pv_win = False
+            for _si, _sec in enumerate(_htw.takes(_pshots) if _pv_win
+                                       else _ht.sections(_pshots, _plens)):
                 ht_sections.append(list(_sec))
                 ht_chained.append(_ht.chained(_pshots, _sec))
                 _frames = [_plens[j] for j in _sec]
+                _wpl = _htw.plan(_frames) if _pv_win else None
+                if _wpl is not None and not _wpl["windowed"]:
+                    _wpl = None          # the take fits one generate: today's previs
+                ht_wplans.append(_wpl)
                 _text, _lay = _ht.compile_previs([_pshots[j] for j in _sec], _frames, FPS,
-                                                 chained=bool(ht_chained[-1]))
+                                                 chained=bool(ht_chained[-1]),
+                                                 max_frames=(10 ** 9 if _wpl else None))
                 if ht_chained[-1]:
                     _text = _ht.chain_previs_text(_text, [_pshots[j] for j in _sec], _lay, FPS)
                 # The section's framing, once, in front: the compiled moments drop it.
@@ -6337,8 +6353,22 @@ class HandTieClips:
                     _dirs["tail"] = _tail
                 ht_previs_raw.append(_d.compile_shot({"beat": _text, "directives": _dirs},
                                                      0, establish))
+                if _wpl:
+                    # One block per context window, compiled as the take's own (same
+                    # directives, same establish): a frame two windows share reads alike.
+                    _wtexts, _wnotes = _htw.window_texts([_pshots[j] for j in _sec], _frames, _wpl, FPS)
+                    ht_previs_wraw.append([_d.compile_shot({"beat": _t, "directives": _dirs},
+                                                           0, establish) for _t in _wtexts])
+                    for _w in _wnotes:
+                        print(f"[{TAG}] hand-tie section {_si + 1}: {_w}", flush=True)
+                else:
+                    ht_previs_wraw.append(None)
                 ht_layouts.append(_lay)
-                ht_pv.append(_ht.previs_canvas(width, height, _frames, _lay["previs"], pv_cap))
+                # Windowed, no model call sees more than one window: budget on the longest.
+                ht_pv.append(_ht.previs_canvas(
+                    width, height, _frames,
+                    max(w["f1"] - w["f0"] for w in _wpl["windows"]) if _wpl else _lay["previs"],
+                    pv_cap))
                 # A master song owns every hop's sound: no window carries a line of
                 # its own, so the windows tie picture only and the heads hold no
                 # previs sound.
@@ -6349,7 +6379,10 @@ class HandTieClips:
                 print(f"[{TAG}] hand-tie section {_si + 1}: hops {_sec[0] + 1}-{_sec[-1] + 1}, "
                       f"previs {_lay['previs']}f at {ht_pv[-1][0]}x{ht_pv[-1][1]}, "
                       f"windows at {_lay['windows']}"
-                      + (f", continuing hop {_sec[0]}'s last frames" if ht_chained[-1] else ""),
+                      + (f", continuing hop {_sec[0]}'s last frames" if ht_chained[-1] else "")
+                      + (f", sampled in {len(_wpl['windows'])} context windows of "
+                         + "/".join(str(w["f1"] - w["f0"]) for w in _wpl["windows"]) + "f"
+                         if _wpl else ""),
                       flush=True)
             if tone_on or anchor_on:
                 print(f"[{TAG}] hand-tie: tone_compensate={tone_mode} is replaced by the "
@@ -6403,27 +6436,35 @@ class HandTieClips:
             _from = ({"frames": _store.tensor_digest(_chain_pin_imgs),
                       "sound": (None if _mute_k else _store.audio_digest(prev_audio))}
                      if _chain else None)
-            if ref_plan_refs:
-                pblock = _refs.resolve_tags(
-                    pblock, hop_ords, _refs.subjects(ref_plan_refs),
-                    where=f"hand-tie previs {_si + 1}",
-                    declared={r["tag"] for r in ref_plan_refs},
-                    subject_names=None, video_map=video_ords)
-            if hop_subject_prose and not _d.is_full_h3_prompt(pblock):
-                pblock = hop_subject_prose + "\n\n" + pblock
-            if refvid_line and not _d.is_full_h3_prompt(pblock):
-                pblock = pblock.rstrip() + "\n\n" + refvid_line
-            if _voice_ord and f"<Audio {_voice_ord}>" not in pblock:
-                pblock = (pblock.rstrip() + f"\n\nThe speaker's voice follows "
-                          f"<Audio {_voice_ord}> as a timbre reference.")
-            if _bindings:
-                _pst = ([_m.start() for _m in re.finditer(r"<d>", pblock)]
-                        + [_a for _a, _b in _planner.spoken_spans(pblock)])
-                pblock = _refs.bind_voices(pblock, _bindings, _pst)
-            if _pre:
-                pblock = _pre + " " + pblock.lstrip()
-            if _suf:
-                pblock = pblock.rstrip() + " " + _suf
+            def _pv_assemble(pblock):
+                if ref_plan_refs:
+                    pblock = _refs.resolve_tags(
+                        pblock, hop_ords, _refs.subjects(ref_plan_refs),
+                        where=f"hand-tie previs {_si + 1}",
+                        declared={r["tag"] for r in ref_plan_refs},
+                        subject_names=None, video_map=video_ords)
+                if hop_subject_prose and not _d.is_full_h3_prompt(pblock):
+                    pblock = hop_subject_prose + "\n\n" + pblock
+                if refvid_line and not _d.is_full_h3_prompt(pblock):
+                    pblock = pblock.rstrip() + "\n\n" + refvid_line
+                if _voice_ord and f"<Audio {_voice_ord}>" not in pblock:
+                    pblock = (pblock.rstrip() + f"\n\nThe speaker's voice follows "
+                              f"<Audio {_voice_ord}> as a timbre reference.")
+                if _bindings:
+                    _pst = ([_m.start() for _m in re.finditer(r"<d>", pblock)]
+                            + [_a for _a, _b in _planner.spoken_spans(pblock)])
+                    pblock = _refs.bind_voices(pblock, _bindings, _pst)
+                if _pre:
+                    pblock = _pre + " " + pblock.lstrip()
+                if _suf:
+                    pblock = pblock.rstrip() + " " + _suf
+                return pblock
+
+            pblock = _pv_assemble(pblock)
+            # Windowed (hand_tie.PREVIS_WINDOWS): the take's block keys the cache and
+            # the gate; the model reads one block per context window.
+            _wpl = ht_wplans[_si] if _si < len(ht_wplans) else None
+            _wblocks = ([_pv_assemble(b) for b in ht_previs_wraw[_si]] if _wpl else None)
 
             _sh = shots[i] or {}
             # The run seed, never the shot's own: a shot's `seed` is how one hop
@@ -6447,6 +6488,8 @@ class HandTieClips:
                 _p_key = _store.hop_key(None, {
                     "chain": chain_salt, "previs": pblock, "len": _p_len,
                     "fmt": ("ranges_v2_mc" if _chain else "ranges_v1"),
+                    **({"windows": [[w["l0"], w["l1"]] for w in _wpl["windows"]],
+                        "wblocks": _wblocks} if _wpl else {}),
                     "seed": _p_seed, "steps": _p_steps,
                     "refs": {k: _store.tensor_digest(t)
                              for k, t in sorted((hop_images or {}).items())},
@@ -6562,21 +6605,30 @@ class HandTieClips:
                                     if (int(pv_w) * int(pv_h) <= 524288
                                         and str(ref_image_size) in ("0.75 MP", "1.0 MP"))
                                     else ref_image_size)
-                    packed = _core_call(
-                        MiniMaxH3ReferenceToVideo, "the hand-tie previs",
-                        clip=clip, vae=ref_vae, audio_vae=ref_audio_vae, prompt=pblock,
-                        width=int(pv_w), height=int(pv_h), length=_p_len,
-                        ref_image_size=_pv_ref_size, ref_images=hop_images,
-                        ref_videos=hop_videos,
-                        ref_video_audios=(hop_video_audios or None),
-                        ref_audios=(None if _mute else hop_ref_audios),
-                    )
-                    _pc, _pl = _result(packed)[0], _result(packed)[1]
-                    del packed
-                    if refmod_image_blocks or refmod_video_blocks:
-                        _pc = _refmod.splice_blocks(
-                            _pc, hop_images, hop_videos,
-                            refmod_image_blocks, refmod_video_blocks)
+                    # Windowed: one conditioning entry per context window, in window
+                    # order (ht_windows' handler gives window k entry k); every entry
+                    # carries the same references and the take's full length.
+                    _pc = []
+                    for _blk in (_wblocks or [pblock]):
+                        packed = _core_call(
+                            MiniMaxH3ReferenceToVideo, "the hand-tie previs",
+                            clip=clip, vae=ref_vae, audio_vae=ref_audio_vae, prompt=_blk,
+                            width=int(pv_w), height=int(pv_h), length=_p_len,
+                            ref_image_size=_pv_ref_size, ref_images=hop_images,
+                            ref_videos=hop_videos,
+                            ref_video_audios=(hop_video_audios or None),
+                            ref_audios=(None if _mute else hop_ref_audios),
+                        )
+                        _pc_k, _pl = _result(packed)[0], _result(packed)[1]
+                        del packed
+                        if refmod_image_blocks or refmod_video_blocks:
+                            _pc_k = _refmod.splice_blocks(
+                                _pc_k, hop_images, hop_videos,
+                                refmod_image_blocks, refmod_video_blocks)
+                        _pc = _pc + list(_pc_k)
+                    if _wblocks:
+                        print(f"[{TAG}] hand-tie previs {_si + 1}: {len(_wblocks)} window "
+                              "prompts encoded", flush=True)
                     if start_image is not None and (i == 0 or str(_sh.get("anchor") or "") == "restart"):
                         # The section opens on the photograph, so window A does.
                         _pc = _result(_core_call(
@@ -6670,7 +6722,8 @@ class HandTieClips:
                         model=model, scheduler=scheduler, steps=_p_steps,
                         denoise=1.0))[0]
                 _pg = _result(_core_call(BasicGuider, "the previs guider",
-                                         model=model, conditioning=_pc))[0]
+                                         model=(_htw.install(model, _wpl) if _wpl else model),
+                                         conditioning=_pc))[0]
                 _pn = _result(_core_call(RandomNoise, "the previs noise",
                                          noise_seed=_p_seed))[0]
                 _ps = _result(_core_call(
