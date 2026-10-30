@@ -107,3 +107,19 @@ prompt writing guides and staff answers on the MiniMax-H3 repository,
 [phileiny/h3-storyboard-skill](https://github.com/phileiny/h3-storyboard-skill) (MIT),
 Emily2040/seedance-2.0, ruashots/open-h3-ir, teskor-hub/minimax-h3-skill and
 ComfyUI's own `nodes_minimax_h3.py`. Credit for those findings stays with them.
+
+## Ideas from ComfyUI-UtilsCollection (no code copied)
+
+The file-to-file node's streamed reading, its latent cache and its 24 fps
+re-timing follow ideas from **[silveroxides](https://github.com/silveroxides)'**
+[`ComfyUI-UtilsCollection`](https://github.com/silveroxides/ComfyUI-UtilsCollection)
+(AGPL-3.0), from its H3 reference-video path:
+
+- decoding a VIDEO in batches with core's own trim, rotation and crop rules,
+  instead of assembling the whole clip as one tensor;
+- keying decoded media to the file's content, so a rerun skips the decode;
+- resampling to H3's 24 fps by nearest frame.
+
+The code in `video_upsampler.py` was written fresh for this pack and shares
+none of that repository's code. silveroxides agreed to this on the condition
+that the ideas are credited, which is what this section does.
