@@ -3166,6 +3166,11 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
     else:
         r2k_sigmas = _tu.REGEN2K_SIGMAS
     n_chunks = 0
+    # For the log only: the budget upsample() will use (0 = this machine's
+    # learned one); `budget` itself goes through untouched so auto stays auto.
+    _plan_budget = _tu.resolve_budget(budget, _tu.memory_key(
+        r2k_settings.get("attention", "dense"), r2k_settings.get("attn_chunks", 4),
+        r2k_settings.get("ffn_chunks", 2)))[0]
     for seg in _tu.segments(r2k_hops):
         sv, _sa = _tu.stitch(seg)
         cf_val = r2k_settings.get("chunk_frames", _tu._DEFAULT_CHUNK_FRAMES)
@@ -3177,15 +3182,15 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
                                      float(megapixels))
         if isinstance(cf_val, _tu._DefaultInt) and r2k_sigmas is not None:
             cf_plan, _ = _tu._regen2k_chunk_frames(
-                w_px, h_px, budget, overlap_px=ov_px)
+                w_px, h_px, _plan_budget, overlap_px=ov_px)
         if (r2k_settings.get("chunking") is False
                 and _tu.seq_len(w_px, h_px, int(sv.shape[2]))
-                <= _tu.WHOLE_CLIP_MAX * int(budget or _tu.TOKEN_BUDGET)):
+                <= _tu.WHOLE_CLIP_MAX * int(_plan_budget)):
             n_chunks += 1
         elif r2k_sigmas is not None:
             n_chunks += len(_tu.regen2k_chunks(
                 int(sv.shape[2]), cf_plan, co_plan,
-                w_px=w_px, h_px=h_px, budget=budget, overlap_px=ov_px))
+                w_px=w_px, h_px=h_px, budget=_plan_budget, overlap_px=ov_px))
         else:
             n_chunks += len(_tu.chunks(int(sv.shape[2]), cf_plan, co_plan))
     m_label = getattr(regen2k_model, "htc_name", None) or type(regen2k_model).__name__
@@ -4767,8 +4772,9 @@ class HandTieClips:
                     "default": _tu.TOKEN_BUDGET, "min": 0, "max": 1048576, "step": 1024,
                     "tooltip": ("Upsample VRAM: the largest sequence one tile forward may carry. "
                                 "Lower = more, smaller tiles -- less memory, slower, the same "
-                                f"seamless merge. {_tu.TOKEN_BUDGET} (or 0) is the recipe's "
-                                "value. Delivery only: no hop re-renders when it changes."),
+                                f"seamless merge. {_tu.TOKEN_BUDGET} is the recipe's value; 0 = "
+                                "auto: learned on this machine, run by run. Delivery only: no "
+                                "hop re-renders when it changes."),
                 }),
                 # APPENDED 2026-10-04, LAST. A socket, so it takes no widget slot.
                 "upsample_dit": ("MODEL", {
@@ -8969,12 +8975,13 @@ class HandTieClips:
                 print(f"[{TAG}] upsample: re-draw LoRA {upsample_lora} "
                       f"{float(upsample_lora_strength):g}", flush=True)
             _push_preview(unique_id, "upsampling", hop=n, total=n, frac=1.0)
-            # 0 (and anything under a floor no tile could fit, e.g. a stale
-            # split_finish_aug value cast to INT) is the recipe's budget.
+            # 0 = auto (the upsampler's memory plan for this machine). Anything
+            # else under a floor no tile could fit (e.g. a stale split_finish_aug
+            # value cast to INT) is the recipe's budget.
             _up_budget = (int(upsample_tile_tokens)
                           if int(upsample_tile_tokens) >= UPSAMPLE_MIN_TILE_TOKENS
-                          else _tu.TOKEN_BUDGET)
-            if _up_budget != _tu.TOKEN_BUDGET:
+                          else 0 if int(upsample_tile_tokens) == 0 else _tu.TOKEN_BUDGET)
+            if _up_budget not in (0, _tu.TOKEN_BUDGET):
                 print(f"[{TAG}] upsample: tile budget {_up_budget} tokens (recipe "
                       f"{_tu.TOKEN_BUDGET}): more, smaller tiles", flush=True)
             try:
