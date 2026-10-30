@@ -3161,6 +3161,10 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
         r2k_sigmas = None
     elif float(r2k_settings.get("start_sigma", 0.0)) > 0.0:
         r2k_sigmas = None
+    elif abs(float(r2k_settings.get("redraw_start", 0.8)) - 0.8) > 1e-6:
+        # redraw_start (HTC Upsample Settings): Regen2K's grid from another start.
+        r2k_sigmas = _tu.regen2k_sigmas(float(r2k_settings["redraw_start"]),
+                                        max(1, int(r2k_settings["steps"])))
     elif int(r2k_settings["steps"]) == 2:
         r2k_sigmas = _tu.REGEN2K_SIGMAS_2STEP
     else:
