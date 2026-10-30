@@ -3175,7 +3175,8 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
     # For the log only: the budget upsample() will use (0 = this machine's
     # learned one); `budget` itself goes through untouched so auto stays auto.
     _plan_budget = _tu.resolve_budget(budget, _tu.memory_key(
-        r2k_settings.get("attention", "dense"), r2k_settings.get("attn_chunks", 4),
+        r2k_settings.get("attention", _tu.CHAIN_DEFAULTS["attention"]),
+        r2k_settings.get("attn_chunks", 4),
         r2k_settings.get("ffn_chunks", 2)))[0]
     for seg in _tu.segments(r2k_hops):
         sv, _sa = _tu.stitch(seg)
