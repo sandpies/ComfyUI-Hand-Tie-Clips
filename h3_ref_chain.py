@@ -3727,6 +3727,13 @@ WT_FINISH_STEPS = 2
 # overlap is held to those FINISHED frames instead of the step-K estimate (sharper hand-
 # offs, ~+25% time). The take's blended finish still starts from the step-K states.
 WT_FINISHED_HANDOFF = True    # 11-01 v2+mc: joins shifted at overlap ends (held to a rough step-K estimate)
+# Overlaps kept as handed on: after the blended finish, each overlap is put back to the
+# finished frames the next window continued from (11-01 v3: cut at the END of every other
+# overlap, where the film switched from the blended overlap to a body built on the finished
+# one). Needs WT_FINISHED_HANDOFF. A short ramp at the overlap START joins the window's own
+# blended body to its own finished tail.
+WT_HOLD_OVERLAPS = True
+WT_HOLD_RAMP = 3          # latents
 WT_MOTION_CONTEXT = True     # each window gets the previous window's overlap as clean keyframes
 
 
@@ -3843,6 +3850,30 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
         noise=_result(_core_call(DisableNoise, "the windowed finish noise"))[0],
         guider=guider, sampler=sampler, sigmas=lo, latent_image=mid))[0])
     out.pop("noise_mask", None)
+    if WT_HOLD_OVERLAPS and WT_FINISHED_HANDOFF:
+        fv, fa = [t for t in list(out["samples"].unbind())[:2]]
+        fv, fa = fv.clone(), fa.clone()
+        for k in range(1, len(wins)):
+            w, pw = wins[k], wins[k - 1]
+            l0, ovl = w["l0"], max(0, pw["l1"] - w["l0"])
+            a0, ova = w["a0"], max(0, pw["a1"] - w["a0"])
+            if ovl:
+                held = x0_v[:, :, l0:l0 + ovl].to(device=fv.device, dtype=fv.dtype)
+                r = torch.ones(ovl, dtype=fv.dtype, device=fv.device)
+                nr = min(int(WT_HOLD_RAMP), ovl)
+                r[:nr] = torch.linspace(0, 1, nr + 2, dtype=fv.dtype, device=fv.device)[1:-1]
+                r = r.view(1, 1, ovl, 1, 1)
+                fv[:, :, l0:l0 + ovl] = fv[:, :, l0:l0 + ovl] * (1 - r) + held * r
+            if ova:
+                helda = x0_a[..., a0:a0 + ova].to(device=fa.device, dtype=fa.dtype)
+                na_ = max(1, int(round(ova * min(int(WT_HOLD_RAMP), ovl) / max(1, ovl))))
+                ra = torch.ones(ova, dtype=fa.dtype, device=fa.device)
+                ra[:na_] = torch.linspace(0, 1, na_ + 2, dtype=fa.dtype, device=fa.device)[1:-1]
+                ra = ra.view(*([1] * (fa.ndim - 1)), ova)
+                fa[..., a0:a0 + ova] = fa[..., a0:a0 + ova] * (1 - ra) + helda * ra
+        out["samples"] = _latents.rebuild(out["samples"], [fv, fa])
+        print(f"[{TAG}] windowed {label}: {len(wins) - 1} overlap(s) kept as the next window "
+              "continued from them", flush=True)
     return out
 
 
@@ -3898,7 +3929,8 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
         pl = _wt.plan([h["len"] for h in hops], overlap_n)
         digs = [h["dig"] for h in hops]
         key = _wt.take_key(salt, digs, ("finished" if WT_FINISHED_HANDOFF else "")
-                           + ("+mc" if WT_MOTION_CONTEXT else ""))
+                           + ("+mc" if WT_MOTION_CONTEXT else "")
+                           + ("+hold" if (WT_HOLD_OVERLAPS and WT_FINISHED_HANDOFF) else ""))
         name = f"__wtake_{t + 1}"
         hit = hop_store.get(key) if hop_store is not None else None
         if hit is not None:
