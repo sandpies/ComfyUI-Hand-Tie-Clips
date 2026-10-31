@@ -3666,7 +3666,7 @@ def _antiburn_sampled(latent, *, noise, guider, plain_guider, sampler, hop_sigma
 # trip, face texture 84% vs 95%). Now the pin is the hop's delivered frames encoded again:
 # what the next hop continues from is exactly what is seen. Picture only; the audio pin
 # stays the raw audio latent.
-MC_PIN_ENCODED = True
+MC_PIN_ENCODED = False   # 10-31 encpin_E: texture held, joins cut every hop (user) -> off
 
 
 def _encoded_pin(sampled, imgs, vae, hop_no):
