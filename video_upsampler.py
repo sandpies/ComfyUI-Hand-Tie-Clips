@@ -43,6 +43,7 @@ import os
 
 import torch
 
+from . import face_pass as _fp
 from . import tiled_upsampler as _tu
 from . import upscale_guide as _ug
 
@@ -109,47 +110,14 @@ def fit_frames(images, w, h):
     return out
 
 
-# Source tone (issue #3). The Regen2K re-draw draws heavier brows, eyeliner and darker eye
-# sockets than the clip has, and on a medium-far face that reads as another person. After
-# decoding, shading coarser than HOLD_SOURCE_PX pixels comes from the source frames (resized
-# to the output), finer detail from the re-draw: out = redraw - blur(redraw) + blur(source).
-# On a medium-far face (10-31 A/B) 3 px brought the eyes, brow weight and face shape back
-# toward the source and kept the re-draw's texture. 0 = off. No extra decode.
-HOLD_SOURCE_PX = 3.0
-
-
-def _blur_px(x, sigma):
-    """Separable Gaussian blur of [k, H, W, 3], sigma in pixels, edges reflected."""
-    r = max(1, int(3.0 * float(sigma) + 0.5))
-    t = torch.arange(-r, r + 1, device=x.device, dtype=torch.float32)
-    g = torch.exp(-0.5 * (t / float(sigma)) ** 2)
-    g = g / g.sum()
-    k, hh, ww, c = (int(v) for v in x.shape)
-    y = x.permute(0, 3, 1, 2).reshape(k * c, 1, hh, ww)
-    y = torch.nn.functional.conv2d(torch.nn.functional.pad(y, (r, r, 0, 0), mode="reflect"),
-                                   g.view(1, 1, 1, -1))
-    y = torch.nn.functional.conv2d(torch.nn.functional.pad(y, (0, 0, r, r), mode="reflect"),
-                                   g.view(1, 1, -1, 1))
-    return y.reshape(k, c, hh, ww).permute(0, 2, 3, 1)
-
-
-def hold_source(img, src, sigma=None, batch=8):
-    """`img` ([n, H, W, 3] re-drawn, 0..1) with its shading above `sigma` px taken from `src`
-    ([n, h, w, 3], the frames that went in), in place. -> img."""
-    sigma = HOLD_SOURCE_PX if sigma is None else float(sigma)
-    if sigma <= 0.0:
-        return img
-    n, hh, ww = int(img.shape[0]), int(img.shape[1]), int(img.shape[2])
-    dev = _tu._device()
-    for s in range(0, n, batch):
-        red = img[s:s + batch].to(dev, torch.float32)
-        base = src[s:s + batch, ..., :3].to(dev, torch.float32).permute(0, 3, 1, 2)
-        base = torch.nn.functional.interpolate(base, size=(hh, ww), mode="bicubic",
-                                               align_corners=False).permute(0, 2, 3, 1).clamp(0, 1)
-        img[s:s + batch] = (red - _blur_px(red, sigma) + _blur_px(base, sigma)).clamp(0.0, 1.0).to(
-            img.device, img.dtype)
-        del red, base
-    return img
+def slice_audio(audio, t0, t1):
+    """The part of an AUDIO dict from t0 to t1 seconds (None stays None)."""
+    if audio is None:
+        return None
+    sr = int(audio["sample_rate"])
+    wav = audio["waveform"]
+    a, b = max(0, int(round(t0 * sr))), max(0, int(round(t1 * sr)))
+    return {"waveform": wav[..., a:max(a + 1, b)], "sample_rate": sr}
 
 
 def pad_frames(images, length):
@@ -607,9 +575,25 @@ class HTCVideoUpsampler:
             attention, chunk_join, chunking, tiling, redraw_start, redraw_steps)
         img = decode_streamed(vae.decode, vid, n)
         del vid
-        if float(denoise) > 0.0 and HOLD_SOURCE_PX > 0.0:
-            img = hold_source(img.float().cpu(), fit_frames(images, w, h))
-            report += f", source tone held above {HOLD_SOURCE_PX:g} px"
+        if float(denoise) > 0.0:
+            img = img.float().cpu()
+            clip_fps = float(fps) if fps else float(H3_FPS)
+
+            def _close_up(crops, t0, t1):
+                m = int(crops.shape[0])
+                cv = vae.encode(pad_frames(crops, valid_length(m)))
+                cv, _ = redraw(
+                    model, cv, m, (int(crops.shape[2]), int(crops.shape[1])), upscale_model,
+                    _fp.CROP_OUT ** 2 / 1048576.0, denoise, lora, tile_tokens, sampler_name,
+                    redraw_seed, slice_audio(audio, t0, t1), audio_vae, conditioning, fps,
+                    attention, chunk_join, chunking and not _fp.one_chunk(m), tiling,
+                    redraw_start, redraw_steps)
+                out = decode_streamed(vae.decode, cv, m)
+                del cv
+                return out.float().cpu()
+
+            img, note = _fp.apply(img, images, _close_up, clip_fps)
+            report += note
         return (img.float().cpu(), audio if audio is not None else silent_audio(n, H3_FPS),
                 report)
 
