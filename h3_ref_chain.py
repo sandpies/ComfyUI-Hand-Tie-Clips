@@ -3606,6 +3606,56 @@ UPSAMPLE_MIN_TILE_TOKENS = 1024
 SPLIT_DEFAULT_K = 2         # refine_steps=0 ("the hop's steps") means this here
 
 
+# Anti-Burn (Imagineer13, h3_antiburn_universal_v1, MiniMax H3 community license): a
+# LoRA trained so a continuation looks like a fresh generate, which stops the
+# motion_context join burn. It softens by design (10-31: no burn over 6 hops, mid band
+# x0.76 at hop 2 with hop_refine on top). So: continuation hops only (hop 1 and
+# restarts are fresh), every step but the last ANTIBURN_PLAIN_STEPS on the LoRA, those
+# on the plain model so each hop draws its own fine detail; no refine on those hops
+# (the LoRA does refine's job). Used when the file is in models/loras; no widget.
+ANTIBURN_FILE = "h3_antiburn_universal_v1.safetensors"
+ANTIBURN_STRENGTH = 0.5
+ANTIBURN_PLAIN_STEPS = 2
+
+
+def _antiburn_lora():
+    """The Anti-Burn LoRA's name in models/loras (any subfolder), or None."""
+    try:
+        import folder_paths  # noqa: PLC0415
+        names = list(folder_paths.get_filename_list("loras"))
+    except Exception:  # noqa: BLE001
+        return None
+    for nm in names:
+        if str(nm).replace("\\", "/").rsplit("/", 1)[-1].lower() == ANTIBURN_FILE:
+            return nm
+    return None
+
+
+def _antiburn_sampled(latent, *, noise, guider, plain_guider, sampler, hop_sigmas,
+                      plain_steps, hop_no):
+    """One continuation hop: the Anti-Burn model for all but the last `plain_steps`
+    steps, the plain model for those. Same hand-off as _split_sampled (stage 2 adds
+    no noise), but no extended finish: the schedule is the hop's own."""
+    n = int(hop_sigmas.shape[-1]) - 1
+    k = max(0, min(int(plain_steps), n - 1))
+    if k == 0:
+        return _result(_core_call(
+            SamplerCustomAdvanced, "the anti-burn sampler",
+            noise=noise, guider=guider, sampler=sampler,
+            sigmas=hop_sigmas, latent_image=latent))[0]
+    hi, lo = hop_sigmas[:n - k + 1].clone(), hop_sigmas[n - k:].clone()
+    print(f"[{TAG}] hop {hop_no}: anti-burn {n - k} steps on the LoRA, last {k} on the "
+          f"plain model (hand-off sigma {float(lo[0]):.4f})", flush=True)
+    mid = _result(_core_call(
+        SamplerCustomAdvanced, "the anti-burn sampler",
+        noise=noise, guider=guider, sampler=sampler,
+        sigmas=hi, latent_image=latent))[0]
+    return _result(_core_call(
+        SamplerCustomAdvanced, "the anti-burn plain finish",
+        noise=_result(_core_call(DisableNoise, "the anti-burn finish noise"))[0],
+        guider=plain_guider, sampler=sampler, sigmas=lo, latent_image=mid))[0]
+
+
 def _split_k(refine_steps, hop_steps):
     """K for this hop: refine_steps (0 = SPLIT_DEFAULT_K), at least one step
     left for stage 1 and at least one finished finely."""
@@ -6010,6 +6060,7 @@ class HandTieClips:
         split_model = None
         boost_model = None
         refine_sampler_obj = refine_sched = None
+        antiburn_name = antiburn_model = None   # set below unless dry
         sigma_cache = {}
         _raw_model = model
         _raw_refine_model = refine_model
@@ -6048,6 +6099,15 @@ class HandTieClips:
                 model=model, scheduler=scheduler, steps=int(steps),
                 denoise=1.0))[0]
             sigma_cache = {int(steps): base_sigmas}
+            antiburn_name = None if (str(pin_mech).startswith("hand_tie") or boost_on or split_on) else _antiburn_lora()
+            antiburn_model = None
+            if antiburn_name:
+                print(f"[{TAG}] anti-burn: {antiburn_name} at {ANTIBURN_STRENGTH:g} on "
+                      f"motion_context continuation hops, last {ANTIBURN_PLAIN_STEPS} steps "
+                      "plain, no refine on those hops", flush=True)
+            elif not str(pin_mech).startswith("hand_tie") and (boost_on or split_on) and _antiburn_lora():
+                print(f"[{TAG}] anti-burn: not used with "
+                      + ("realism_boost" if boost_on else "hop_refine=split"), flush=True)
             if boost_on:
                 boost_model = _boost_model(model, boost_loras)
                 print(f"[{TAG}] realism boost: "
@@ -7505,6 +7565,8 @@ class HandTieClips:
                              else _pin_mech_for(i, overlap_n, prev_sampled,
                                                 mode=str(pin_mech)))
             pin_mech_used = pin_mech_pred
+            _ab_hop = (bool(antiburn_name) and i > 0 and not hop_restart
+                       and pin_mech_pred == "motion_context")
             if hop_store is not None:
                 # `None`, not prev_key, on a restart: the hop genuinely does
                 # not depend on its predecessor, so chaining it would re-render
@@ -7717,6 +7779,9 @@ class HandTieClips:
                         min(int(reference_video.shape[0]), int(render_length)),
                         bool(_vid_slots and _vid_slots[0][1] is not None and audio_vae is not None),
                     ]
+                if _ab_hop:
+                    hop_payload["antiburn"] = [str(antiburn_name), ANTIBURN_STRENGTH,
+                                               ANTIBURN_PLAIN_STEPS, "no_refine"]
                 hop_key = _store.hop_key(
                     None if (hop_restart or ht) else prev_key,
                     hop_payload)
@@ -8315,7 +8380,19 @@ class HandTieClips:
                 noise = _result(_core_call(
                     RandomNoise, "the noise source",
                     noise_seed=shot_seed))[0]
-                if boost_model is not None:
+                if _ab_hop and pin_mech_used == "motion_context":
+                    if antiburn_model is None:
+                        antiburn_model = _boost_model(
+                            model, [(antiburn_name, ANTIBURN_STRENGTH)])
+                    _ab_guider = _result(_core_call(
+                        BasicGuider, "the anti-burn guider",
+                        model=antiburn_model, conditioning=cond))[0]
+                    sampled = _antiburn_sampled(
+                        latent, noise=noise, guider=_ab_guider, plain_guider=guider,
+                        sampler=sampler, hop_sigmas=hop_sigmas,
+                        plain_steps=ANTIBURN_PLAIN_STEPS, hop_no=i + 1)
+                    del _ab_guider
+                elif boost_model is not None:
                     # Same conditioning on both guiders, so the pin and the
                     # guides reach the boost stage too. The latent that comes
                     # out is an ordinary hop latent on the hop canvas: the
@@ -8387,6 +8464,10 @@ class HandTieClips:
                         # Nothing downstream would ever read it.
                         print(f"[{TAG}] hop {i + 1}: refine skipped "
                               "(pin_only, last hop teaches nobody)", flush=True)
+                    elif _ab_hop:
+                        print(f"[{TAG}] hop {i + 1}: refine skipped (anti-burn hop: the "
+                              "LoRA keeps the join clean, refine would soften it twice)",
+                              flush=True)
                     elif hop_is_start:
                         if float(refine_detail_sigma) > 0.0:
                             _sp = _latents.from_dict(sampled)

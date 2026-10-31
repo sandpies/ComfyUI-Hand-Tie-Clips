@@ -34,6 +34,9 @@ Part 2 is this skill's lints. Each one is a failure seen on a real render:
   speech-tail      the words after a line ("...,' lips shut, a chime chiming") start with
                    no verb, so they read as more of the line and get spoken. Start them
                    with one: "..., then presses her lips shut".
+  same-sound       the same named sound in the last window of 3+ hops ("a chime" closing
+                   every hop): it lands on every join and plays as a seam effect. Name a
+                   sound from each hop's own scene.
   song-words       a song-structure word in a beat ("sings the hook", "the second
                    verse", "the last line"): the video model never hears the song's
                    sections, so the words mean nothing. Describe the delivery.
@@ -372,7 +375,7 @@ def main():
                 lint.append(f"shot {i}: speech-tail: the words after {q.group(0).strip()[:30]!r} start with "
                             f"\"{' '.join(after.split()[:3])}\", which reads as more of the line (a walk vlog "
                             f"said \"chiming\" aloud). Start them with a verb: \"..., then presses her lips "
-                            f"shut, a chime chiming.\"")
+                            f"shut, the wind humming.\"")
                 break
         if not mv and re.search(r"(?:^|[\s,])'[A-Z][^']{2,}'", beat) and not re.search(r"\beyes (?:stay |fixed |locked )?on @", beat, re.I):
             lint.append(f"shot {i}: eyeline: a line is spoken with no eyeline. Give the speaker's eyes a target "
@@ -393,6 +396,21 @@ def main():
             elif not FACE.search(last):
                 lint.append(f"shot {i}: pin-face: shot {i + 1} continues from this ending, but the last sentence "
                             f"(\"{last[:70]}\") puts no face toward the camera.")
+
+    # The same sound closing hop after hop sits on every join and plays as a seam effect
+    # (10-31: "a chime chiming" ended all six hops of a test; heard as a seam bug).
+    _ends = {}
+    for i, s in enumerate(shots, 1):
+        _b = str(s.get("beat") or "")
+        _w = list(re.finditer(r"At \d\d:\d\d(?:\.\d+)?-\d\d:\d\d(?:\.\d+)?,", _b))
+        _last = _b[_w[-1].start():] if _w else (sentences(_b) or [""])[-1]
+        for m in {m.group(0).lower()[:4] for m in SOUND.finditer(_last)}:
+            _ends.setdefault(m, []).append(i)
+    for stem, hops in sorted(_ends.items()):
+        if len(hops) >= 3:
+            lint.append(f"same-sound: hops {', '.join(map(str, hops))} all end on the same sound "
+                        f"(\"{stem}...\"). It lands on every join and plays as a seam effect. Name a "
+                        f"sound from each hop's own scene.")
 
     # --- text lints that need no map ---
     subj = refs.get("subjects") or {}
