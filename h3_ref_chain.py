@@ -3727,6 +3727,7 @@ WT_FINISH_STEPS = 2
 # overlap is held to those FINISHED frames instead of the step-K estimate (sharper hand-
 # offs, ~+25% time). The take's blended finish still starts from the step-K states.
 WT_FINISHED_HANDOFF = False
+WT_MOTION_CONTEXT = True     # each window gets the previous window's overlap as clean keyframes
 
 
 class _WtNoise:
@@ -3780,9 +3781,28 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
             sub["noise_mask"] = nt.NestedTensor((vm, am))
         sub["samples"] = nt.NestedTensor((sv, sa))
         noise = _WtNoise(seed, nt.NestedTensor((nv[:, :, l0:l1].clone(), na[..., a0:a1].clone())))
+        cond_k = [list(conds[k])[0]]
+        if k > 0 and WT_MOTION_CONTEXT:
+            # The hold alone is not followed: under the mask the held frames are re-noised
+            # every step, so early on the model barely sees them and composes its own take
+            # (windowed_v2 cut at every overlap end). Motion-Context hands them CLEAN, as
+            # keyframes, every step -- picture and end-aligned sound.
+            pw = wins[k - 1]
+            ov_f = int(pw["f1"] - w["f0"])
+            ctx = {"samples": nt.NestedTensor((
+                x0_v[:, :, pw["l0"]:pw["l1"]].to(full_v.dtype).clone(),
+                x0_a[..., pw["a0"]:pw["a1"]].to(full_a.dtype).clone()))}
+            try:
+                cond_k = _HTCMotionContext().apply(
+                    conditioning=cond_k, vae=None, latent=sub, context_length=str(ov_f),
+                    audio_context_length=ov_f, context_latent=ctx)[0]
+            except (ValueError, RuntimeError) as _e:
+                print(f"[{TAG}] windowed window {k + 1}: Motion-Context skipped ({_e}); "
+                      "held by mask only", flush=True)
+            del ctx
         guider = _result(_core_call(
             BasicGuider, "the windowed guider",
-            model=model, conditioning=[list(conds[k])[0]]))[0]
+            model=model, conditioning=cond_k))[0]
         res = _result(_core_call(
             SamplerCustomAdvanced, "the windowed layout sampler",
             noise=noise, guider=guider, sampler=sampler, sigmas=hi, latent_image=sub))
@@ -3877,7 +3897,8 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
     for t, hops in enumerate(groups):
         pl = _wt.plan([h["len"] for h in hops], overlap_n)
         digs = [h["dig"] for h in hops]
-        key = _wt.take_key(salt, digs, "finished" if WT_FINISHED_HANDOFF else "")
+        key = _wt.take_key(salt, digs, ("finished" if WT_FINISHED_HANDOFF else "")
+                           + ("+mc" if WT_MOTION_CONTEXT else ""))
         name = f"__wtake_{t + 1}"
         hit = hop_store.get(key) if hop_store is not None else None
         if hit is not None:
