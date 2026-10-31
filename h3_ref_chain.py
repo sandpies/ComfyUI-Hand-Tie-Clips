@@ -3723,6 +3723,10 @@ def _wt_sample(lat, plan, conds, *, model, sampler, sigmas, seed, label):
 # finished twice -- then the last WT_FINISH_STEPS run blended over all windows.
 WT_SEQUENTIAL = True
 WT_FINISH_STEPS = 2
+# Finished hand-off: each window also runs its last steps alone, and the next window's
+# overlap is held to those FINISHED frames instead of the step-K estimate (sharper hand-
+# offs, ~+25% time). The take's blended finish still starts from the step-K states.
+WT_FINISHED_HANDOFF = False
 
 
 class _WtNoise:
@@ -3755,8 +3759,9 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
     x0_v = torch.zeros_like(st_v)
     x0_a = torch.zeros_like(st_a)
     print(f"[{TAG}] windowed {label}: {plan['frames']} frames, {len(wins)} windows in order "
-          f"for {k_sw} steps (each held on the one before), then {fin} blended; seed {int(seed)}",
-          flush=True)
+          f"for {k_sw} steps (each held on the one before"
+          + (", finished" if WT_FINISHED_HANDOFF else "")
+          + f"), then {fin} blended; seed {int(seed)}", flush=True)
     for k, w in enumerate(wins):
         l0, l1, a0, a1 = w["l0"], w["l1"], w["a0"], w["a1"]
         sv = torch.zeros_like(full_v[:, :, l0:l1])
@@ -3783,6 +3788,16 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
             noise=noise, guider=guider, sampler=sampler, sigmas=hi, latent_image=sub))
         ov, oa = [t.float().cpu() for t in list(res[0]["samples"].unbind())[:2]]
         dv, da = [t.float().cpu() for t in list(res[1]["samples"].unbind())[:2]]
+        if WT_FINISHED_HANDOFF and k + 1 < len(wins):
+            # no hold here: a mask would treat the running state as clean. Only the
+            # window's tail (beyond its own held head) is handed on.
+            _fm = {"samples": res[0]["samples"]}
+            _fz = _result(_core_call(
+                SamplerCustomAdvanced, "the windowed hand-off sampler",
+                noise=_result(_core_call(DisableNoise, "the windowed hand-off noise"))[0],
+                guider=guider, sampler=sampler, sigmas=lo, latent_image=_fm))[0]
+            dv, da = [t.float().cpu() for t in list(_fz["samples"].unbind())[:2]]
+            del _fz, _fm
         if k == 0:
             st_v[:, :, l0:l1], st_a[..., a0:a1] = ov, oa
             x0_v[:, :, l0:l1], x0_a[..., a0:a1] = dv, da
@@ -3862,7 +3877,7 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
     for t, hops in enumerate(groups):
         pl = _wt.plan([h["len"] for h in hops], overlap_n)
         digs = [h["dig"] for h in hops]
-        key = _wt.take_key(salt, digs)
+        key = _wt.take_key(salt, digs, "finished" if WT_FINISHED_HANDOFF else "")
         name = f"__wtake_{t + 1}"
         hit = hop_store.get(key) if hop_store is not None else None
         if hit is not None:
