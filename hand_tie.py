@@ -1588,11 +1588,13 @@ PREVIS_RETRY_STRIDE = 104729   # the HOP retake's seed step (h3_ref_chain hop cu
 # names the frame, the nearest join and the previs text running there.
 PREVIS_GATE = True
 
-# One previs per take (10-31, unproven). A take is only split at anchor=restart; a
+# One previs per take (10-31; Tokyo previs A/B: chained cut at f22, windowed none;
+# tokyo_walk2 10-hop render passed). A take is only split at anchor=restart; a
 # take past PREVIS_MAX is sampled in overlapping context windows of two hops each
 # (ht_windows.py, needs ComfyUI with Comfy-Org/ComfyUI#17425), not as CHAINED
 # sections pinned on the last one: the section pin is where a chained previs snapped
-# at f22 and where section 2 drifted closer. Off, or on an older core: as before.
+# at f22 and where section 2 drifted closer. Off, or on a core without it
+# (ht_windows.probe() logs the missing piece): chained sections as before.
 PREVIS_WINDOWS = True
 
 

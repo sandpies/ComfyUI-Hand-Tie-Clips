@@ -1,8 +1,9 @@
 """Windowed hand-tie previs: one previs for a whole take, past PREVIS_MAX.
 
-PREP ONLY (2026-10-30). Nothing imports this yet. The core half needs ComfyUI with
-Comfy-Org/ComfyUI#17425 (MiniMax H3 context windows, merged 2026-10-30 as 6651247);
-`available()` says whether this core has it.
+Used by HandTieClips.run() for every hand_tie take past PREVIS_MAX (hand_tie.PREVIS_WINDOWS).
+The core half needs ComfyUI with Comfy-Org/ComfyUI#17425 (MiniMax H3 context windows,
+merged 2026-10-30 as 6651247); `probe()` says whether this core has every piece used here
+and, if not, which one is missing. Without it a long take falls back to chained sections.
 
 Why. A hand-tie previs is one H3 generate, so it stops at PREVIS_MAX (362 frames, about
 5 hops of 8 s) and a longer take is cut into CHAINED sections: section s is pinned on
@@ -176,15 +177,46 @@ def window_texts(shots, hop_frames, pl, fps=_ht.FPS):
 
 # --- the core half (needs Comfy-Org/ComfyUI#17425) --------------------------------
 
-def available():
-    """True when this ComfyUI can window an H3 latent (core 6651247 or later)."""
+# Every core name this module touches, so an older or reshaped core falls back with a
+# reason instead of failing mid-previs.
+_CORE_NAMES = ("IndexListContextHandler", "IndexListContextWindow", "ContextSchedules",
+               "get_matching_context_schedule", "get_matching_fuse_method",
+               "create_prepare_sampling_wrapper", "create_sampler_sample_wrapper")
+_HANDLER_KWARGS = ("context_schedule", "fuse_method", "context_length", "context_overlap",
+                   "dim", "freenoise", "causal_window_fix")
+
+
+def probe():
+    """(ok, reason): whether this ComfyUI can window an H3 latent the way make_handler and
+    install do. reason is "" when ok, else names the missing piece."""
+    import inspect
     try:
         import comfy.model_base as mb
-        import comfy.context_windows  # noqa: F401
-    except Exception:
-        return False
+        import comfy.context_windows as cw
+    except Exception as e:
+        return False, "comfy.context_windows does not import (%s)" % type(e).__name__
     h3 = getattr(mb, "MiniMaxH3", None)
-    return h3 is not None and callable(getattr(h3, "map_context_window_to_modalities", None))
+    if h3 is None or not callable(getattr(h3, "map_context_window_to_modalities", None)):
+        return False, "MiniMaxH3 has no map_context_window_to_modalities"
+    missing = [n for n in _CORE_NAMES if not hasattr(cw, n)]
+    if missing:
+        return False, "comfy.context_windows has no " + ", ".join(missing)
+    if not hasattr(cw.ContextSchedules, "STATIC_STANDARD"):
+        return False, "ContextSchedules has no STATIC_STANDARD"
+    try:
+        params = inspect.signature(cw.IndexListContextHandler.__init__).parameters
+    except (TypeError, ValueError):
+        return True, ""
+    if not any(p.kind == p.VAR_KEYWORD for p in params.values()):
+        gone = [k for k in _HANDLER_KWARGS if k not in params]
+        if gone:
+            return False, "IndexListContextHandler takes no " + ", ".join(gone)
+    return True, ""
+
+
+def available():
+    """True when this ComfyUI can window an H3 latent (core 6651247 or later)."""
+    return probe()[0]
 
 
 def make_handler(pl, fuse="pyramid", freenoise=False):

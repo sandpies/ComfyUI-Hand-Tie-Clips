@@ -6357,11 +6357,13 @@ class HandTieClips:
             ht_speaks = []       # section -> [window carries a planned line]
             # One previs per take, sampled in context windows (hand_tie.PREVIS_WINDOWS).
             _pv_win = bool(_ht.PREVIS_WINDOWS)
-            if _pv_win and not _htw.available():
-                print(f"[{TAG}] hand-tie: PREVIS_WINDOWS is on but this ComfyUI has no MiniMax "
-                      "H3 context windows (Comfy-Org/ComfyUI#17425): chained sections as before",
-                      flush=True)
-                _pv_win = False
+            if _pv_win:
+                _pw_ok, _pw_why = _htw.probe()
+                if not _pw_ok:
+                    print(f"[{TAG}] hand-tie: one previs per take needs ComfyUI with MiniMax H3 "
+                          f"context windows (Comfy-Org/ComfyUI#17425; here: {_pw_why}); a take "
+                          "past ~5 hops is split into chained previs sections instead", flush=True)
+                    _pv_win = False
             for _si, _sec in enumerate(_htw.takes(_pshots) if _pv_win
                                        else _ht.sections(_pshots, _plens)):
                 ht_sections.append(list(_sec))
