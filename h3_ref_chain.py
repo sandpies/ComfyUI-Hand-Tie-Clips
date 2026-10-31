@@ -3716,6 +3716,101 @@ def _wt_sample(lat, plan, conds, *, model, sampler, sigmas, seed, label):
     return out
 
 
+# Windowed take, in order (11-01). Drawing every window at once let each compose its own
+# take and the overlaps cut (windowed_take_00001). So: the first steps run window by
+# window, each one's overlap HELD (picture and sound) to the previous window's clean
+# estimate at that step -- the motion_context hold, inside one trajectory, so no frame is
+# finished twice -- then the last WT_FINISH_STEPS run blended over all windows.
+WT_SEQUENTIAL = True
+WT_FINISH_STEPS = 2
+
+
+class _WtNoise:
+    """One noise field for the whole take, handed to each window as its own slice."""
+    def __init__(self, seed, noise):
+        self.seed = int(seed)
+        self._noise = noise
+
+    def generate_noise(self, input_latent):
+        return self._noise
+
+
+def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
+    """Sample a take: steps 1..K window by window in order, each overlap held to the
+    previous window's clean estimate, then the last steps blended over all windows."""
+    import comfy.nested_tensor as nt  # noqa: PLC0415
+    import comfy.sample as cs  # noqa: PLC0415
+    wins = plan["windows"]
+    n = int(sigmas.shape[-1]) - 1
+    fin = max(1, min(int(WT_FINISH_STEPS), n - 1))
+    k_sw = n - fin
+    if len(wins) == 1 or k_sw < 1:
+        return _wt_sample(lat, plan, conds, model=model, sampler=sampler, sigmas=sigmas,
+                          seed=seed, label=label)
+    full_v, full_a = list(lat["samples"].unbind())[:2]
+    nv, na = list(cs.prepare_noise(lat["samples"], int(seed)).unbind())[:2]
+    hi, lo = sigmas[:k_sw + 1].clone(), sigmas[k_sw:].clone()
+    st_v = torch.zeros_like(full_v, dtype=torch.float32)
+    st_a = torch.zeros_like(full_a, dtype=torch.float32)
+    x0_v = torch.zeros_like(st_v)
+    x0_a = torch.zeros_like(st_a)
+    print(f"[{TAG}] windowed {label}: {plan['frames']} frames, {len(wins)} windows in order "
+          f"for {k_sw} steps (each held on the one before), then {fin} blended; seed {int(seed)}",
+          flush=True)
+    for k, w in enumerate(wins):
+        l0, l1, a0, a1 = w["l0"], w["l1"], w["a0"], w["a1"]
+        sv = torch.zeros_like(full_v[:, :, l0:l1])
+        sa = torch.zeros_like(full_a[..., a0:a1])
+        sub = {}
+        ovl = ova = 0
+        if k > 0:
+            ovl = max(0, wins[k - 1]["l1"] - l0)
+            ova = max(0, wins[k - 1]["a1"] - a0)
+            sv[:, :, :ovl] = x0_v[:, :, l0:l0 + ovl].to(sv.dtype)
+            sa[..., :ova] = x0_a[..., a0:a0 + ova].to(sa.dtype)
+            vm = torch.ones((1, 1) + tuple(sv.shape[2:]), dtype=torch.float32)
+            am = torch.ones((1, 1) + tuple(sa.shape[2:]), dtype=torch.float32)
+            vm[:, :, :ovl] = 0.0
+            am[..., :ova] = 0.0
+            sub["noise_mask"] = nt.NestedTensor((vm, am))
+        sub["samples"] = nt.NestedTensor((sv, sa))
+        noise = _WtNoise(seed, nt.NestedTensor((nv[:, :, l0:l1].clone(), na[..., a0:a1].clone())))
+        guider = _result(_core_call(
+            BasicGuider, "the windowed guider",
+            model=model, conditioning=[list(conds[k])[0]]))[0]
+        res = _result(_core_call(
+            SamplerCustomAdvanced, "the windowed layout sampler",
+            noise=noise, guider=guider, sampler=sampler, sigmas=hi, latent_image=sub))
+        ov, oa = [t.float().cpu() for t in list(res[0]["samples"].unbind())[:2]]
+        dv, da = [t.float().cpu() for t in list(res[1]["samples"].unbind())[:2]]
+        if k == 0:
+            st_v[:, :, l0:l1], st_a[..., a0:a1] = ov, oa
+            x0_v[:, :, l0:l1], x0_a[..., a0:a1] = dv, da
+        else:
+            # the running state crossfades over the overlap; the clean estimate there stays
+            # the previous window's (it was held to exactly that)
+            if ovl:
+                r = torch.linspace(0, 1, ovl + 2)[1:-1].view(1, 1, ovl, 1, 1)
+                st_v[:, :, l0:l0 + ovl] = st_v[:, :, l0:l0 + ovl] * (1 - r) + ov[:, :, :ovl] * r
+            if ova:
+                ra = torch.linspace(0, 1, ova + 2)[1:-1].view(*([1] * (oa.ndim - 1)), ova)
+                st_a[..., a0:a0 + ova] = st_a[..., a0:a0 + ova] * (1 - ra) + oa[..., :ova] * ra
+            st_v[:, :, l0 + ovl:l1], st_a[..., a0 + ova:a1] = ov[:, :, ovl:], oa[..., ova:]
+            x0_v[:, :, l0 + ovl:l1], x0_a[..., a0 + ova:a1] = dv[:, :, ovl:], da[..., ova:]
+        del res, ov, oa, dv, da, sub, guider
+    flat = [list(c)[0] for c in conds]
+    guider = _result(_core_call(
+        BasicGuider, "the windowed finish guider",
+        model=_htw.install(model, plan), conditioning=flat))[0]
+    mid = {"samples": nt.NestedTensor((st_v.to(full_v.dtype), st_a.to(full_a.dtype)))}
+    out = dict(_result(_core_call(
+        SamplerCustomAdvanced, "the windowed finish sampler",
+        noise=_result(_core_call(DisableNoise, "the windowed finish noise"))[0],
+        guider=guider, sampler=sampler, sigmas=lo, latent_image=mid))[0])
+    out.pop("noise_mask", None)
+    return out
+
+
 def _wt_retake(lat, pl, a, b, hops, *, overlap_n, model, sampler, sigmas):
     """Re-draw hops a..b of a stored take: cut their windows out of the take latent, hold
     the overlaps shared with the kept neighbours (noise_mask 0), sample, put back."""
@@ -3797,9 +3892,9 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                 if int(_fc) != int(pl["frames"]):
                     raise ValueError(f"{TAG}: windowed take {t + 1}: {pl['frames']} frames is "
                                      f"off the H3 grid ({_fc})")
-                lat = _wt_sample(lat0, pl, [h["cond"] for h in hops], model=model,
-                                 sampler=sampler, sigmas=sigmas, seed=hops[0]["seed"],
-                                 label=f"take {t + 1}")
+                lat = (_wt_sample_seq if WT_SEQUENTIAL else _wt_sample)(
+                    lat0, pl, [h["cond"] for h in hops], model=model, sampler=sampler,
+                    sigmas=sigmas, seed=hops[0]["seed"], label=f"take {t + 1}")
             _wimgs, _waud = _decode_av(vae, audio_vae, lat)
             imgs = _wimgs.contiguous().cpu()
             wav, sr = _waud["waveform"], int(_waud["sample_rate"])

@@ -77,7 +77,7 @@ def digest(block, seed, steps, length, refs):
 
 def take_key(salt, digs):
     """The stored take's key: the chain salt (model, size, sampler...) + every hop's digest."""
-    payload = {"windowed_take": 1, "salt": salt, "hops": list(digs)}
+    payload = {"windowed_take": 2, "salt": salt, "hops": list(digs)}   # 2 = in-order layout
     return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:24]
 
 
