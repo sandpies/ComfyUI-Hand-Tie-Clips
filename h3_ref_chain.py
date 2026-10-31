@@ -3613,6 +3613,8 @@ SPLIT_DEFAULT_K = 2         # refine_steps=0 ("the hop's steps") means this here
 # restarts are fresh), every step but the last ANTIBURN_PLAIN_STEPS on the LoRA, those
 # on the plain model so each hop draws its own fine detail; no refine on those hops
 # (the LoRA does refine's job). Used when the file is in models/loras; no widget.
+# Off while the encoded pin (MC_PIN_ENCODED) is tested: it targets the same burn at its cause.
+ANTIBURN_AUTO = False
 ANTIBURN_FILE = "h3_antiburn_universal_v1.safetensors"
 ANTIBURN_STRENGTH = 0.5
 ANTIBURN_PLAIN_STEPS = 2
@@ -3620,6 +3622,8 @@ ANTIBURN_PLAIN_STEPS = 2
 
 def _antiburn_lora():
     """The Anti-Burn LoRA's name in models/loras (any subfolder), or None."""
+    if not ANTIBURN_AUTO:
+        return None
     try:
         import folder_paths  # noqa: PLC0415
         names = list(folder_paths.get_filename_list("loras"))
@@ -3654,6 +3658,39 @@ def _antiburn_sampled(latent, *, noise, guider, plain_guider, sampler, hop_sigma
         SamplerCustomAdvanced, "the anti-burn plain finish",
         noise=_result(_core_call(DisableNoise, "the anti-burn finish noise"))[0],
         guider=plain_guider, sampler=sampler, sigmas=lo, latent_image=mid))[0]
+
+
+# Encoded motion_context pin (10-31). The next hop used to continue from the raw sampler
+# latent, which carries structure the decoder drops; each hop sharpened it further (the
+# burn: DEVLOG 28, pin sigma 1.044 -> 1.061 on the raw latent, flat through the VAE round
+# trip, face texture 84% vs 95%). Now the pin is the hop's delivered frames encoded again:
+# what the next hop continues from is exactly what is seen. Picture only; the audio pin
+# stays the raw audio latent.
+MC_PIN_ENCODED = True
+
+
+def _encoded_pin(sampled, imgs, vae, hop_no):
+    """`sampled` with its video stream replaced by vae.encode(imgs). Unchanged (and
+    logged) if the encode does not come back the sampled video's shape."""
+    parts = _latents.from_dict(sampled) if sampled is not None else None
+    if not parts or vae is None or imgs is None:
+        return sampled
+    try:
+        z = vae.encode(imgs[..., :3])
+    except Exception as e:  # noqa: BLE001
+        print(f"[{TAG}] hop {hop_no}: encoded pin skipped ({type(e).__name__}); "
+              "the raw latent is the pin", flush=True)
+        return sampled
+    v = parts[0]
+    if tuple(z.shape) != tuple(v.shape):
+        print(f"[{TAG}] hop {hop_no}: encoded pin skipped (encode {tuple(z.shape)} vs "
+              f"sampled {tuple(v.shape)}); the raw latent is the pin", flush=True)
+        return sampled
+    out = dict(sampled)
+    out.pop("noise_mask", None)
+    out["samples"] = _latents.rebuild(sampled["samples"],
+                                      [z.to(device=v.device, dtype=v.dtype)] + list(parts[1:]))
+    return out
 
 
 def _split_k(refine_steps, hop_steps):
@@ -7779,6 +7816,8 @@ class HandTieClips:
                         min(int(reference_video.shape[0]), int(render_length)),
                         bool(_vid_slots and _vid_slots[0][1] is not None and audio_vae is not None),
                     ]
+                if MC_PIN_ENCODED and pin_mech_pred == "motion_context" and i > 0:
+                    hop_payload["mc_pin"] = "encoded_v1"
                 if _ab_hop:
                     hop_payload["antiburn"] = [str(antiburn_name), ANTIBURN_STRENGTH,
                                                ANTIBURN_PLAIN_STEPS, "no_refine"]
@@ -8989,6 +9028,9 @@ class HandTieClips:
             prev_audio = {"waveform": _tail_audio(audio, overlap_n)["waveform"].clone(),
                           "sample_rate": sr}
             prev_sampled = this_sampled
+            if (MC_PIN_ENCODED and not ht and i + 1 < n and prev_sampled is not None
+                    and str(pin_mech) in ("auto", "motion_context")):
+                prev_sampled = _encoded_pin(prev_sampled, imgs, vae, i + 1)
             prev_key = hop_key
             _push_preview(
                 unique_id, f"hop {i + 1}/{n} done",
