@@ -8670,15 +8670,10 @@ class HandTieClips:
                 # is closed by seam_bend at the master write.
                 _si, _k = ht_pos[i]
                 _wp, _ws = ht_windows[_si]
-                if locked is None:
-                    _h_free = _ht.free_head(_k, ht_chained[_si], start_image is not None)
-                    _h_sp = bool(ht_speaks[_si][_k]) if not _h_free else True
-                    _t_sp = bool(ht_speaks[_si][_k + 1]) if (_k + 1 < len(ht_speaks[_si])) else False
-                    wav = _ht.calm_hop_audio(
-                        wav, sr, has_line=bool(_dlg.script_words(block)),
-                        head_speaks=_h_sp, tail_speaks=_t_sp,
-                        overlap_n=overlap_n, fps=FPS)
-                    audio = {"waveform": wav, "sample_rate": sr}
+                # The hop's sound is H3's own, as rendered. calm_hop_audio (removed 10-31)
+                # swapped quiet hops for a low-passed noise bed: on tokyo_walk2 every
+                # silent hop sat at a 340-570 Hz centroid against 2-3 kHz on the line
+                # hops, so the film switched between street sound and hum hop to hop.
                 _tone_head = _wp[_k]
                 # (prev-hop head tone match / SEAMFIX_TONE_MATCH skip: removed with
                 # ht_seam_source; every hand-tie hop matches its previs head window.)
