@@ -7379,7 +7379,8 @@ class HandTieClips:
             # <Picture 1> is the definition of a continuation, and a restart
             # takes NOTHING from the previous hop -- the branch at the sampler
             # says so in as many words. It was still handing over the tail here.
-            if not hop_is_start:
+            # windowed: no hop hands another its frames (they don't exist yet).
+            if not hop_is_start and not windowed:
                 hop_images, live_p, hop_videos, live_v = _attach_pin_to_qwen(
                     str(pin_to_qwen), base_images, hop_video_seed,
                     prev_imgs[-1:], prev_imgs[-overlap_n:],
