@@ -88,6 +88,7 @@ from . import upscale_guide as _ug
 from . import hear as _hear
 from . import hand_tie as _ht
 from . import ht_windows as _htw
+from . import face_pass as _fp
 # One definition, in refs.py -- routes.py publishes that copy to the editor, so
 # a second constant here meant the node's slot count and the number the UI was
 # told could drift apart.
@@ -3109,8 +3110,14 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
                           lora_strength=UPSAMPLE_DENOISE,
                           regen2k_seed=REGEN2K_SEED,
                           strip_existing_loras=False,
-                          regen2k_cond=REGEN2K_DEFAULT_COND):
-    """Run the delivery-only Open-H3-Regenerate-2K stage over stitched pre-VAE hop latents."""
+                          regen2k_cond=REGEN2K_DEFAULT_COND,
+                          face_src=None, face_audio=None, audio_vae=None):
+    """Run the delivery-only Open-H3-Regenerate-2K stage over stitched pre-VAE hop latents.
+
+    `face_src` (the film at canvas size, as delivered without upsample) turns on
+    the small-face close-up re-draw (face_pass, as the standalone upsampler):
+    faces found in it are re-drawn at close-up size with the same LoRA, sigmas
+    and seed and the film's soundtrack (`face_audio`), and blended in."""
     cond_mode = str(regen2k_cond or REGEN2K_DEFAULT_COND).strip().lower()
     if cond_mode not in REGEN2K_COND_MODES:
         raise ValueError(
@@ -3221,7 +3228,42 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
     finally:
         _tu._free(work_model)
         _verify_model_unmutated(regen2k_model, snap)
+    if face_src is not None and r2k_sigmas is not None and _fp.FACE_PASS:
+        note += _chain_face_pass(
+            frames, face_src, regen2k_model, vae, audio_vae, face_audio, upscaler, budget,
+            r2k_settings, lora_name, strength, strip_existing_loras)
+        _verify_model_unmutated(regen2k_model, snap)
     return frames, f"{note} ({r2k_line})"
+
+
+def _chain_face_pass(frames, face_src, regen2k_model, vae, audio_vae, face_audio, upscaler,
+                     budget, r2k_settings, lora_name, strength, strip_existing_loras):
+    """Small-face close-ups over the upsampled film `frames`, in place, with the
+    standalone upsampler's own code (video_upsampler.close_up_fn). -> note."""
+    from . import video_upsampler as _vu  # noqa: PLC0415
+    try:
+        base = regen2k_model.clone() if hasattr(regen2k_model, "clone") else regen2k_model
+        if strip_existing_loras and getattr(base, "patches", None):
+            base.patches = {}
+        # Already LoRA'd (a wired regen2k model) -> as is; else the chain's LoRA.
+        lora = "None" if getattr(base, "patches", None) else lora_name
+        n = min(int(frames.shape[0]), int(face_src.shape[0]))
+        fn = _vu.close_up_fn(
+            vae, base, str(upscaler), float(strength), lora, int(budget or 0), "euler",
+            int(r2k_settings.get("seed", REGEN2K_SEED)), face_audio,
+            audio_vae if face_audio is not None else None, float(_vu.H3_FPS),
+            r2k_settings.get("attention", _tu.CHAIN_DEFAULTS["attention"]),
+            r2k_settings.get("chunk_join", _tu.CHAIN_DEFAULTS["chunk_join"]),
+            True, r2k_settings.get("tiling", True),
+            float(r2k_settings.get("redraw_start", _tu.CHAIN_DEFAULTS["redraw_start"])),
+            str(int(r2k_settings.get("steps", len(_tu.REGEN2K_SIGMAS) - 1))))
+        _img, note = _fp.apply(frames[:n], face_src[:n], fn, float(_vu.H3_FPS))
+        return note
+    except mm.InterruptProcessingException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        print(f"[{TAG}] WARNING: small-face re-draw skipped: {exc!r}", flush=True)
+        return ", small-face re-draw skipped"
 
 
 def _boost_lora_choices():
@@ -4777,12 +4819,13 @@ class HandTieClips:
                 # it carries 0.999 / 0.85 here, which ComfyUI casts to 0 for an
                 # INT -- and 0 means the recipe value, so it still queues.
                 "upsample_tile_tokens": ("INT", {
-                    "default": _tu.TOKEN_BUDGET, "min": 0, "max": 1048576, "step": 1024,
+                    "default": 0, "min": 0, "max": 1048576, "step": 1024,
                     "tooltip": ("Upsample VRAM: the largest sequence one tile forward may carry. "
-                                "Lower = more, smaller tiles -- less memory, slower, the same "
-                                f"seamless merge. {_tu.TOKEN_BUDGET} is the recipe's value; 0 = "
-                                "auto: learned on this machine, run by run. Delivery only: no "
-                                "hop re-renders when it changes."),
+                                "0 (default) = auto: starts from what this GPU managed last time "
+                                f"({_tu.TOKEN_BUDGET}, the recipe's value, the first time) and "
+                                "learns run by run. A number fixes it: lower = more, smaller "
+                                "tiles -- less memory, slower, the same seamless merge. Delivery "
+                                "only: no hop re-renders when it changes."),
                 }),
                 # APPENDED 2026-10-04, LAST. A socket, so it takes no widget slot.
                 "upsample_dit": ("MODEL", {
@@ -5035,7 +5078,7 @@ class HandTieClips:
             prompt_suffix="", upsample_model=_tu.UPSCALER_FILE,
             boost_lora_4="None", boost_lora_4_strength=1.0,
             upsample_lora="None", upsample_lora_strength=1.0,
-            upsample_tile_tokens=_tu.TOKEN_BUDGET, upsample_dit=None,
+            upsample_tile_tokens=0, upsample_dit=None,
             swap_script="", swap_refs="",
              ht_seam_fix="off",
             audio_refine="off", audio_denoise=0.50, audio_steps=5,
@@ -9058,7 +9101,10 @@ class HandTieClips:
                         lora_strength=float(upsample_denoise),
                         regen2k_seed=int(regen2k_seed),
                         strip_existing_loras=(regen2k_model is None),
-                        regen2k_cond=str(regen2k_cond))
+                        regen2k_cond=str(regen2k_cond),
+                        face_src=master_imgs, audio_vae=audio_vae,
+                        face_audio=({"waveform": _batch_wav(master_wav), "sample_rate": int(sr)}
+                                    if master_wav is not None and sr else None))
                 else:
                     if (upsample_guide_factor and float(upsample_denoise) > 0.0
                             and float(upsample_lora_strength) != 0.0):

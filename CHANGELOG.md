@@ -3,6 +3,11 @@
 User-facing. The files named here are in the repository, not in the installed
 pack — the published package excludes them.
 
+## Unreleased
+
+- **Upsampler: small faces keep their person** (issue #3 on the standalone upsampler). A face far from the camera is only a few latent points wide, so the re-draw drew its own (heavier brows, eyeliner, darker eyes). Every face under about 220 px tall in the output is now found in the source (YuNet via OpenCV, downloaded once into `models/facedetection`), followed across frames, cut out and enlarged to close-up size, re-drawn with the same LoRA, sigmas, seed and soundtrack (in one piece when it fits), and blended back with a soft oval; it fades to the main re-draw between 220 and 360 px. Up to four faces per clip. In `H3 Video Upsampler`, the file-to-file node and `HandTieClips`' Regen2K upsample alike; no new widget. Without OpenCV the pass is skipped and logged.
+- **`HandTieClips`: `upsample_tile_tokens` defaults to 0 (auto)**, as the standalone nodes do: it starts from what this GPU managed last time and learns run by run. Saved graphs keep the number they have.
+
 ## 3.3.0 — 2026-10-31
 
 **Breaking for saved upsampler graphs:** the widget lists of `H3 Video Upsampler` and `HTC Upsample Settings` changed, so graphs saved before 3.3.0 load with values in the wrong slots. Re-load `workflows/HandTieClips_Upsample_Video.json` (or the new `HandTieClips_Upsample_Video_File.json`) and set your values again. `HandTieClips` graphs are unaffected.

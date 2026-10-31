@@ -113,18 +113,22 @@ def _detector(w, h):
 def detect(images):
     """[n, H, W, 3] 0..1 -> list per frame of (cx, cy, size) in source px, or None
     when no detector is available. size = face box height."""
-    n, hh, ww = int(images.shape[0]), int(images.shape[1]), int(images.shape[2])
-    det = _detector(ww, hh)
-    if det is None:
-        return None
+    return detect_batches(images[s:s + 16] for s in range(0, int(images.shape[0]), 16))
+
+
+def detect_batches(batches):
+    """detect() over an iterable of [k, H, W, 3] batches (a file read a piece at
+    a time). -> list per frame, or None without a detector."""
     import numpy as np
-    out = []
-    for s in range(0, n, 16):
-        batch = (images[s:s + 16, ..., :3].float().clamp(0, 1) * 255.0).round().to(torch.uint8)
-        batch = batch.cpu().numpy()
-        for fr in batch:
-            bgr = np.ascontiguousarray(fr[..., ::-1])
-            _, faces = det.detect(bgr)
+    det, out = None, []
+    for batch in batches:
+        if det is None:
+            det = _detector(int(batch.shape[2]), int(batch.shape[1]))
+            if det is None:
+                return None
+        arr = (batch[..., :3].float().clamp(0, 1) * 255.0).round().to(torch.uint8).cpu().numpy()
+        for fr in arr:
+            _, faces = det.detect(np.ascontiguousarray(fr[..., ::-1]))
             row = []
             if faces is not None:
                 for fa in faces:
@@ -327,44 +331,95 @@ def one_chunk(m):
     lat_t = (17 * math.ceil((max(5, m) - 5) / 17) + 5 - 1) // 4 + 1
     return lat_t * (CROP_OUT // 32) ** 2 <= ONE_CHUNK_TOKENS
 
+
+def select(dets, n, scale):
+    """Tracks worth a close-up -> jobs: {f0, m, cx, cy, side, w, size_out}, at
+    most MAX_TRACKS, largest faces first. `scale` = output px per source px."""
+    jobs = []
+    for tr in link(dets, n):
+        if len(jobs) >= MAX_TRACKS:
+            break
+        w = weights(tr, scale, fade_in=tr["first"] > 0, fade_out=tr["last"] < n - 1)
+        if float(w.max()) <= 0.0:
+            continue
+        nz = torch.nonzero(w > 0).view(-1)
+        a, b = int(nz[0]), int(nz[-1]) + 1
+        jobs.append({"f0": tr["first"] + a, "m": b - a, "cx": tr["cx"][a:b],
+                     "cy": tr["cy"][a:b], "side": tr["size"][a:b] * CONTEXT, "w": w[a:b],
+                     "size_out": float(tr["size"][a:b].mean() * scale)})
+    return jobs
+
+
+def crops_from_batches(jobs, batches):
+    """Each job's crop clip, cut from source batches read in order. -> list of
+    [m, CROP_IN, CROP_IN, 3] (uint8 on the CPU, to keep long tracks small)."""
+    out = [torch.empty((j["m"], CROP_IN, CROP_IN, 3), dtype=torch.uint8) for j in jobs]
+    at = 0
+    for batch in batches:
+        k = int(batch.shape[0])
+        for j, dst in zip(jobs, out):
+            a, b = max(at, j["f0"]), min(at + k, j["f0"] + j["m"])
+            if a >= b:
+                continue
+            i0, i1 = a - j["f0"], b - j["f0"]
+            c = crop(batch[a - at:b - at], j["cx"][i0:i1], j["cy"][i0:i1], j["side"][i0:i1])
+            dst[i0:i1] = (c * 255.0).round().clamp(0, 255).to(torch.uint8)
+        at += k
+    return out
+
+
+def render(jobs, crops, redraw_fn, fps):
+    """Run the close-up re-draw for every job; stores job["out"] ([m, S, S, 3] uint8)."""
+    for i, (j, c) in enumerate(zip(jobs, crops)):
+        t0 = j["f0"] / float(fps)
+        out = redraw_fn(c.float() / 255.0, t0, t0 + j["m"] / float(fps))[: j["m"]]
+        j["out"] = (out.float().clamp(0, 1) * 255.0).round().to(torch.uint8)
+        print(f"[{TAG}] small face {i + 1}: frames {j['f0']}-{j['f0'] + j['m'] - 1}, "
+              f"{j['size_out']:.0f} px tall in the output, re-drawn as a "
+              f"{int(j['out'].shape[1])} px close-up", flush=True)
+
+
+def paste_jobs(img, f_off, jobs, sx, sy):
+    """Blend every rendered job's frames that fall in img (frames f_off ..) in place."""
+    k = int(img.shape[0])
+    for j in jobs:
+        if "out" not in j:
+            continue
+        a, b = max(f_off, j["f0"]), min(f_off + k, j["f0"] + j["m"])
+        if a >= b:
+            continue
+        i0, i1 = a - j["f0"], b - j["f0"]
+        paste(img[a - f_off:b - f_off], j["out"][i0:i1].float() / 255.0, j["cx"][i0:i1],
+              j["cy"][i0:i1], j["side"][i0:i1], j["w"][i0:i1], sx, sy)
+    return img
+
+
+def note(jobs):
+    done = sum(1 for j in jobs if "out" in j)
+    return f", {done} small face(s) re-drawn as close-ups" if done else ", no small faces"
+
+
 def apply(img, images, redraw_fn, fps=24.0):
     """Re-draw the small faces of `images` (the source, [n, h, w, 3]) as close-ups
     and blend them into `img` (the upsampled clip, [n, Ho, Wo, 3]) in place.
 
-    redraw_fn(crops [m, CROP_IN, CROP_IN, 3], t0_s, t1_s) -> [m, CROP_OUT', CROP_OUT', 3]:
-    the upsampler run on the crop clip with the soundtrack from t0_s to t1_s, in ONE
+    redraw_fn(crops [m, CROP_IN, CROP_IN, 3], t0_s, t1_s) -> [m, S, S, 3]: the
+    upsampler run on the crop clip with the soundtrack from t0_s to t1_s, in ONE
     chunk when it fits (see one_chunk): a chunk seam inside a close-up morphs the face.
     -> (img, note)"""
     if not FACE_PASS:
         return img, ""
     n = min(int(img.shape[0]), int(images.shape[0]))
     sh, sw = int(images.shape[1]), int(images.shape[2])
-    ho, wo = int(img.shape[1]), int(img.shape[2])
-    sx, sy = wo / float(sw), ho / float(sh)
+    sx, sy = int(img.shape[2]) / float(sw), int(img.shape[1]) / float(sh)
     dets = detect(images[:n])
     if dets is None:
         return img, ""
-    tracks = link(dets, n)
-    done = 0
-    for tr in tracks:
-        if done >= MAX_TRACKS:
-            break
-        w = weights(tr, (sx + sy) / 2.0, fade_in=tr["first"] > 0, fade_out=tr["last"] < n - 1)
-        if float(w.max()) <= 0.0:
-            continue
-        nz = torch.nonzero(w > 0).view(-1)
-        a, b = int(nz[0]), int(nz[-1]) + 1                  # within the track
-        f0 = tr["first"] + a
-        cx, cy = tr["cx"][a:b], tr["cy"][a:b]
-        side = tr["size"][a:b] * CONTEXT
-        crops = crop(images[f0:f0 + (b - a)], cx, cy, side)
-        out = redraw_fn(crops, f0 / float(fps), (f0 + (b - a)) / float(fps))
-        out = out[: b - a].float()
-        paste(img[f0:f0 + (b - a)], out, cx, cy, side, w[a:b], sx, sy)
-        done += 1
-        print(f"[{TAG}] small face {done}: frames {f0}-{f0 + (b - a) - 1}, "
-              f"{float(tr['size'][a:b].mean() * (sx + sy) / 2):.0f} px tall in the output, "
-              f"re-drawn as a {int(out.shape[1])} px close-up", flush=True)
-    note = (f", {done} small face(s) re-drawn as close-ups" if done
-            else ", no small faces")
-    return img, note
+    jobs = select(dets, n, (sx + sy) / 2.0)
+    if not jobs:
+        return img, note(jobs)
+    crops = crops_from_batches(jobs, (images[s:s + 64] for s in range(0, n, 64)))
+    render(jobs, crops, redraw_fn, fps)
+    del crops
+    paste_jobs(img, 0, jobs, sx, sy)
+    return img, note(jobs)

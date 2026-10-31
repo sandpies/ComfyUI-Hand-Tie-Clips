@@ -110,6 +110,14 @@ prompt writing guides and staff answers on the MiniMax-H3 repository,
 Emily2040/seedance-2.0, ruashots/open-h3-ir, teskor-hub/minimax-h3-skill and
 ComfyUI's own `nodes_minimax_h3.py`. Credit for those findings stays with them.
 
+## YuNet face detector (`face_pass.py`, downloaded on first use)
+
+The upsampler's small-face pass finds faces with [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet)
+(`face_detection_yunet_2023mar.onnx`, 232 KB) through OpenCV's `FaceDetectorYN`. The
+model is not in this repository: it is downloaded from opencv_zoo on first use into
+`ComfyUI/models/facedetection` and checked against its SHA-256. YuNet is MIT licensed,
+Copyright (c) 2020 Shiqi Yu.
+
 ## Ideas from ComfyUI-UtilsCollection (no code copied)
 
 The file-to-file, Video Frames and Load Video (path) nodes follow ideas from **[silveroxides](https://github.com/silveroxides)'**
