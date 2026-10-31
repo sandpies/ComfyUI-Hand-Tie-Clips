@@ -3726,7 +3726,7 @@ WT_FINISH_STEPS = 2
 # Finished hand-off: each window also runs its last steps alone, and the next window's
 # overlap is held to those FINISHED frames instead of the step-K estimate (sharper hand-
 # offs, ~+25% time). The take's blended finish still starts from the step-K states.
-WT_FINISHED_HANDOFF = False
+WT_FINISHED_HANDOFF = True    # 11-01 v2+mc: joins shifted at overlap ends (held to a rough step-K estimate)
 WT_MOTION_CONTEXT = True     # each window gets the previous window's overlap as clean keyframes
 
 
