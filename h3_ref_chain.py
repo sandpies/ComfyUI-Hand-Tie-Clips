@@ -4254,7 +4254,7 @@ def _ht_mc_inpaint_head(latent, cond, prev_sampled, overlap_n, vae=None,
 # latents and held there with noise_mask from step 0, the way a head is held, and the hop
 # is drawn INTO it. Those frames are dropped at the join (the next hop is written over
 # them), so the held previs picture is never delivered.
-HT_TAIL_HOLD = True
+HT_TAIL_HOLD = False   # 10-31 tailhold_4hop (user): same as usual previs, flashes MORE visible -> off
 
 
 def _ht_hold_tail(latent, tail_lat, hop_no=0):
