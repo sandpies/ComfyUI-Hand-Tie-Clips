@@ -89,6 +89,7 @@ from . import hear as _hear
 from . import hand_tie as _ht
 from . import ht_windows as _htw
 from . import face_pass as _fp
+from . import wtake as _wt
 # One definition, in refs.py -- routes.py publishes that copy to the editor, so
 # a second constant here meant the node's slot count and the number the UI was
 # told could drift apart.
@@ -3693,6 +3694,145 @@ def _encoded_pin(sampled, imgs, vae, hop_no):
     return out
 
 
+def _wt_sample(lat, plan, conds, *, model, sampler, sigmas, seed, label):
+    """Sample one (sub-)take latent over its windows. `conds`: one conditioning list per
+    window, in window order. One window = the plain model on that window's conditioning."""
+    flat = []
+    for c in conds:
+        flat.append(list(c)[0])
+    one = len(plan["windows"]) == 1
+    guider = _result(_core_call(
+        BasicGuider, "the windowed guider",
+        model=(model if one else _htw.install(model, plan)),
+        conditioning=([flat[0]] if one else flat)))[0]
+    noise = _result(_core_call(RandomNoise, "the windowed noise", noise_seed=int(seed)))[0]
+    print(f"[{TAG}] windowed {label}: {plan['frames']} frames in {len(plan['windows'])} "
+          f"window(s) of " + "/".join(str(w["f1"] - w["f0"]) for w in plan["windows"])
+          + f" f, seed {int(seed)}", flush=True)
+    out = dict(_result(_core_call(
+        SamplerCustomAdvanced, "the windowed sampler",
+        noise=noise, guider=guider, sampler=sampler, sigmas=sigmas, latent_image=lat))[0])
+    out.pop("noise_mask", None)
+    return out
+
+
+def _wt_retake(lat, pl, a, b, hops, *, overlap_n, model, sampler, sigmas):
+    """Re-draw hops a..b of a stored take: cut their windows out of the take latent, hold
+    the overlaps shared with the kept neighbours (noise_mask 0), sample, put back."""
+    import comfy.nested_tensor as nt  # noqa: PLC0415
+    sp = _wt.sub_plan(pl, a, b, overlap_n)
+    parts = list(_latents.from_dict(lat))
+    v, au = parts[0], parts[1]
+    if v.ndim != 5 or au.ndim != 4:
+        raise ValueError(f"{TAG}: windowed retake: stored take latent has shapes "
+                         f"{tuple(v.shape)} / {tuple(au.shape)}")
+    sv = v[:, :, sp["l0"]:sp["l1"]].clone()
+    sa = au[..., sp["a0"]:sp["a1"]].clone()
+    vmask = torch.ones((1, 1) + tuple(sv.shape[2:]), dtype=torch.float32, device=sv.device)
+    amask = torch.ones((1, 1) + tuple(sa.shape[2:]), dtype=torch.float32, device=sa.device)
+    for x, y in sp["hold_v"]:
+        vmask[:, :, x:y] = 0.0
+    for x, y in sp["hold_a"]:
+        amask[..., x:y] = 0.0
+    sub = {"samples": nt.NestedTensor((sv, sa)), "noise_mask": nt.NestedTensor((vmask, amask))}
+    out = _wt_sample(sub, sp["plan"], [h["cond"] for h in hops[a:b + 1]], model=model,
+                     sampler=sampler, sigmas=sigmas, seed=hops[a]["seed"],
+                     label=f"retake of hop(s) {hops[a]['hop']}-{hops[b]['hop']}")
+    op = list(_latents.from_dict(out))
+    v = v.clone()
+    au = au.clone()
+    v[:, :, sp["l0"]:sp["l1"]] = op[0].to(device=v.device, dtype=v.dtype)
+    au[..., sp["a0"]:sp["a1"]] = op[1].to(device=au.device, dtype=au.dtype)
+    res = dict(lat)
+    res.pop("noise_mask", None)
+    res["samples"] = _latents.rebuild(lat["samples"], [v, au] + parts[2:])
+    return res
+
+
+def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, scheduler,
+                     steps, overlap_n, width, height, hop_store, salt):
+    """pin_mech=windowed: every take as ONE latent over its hops' windows. A stored take
+    whose hop digests all match is reused; one where some changed re-draws only those hops
+    between the kept ones. -> (master_wav, sample_rate, frames written, store keys)."""
+    from comfy_extras.nodes_minimax_h3 import _empty_av_latent  # noqa: PLC0415
+    groups = []
+    for h in win_hops:
+        if h["restart"] or not groups:
+            groups.append([])
+        groups[-1].append(h)
+    sigmas = _result(_core_call(
+        BasicScheduler, "the windowed sigma schedule",
+        model=model, scheduler=scheduler, steps=int(steps), denoise=1.0))[0]
+    pos, wav_all, sr_out, keys = 0, None, None, []
+    for t, hops in enumerate(groups):
+        pl = _wt.plan([h["len"] for h in hops], overlap_n)
+        digs = [h["dig"] for h in hops]
+        key = _wt.take_key(salt, digs)
+        name = f"__wtake_{t + 1}"
+        hit = hop_store.get(key) if hop_store is not None else None
+        if hit is not None:
+            imgs, wav, sr = hit[0], hit[1], int(hit[2])
+            print(f"[{TAG}] windowed take {t + 1}: loaded from cache (key {key[:8]})", flush=True)
+        else:
+            old_key = hop_store.get_pointer(name) if hop_store is not None else None
+            old = hop_store.get(old_key) if old_key else None
+            old_meta = (hop_store.meta(old_key) or {}) if old_key else {}
+            runs = None
+            if old is not None and old[3] is not None:
+                runs = _wt.changed_runs(old_meta.get("digs"), digs)
+                _ov = list(_latents.from_dict(old[3]) or [])
+                if not _ov or int(_ov[0].shape[2]) != int(pl["latents"]):
+                    runs = None
+            if runs:
+                lat = old[3]
+                print(f"[{TAG}] windowed take {t + 1}: re-drawing hop(s) "
+                      + ", ".join(f"{hops[a]['hop']}-{hops[b]['hop']}" if a != b else str(hops[a]["hop"])
+                                  for a, b in runs)
+                      + "; the rest is kept", flush=True)
+                for a, b in runs:
+                    lat = _wt_retake(lat, pl, a, b, hops, overlap_n=overlap_n, model=model,
+                                     sampler=sampler, sigmas=sigmas)
+            else:
+                lat0, _fc = _empty_av_latent(int(width), int(height), int(pl["frames"]))
+                if int(_fc) != int(pl["frames"]):
+                    raise ValueError(f"{TAG}: windowed take {t + 1}: {pl['frames']} frames is "
+                                     f"off the H3 grid ({_fc})")
+                lat = _wt_sample(lat0, pl, [h["cond"] for h in hops], model=model,
+                                 sampler=sampler, sigmas=sigmas, seed=hops[0]["seed"],
+                                 label=f"take {t + 1}")
+            _wimgs, _waud = _decode_av(vae, audio_vae, lat)
+            imgs = _wimgs.contiguous().cpu()
+            wav, sr = _waud["waveform"], int(_waud["sample_rate"])
+            del _wimgs, _waud
+            if hop_store is not None:
+                hop_store.put(key, imgs, wav, sr, meta={"digs": digs, "windowed_take": t + 1},
+                              latent=lat)
+                hop_store.set_pointer(name, key)
+        keys.append(key)
+        nf = min(int(imgs.shape[0]), int(master_imgs.shape[0]) - pos)
+        master_imgs[pos:pos + nf] = imgs[:nf]
+        pos += nf
+        w = _batch_wav(wav)
+        need = int(round(nf / float(FPS) * sr))
+        if int(w.shape[-1]) < need:
+            w = torch.nn.functional.pad(w, (0, need - int(w.shape[-1])))
+        w = w[..., :need]
+        if wav_all is None:
+            wav_all, sr_out = w, sr
+        else:
+            if sr != sr_out:
+                w = _resample_wav(w, sr, sr_out)
+            m = min(int(sr_out * 0.005), int(wav_all.shape[-1]), int(w.shape[-1]))
+            if m >= 1:
+                tt = torch.linspace(0, 1, m, dtype=w.dtype, device=w.device)
+                wav_all = torch.cat([wav_all[..., :-m], wav_all[..., -m:] * torch.cos(tt * math.pi / 2),
+                                     w[..., :m] * torch.sin(tt * math.pi / 2), w[..., m:]], dim=-1)
+            else:
+                wav_all = torch.cat([wav_all, w], dim=-1)
+        del imgs, wav
+    return wav_all, sr_out, pos, keys
+
+
 def _split_k(refine_steps, hop_steps):
     """K for this hop: refine_steps (0 = SPLIT_DEFAULT_K), at least one step
     left for stage 1 and at least one finished finely."""
@@ -4671,14 +4811,18 @@ class HandTieClips:
                 # anywhere but the end silently reassigns every later value in
                 # every saved workflow. Adding options to an existing combo is
                 # safe; adding a widget is not.
-                "pin_mech": (["auto", "motion_context", "addguide", "hand_tie", "hand_tie_mc"], {
+                "pin_mech": (["auto", "motion_context", "addguide", "hand_tie", "hand_tie_mc", "windowed"], {
                     "default": "auto",
                     "tooltip": ("How hops are joined. auto uses Motion-Context when available, AddGuide "
                                 "otherwise. Forcing one fails rather than falling back. hand_tie renders one "
                                 "previs per section and ties every hop to it at both ends, so no hop reads "
                                 "another and texture does not compound (needs a shot plan, overlap 0.9 s). "
                                 "hand_tie_mc uses the previs window as a per-step Motion-Context guide with "
-                                "end-aligned audio carry."),
+                                "end-aligned audio carry. windowed renders each take (split only at "
+                                "anchor=restart) as ONE latent, its hops as overlapping context windows "
+                                "sampled together, so nothing is handed hop to hop; a changed hop is "
+                                "re-drawn alone between its kept neighbours (needs ComfyUI with MiniMax "
+                                "H3 context windows, overlap 0.9 s)."),
                 }),
                 # APPENDED, never inserted -- see the note above `pin_mech`.
                 "tone_anchor_ref": (["hop1", "still"], {
@@ -6447,6 +6591,26 @@ class HandTieClips:
         # into 22-frame windows that guide every hop of the section at both ends.
         # See hand_tie.py. Off for a swap, which is a single guided generate.
         ht = (str(pin_mech) == "hand_tie") and not swap
+        windowed = str(pin_mech) == "windowed" and not swap and not dry
+        win_hops = []
+        if windowed:
+            _w_ok, _w_why = _htw.probe()
+            if not _w_ok:
+                raise ValueError(f"{TAG}: pin_mech=windowed needs ComfyUI with MiniMax H3 context "
+                                 f"windows (Comfy-Org/ComfyUI#17425): {_w_why}")
+            for _tk in _wt.takes(shots):            # refuse before any text is encoded
+                try:
+                    _wt.plan([lengths[j] for j in _tk], overlap_n)
+                except ValueError as _we:
+                    raise ValueError(f"{TAG}: pin_mech=windowed: {_we}. Use overlap 0.9 s and "
+                                     "hop lengths of 17n+5 frames (8 s = 192).") from None
+            _w_off = [nm for nm, on in (
+                ("hop_refine", str(hop_refine) != "off"), ("realism_boost", bool(boost_on)),
+                ("upsample", bool(upsample_on)), ("dialogue_lock", dlg is not None),
+                ("start image", start_image is not None)) if on]
+            if _w_off:
+                print(f"[{TAG}] windowed: not applied in this mode yet: {', '.join(_w_off)}",
+                      flush=True)
         # ht_seam_source, gap_order and guide_carry were REMOVED 2026-10-14 (user): a hop
         # opens on its previs window as designed; no hop reads another hop.
 
@@ -7633,6 +7797,24 @@ class HandTieClips:
             if ht and ht_pos[i][0] not in ht_windows:
                 _ht_previs(i, pre_encode_hop=_hop_and_draft)
             if previs_only:
+                pbar.update(1)
+                continue
+            if windowed:
+                # Only the hop's own conditioning: it is one window of the take latent,
+                # sampled after the loop with every other window of its take.
+                _w_seed = (int(shot["seed"]) if shot.get("seed") is not None
+                           else ((int(seed) + i) if seed_per_shot else int(seed)))
+                win_hops.append({
+                    "hop": i + 1,
+                    "cond": _cond_cpu(_hop_ref2va()[0], keep_refs=True),
+                    "len": int(render_length),
+                    "restart": bool(i == 0 or hop_restart),
+                    "seed": _w_seed,
+                    "dig": _wt.digest(block, _w_seed, int(shot.get("steps") or steps),
+                                      int(render_length),
+                                      {k: _store.tensor_digest(t)
+                                       for k, t in sorted((hop_images or {}).items())}),
+                })
                 pbar.update(1)
                 continue
 
@@ -9188,6 +9370,15 @@ class HandTieClips:
                     info,
                     sheet)
 
+        if windowed and win_hops:
+            _offload_text_encoder(clip, model)
+            master_wav, sr, write_pos, _wkeys = _windowed_render(
+                win_hops, master_imgs, model=model, vae=vae, audio_vae=audio_vae,
+                sampler=sampler, scheduler=scheduler, steps=int(steps),
+                overlap_n=int(overlap_n), width=int(width), height=int(height),
+                hop_store=hop_store, salt=chain_salt)
+            hop_keys.extend(_wkeys)
+            win_hops = []
         if write_pos != total_frames:
             print(f"[{TAG}] note: wrote {write_pos} of {total_frames} planned "
                   f"frames; trimming", flush=True)
