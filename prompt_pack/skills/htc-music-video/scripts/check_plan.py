@@ -31,6 +31,9 @@ Part 2 is this skill's lints. Each one is a failure seen on a real render:
                    window before.
   into-camera      "raps / sings / looks into the camera": "into" reads as travel toward
                    the lens and pushes the shot in. Write "eyes on the lens".
+  speech-tail      the words after a line ("...,' lips shut, a chime chiming") start with
+                   no verb, so they read as more of the line and get spoken. Start them
+                   with one: "..., then presses her lips shut".
   song-words       a song-structure word in a beat ("sings the hook", "the second
                    verse", "the last line"): the video model never hears the song's
                    sections, so the words mean nothing. Describe the delivery.
@@ -360,6 +363,17 @@ def main():
             lint.append(f"shot {i}: after-line: nothing after the hop's last line names a sound. Close the "
                         f"mouth and name one (\"...presses her lips shut, the wind humming\"), or the model "
                         f"adds a few words of babble after the line.")
+        # What follows a line's closing quote must start with a verb, or it reads as more of the
+        # line: "...tonight,' lips shut, a chime chiming." was SPOKEN ("chiming", 10-31 walk vlog).
+        for q in quotes:
+            after = beat[q.end():].lstrip(" ,")
+            if (not mv and q.group(0).rstrip().endswith(",'")
+                    and re.match(r"(?:her|his|their|its|the|a|an|lips|mouth|eyes)\b", after, re.I)):
+                lint.append(f"shot {i}: speech-tail: the words after {q.group(0).strip()[:30]!r} start with "
+                            f"\"{' '.join(after.split()[:3])}\", which reads as more of the line (a walk vlog "
+                            f"said \"chiming\" aloud). Start them with a verb: \"..., then presses her lips "
+                            f"shut, a chime chiming.\"")
+                break
         if not mv and re.search(r"(?:^|[\s,])'[A-Z][^']{2,}'", beat) and not re.search(r"\beyes (?:stay |fixed |locked )?on @", beat, re.I):
             lint.append(f"shot {i}: eyeline: a line is spoken with no eyeline. Give the speaker's eyes a target "
                         f"and a direction (\"his eyes on @b just left of the lens\"), or he talks to the audience.")

@@ -1730,6 +1730,67 @@ def audio_cut(out_tail, in_head, sr):
     return out_quiet or 0
 
 
+# Voiced-only quiet hops (10-31). A no-line hop used to keep only a 1.1 kHz low-pass of
+# whatever stayed under 1.5x its quietest stretch: footsteps, chimes and a griddle --
+# every sound the beat named -- were as loud as speech, so they went too, and every quiet
+# hop of a walking vlog sat flat at -36.5 dBFS ("eerily silent", tokyo_walk2). Speech is
+# VOICED: a pitch between 80 and 400 Hz. With this on, a quiet hop loses only voiced runs
+# (H3's invented talk: 2.35 s on that film's hop 5, where the mouth moved) and keeps the
+# rest as rendered. False restores the old filter exactly.
+CALM_VOICED_ONLY = True
+
+
+def voiced_frames(x, sr, win_s=0.050, hop_s=0.025, f0=(80.0, 400.0), band=(70.0, 900.0),
+                  min_rms=0.004, r_min=0.5, min_run_s=0.10, tone_s=0.8, tone_cv=0.02):
+    """Which frames of mono `x` hold a voice. -> (bool per frame, win_n, hop_n).
+
+    Voiced = the 70-900 Hz band repeats at a lag inside the speaking pitch range
+    (normalised autocorrelation > r_min), more strongly than at any shorter lag (a
+    tone above 400 Hz -- a chime's partials -- peaks there first). Runs shorter than
+    min_run_s are dropped (a click), and so is a run longer than tone_s on one steady
+    pitch (lag spread under tone_cv): a hum or a drone, not a person.
+    """
+    import torch  # noqa: PLC0415
+    n = int(x.shape[-1])
+    X = torch.fft.rfft(x.float())
+    f = torch.fft.rfftfreq(n, 1.0 / float(sr)).to(X.device)
+    X[(f < band[0]) | (f > band[1])] = 0
+    lp = torch.fft.irfft(X, n)
+    win_n, hop_n = int(round(win_s * sr)), int(round(hop_s * sr))
+    if n < win_n:
+        return torch.zeros(0, dtype=torch.bool), win_n, hop_n
+    fr = lp.unfold(0, win_n, hop_n)
+    fr = fr - fr.mean(1, keepdim=True)
+    rms = fr.pow(2).mean(1).sqrt()
+    spec = torch.fft.rfft(fr * torch.hann_window(win_n, device=fr.device), 2 * win_n)
+    ac = torch.fft.irfft(spec.abs().pow(2), 2 * win_n)[:, :win_n]
+    ac = ac / ac[:, :1].clamp_min(1e-12)
+    lo, hi = int(sr / f0[1]), min(int(sr / f0[0]), win_n - 1)
+    in_r, in_l = ac[:, lo:hi].max(1)
+    short = int(sr / band[1] * 1.2)
+    hi_tone = ac[:, short:lo].max(1).values if lo > short else torch.zeros_like(in_r)
+    v = (rms > min_rms) & (in_r > r_min) & (in_r > hi_tone + 0.05)
+    lag = (in_l + lo).float()
+    out = v.clone()
+    m, i = int(v.numel()), 0
+    min_run = max(1, int(round(min_run_s / hop_s)))
+    while i < m:
+        if not bool(v[i]):
+            i += 1
+            continue
+        j = i
+        while j < m and bool(v[j]):
+            j += 1
+        if j - i < min_run:
+            out[i:j] = False
+        elif (j - i) * hop_s > tone_s:
+            run = lag[i:j]
+            if float(run.std() / run.mean()) < tone_cv:
+                out[i:j] = False
+        i = j
+    return out, win_n, hop_n
+
+
 def calm_hop_audio(wav, sr, has_line=True, head_speaks=False, tail_speaks=False,
                    overlap_n=WINDOW, fps=FPS):
     """Suppress guide-window swoosh SFX, closed-mouth head speech leaks, and
@@ -1819,6 +1880,30 @@ def calm_hop_audio(wav, sr, has_line=True, head_speaks=False, tail_speaks=False,
         else:
             bed[:, pos:pos + take] = chunk
         pos += step_len
+
+    if not has_line and not head_speaks and not tail_speaks and CALM_VOICED_ONLY:
+        # Only voiced runs (plus 50 ms each side for their consonants) and dead-zero
+        # dropouts become the bed; the join windows stay the bed (seam swooshes); the
+        # rest is kept as rendered, unfiltered.
+        env = torch.ones((total_s,), dtype=torch.float32, device=w2.device)
+        win_edge = min(total_s // 4, int(round((overlap_n / float(fps)) * sr)))
+        if win_edge > 0:
+            env[:win_edge] = 0.0
+            env[total_s - win_edge:] = 0.0
+        vf, v_win, v_hop = voiced_frames(w2.mean(0), sr)
+        pad = 2 * v_hop
+        for i in torch.nonzero(vf).flatten().tolist():
+            env[max(0, i * v_hop - pad):min(total_s, i * v_hop + v_win + pad)] = 0.0
+        for i in range(n_wins):
+            if float(rms_t[i].item()) < 0.004:
+                env[i * hop_n:min(total_s, i * hop_n + win_n)] = 0.0
+        sm = max(3, int(round(0.060 * sr)) | 1)
+        env = F.avg_pool1d(
+            F.pad(env.view(1, 1, -1), (sm // 2, sm // 2), mode="replicate"),
+            kernel_size=sm, stride=1,
+        ).view(1, -1)
+        w2 = w2 * env + bed * (1.0 - env)
+        return w2.reshape(orig_shape).to(dtype=wav.dtype)
 
     if not has_line and not head_speaks and not tail_speaks:
         env = torch.ones((total_s,), dtype=torch.float32, device=w2.device)
