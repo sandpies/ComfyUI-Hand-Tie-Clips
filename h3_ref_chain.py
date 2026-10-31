@@ -4107,6 +4107,55 @@ def _ht_mc_inpaint_head(latent, cond, prev_sampled, overlap_n, vae=None,
     return latent, out_cond, v_steps, None
 
 
+# Hand-tie tail HOLD (10-31). H3 follows a pin at a clip's start smoothly but treats a
+# pin at its END as a deadline: it keeps its own take, then snaps to the pin just before
+# it (Clerveu/ComfyUI-H3-Rolling documents the same; our vlog cut ~0.4 s before joins).
+# So the tail window is no longer only a guide: its latent is written into the hop's last
+# latents and held there with noise_mask from step 0, the way a head is held, and the hop
+# is drawn INTO it. Those frames are dropped at the join (the next hop is written over
+# them), so the held previs picture is never delivered.
+HT_TAIL_HOLD = True
+
+
+def _ht_hold_tail(latent, tail_lat, hop_no=0):
+    """(latent with its last T video latents = tail_lat and held, previous noise_mask or
+    None, held T). Unchanged with hold 0 if shapes don't line up."""
+    import comfy.nested_tensor as nt  # noqa: PLC0415
+    parts = _latents.from_dict(latent) if latent is not None else None
+    if not parts or len(parts) < 2 or not isinstance(tail_lat, torch.Tensor) or tail_lat.ndim != 5:
+        return latent, None, 0
+    vid = _stream_5d(parts[0])
+    aud = _stream_audio(parts[1])
+    t = int(tail_lat.shape[2])
+    if (t < 2 or int(vid.shape[2]) <= t + 2
+            or tuple(vid.shape[1:2]) + tuple(vid.shape[3:])
+            != tuple(tail_lat.shape[1:2]) + tuple(tail_lat.shape[3:])):
+        print(f"[{TAG}] hop {hop_no}: tail hold skipped (window latent "
+              f"{tuple(tail_lat.shape)} vs hop {tuple(vid.shape)})", flush=True)
+        return latent, None, 0
+    new_vid = vid.clone()
+    new_vid[:, :, -t:] = tail_lat.to(device=vid.device, dtype=vid.dtype)
+    parts = list(parts)
+    parts[0] = new_vid.reshape(parts[0].shape)
+    vmask = torch.ones((1, 1) + tuple(int(d) for d in vid.shape[2:]),
+                       device=vid.device, dtype=torch.float32)
+    vmask[:, :, -t:] = 0.0
+    amask = torch.ones((1, 1) + tuple(int(d) for d in aud.shape[2:]),
+                       device=aud.device, dtype=torch.float32)
+    prev_mask = latent.get("noise_mask")
+    if prev_mask is not None:
+        try:
+            pv, pa = list(prev_mask.unbind())[:2]
+            vmask = vmask * pv.to(device=vmask.device, dtype=vmask.dtype)
+            amask = amask * pa.to(device=amask.device, dtype=amask.dtype)
+        except Exception:  # noqa: BLE001
+            return latent, None, 0
+    out = dict(latent)
+    out["samples"] = _latents.rebuild(latent["samples"], parts)
+    out["noise_mask"] = nt.NestedTensor((vmask, amask))
+    return out, prev_mask, t
+
+
 def _calibrate_ht_latent(sampled, prev_sampled, overlap_n, hop_no=0):
     """Lock a `hand_tie` continuation hop's opening latent `(mean, std)` and 3-step handoff to Hop k.
 
@@ -7792,6 +7841,8 @@ class HandTieClips:
                         _store.tensor_digest(_wp[_k + 1]) if _tl else None,
                         _store.audio_digest(_ws[_k]) if _hd else None,
                         _store.audio_digest(_ws[_k + 1]) if _tl else None))
+                    if _tl and HT_TAIL_HOLD and _k + 1 < len(ht_sections[_si]):
+                        hop_payload["ht_tail_hold"] = "v1"
                     if i > 0 and _hd:
                         hop_payload["ht_inpaint"] = "v2.6"
                         if ht_mc:
@@ -7974,6 +8025,7 @@ class HandTieClips:
                                   ((render_length + _fi) / float(FPS),
                                    render_length / float(FPS)))
                                  for _fi, _w in _ties]
+                    _ht_tail_lat = None
                     for _fi, _w in _ties:
                         # A muted previs window's sound is recorded silence: tying it would pin the hop to silence over the voice reference, so a muted window ties picture only.
                         _pv_muted = bool(_ht.PREVIS_MUTE) and not any(ht_speaks[_si])
@@ -7995,6 +8047,8 @@ class HandTieClips:
                                     _sliced = _wlat[:, :, 5:].contiguous()
                                     if _sliced.shape == _kfs[-1]["latent"].shape:
                                         _kfs[-1] = dict(_kfs[-1], latent=_sliced)
+                                        if _fi < 0:
+                                            _ht_tail_lat = _sliced
                             except Exception:
                                 pass
                         if _ht.SAVE_WINDOWS:
@@ -8052,6 +8106,16 @@ class HandTieClips:
                                   + ("via Previs-driven Motion-Context (7 per-step keyframes + ambient audio tail)"
                                      if ht_mc else "pre-cut block; step 0 seeded from Hop k cut token"),
                                   flush=True)
+                    _ht_tail_hold, _ht_tail_prior = 0, None
+                    # Only where the next hop overwrites the tail: a section's last hop keeps it.
+                    if (HT_TAIL_HOLD and _ht_tail_lat is not None
+                            and _k + 1 < len(ht_sections[_si])):
+                        latent, _ht_tail_prior, _ht_tail_hold = _ht_hold_tail(
+                            latent, _ht_tail_lat, hop_no=i + 1)
+                        if _ht_tail_hold:
+                            print(f"[{TAG}] hop {i + 1}: hand-tie tail HELD on window "
+                                  f"{_k + 2} ({_ht_tail_hold} latents from step 0; the hop is "
+                                  "drawn into it, not snapped to it)", flush=True)
                 elif swap and reference_video is not None:
                     # Guided swap (Alissonerdx BFS / H3EncodeLD._add_guide):
                     # lay the guide clip's frames onto the generated timeline
@@ -8472,6 +8536,13 @@ class HandTieClips:
                         noise=noise, guider=guider, sampler=sampler,
                         sigmas=hop_sigmas, latent_image=latent))[0]
 
+                if ht and locals().get("_ht_tail_hold", 0) > 0:
+                    # The tail hold's mask must not ride into decode, refine or the cache.
+                    sampled = dict(sampled)
+                    if locals().get("_ht_tail_prior") is None:
+                        sampled.pop("noise_mask", None)
+                    else:
+                        sampled["noise_mask"] = _ht_tail_prior
                 if (i > 0 and not hop_restart
                         and pin_mech_used == "motion_context"
                         and prev_sampled is not None):
