@@ -90,6 +90,7 @@ from . import hand_tie as _ht
 from . import ht_windows as _htw
 from . import face_pass as _fp
 from . import wtake as _wt
+from . import take as _take
 # One definition, in refs.py -- routes.py publishes that copy to the editor, so
 # a second constant here meant the node's slot count and the number the UI was
 # told could drift apart.
@@ -3735,6 +3736,30 @@ WT_FINISHED_HANDOFF = True    # 11-01 v2+mc: joins shifted at overlap ends (held
 WT_HOLD_OVERLAPS = True
 WT_HOLD_RAMP = 3          # latents
 WT_MOTION_CONTEXT = True     # each window gets the previous window's overlap as clean keyframes
+# take = shot (11-01, architecture): every window of a take gets the same shot words and its
+# slice of one action timeline (take.py), all assembled as starts; the take anchor gives
+# windows 2+ the take's own finished opening frame as a DiT-side reference image; cond,
+# reference and anchor tokens stay at full attention under sparse-attention patches.
+WT_TAKE_SHOT = True
+WT_TAKE_ANCHOR = True
+WT_PIN_ATTENTION = True
+
+
+def _wt_with_anchor(cond, anchor):
+    """Conditioning plus the take anchor: the take's own finished opening frame (latent 0,
+    a single-frame latent like any encoded reference still) as one more DiT-side
+    reference image. Not cited in the text: it is the shot itself, not a subject."""
+    if anchor is None:
+        return cond
+    out = []
+    for emb, d in cond:
+        d2 = dict(d) if isinstance(d, dict) else {}
+        refs = list(d2.get("minimax_refs") or [])
+        refs.append({"kind": "image", "latent_h": int(anchor.shape[3]),
+                     "latent_w": int(anchor.shape[4]), "latent": anchor})
+        d2["minimax_refs"] = refs
+        out.append([emb, d2])
+    return out
 
 
 class _WtNoise:
@@ -3766,6 +3791,7 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
     st_a = torch.zeros_like(full_a, dtype=torch.float32)
     x0_v = torch.zeros_like(st_v)
     x0_a = torch.zeros_like(st_a)
+    anchor = None
     print(f"[{TAG}] windowed {label}: {plan['frames']} frames, {len(wins)} windows in order "
           f"for {k_sw} steps (each held on the one before"
           + (", finished" if WT_FINISHED_HANDOFF else "")
@@ -3789,6 +3815,8 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
         sub["samples"] = nt.NestedTensor((sv, sa))
         noise = _WtNoise(seed, nt.NestedTensor((nv[:, :, l0:l1].clone(), na[..., a0:a1].clone())))
         cond_k = [list(conds[k])[0]]
+        if k > 0:
+            cond_k = _wt_with_anchor(cond_k, anchor)
         if k > 0 and WT_MOTION_CONTEXT:
             # The hold alone is not followed: under the mask the held frames are re-noised
             # every step, so early on the model barely sees them and composes its own take
@@ -3828,6 +3856,11 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
         if k == 0:
             st_v[:, :, l0:l1], st_a[..., a0:a1] = ov, oa
             x0_v[:, :, l0:l1], x0_a[..., a0:a1] = dv, da
+            if WT_TAKE_ANCHOR:
+                anchor = dv[:, :, 0:1].to(full_v.dtype).clone()
+                print(f"[{TAG}] windowed {label}: take anchor = window 1's "
+                      + ("finished" if WT_FINISHED_HANDOFF else "step-" + str(k_sw))
+                      + " opening frame, shown to windows 2+", flush=True)
         else:
             # the running state crossfades over the overlap; the clean estimate there stays
             # the previous window's (it was held to exactly that)
@@ -3841,6 +3874,8 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
             x0_v[:, :, l0 + ovl:l1], x0_a[..., a0 + ova:a1] = dv[:, :, ovl:], da[..., ova:]
         del res, ov, oa, dv, da, sub, guider
     flat = [list(c)[0] for c in conds]
+    if anchor is not None:
+        flat = flat[:1] + [_wt_with_anchor([c], anchor)[0] for c in flat[1:]]
     guider = _result(_core_call(
         BasicGuider, "the windowed finish guider",
         model=_htw.install(model, plan), conditioning=flat))[0]
@@ -3896,7 +3931,10 @@ def _wt_retake(lat, pl, a, b, hops, *, overlap_n, model, sampler, sigmas):
     for x, y in sp["hold_a"]:
         amask[..., x:y] = 0.0
     sub = {"samples": nt.NestedTensor((sv, sa)), "noise_mask": nt.NestedTensor((vmask, amask))}
-    out = _wt_sample(sub, sp["plan"], [h["cond"] for h in hops[a:b + 1]], model=model,
+    _anc = v[:, :, 0:1].clone() if WT_TAKE_ANCHOR else None
+    _rc = [(h["cond"] if (j == 0 or _anc is None) else _wt_with_anchor(h["cond"], _anc))
+           for j, h in enumerate(hops[:b + 1])][a:]
+    out = _wt_sample(sub, sp["plan"], _rc, model=model,
                      sampler=sampler, sigmas=sigmas, seed=hops[a]["seed"],
                      label=f"retake of hop(s) {hops[a]['hop']}-{hops[b]['hop']}")
     op = list(_latents.from_dict(out))
@@ -3908,6 +3946,39 @@ def _wt_retake(lat, pl, a, b, hops, *, overlap_n, model, sampler, sigmas):
     res.pop("noise_mask", None)
     res["samples"] = _latents.rebuild(lat["samples"], [v, au] + parts[2:])
     return res
+
+
+def _pin_attention(model, kinds=("text", "ref_img", "cond"), key="htc_pin_attention"):
+    """Keep the given layout segments at full attention under H3SLAAttention: added to
+    its `_h3sla_protected_ranges` each call. SLA alone keeps language and audio dense but
+    leaves `cond` (keyframes: pins, held context) and references sparse, competing for
+    the kept blocks -- the continuity signals. No-op without SLA (the key is absent)."""
+    if not hasattr(model, "add_wrapper_with_key"):
+        return model
+    kinds = tuple(kinds)
+
+    def _wrapper(executor, x, timestep, context, transformer_options={},
+                 minimax_payload=None, **kwargs):
+        layout = minimax_payload.get("layout") if minimax_payload else None
+        if layout is not None and "_h3sla_protected_ranges" in transformer_options:
+            prot = list(transformer_options.get("_h3sla_protected_ranges") or ())
+            for seg in getattr(layout, "segments", ()) or ():
+                if len(seg) == 3 and seg[2] in kinds:
+                    span = (int(seg[0]), int(seg[1]))
+                    if span not in prot:
+                        prot.append(span)
+            transformer_options["_h3sla_protected_ranges"] = tuple(prot)
+        if minimax_payload is not None:
+            kwargs["minimax_payload"] = minimax_payload
+        if not isinstance(executor, type) and callable(executor):
+            return executor(x, timestep, context,
+                            transformer_options=transformer_options, **kwargs)
+        return executor.original(x, timestep, context,
+                                 transformer_options=transformer_options, **kwargs)
+
+    out = model.clone()
+    out.add_wrapper_with_key("diffusion_model", key, _wrapper)
+    return out
 
 
 def _wt_model_fp(model):
@@ -3936,6 +4007,8 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
     whose hop digests all match is reused; one where some changed re-draws only those hops
     between the kept ones. -> (master_wav, sample_rate, frames written, store keys)."""
     from comfy_extras.nodes_minimax_h3 import _empty_av_latent  # noqa: PLC0415
+    if WT_PIN_ATTENTION:
+        model = _pin_attention(model)
     groups = []
     for h in win_hops:
         if h["restart"] or not groups:
@@ -3951,6 +4024,7 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
         key = _wt.take_key(salt, digs, ("finished" if WT_FINISHED_HANDOFF else "")
                            + ("+mc" if WT_MOTION_CONTEXT else "")
                            + ("+hold" if (WT_HOLD_OVERLAPS and WT_FINISHED_HANDOFF) else "")
+                           + ("+anchor" if WT_TAKE_ANCHOR else "")
                            + "+m" + _wt_model_fp(model))
         name = f"__wtake_{t + 1}"
         hit = hop_store.get(key) if hop_store is not None else None
@@ -5735,6 +5809,15 @@ class HandTieClips:
                                        else _ht.LINE_START_S)))]
                 for _w in _ht.crossing_lints(shots):
                     print(f"[{TAG}] note: {_w}", flush=True)
+            if str(pin_mech) == "windowed" and not swap and WT_TAKE_SHOT:
+                # take = shot: every window of a take gets the take's shot layer word for
+                # word and its slice of ONE action timeline (take.py); every window is
+                # assembled as a start, so none is told it continues or begins anew.
+                _tl_frames = [align_frame_count(_duration_frames((s or {}).get("duration") or duration))
+                              for s in shots]
+                blocks = [_d.compile_shot(s, 0, establish) for s in _take.compile_take(
+                    shots, _tl_frames, overlap_n, FPS,
+                    log=lambda m: print(f"[{TAG}] {m}", flush=True))]
             unique = len(shots)
             print(f"[{TAG}] shot plan:\n" + _plan.describe(shots), flush=True)
             for i, sh in enumerate(shots):
@@ -7461,7 +7544,7 @@ class HandTieClips:
             # ASSEMBLED as a start (it reads no other hop) yet still overlaps its
             # predecessor by one window and is cut inside it.
             hop_trims = i > 0 and not hop_restart
-            if ht:
+            if ht or (windowed and WT_TAKE_SHOT):
                 hop_is_start = True
             if hop_restart:
                 print(f"[{TAG}] hop {i + 1}: ANCHOR RESTART -- start image is "
