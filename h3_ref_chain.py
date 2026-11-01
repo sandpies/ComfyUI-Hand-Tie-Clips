@@ -3857,6 +3857,15 @@ WT_TAKE_SHOT = True
 WT_TAKE_ANCHOR = True
 WT_PIN_ATTENTION = True
 
+# Tone lock (11-02). walk_night_mv_00003 measured an exposure ratchet: every window came out
+# brighter and less saturated than the one before (background luma 50 -> 98 over 9 windows),
+# the plate's neon washing out, until one window snapped back to the plate and it climbed again.
+# The push is added at each hand-off. Each window's video is pulled to WINDOW 1's per-channel
+# latent mean/std (not the previous window's: that passes the drift on) before it is handed on.
+# Off for takes whose light is meant to change (night to dawn): it would flatten that too.
+WT_TONE_LOCK = True
+WT_TONE_STD_CLAMP = (0.85, 1.18)   # the spread is matched within these ratios only
+
 
 def _wt_with_anchor(cond, anchor):
     """Conditioning plus the take anchor: the take's own finished opening frame (latent 0,
@@ -3898,6 +3907,32 @@ def _wt_song_lat(lat, song):
     return out
 
 
+def _wt_tone_stats(v):
+    """Per-channel mean/std of a video latent [B, C, T, H, W] -> ([1,C,1,1,1], [1,C,1,1,1])."""
+    x = v.float()
+    return (x.mean(dim=(0, 2, 3, 4), keepdim=True), x.std(dim=(0, 2, 3, 4), keepdim=True).clamp_min(1e-6))
+
+
+def _wt_tone_lock(dv, ov, ref, *, start, sigma):
+    """Pull a window's clean estimate `dv` (frames from `start` on: the held overlap is already
+    the previous window's, locked) to the take's tone `ref` = window 1's per-channel mean/std,
+    and move its running state `ov` (flow: x = (1 - sigma) x0 + sigma eps) by the same x0 shift.
+    Only the global level per channel moves; the frame-to-frame content is untouched."""
+    if ref is None or int(dv.shape[2]) <= int(start):
+        return dv, ov
+    body = dv[:, :, start:].float()
+    mu, sd = _wt_tone_stats(body)
+    lo, hi = WT_TONE_STD_CLAMP
+    r = (ref[1] / sd).clamp(lo, hi)
+    fixed = (body - mu) * r + ref[0]
+    shift = fixed - body
+    dv = dv.clone()
+    ov = ov.clone()
+    dv[:, :, start:] = fixed.to(dv.dtype)
+    ov[:, :, start:] = (ov[:, :, start:].float() + (1.0 - float(sigma)) * shift).to(ov.dtype)
+    return dv, ov
+
+
 def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, song=None):
     """Sample a take: steps 1..K window by window in order, each overlap held to the
     previous window's clean estimate, then the last steps blended over all windows.
@@ -3926,6 +3961,7 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, son
     x0_v = torch.zeros_like(st_v)
     x0_a = torch.zeros_like(st_a)
     anchor = None
+    tone_ref = None
     print(f"[{TAG}] windowed {label}: {plan['frames']} frames, {len(wins)} windows in order "
           f"for {k_sw} steps (each held on the one before"
           + (", finished" if WT_FINISHED_HANDOFF else "")
@@ -3994,6 +4030,11 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, son
             del _fz, _fm
         if song is not None:
             da = full_a[..., a0:a1].float().cpu()   # the clean estimate of the sound is the song
+        if WT_TONE_LOCK:
+            if k == 0:
+                tone_ref = _wt_tone_stats(dv)
+            else:
+                dv, ov = _wt_tone_lock(dv, ov, tone_ref, start=ovl, sigma=float(hi[-1]))
         if k == 0:
             st_v[:, :, l0:l1], st_a[..., a0:a1] = ov, oa
             x0_v[:, :, l0:l1], x0_a[..., a0:a1] = dv, da
@@ -4192,6 +4233,7 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                            + ("+mc" if WT_MOTION_CONTEXT else "")
                            + ("+hold" if (WT_HOLD_OVERLAPS and WT_FINISHED_HANDOFF) else "")
                            + ("+anchor" if WT_TAKE_ANCHOR else "")
+                           + ("+tone" if WT_TONE_LOCK else "")
                            + "+m" + _wt_model_fp(model))
         name = f"__wtake_{t + 1}"
         if hop_store is not None and getattr(hop_store, "has", lambda _k: False)(key):
