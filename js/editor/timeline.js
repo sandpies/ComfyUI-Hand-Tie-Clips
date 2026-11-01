@@ -22,8 +22,8 @@
  * - **Geometry comes from `editor.timing()`,** the one place that knows a
  *   restart is charged no overlap trim.
  *
- * The cache lives in ComfyUI's temp folder and is wiped on every start, so an
- * empty film row after a restart is the ordinary state, and it says so.
+ * The cache lives in ComfyUI's user folder (user/h3_ref_chain_hops) and survives
+ * restarts; a hop the budget sweep dropped shows as an empty film row.
  */
 import { app } from "../../../scripts/app.js";
 import { api } from "../../../scripts/api.js";
