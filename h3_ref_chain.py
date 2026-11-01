@@ -1442,6 +1442,70 @@ def _open_self_deleting(path, nbytes):
     return fh
 
 
+def _decode_take_streamed(vae, lat, label):
+    """Decode a whole take's video into a disk-backed float32 buffer.
+
+    The H3 decoder writes its chunks straight into a caller's output buffer (core
+    `comfy_has_chunked_io`). Handing it a self-deleting memmap instead of a RAM
+    tensor keeps the take's frames (~21 GB for 2 minutes at 576p) off RAM; the OS
+    pages them out as they are written. Same decoder, same chunk plan, same pixels.
+    -> [T, H, W, 3] float32 view of the buffer, or None (a VAE without chunked
+    output: the caller decodes the usual way)."""
+    fsm = getattr(vae, "first_stage_model", None)
+    if not (getattr(fsm, "comfy_has_chunked_io", False) and hasattr(fsm, "decode_output_shape")):
+        return None
+    try:
+        v = list(_latents.from_dict(lat))[0]
+        shape = tuple(int(d) for d in fsm.decode_output_shape(tuple(v.shape)))
+        if len(shape) != 5 or shape[0] != 1:
+            return None
+        nbytes = 4
+        for d in shape:
+            nbytes *= d
+        import folder_paths  # noqa: PLC0415
+        root = folder_paths.get_temp_directory()
+        os.makedirs(root, exist_ok=True)
+        path = os.path.join(root, f"htc_master_take_{uuid.uuid4().hex}.raw")
+        fh = _open_self_deleting(path, nbytes)
+        arr = np.memmap(fh, dtype=np.float32, mode="r+", shape=shape)
+        buf = torch.from_numpy(arr)
+    except Exception as e:  # noqa: BLE001
+        print(f"[{TAG}] windowed {label}: disk-backed decode unavailable ({e!r}); "
+              "decoding in RAM", flush=True)
+        return None
+    if hasattr(vae, "prepare_decode"):
+        vae.prepare_decode(tuple(v.shape))
+    else:
+        mm.load_models_gpu([vae.patcher])
+    try:
+        with torch.inference_mode():
+            fsm.decode(v.to(device=vae.device, dtype=vae.vae_dtype), output_buffer=buf)
+    except Exception as e:  # noqa: BLE001
+        if not _tu._is_oom(e):
+            raise
+        # out of VRAM: ComfyUI's own decode retries tiled; hand it back to that path
+        del buf, arr
+        fh.close()
+        mm.soft_empty_cache()
+        print(f"[{TAG}] windowed {label}: disk-backed decode ran out of VRAM; "
+              "using ComfyUI's tiled decode", flush=True)
+        return None
+    vae.process_output(buf)
+    out = buf[0].movedim(0, -1)          # [T, H, W, 3], a view: nothing copied
+    out._htc_mmap = (arr, fh)            # the view keeps the mapping; this names it
+    print(f"[{TAG}] windowed {label}: decoded {shape[2]} frames to disk "
+          f"({nbytes / 2 ** 30:.1f} GB, self-deleting), not RAM", flush=True)
+    return out
+
+
+def _release_mmap(handle):
+    """Let a decode buffer's mapping go: drop the last references, collect. The file
+    deletes itself when its handle closes (_open_self_deleting)."""
+    import gc  # noqa: PLC0415
+    del handle
+    gc.collect()
+
+
 def _sweep_master_spills(keep):
     """Remove spill files a previous BUILD or a hard kill left behind.
 
@@ -4139,52 +4203,68 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
             imgs, wav, sr = hit[0], hit[1], int(hit[2])
             print(f"[{TAG}] windowed take {t + 1}: loaded from cache (key {key[:8]})", flush=True)
         else:
-            old_key = hop_store.get_pointer(name) if hop_store is not None else None
-            old = hop_store.get(old_key) if old_key else None
-            old_meta = (hop_store.meta(old_key) or {}) if old_key else {}
-            runs = None
-            if old is not None and old[3] is not None:
-                runs = _wt.changed_runs(old_meta.get("digs"), digs)
-                if runs == [(0, len(digs) - 1)]:
-                    # every hop changed (e.g. a new seed): nothing to keep, so a fresh take on
-                    # the in-order path, not a one-pass retake (11-01: 00004 went there)
-                    runs = None
-                if old_meta.get("mfp") not in (None, _wt_model_fp(model)):
-                    runs = None   # other model patches (SLA, LoRA...): the kept hops don't match
-                _ov = list(_latents.from_dict(old[3]) or [])
-                if not _ov or int(_ov[0].shape[2]) != int(pl["latents"]):
-                    runs = None
-            if runs:
-                lat = old[3]
-                print(f"[{TAG}] windowed take {t + 1}: re-drawing hop(s) "
-                      + ", ".join(f"{hops[a]['hop']}-{hops[b]['hop']}" if a != b else str(hops[a]["hop"])
-                                  for a, b in runs)
-                      + "; the rest is kept", flush=True)
-                for a, b in runs:
-                    lat = _wt_retake(lat, pl, a, b, hops, overlap_n=overlap_n, model=model,
-                                     sampler=sampler, sigmas=sigmas,
-                                     song=_wt_song(locked, audio_vae, lat, pos, pl, t))
+            lat = (hop_store.get_pending(key)
+                   if hop_store is not None and hasattr(hop_store, "get_pending") else None)
+            if lat is not None:
+                print(f"[{TAG}] windowed take {t + 1}: sampled on an earlier run (its decode did "
+                      "not finish); decoding it, no sampling", flush=True)
             else:
-                lat0, _fc = _empty_av_latent(int(width), int(height), int(pl["frames"]))
-                if int(_fc) != int(pl["frames"]):
-                    raise ValueError(f"{TAG}: windowed take {t + 1}: {pl['frames']} frames is "
-                                     f"off the H3 grid ({_fc})")
-                lat = (_wt_sample_seq if WT_SEQUENTIAL else _wt_sample)(
-                    lat0, pl, [h["cond"] for h in hops], model=model, sampler=sampler,
-                    sigmas=sigmas, seed=hops[0]["seed"], label=f"take {t + 1}",
-                    song=_wt_song(locked, audio_vae, lat0, pos, pl, t))
-            # the whole take decodes at once: float32 frames + the decoder's working set
-            _ram_room(int(pl["frames"]) * int(height) * int(width) * 3 * 4 * 3 // 2,
-                      f"decoding take {t + 1}")
-            _wimgs, _waud = _decode_av(vae, audio_vae, lat)
-            imgs = _wimgs.contiguous().cpu()
+                old_key = hop_store.get_pointer(name) if hop_store is not None else None
+                old = hop_store.get(old_key) if old_key else None
+                old_meta = (hop_store.meta(old_key) or {}) if old_key else {}
+                runs = None
+                if old is not None and old[3] is not None:
+                    runs = _wt.changed_runs(old_meta.get("digs"), digs)
+                    if runs == [(0, len(digs) - 1)]:
+                        # every hop changed (e.g. a new seed): nothing to keep, so a fresh take on
+                        # the in-order path, not a one-pass retake (11-01: 00004 went there)
+                        runs = None
+                    if old_meta.get("mfp") not in (None, _wt_model_fp(model)):
+                        runs = None   # other model patches (SLA, LoRA...): the kept hops don't match
+                    _ov = list(_latents.from_dict(old[3]) or [])
+                    if not _ov or int(_ov[0].shape[2]) != int(pl["latents"]):
+                        runs = None
+                if runs:
+                    lat = old[3]
+                    print(f"[{TAG}] windowed take {t + 1}: re-drawing hop(s) "
+                          + ", ".join(f"{hops[a]['hop']}-{hops[b]['hop']}" if a != b else str(hops[a]["hop"])
+                                      for a, b in runs)
+                          + "; the rest is kept", flush=True)
+                    for a, b in runs:
+                        lat = _wt_retake(lat, pl, a, b, hops, overlap_n=overlap_n, model=model,
+                                         sampler=sampler, sigmas=sigmas,
+                                         song=_wt_song(locked, audio_vae, lat, pos, pl, t))
+                else:
+                    lat0, _fc = _empty_av_latent(int(width), int(height), int(pl["frames"]))
+                    if int(_fc) != int(pl["frames"]):
+                        raise ValueError(f"{TAG}: windowed take {t + 1}: {pl['frames']} frames is "
+                                         f"off the H3 grid ({_fc})")
+                    lat = (_wt_sample_seq if WT_SEQUENTIAL else _wt_sample)(
+                        lat0, pl, [h["cond"] for h in hops], model=model, sampler=sampler,
+                        sigmas=sigmas, seed=hops[0]["seed"], label=f"take {t + 1}",
+                        song=_wt_song(locked, audio_vae, lat0, pos, pl, t))
+            if hop_store is not None and hasattr(hop_store, "put_pending"):
+                hop_store.put_pending(key, lat)   # an out-of-memory decode must not cost the sampling
+            # Into a disk-backed buffer, not RAM: a 2-minute take is ~21 GB of float32 frames.
+            imgs = _decode_take_streamed(vae, lat, f"take {t + 1}")
+            if imgs is not None:
+                _waud = vae_decode_audio(audio_vae, lat)
+            else:
+                # the whole take decodes at once: float32 frames + the decoder's working set
+                _ram_room(int(pl["frames"]) * int(height) * int(width) * 3 * 4 * 3 // 2,
+                          f"decoding take {t + 1}")
+                _wimgs, _waud = _decode_av(vae, audio_vae, lat)
+                imgs = _wimgs.contiguous().cpu()
+                del _wimgs
             wav, sr = _waud["waveform"], int(_waud["sample_rate"])
-            del _wimgs, _waud
+            del _waud
             if hop_store is not None:
                 hop_store.put(key, imgs, wav, sr, meta={"digs": digs, "windowed_take": t + 1,
                                                         "mfp": _wt_model_fp(model)},
                               latent=lat)
                 hop_store.set_pointer(name, key)
+                if hasattr(hop_store, "drop_pending"):
+                    hop_store.drop_pending(key)
         if up_out is not None:
             # the take latent as the upsampler's per-window entries (stitch() rebuilds it)
             _tl = hit[3] if (hit is not None and len(hit) > 3) else (None if hit is not None else lat)
@@ -4198,7 +4278,9 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                     [h["hop"] for h in hops], overlap_n))
         keys.append(key)
         nf = min(int(imgs.shape[0]), int(master_imgs.shape[0]) - pos)
-        master_imgs[pos:pos + nf] = imgs[:nf]
+        for _c0 in range(0, nf, 64):      # in slices: imgs may be a disk-backed view
+            _c1 = min(nf, _c0 + 64)
+            master_imgs[pos + _c0:pos + _c1] = imgs[_c0:_c1]
         pos += nf
         w = _batch_wav(wav)
         need = int(round(nf / float(FPS) * sr))
@@ -4217,7 +4299,11 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                                      w[..., :m] * torch.sin(tt * math.pi / 2), w[..., m:]], dim=-1)
             else:
                 wav_all = torch.cat([wav_all, w], dim=-1)
+        _mm = getattr(imgs, "_htc_mmap", None)
         del imgs, wav
+        if _mm is not None:
+            _release_mmap(_mm)
+            del _mm
     return wav_all, sr_out, pos, keys
 
 

@@ -406,6 +406,53 @@ class HopStore:
             json.dump(info, fh, indent=1)
         return info
 
+    # -- a sampled take waiting for its decode ----------------------------
+    # A windowed take is sampled for many minutes and only then decoded, and the
+    # entry above needs the decoded frames. Its latent is written here first, so a
+    # decode that runs out of memory costs the decode on the re-queue, not the
+    # sampling. One at a time: writing one drops any other left behind.
+    PENDING_EXT = ".pending" + LATENT_EXT
+
+    def put_pending(self, key, latent):
+        try:
+            for fn in os.listdir(self.root):
+                if fn.endswith(self.PENDING_EXT) and fn != key + self.PENDING_EXT:
+                    try:
+                        os.remove(os.path.join(self.root, fn))
+                    except OSError:
+                        pass
+            packed = _latent_to_flat(latent)
+            if packed is None:
+                return False
+            flat, st_meta = packed
+            tmp = self._p(key, self.PENDING_EXT + ".part")
+            _st_save(flat, tmp, metadata=st_meta)
+            os.replace(tmp, self._p(key, self.PENDING_EXT))
+            return True
+        except Exception as e:  # noqa: BLE001
+            print(f"[{TAG}] take {key[:8]}: sampled latent not saved before the decode "
+                  f"({e!r})", flush=True)
+            return False
+
+    def get_pending(self, key):
+        path = self._p(key, self.PENDING_EXT)
+        if not os.path.exists(path):
+            return None
+        try:
+            with safetensors.safe_open(path, framework="pt", device="cpu") as fh:
+                meta = (fh.metadata() or {}).get("htc")
+                flat = {k: fh.get_tensor(k) for k in fh.keys()}
+            return _latent_from_flat(flat, meta) if meta is not None else None
+        except Exception as e:  # noqa: BLE001
+            print(f"[{TAG}] take {key[:8]}: saved latent unreadable ({e!r})", flush=True)
+            return None
+
+    def drop_pending(self, key):
+        try:
+            os.remove(self._p(key, self.PENDING_EXT))
+        except OSError:
+            pass
+
     # -- read -------------------------------------------------------------
     def _get_latent(self, key):
         """The stored sampler latent, or None when this entry has none.
