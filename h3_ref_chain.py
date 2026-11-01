@@ -7544,7 +7544,7 @@ class HandTieClips:
             # ASSEMBLED as a start (it reads no other hop) yet still overlaps its
             # predecessor by one window and is cut inside it.
             hop_trims = i > 0 and not hop_restart
-            if ht or (windowed and WT_TAKE_SHOT):
+            if ht or (str(pin_mech) == "windowed" and not swap and WT_TAKE_SHOT):
                 hop_is_start = True
             if hop_restart:
                 print(f"[{TAG}] hop {i + 1}: ANCHOR RESTART -- start image is "
@@ -7973,7 +7973,10 @@ class HandTieClips:
             _pre = str(prompt_prefix or "").strip()
             _suf = str(prompt_suffix or "").strip()
             if _pre:
-                block = _pre + " " + block.lstrip()
+                # a block that opens on an official field keeps the field at a line start
+                _sep = ("\n\n" if (_d.is_full_h3_prompt(block)
+                                   or block.lstrip().startswith("subject_definitions:")) else " ")
+                block = _pre + _sep + block.lstrip()
             if _suf:
                 block = block.rstrip() + " " + _suf
 

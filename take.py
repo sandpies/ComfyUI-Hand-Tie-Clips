@@ -17,6 +17,8 @@ Pure Python; no torch, no ComfyUI.
 import copy
 import re
 
+WINDOW_TAIL = "window"   # a tail value with no sentence in directives.VOCAB
+
 _TIMED = re.compile(
     r"\bAt\s+(\d+):(\d+(?:\.\d+)?)\s*[-–]\s*(\d+):(\d+(?:\.\d+)?)\s*,\s*")
 
@@ -112,7 +114,12 @@ def compile_take(shots, hop_frames, overlap_frames, fps=24, log=None):
             sh["beat"] = _render(lead0, ev)
             d = dict(dirs0)
             tail = ((shots[i] or {}).get("directives") or {}).get("tail")
-            if tail is not None:
+            if j + 1 < len(idx):
+                # a window's end is mid-take: no closing sentence ("still underway as the
+                # clip ends" made every window invent action after its calm edge). Its own
+                # timeline says how it ends. Only the take's last window keeps its tail.
+                d["tail"] = WINDOW_TAIL
+            elif tail is not None:
                 d["tail"] = tail
             d.pop("join", None)
             sh["directives"] = d
