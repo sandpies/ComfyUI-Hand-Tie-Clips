@@ -2112,6 +2112,39 @@ def _offload_text_encoder(clip, model):
         print(f"[{TAG}] VRAM purge skipped: {e}", flush=True)
 
 
+def _ram_room(nbytes, label, evict_active=False):
+    """Ask ComfyUI for `nbytes` of free RAM before a big allocation that is not a model.
+
+    ComfyUI keeps RAM copies ("pins") of every model it has loaded and gives them
+    back under pressure -- between nodes, or when another model is pinned. The
+    whole chain runs inside ONE node, so before the take decode or the upsample
+    nothing ever asks: the hop DiT and the text encoder sit pinned while the film
+    buffers grow, and a box with less RAM than this one runs out. This is the same
+    call ComfyUI makes for its own caches; a dropped pin reloads from disk when the
+    model is next used. Older cores without it: no-op."""
+    f = getattr(mm, "ensure_pin_budget", None)
+    if f is None or int(nbytes) <= 0:
+        return None
+    try:
+        import comfy.system_memory as _sm  # noqa: PLC0415
+        before = _sm.virtual_memory_available()
+        ok = f(int(nbytes), evict_active=bool(evict_active))
+        after = _sm.virtual_memory_available()
+    except Exception as e:  # noqa: BLE001
+        print(f"[{TAG}] RAM for {label}: not asked ({e!r})", flush=True)
+        return None
+    gb = 1024.0 ** 3
+    msg = (f"[{TAG}] RAM for {label}: {nbytes / gb:.1f} GB needed, "
+           f"{before / gb:.1f} GB available")
+    if after - before > 256 * 1024 ** 2:
+        msg += (f" -> {after / gb:.1f} GB after ComfyUI dropped RAM copies of models "
+                "not in use (they reload from disk when next used)")
+    if not ok:
+        msg += "; WARNING: could not free enough, this step may run out of RAM"
+    print(msg, flush=True)
+    return ok
+
+
 def _decode_av(video_vae, audio_vae, latent, skip_audio=False):
     v_lat = latent
     drop_f = 0
@@ -4030,6 +4063,10 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                            + ("+anchor" if WT_TAKE_ANCHOR else "")
                            + "+m" + _wt_model_fp(model))
         name = f"__wtake_{t + 1}"
+        if hop_store is not None and getattr(hop_store, "has", lambda _k: False)(key):
+            # a hit loads the whole take as float32 frames
+            _ram_room(int(pl["frames"]) * int(height) * int(width) * 3 * 4,
+                      f"loading take {t + 1} from the cache")
         hit = hop_store.get(key) if hop_store is not None else None
         if hit is not None:
             imgs, wav, sr = hit[0], hit[1], int(hit[2])
@@ -4067,6 +4104,9 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                 lat = (_wt_sample_seq if WT_SEQUENTIAL else _wt_sample)(
                     lat0, pl, [h["cond"] for h in hops], model=model, sampler=sampler,
                     sigmas=sigmas, seed=hops[0]["seed"], label=f"take {t + 1}")
+            # the whole take decodes at once: float32 frames + the decoder's working set
+            _ram_room(int(pl["frames"]) * int(height) * int(width) * 3 * 4 * 3 // 2,
+                      f"decoding take {t + 1}")
             _wimgs, _waud = _decode_av(vae, audio_vae, lat)
             imgs = _wimgs.contiguous().cpu()
             wav, sr = _waud["waveform"], int(_waud["sample_rate"])
@@ -9730,6 +9770,10 @@ class HandTieClips:
                 print(f"[{TAG}] upsample: hop_refine=pin_only cached the "
                       "refined latent, not the delivered one; cached hops are "
                       "upsampled from the refined version", flush=True)
+            # The chain is done: what it pinned (hop DiT, text encoder) can give way
+            # to the upsampled film (float16) and the re-draw's working set.
+            _ram_room(int(master_imgs.shape[0]) * int(_uh) * int(_uw) * 3 * 2 * 2,
+                      "the upsample", evict_active=True)
             _log_upsample_resources(int(master_imgs.shape[0]), _uw, _uh,
                                     regen2k=regen2k_on)
             # Under realism_boost the re-draw runs on the boost model. At
