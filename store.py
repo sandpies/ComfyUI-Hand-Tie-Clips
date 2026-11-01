@@ -34,22 +34,6 @@ from safetensors.torch import save_file as _st_save
 
 from . import latents as _latents
 
-
-CACHE_DIRNAME = "h3_ref_chain_hops"
-
-
-def cache_root():
-    """The hop cache folder: <ComfyUI user dir>/h3_ref_chain_hops.
-
-    NOT ComfyUI's temp folder: ComfyUI deletes temp at every startup
-    (main.py cleanup_temp_filesystem), so every restart -- and every code change
-    needs one -- threw away every cached hop and take, and a take could never be
-    retaken or upsampled after a restart (11-01: a 15 min re-render). The user
-    folder survives restarts; the store's own budget sweep keeps it bounded.
-    """
-    import folder_paths  # noqa: PLC0415
-    return os.path.join(folder_paths.get_user_directory(), CACHE_DIRNAME)
-
 TAG = "HandTieClips"
 
 VIDEO_EXT = ".mkv"

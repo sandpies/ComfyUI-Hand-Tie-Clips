@@ -825,9 +825,9 @@ section, but it cannot see everything: a LoRA swapped on the MODEL wire, or a
 reference file replaced under the same name, only shows up when you queue.
 
 What it plays is the cache, not the delivered video: hops before tone
-correction, without the 40 ms audio crossfade at each join. The cache lives in
-ComfyUI's user folder (`user/h3_ref_chain_hops`), so it survives a restart; its
-size budget (`cache_budget_gb`) drops the oldest hops first.
+correction, without the 40 ms audio crossfade at each join. And the cache lives
+in ComfyUI's temp folder, which is emptied every time ComfyUI starts -- after a
+restart the film row says "not in cache" until you queue again.
 
 ### Editing a hop invalidates that hop and everything after it
 

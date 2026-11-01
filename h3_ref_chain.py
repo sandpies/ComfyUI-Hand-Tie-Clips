@@ -6768,7 +6768,7 @@ class HandTieClips:
         if str(cache_hops) == "on" and not dry:
             import folder_paths
             hop_store = _store.HopStore(
-                _store.cache_root(),
+                os.path.join(folder_paths.get_temp_directory(), "h3_ref_chain_hops"),
                 budget_gb=float(cache_budget_gb), fps=FPS)
             # The fingerprint is printed because it is the one cache input a
             # user cannot see and cannot derive. If a run that should have hit
@@ -8412,8 +8412,8 @@ class HandTieClips:
                     # Name the hop. "Cache miss" on its own sends people to the
                     # temp folder to count files; what they need to know is
                     # which shot moved and that the sweep may simply have
-                    # reclaimed it (the store lives in ComfyUI's user folder,
-                    # store.cache_root(), and survives restarts).
+                    # reclaimed it -- the store is under ComfyUI's temp
+                    # directory, which is deleted on startup and shutdown.
                     raise ValueError(
                         f"{TAG}: render_from={start_at} needs hop {i + 1} in "
                         "the cache and it is not there. Either its inputs "

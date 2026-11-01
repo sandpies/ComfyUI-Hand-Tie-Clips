@@ -1581,15 +1581,15 @@ def register():
     #
     # Read-only views of the hop store, shaped like /peaks: the decode and
     # the encode run in an executor, never on the event loop. A key the store
-    # does not hold is a 404 with `missing: true` -- a hop the budget sweep
-    # dropped, or one never rendered, so "not there" is ordinary, not an error.
-    # (The store lives in ComfyUI's user folder and survives restarts.)
+    # does not hold is a 404 with `missing: true` -- the cache lives in
+    # ComfyUI's temp folder, which is wiped on every start, so "not there" is
+    # the ordinary state after a restart, not an error.
 
     def _hop_store():
         import folder_paths
         from . import store as _store
 
-        root = _store.cache_root()
+        root = _os.path.join(folder_paths.get_temp_directory(), "h3_ref_chain_hops")
         return _store.HopStore(root) if _os.path.isdir(root) else None
 
     def _key_arg(request, name="key"):
