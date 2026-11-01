@@ -502,6 +502,7 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
         const skip = suppressedSet();
         builtFor = [...skip].sort().join(",");
 
+        const groupMarks = [];
         for (const [title, names] of GROUPS) {
             const master = GROUP_MASTER[title];
             // When the master is off the whole group is one dimmed line. Its
@@ -538,7 +539,14 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
                     owned.push(name);
                     continue;
                 }
-                const f = fieldFor(node, w, () => { paintDigest(); onChange?.(); });
+                // Also re-run every group's off-state mark, so flipping `upsample` to
+                // on clears "· off" at once (it stayed stale until the next rebuild).
+                // Only the marks: render() would rewrite inputs mid-typing.
+                const f = fieldFor(node, w, () => {
+                    paintDigest();
+                    for (const m of groupMarks) m();
+                    onChange?.();
+                });
                 if (!f) {                          // stays a native dial below
                     rejected.push(`${name}:${widgetType(w) || "?"}`);
                     continue;
@@ -608,6 +616,7 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
                     if (off) group.open = false;
                 };
                 readers.push(mark);
+                groupMarks.push(mark);
                 state.textContent = "";
             }
         }
