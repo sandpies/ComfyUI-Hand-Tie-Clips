@@ -3910,6 +3910,26 @@ def _wt_retake(lat, pl, a, b, hops, *, overlap_n, model, sampler, sigmas):
     return res
 
 
+def _wt_model_fp(model):
+    """Short fingerprint of what is patched onto the model (attention overrides like SLA,
+    wrappers, callbacks, weight patches), so toggling one renders the take fresh."""
+    import hashlib  # noqa: PLC0415
+    parts = []
+    try:
+        mo = getattr(model, "model_options", {}) or {}
+        to = mo.get("transformer_options", {}) or {}
+        parts.append(sorted(str(k) for k in mo.keys()))
+        parts.append(sorted(f"{k}:{type(v).__name__}" for k, v in to.items()))
+        for name in ("wrappers", "callbacks"):
+            d = getattr(model, name, None) or {}
+            parts.append(sorted(f"{a}/{b}" for a, sub in d.items()
+                                for b in (sub.keys() if isinstance(sub, dict) else [sub])))
+        parts.append(len(getattr(model, "patches", {}) or {}))
+    except Exception as e:  # noqa: BLE001
+        parts.append(f"err:{type(e).__name__}")
+    return hashlib.sha256(repr(parts).encode("utf-8")).hexdigest()[:8]
+
+
 def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, scheduler,
                      steps, overlap_n, width, height, hop_store, salt):
     """pin_mech=windowed: every take as ONE latent over its hops' windows. A stored take
@@ -3930,7 +3950,8 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
         digs = [h["dig"] for h in hops]
         key = _wt.take_key(salt, digs, ("finished" if WT_FINISHED_HANDOFF else "")
                            + ("+mc" if WT_MOTION_CONTEXT else "")
-                           + ("+hold" if (WT_HOLD_OVERLAPS and WT_FINISHED_HANDOFF) else ""))
+                           + ("+hold" if (WT_HOLD_OVERLAPS and WT_FINISHED_HANDOFF) else "")
+                           + "+m" + _wt_model_fp(model))
         name = f"__wtake_{t + 1}"
         hit = hop_store.get(key) if hop_store is not None else None
         if hit is not None:
@@ -3943,6 +3964,12 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
             runs = None
             if old is not None and old[3] is not None:
                 runs = _wt.changed_runs(old_meta.get("digs"), digs)
+                if runs == [(0, len(digs) - 1)]:
+                    # every hop changed (e.g. a new seed): nothing to keep, so a fresh take on
+                    # the in-order path, not a one-pass retake (11-01: 00004 went there)
+                    runs = None
+                if old_meta.get("mfp") not in (None, _wt_model_fp(model)):
+                    runs = None   # other model patches (SLA, LoRA...): the kept hops don't match
                 _ov = list(_latents.from_dict(old[3]) or [])
                 if not _ov or int(_ov[0].shape[2]) != int(pl["latents"]):
                     runs = None
@@ -3968,7 +3995,8 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
             wav, sr = _waud["waveform"], int(_waud["sample_rate"])
             del _wimgs, _waud
             if hop_store is not None:
-                hop_store.put(key, imgs, wav, sr, meta={"digs": digs, "windowed_take": t + 1},
+                hop_store.put(key, imgs, wav, sr, meta={"digs": digs, "windowed_take": t + 1,
+                                                        "mfp": _wt_model_fp(model)},
                               latent=lat)
                 hop_store.set_pointer(name, key)
         keys.append(key)
