@@ -9682,8 +9682,8 @@ class HandTieClips:
                 up_out=(upsample_hops if upsample_on else None))
             if upsample_on and regen2k_on:
                 # the hop path hands Regen2K conditioning without references
-                for _uh in upsample_hops:
-                    _uh["cond"] = _cond_cpu(_uh["cond"], keep_refs=False)
+                for _ue in upsample_hops:
+                    _ue["cond"] = _cond_cpu(_ue["cond"], keep_refs=False)
             hop_keys.extend(_wkeys)
             win_hops = []
         if write_pos != total_frames:
