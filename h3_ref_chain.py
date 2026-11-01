@@ -3731,9 +3731,20 @@ def _encoded_pin(sampled, imgs, vae, hop_no):
     return out
 
 
-def _wt_sample(lat, plan, conds, *, model, sampler, sigmas, seed, label):
+def _wt_sample(lat, plan, conds, *, model, sampler, sigmas, seed, label, song=None):
     """Sample one (sub-)take latent over its windows. `conds`: one conditioning list per
-    window, in window order. One window = the plain model on that window's conditioning."""
+    window, in window order. One window = the plain model on that window's conditioning.
+    `song`: the take's audio latent from master_audio_file, frozen (see _wt_sample_seq)."""
+    if song is not None:
+        import comfy.nested_tensor as nt  # noqa: PLC0415
+        lat = _wt_song_lat(lat, song)
+        _v, _a = list(lat["samples"].unbind())[:2]
+        _vm = torch.ones((1, 1) + tuple(_v.shape[2:]), dtype=torch.float32)
+        _am = torch.zeros((1, 1) + tuple(_a.shape[2:]), dtype=torch.float32)
+        _old = lat.get("noise_mask")
+        if _old is not None:      # a retake's held overlaps stay held
+            _vm = _vm * list(_old.unbind())[0].to(_vm.dtype).cpu()
+        lat["noise_mask"] = nt.NestedTensor((_vm, _am))
     flat = []
     for c in conds:
         flat.append(list(c)[0])
@@ -3750,6 +3761,8 @@ def _wt_sample(lat, plan, conds, *, model, sampler, sigmas, seed, label):
         SamplerCustomAdvanced, "the windowed sampler",
         noise=noise, guider=guider, sampler=sampler, sigmas=sigmas, latent_image=lat))[0])
     out.pop("noise_mask", None)
+    if song is not None:
+        out = _wt_song_lat(out, song)
     return out
 
 
@@ -3808,9 +3821,27 @@ class _WtNoise:
         return self._noise
 
 
-def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
+def _wt_song_lat(lat, song):
+    """The take latent with its audio replaced by the song's (master_audio_file)."""
+    import comfy.nested_tensor as nt  # noqa: PLC0415
+    v, a = list(lat["samples"].unbind())[:2]
+    z = song.to(device=a.device, dtype=a.dtype)
+    if tuple(z.shape) != tuple(a.shape):
+        raise RuntimeError(f"{TAG}: windowed song lock: song latent {tuple(z.shape)} "
+                           f"!= take audio {tuple(a.shape)}")
+    out = dict(lat)
+    out["samples"] = nt.NestedTensor((v, z.clone()))
+    return out
+
+
+def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, song=None):
     """Sample a take: steps 1..K window by window in order, each overlap held to the
-    previous window's clean estimate, then the last steps blended over all windows."""
+    previous window's clean estimate, then the last steps blended over all windows.
+
+    `song` (master_audio_file, 11-01): the take's audio latent, encoded from the song.
+    It is the sound of every window, frozen (noise_mask 0 on audio, as the motion_context
+    song lock), so the picture is drawn to the song; the finished take's sound is the
+    song again, whatever the blended finish did to it."""
     import comfy.nested_tensor as nt  # noqa: PLC0415
     import comfy.sample as cs  # noqa: PLC0415
     wins = plan["windows"]
@@ -3819,8 +3850,11 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
     k_sw = n - fin
     if len(wins) == 1 or k_sw < 1:
         return _wt_sample(lat, plan, conds, model=model, sampler=sampler, sigmas=sigmas,
-                          seed=seed, label=label)
+                          seed=seed, label=label, song=song)
     full_v, full_a = list(lat["samples"].unbind())[:2]
+    if song is not None:
+        full_a = song.to(device=full_a.device, dtype=full_a.dtype)
+        print(f"[{TAG}] windowed {label}: sound = the song, frozen in every window", flush=True)
     nv, na = list(cs.prepare_noise(lat["samples"], int(seed)).unbind())[:2]
     hi, lo = sigmas[:k_sw + 1].clone(), sigmas[k_sw:].clone()
     st_v = torch.zeros_like(full_v, dtype=torch.float32)
@@ -3835,18 +3869,23 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
     for k, w in enumerate(wins):
         l0, l1, a0, a1 = w["l0"], w["l1"], w["a0"], w["a1"]
         sv = torch.zeros_like(full_v[:, :, l0:l1])
-        sa = torch.zeros_like(full_a[..., a0:a1])
+        sa = (full_a[..., a0:a1].clone() if song is not None
+              else torch.zeros_like(full_a[..., a0:a1]))
         sub = {}
         ovl = ova = 0
         if k > 0:
             ovl = max(0, wins[k - 1]["l1"] - l0)
             ova = max(0, wins[k - 1]["a1"] - a0)
             sv[:, :, :ovl] = x0_v[:, :, l0:l0 + ovl].to(sv.dtype)
-            sa[..., :ova] = x0_a[..., a0:a0 + ova].to(sa.dtype)
+            if song is None:
+                sa[..., :ova] = x0_a[..., a0:a0 + ova].to(sa.dtype)
+        if k > 0 or song is not None:
             vm = torch.ones((1, 1) + tuple(sv.shape[2:]), dtype=torch.float32)
             am = torch.ones((1, 1) + tuple(sa.shape[2:]), dtype=torch.float32)
             vm[:, :, :ovl] = 0.0
             am[..., :ova] = 0.0
+            if song is not None:
+                am[...] = 0.0
             sub["noise_mask"] = nt.NestedTensor((vm, am))
         sub["samples"] = nt.NestedTensor((sv, sa))
         noise = _WtNoise(seed, nt.NestedTensor((nv[:, :, l0:l1].clone(), na[..., a0:a1].clone())))
@@ -3889,6 +3928,8 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
                 guider=guider, sampler=sampler, sigmas=lo, latent_image=_fm))[0]
             dv, da = [t.float().cpu() for t in list(_fz["samples"].unbind())[:2]]
             del _fz, _fm
+        if song is not None:
+            da = full_a[..., a0:a1].float().cpu()   # the clean estimate of the sound is the song
         if k == 0:
             st_v[:, :, l0:l1], st_a[..., a0:a1] = ov, oa
             x0_v[:, :, l0:l1], x0_a[..., a0:a1] = dv, da
@@ -3945,10 +3986,12 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label):
         out["samples"] = _latents.rebuild(out["samples"], [fv, fa])
         print(f"[{TAG}] windowed {label}: {len(wins) - 1} overlap(s) kept as the next window "
               "continued from them", flush=True)
+    if song is not None:
+        out = _wt_song_lat(out, song)
     return out
 
 
-def _wt_retake(lat, pl, a, b, hops, *, overlap_n, model, sampler, sigmas):
+def _wt_retake(lat, pl, a, b, hops, *, overlap_n, model, sampler, sigmas, song=None):
     """Re-draw hops a..b of a stored take: cut their windows out of the take latent, hold
     the overlaps shared with the kept neighbours (noise_mask 0), sample, put back."""
     import comfy.nested_tensor as nt  # noqa: PLC0415
@@ -3972,7 +4015,8 @@ def _wt_retake(lat, pl, a, b, hops, *, overlap_n, model, sampler, sigmas):
            for j, h in enumerate(hops[:b + 1])][a:]
     out = _wt_sample(sub, sp["plan"], _rc, model=model,
                      sampler=sampler, sigmas=sigmas, seed=hops[a]["seed"],
-                     label=f"retake of hop(s) {hops[a]['hop']}-{hops[b]['hop']}")
+                     label=f"retake of hop(s) {hops[a]['hop']}-{hops[b]['hop']}",
+                     song=(song[..., sp["a0"]:sp["a1"]] if song is not None else None))
     op = list(_latents.from_dict(out))
     v = v.clone()
     au = au.clone()
@@ -4037,8 +4081,31 @@ def _wt_model_fp(model):
     return hashlib.sha256(repr(parts).encode("utf-8")).hexdigest()[:8]
 
 
+def _wt_song(locked, audio_vae, lat, pos, pl, t):
+    """The take's span of master_audio_file as its audio latent, or None (no song).
+    The take starts at film frame `pos` and runs pl['frames'] frames; the song's clock is
+    the film's (master_audio_start_s was cut at load)."""
+    if locked is None:
+        return None
+    parts = list(_latents.from_dict(lat) or [])
+    if len(parts) < 2:
+        raise RuntimeError(f"{TAG}: windowed take {t + 1}: master_audio_file needs a joint "
+                           "AV latent")
+    t0 = float(pos) / FPS
+    t1 = float(pos + int(pl["frames"])) / FPS
+    z = _encode_locked_slice(audio_vae, locked["wav32"], t0, t1, int(parts[1].shape[-1]))
+    while z.dim() > parts[1].dim():
+        z = z[0]
+    while z.dim() < parts[1].dim():
+        z = z.unsqueeze(0)
+    print(f"[{TAG}] windowed take {t + 1}: audio locked [{t0:.2f}s-{t1:.2f}s] of "
+          "master_audio_file", flush=True)
+    return z.to(dtype=parts[1].dtype).cpu()
+
+
 def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, scheduler,
-                     steps, overlap_n, width, height, hop_store, salt, up_out=None):
+                     steps, overlap_n, width, height, hop_store, salt, up_out=None,
+                     locked=None):
     """pin_mech=windowed: every take as ONE latent over its hops' windows. A stored take
     whose hop digests all match is reused; one where some changed re-draws only those hops
     between the kept ones. -> (master_wav, sample_rate, frames written, store keys)."""
@@ -4095,7 +4162,8 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                       + "; the rest is kept", flush=True)
                 for a, b in runs:
                     lat = _wt_retake(lat, pl, a, b, hops, overlap_n=overlap_n, model=model,
-                                     sampler=sampler, sigmas=sigmas)
+                                     sampler=sampler, sigmas=sigmas,
+                                     song=_wt_song(locked, audio_vae, lat, pos, pl, t))
             else:
                 lat0, _fc = _empty_av_latent(int(width), int(height), int(pl["frames"]))
                 if int(_fc) != int(pl["frames"]):
@@ -4103,7 +4171,8 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                                      f"off the H3 grid ({_fc})")
                 lat = (_wt_sample_seq if WT_SEQUENTIAL else _wt_sample)(
                     lat0, pl, [h["cond"] for h in hops], model=model, sampler=sampler,
-                    sigmas=sigmas, seed=hops[0]["seed"], label=f"take {t + 1}")
+                    sigmas=sigmas, seed=hops[0]["seed"], label=f"take {t + 1}",
+                    song=_wt_song(locked, audio_vae, lat0, pos, pl, t))
             # the whole take decodes at once: float32 frames + the decoder's working set
             _ram_room(int(pl["frames"]) * int(height) * int(width) * 3 * 4 * 3 // 2,
                       f"decoding take {t + 1}")
@@ -9719,7 +9788,7 @@ class HandTieClips:
                 sampler=sampler, scheduler=scheduler, steps=int(steps),
                 overlap_n=int(overlap_n), width=int(width), height=int(height),
                 hop_store=hop_store, salt=chain_salt,
-                up_out=(upsample_hops if upsample_on else None))
+                up_out=(upsample_hops if upsample_on else None), locked=locked)
             if upsample_on and regen2k_on:
                 # the hop path hands Regen2K conditioning without references
                 for _ue in upsample_hops:
