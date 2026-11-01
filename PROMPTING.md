@@ -908,6 +908,54 @@ are for. Otherwise unlock shot 6 and let it re-render against the new shot 5.
 > must not drift. `shots[].locked` in the *shot plan* is this cache pin. Same
 > word, different blocks, unrelated jobs.
 
+## One continuous take (`pin_mech: windowed`)
+
+With `pin_mech: windowed` a run of hops is rendered as **one** take: the hops are windows of a
+single video, not clips joined afterwards. A take ends only at `anchor: restart`, which is a
+real cut. The joins between windows hold well; what breaks a take is the writing, so these
+rules matter more here than anywhere else.
+
+**The opening sentence is the camera, nothing else.** Every hop of a take must open with the
+same sentence, word for word: framing, camera movement, who is in shot. Do not put the place in
+it if the place changes during the take, and do not put the time of day in it if the light
+changes. Only the take's first hop's opening is used; a different one later is ignored and
+logged.
+
+**Write the action on a timeline, with `At mm:ss-mm:ss,` sentences.** Each hop's times are its
+own (0-8 s for an 8 s hop); the node lays them all on one clock and describes each overlap once.
+A take whose beats have no timing is rendered hop by hop as written.
+
+**Every sentence boundary is a place where the picture can jump.** In a long take with a
+moving camera, use as few timed sentences as the story needs. Five sentences across a minute
+hold better than twenty.
+
+**Say the place with the same words in every sentence set there,** time of day included
+("along a narrow street at night lit by neon signs"). A new background detail in one sentence
+("puddles shining pink behind him") makes the model redraw the place at that boundary. Do not
+put an arc in one sentence ("first walks, then stops, then sways"): a sentence is given whole to
+every window it spans, so each window plays the whole arc.
+
+**A camera that backs away ahead of someone reaches a new place before they do.** Write a
+change of place as a crossing that lasts 5-6 seconds, seen from that camera: the new place
+opens up around and beside them, the old one stays behind them through the opening they came
+through. A two-second "walks into the station" renders as a cut.
+
+**Stairs and slopes say which way they rise relative to the camera** ("a staircase that rises
+toward the camera, the camera above them looking down the steps"). Otherwise a person facing
+the camera climbs backwards.
+
+**For a long walk through one place, give the place a plate.** One picture, taken from where the
+camera is (in the middle of the street at chest height, looking down its length), on every hop
+of the take, named in the opening sentence ("walks toward the camera through @street"). Words
+alone let each window invent its own street.
+
+**With `master_audio_file`,** the take is drawn to the song: describe singing as delivery
+("sings toward the camera, tapping his chest"), not the lyrics, and give whoever is not singing
+something to do.
+
+**Retakes:** change one hop's beat or seed and re-queue; only that hop's window is drawn again,
+held to its neighbours on both sides. Everything else in the take is reused.
+
 ## When it goes wrong
 
 | symptom | cause | fix |
