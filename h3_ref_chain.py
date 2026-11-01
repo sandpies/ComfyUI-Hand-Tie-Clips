@@ -3137,9 +3137,12 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
     strength = float(lora_strength)
     if strength > 0.0 and lora_name != "None" and not getattr(work_model, "patches", None):
         try:
-            import folder_paths as _fp
+            # not `_fp`: that name is the face_pass module (below); a local import of the
+            # same name shadowed it for the whole function and the face pass raised, so
+            # the upsample was skipped and the canvas film delivered
+            import folder_paths as _folder_paths
             import nodes as _nodes
-            if _fp.get_full_path("loras", lora_name) and hasattr(_nodes, "LoraLoaderModelOnly"):
+            if _folder_paths.get_full_path("loras", lora_name) and hasattr(_nodes, "LoraLoaderModelOnly"):
                 work_model = _nodes.LoraLoaderModelOnly().load_lora_model_only(
                     work_model, lora_name, strength)[0]
         except Exception as _le:
@@ -4002,7 +4005,7 @@ def _wt_model_fp(model):
 
 
 def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, scheduler,
-                     steps, overlap_n, width, height, hop_store, salt):
+                     steps, overlap_n, width, height, hop_store, salt, up_out=None):
     """pin_mech=windowed: every take as ONE latent over its hops' windows. A stored take
     whose hop digests all match is reused; one where some changed re-draws only those hops
     between the kept ones. -> (master_wav, sample_rate, frames written, store keys)."""
@@ -4073,6 +4076,17 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                                                         "mfp": _wt_model_fp(model)},
                               latent=lat)
                 hop_store.set_pointer(name, key)
+        if up_out is not None:
+            # the take latent as the upsampler's per-window entries (stitch() rebuilds it)
+            _tl = hit[3] if (hit is not None and len(hit) > 3) else (None if hit is not None else lat)
+            if _tl is None:
+                print(f"[{TAG}] windowed take {t + 1}: cached without its latent (older build); "
+                      "it is not upsampled", flush=True)
+            else:
+                _tv, _ta = list(_latents.from_dict(_tl))[:2]
+                up_out.extend(_wt.upsample_entries(
+                    pl, _tv.detach().cpu(), _ta.detach().cpu(), [h["cond"] for h in hops],
+                    [h["hop"] for h in hops], overlap_n))
         keys.append(key)
         nf = min(int(imgs.shape[0]), int(master_imgs.shape[0]) - pos)
         master_imgs[pos:pos + nf] = imgs[:nf]
@@ -6880,7 +6894,7 @@ class HandTieClips:
                                      "hop lengths of 17n+5 frames (8 s = 192).") from None
             _w_off = [nm for nm, on in (
                 ("hop_refine", str(hop_refine) != "off"), ("realism_boost", bool(boost_on)),
-                ("upsample", bool(upsample_on)), ("dialogue_lock", dlg is not None),
+                ("dialogue_lock", dlg is not None),
                 ("start image", start_image is not None)) if on]
             if _w_off:
                 print(f"[{TAG}] windowed: not applied in this mode yet: {', '.join(_w_off)}",
@@ -9654,7 +9668,12 @@ class HandTieClips:
                 win_hops, master_imgs, model=model, vae=vae, audio_vae=audio_vae,
                 sampler=sampler, scheduler=scheduler, steps=int(steps),
                 overlap_n=int(overlap_n), width=int(width), height=int(height),
-                hop_store=hop_store, salt=chain_salt)
+                hop_store=hop_store, salt=chain_salt,
+                up_out=(upsample_hops if upsample_on else None))
+            if upsample_on and regen2k_on:
+                # the hop path hands Regen2K conditioning without references
+                for _uh in upsample_hops:
+                    _uh["cond"] = _cond_cpu(_uh["cond"], keep_refs=False)
             hop_keys.extend(_wkeys)
             win_hops = []
         if write_pos != total_frames:

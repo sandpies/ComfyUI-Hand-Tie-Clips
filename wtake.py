@@ -121,3 +121,50 @@ def sub_plan(pl, a, b, overlap):
         hold_a.append((A1 - A0 - ov_a, A1 - A0))
     return {"l0": L0, "l1": L1, "a0": A0, "a1": A1, "plan": sub,
             "hold_v": hold_v, "hold_a": hold_a}
+
+
+_FRAMES_PER_LATENT = (1, 4, 4, 4, 4)   # H3: each 17-frame block = 1 + 4 x 4 frames
+
+
+def frames_in(latents):
+    """Pixel frames covered by the first `latents` video latent steps."""
+    return sum(_FRAMES_PER_LATENT[k % 5] for k in range(int(latents)))
+
+
+def upsample_entries(pl, video, audio, conds, hops, overlap, rescale=5.0 / 3.0):
+    """A finished take latent as the chain upsampler's per-hop entries.
+
+    Window k OWNS its frames from the end of the overlap with window k-1 (window 0 from
+    frame 0) up to where window k+1's ownership begins. Each entry carries those latents
+    plus the `overlap` frames before them, which the upsampler's stitch() drops again --
+    so stitching the entries gives back exactly the take latent, picture and sound, and
+    each stretch is re-drawn under its own window's conditioning.
+    -> [{"hop", "video", "audio", "cond", "start", "drop", "frames", "stand_in"}]
+    """
+    w = pl["windows"]
+    n = len(w)
+    lat_t, aud_t = int(video.shape[2]), int(audio.shape[-1])
+    L = [0] + [int(w[k - 1]["l1"]) for k in range(1, n)] + [lat_t]
+    A = [0] + [int(w[k - 1]["a1"]) for k in range(1, n)] + [aud_t]
+    ov = int(overlap)
+    d_a = int(round(ov * float(rescale)))
+    out = []
+    for k in range(n):
+        tok = (L[k] - int(w[k]["l0"])) if k else 0
+        if k and frames_in(tok) != ov:
+            raise ValueError(f"window {k + 1}: overlap {ov} f is {tok} latents = "
+                             f"{frames_in(tok)} f; cannot hand it to the upsampler")
+        a_from = A[k] - (d_a if k else 0)
+        if a_from < 0:
+            raise ValueError(f"window {k + 1}: audio overlap reaches before the take")
+        out.append({
+            "hop": hops[k],
+            "video": video[:, :, L[k] - tok:L[k + 1]],
+            "audio": audio[..., a_from:A[k + 1]],
+            "cond": conds[k],
+            "start": k == 0,
+            "drop": ov if k else 0,
+            "frames": frames_in(L[k + 1]) - frames_in(L[k]),
+            "stand_in": False,
+        })
+    return out
