@@ -373,7 +373,13 @@ def render(jobs, crops, redraw_fn, fps):
     for i, (j, c) in enumerate(zip(jobs, crops)):
         t0 = j["f0"] / float(fps)
         out = redraw_fn(c.float() / 255.0, t0, t0 + j["m"] / float(fps))[: j["m"]]
-        j["out"] = (out.float().clamp(0, 1) * 255.0).round().to(torch.uint8)
+        # In slices: a close-up that spans a whole long film is tens of GB as floats, and
+        # converting it in one go allocated a second full copy (2946 f at 896 px: 28 GB, OOM).
+        q = torch.empty(tuple(out.shape), dtype=torch.uint8)
+        for s in range(0, int(out.shape[0]), 64):
+            q[s:s + 64] = (out[s:s + 64].float().clamp(0, 1) * 255.0).round().to(torch.uint8)
+        del out
+        j["out"] = q
         print(f"[{TAG}] small face {i + 1}: frames {j['f0']}-{j['f0'] + j['m'] - 1}, "
               f"{j['size_out']:.0f} px tall in the output, re-drawn as a "
               f"{int(j['out'].shape[1])} px close-up", flush=True)
