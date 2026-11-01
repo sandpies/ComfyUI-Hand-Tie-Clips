@@ -5530,6 +5530,16 @@ class HandTieClips:
                                 "chunks, anchor, tiles and VRAM splits of the upsample. "
                                 "Unwired keeps the shipped recipe."),
                 }),
+                # APPENDED 2026-11-01, LAST widget (after regen2k_cond in widgets_values).
+                "cache_location": (list(_store.CACHE_LOCATIONS), {
+                    "default": "temp",
+                    "tooltip": ("Where cache_hops keeps hops. temp: ComfyUI's temp folder, "
+                                "emptied every time ComfyUI starts (no disk left behind). "
+                                "user: ComfyUI's user folder, kept across restarts, so a take "
+                                "can still be retaken or upsampled after one; it stays on disk "
+                                "(up to cache_budget_gb) until you clear it with the button "
+                                "in the cache group."),
+                }),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -5647,7 +5657,7 @@ class HandTieClips:
             regen2k_model=None, regen2k_seed=REGEN2K_SEED,
             regen2k_cond=REGEN2K_DEFAULT_COND,
             audio_model=None,
-            upsample_settings=None, unique_id=None):
+            upsample_settings=None, cache_location="temp", unique_id=None):
         # Every argument, as called: the hand_tie previs-first pass re-runs this
         # same call with dry_run=previs before any hop renders.
         _run_args = {k: v for k, v in locals().items() if k != "self"}
@@ -6768,7 +6778,7 @@ class HandTieClips:
         if str(cache_hops) == "on" and not dry:
             import folder_paths
             hop_store = _store.HopStore(
-                os.path.join(folder_paths.get_temp_directory(), "h3_ref_chain_hops"),
+                _store.cache_root(cache_location),
                 budget_gb=float(cache_budget_gb), fps=FPS)
             # The fingerprint is printed because it is the one cache input a
             # user cannot see and cannot derive. If a run that should have hit

@@ -20,11 +20,63 @@
  * tooltips at all while the native dials kept theirs -- see tooltipFor().
  */
 
+import { api } from "../../../scripts/api.js";
 import {
     el, vocab, widgetByName, widgetType, widgetOptions, tooltipFor,
 } from "./widget_utils.js";
 
 const OPEN_PROP = "h3_run_open";
+
+/**
+ * "clear hop cache": deletes the cache at the node's current cache_location.
+ * Two clicks (no browser confirm(): a modal blocks the page): the first shows
+ * what would go, the second deletes it.
+ */
+function cacheClearRow(node) {
+    const row = el("div", "h3e-note h3e-note-hint");
+    const btn = el("button", "h3e-btn", "clear hop cache");
+    const note = el("span", null, "");
+    let armed = null;
+    const loc = () => String(widgetByName(node, "cache_location")?.value || "temp");
+    const gb = (b) => `${(Number(b || 0) / 1073741824).toFixed(2)} GB`;
+    btn.onclick = async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const where = loc();
+        try {
+            if (armed !== where) {
+                const r = await api.fetchApi(
+                    `/h3_ref_chain/hop_cache?location=${encodeURIComponent(where)}`);
+                const j = await r.json();
+                if (!j.ok) throw new Error(j.error || r.status);
+                if (!j.files) {
+                    note.textContent = ` ${where} cache is empty`;
+                    armed = null;
+                    return;
+                }
+                armed = where;
+                btn.textContent = `click again to delete ${gb(j.bytes)}`;
+                note.textContent = ` ${j.files} files in ${j.root}`;
+                return;
+            }
+            const r = await api.fetchApi("/h3_ref_chain/hop_cache", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ location: where }),
+            });
+            const j = await r.json();
+            if (!j.ok) throw new Error(j.error || r.status);
+            note.textContent = ` ${where} cache cleared: ${gb(j.bytes)} freed`;
+        } catch (err) {
+            note.textContent = ` could not read/clear the cache: ${err.message || err}`;
+        }
+        armed = null;
+        btn.textContent = "clear hop cache";
+    };
+    row.appendChild(btn);
+    row.appendChild(note);
+    return row;
+}
 
 /**
  * Groups, in draw order; names are native widget names.
@@ -101,7 +153,7 @@ const GROUPS = [
     // Wrap every hop's finished prompt: LoRA trigger words first, a trailing
     // camera/body clause last, outside everything the chain adds.
     ["prompt wrap", ["prompt_prefix", "prompt_suffix"]],
-    ["cache",["cache_hops", "cache_budget_gb"]],
+    ["cache",["cache_hops", "cache_budget_gb", "cache_location"]],
     // Added 2026-08-30. 0.4.0 shipped these five on the Python side and never
     // touched js/, so all five fell through to native dials -- the documented
     // fallback doing its job, not a break. Order is the order you reach for
@@ -596,6 +648,7 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
             }
             if (!n) continue;                      // nothing found: draw nothing
             group.appendChild(grid);
+            if (title === "cache") group.appendChild(cacheClearRow(node));
             body.appendChild(group);
             // Repaint this group's off-state whenever anything is re-read, so
             // flipping hop_refine to `full` un-collapses the dials it was

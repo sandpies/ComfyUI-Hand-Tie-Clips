@@ -51,6 +51,7 @@ SWAP_DESCRIBE_ROUTE = "/h3_ref_chain/swap_describe"
 STANDARD_ROUTE = "/h3_ref_chain/standard"
 UNLOAD_ROUTE = "/h3_ref_chain/llm/unload"
 HOP_SPRITE_ROUTE = "/h3_ref_chain/hop_sprite"
+HOP_CACHE_ROUTE = "/h3_ref_chain/hop_cache"
 HOP_CLIP_ROUTE = "/h3_ref_chain/hop_clip"
 SEAM_CLIP_ROUTE = "/h3_ref_chain/seam_clip"
 
@@ -1585,12 +1586,19 @@ def register():
     # ComfyUI's temp folder, which is wiped on every start, so "not there" is
     # the ordinary state after a restart, not an error.
 
-    def _hop_store():
-        import folder_paths
+    def _hop_store(*keys):
+        """The store holding `keys` (all of them), looking in every cache_location
+        (user, then temp). With no keys: the first one that exists."""
         from . import store as _store
 
-        root = _os.path.join(folder_paths.get_temp_directory(), "h3_ref_chain_hops")
-        return _store.HopStore(root) if _os.path.isdir(root) else None
+        for loc in ("user", "temp"):
+            root = _store.cache_root(loc)
+            if not _os.path.isdir(root):
+                continue
+            hs = _store.HopStore(root)
+            if all(hs.has(k) for k in keys if k):
+                return hs
+        return None
 
     def _key_arg(request, name="key"):
         key = str(request.query.get(name) or "").strip().lower()
@@ -1611,6 +1619,39 @@ def register():
 
         return await asyncio.get_running_loop().run_in_executor(None, work)
 
+    def _cache_loc(v):
+        from . import store as _store
+        v = str(v or "temp")
+        return v if v in _store.CACHE_LOCATIONS else None
+
+    @instance.routes.get(HOP_CACHE_ROUTE)
+    async def hop_cache_size(request):
+        """Size of the hop cache at ?location=temp|user."""
+        from . import store as _store
+        loc = _cache_loc(request.query.get("location"))
+        if loc is None:
+            return web.json_response({"ok": False, "error": "bad location"}, status=400)
+        files, size = await _run(lambda: _store.cache_size(loc))
+        return web.json_response({"ok": True, "location": loc, "root": _store.cache_root(loc),
+                                  "files": files, "bytes": size})
+
+    @instance.routes.post(HOP_CACHE_ROUTE)
+    async def hop_cache_clear(request):
+        """Delete the hop cache at {"location": "temp"|"user"}."""
+        from . import store as _store
+        try:
+            body = await request.json()
+        except Exception:  # noqa: BLE001
+            body = {}
+        loc = _cache_loc((body or {}).get("location"))
+        if loc is None:
+            return web.json_response({"ok": False, "error": "bad location"}, status=400)
+        files, size = await _run(lambda: _store.clear_cache(loc))
+        _SPRITES.clear()
+        print(f"[{TAG}] hop cache ({loc}) cleared: {files} files, "
+              f"{size / 1073741824:.2f} GB freed", flush=True)
+        return web.json_response({"ok": True, "location": loc, "files": files, "bytes": size})
+
     @instance.routes.get(HOP_SPRITE_ROUTE)
     async def _hop_sprite(request):
         """A hop's scrub sheet: `n` frames side by side, JPEG."""
@@ -1625,7 +1666,7 @@ def register():
             n = _strip.SPRITE_N
         hit = _SPRITES.get((key, n))
         if hit is None:
-            hs = _hop_store()
+            hs = _hop_store(key)
             if hs is None or not hs.has(key):
                 return _missing(f"hop {key[:8]}")
 
@@ -1654,13 +1695,13 @@ def register():
                             headers={"X-Cells": str(hit[1]),
                                      "Cache-Control": "max-age=3600"})
 
-    async def _serve_clip(name, build):
+    async def _serve_clip(name, build, *keys):
         """Encode once into the store's preview folder, then serve the file.
 
         A file response, because a browser `<video>` seeks with byte ranges.
         The folder sits inside the hop store, so it is wiped with it.
         """
-        hs = _hop_store()
+        hs = _hop_store(*keys)
         if hs is None:
             return None
         out_dir = _os.path.join(hs.root, "previews")
@@ -1690,7 +1731,7 @@ def register():
             return True
 
         try:
-            resp = await _serve_clip("hop_" + key, build)
+            resp = await _serve_clip("hop_" + key, build, key)
         except Exception as exc:  # noqa: BLE001
             print(f"[{TAG}] hop_clip failed for {key[:8]}: {exc!r}", flush=True)
             return web.json_response({"ok": False, "error": str(exc)}, status=500)
@@ -1735,7 +1776,7 @@ def register():
             return True
 
         try:
-            resp = await _serve_clip(f"seam_{a}_{b}_{trim}_{tail}", build)
+            resp = await _serve_clip(f"seam_{a}_{b}_{trim}_{tail}", build, a, b)
         except Exception as exc:  # noqa: BLE001
             print(f"[{TAG}] seam_clip failed for {a[:8]}|{b[:8]}: {exc!r}", flush=True)
             return web.json_response({"ok": False, "error": str(exc)}, status=500)

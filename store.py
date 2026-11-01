@@ -34,6 +34,56 @@ from safetensors.torch import save_file as _st_save
 
 from . import latents as _latents
 
+
+CACHE_DIRNAME = "h3_ref_chain_hops"
+# temp: ComfyUI's temp folder, which ComfyUI deletes at every start (no disk left
+# behind, no take survives a restart). user: ComfyUI's user folder, kept across
+# restarts (retake/upsample after a restart), on disk until cleared.
+CACHE_LOCATIONS = ("temp", "user")
+
+
+def cache_root(location="temp"):
+    """The hop cache folder for `location` ("temp" or "user")."""
+    import folder_paths  # noqa: PLC0415
+    base = (folder_paths.get_user_directory() if str(location) == "user"
+            else folder_paths.get_temp_directory())
+    return os.path.join(base, CACHE_DIRNAME)
+
+
+def cache_size(location="temp"):
+    """-> (files, bytes) under the cache folder for `location`."""
+    root = cache_root(location)
+    files = total = 0
+    for dirpath, _dirs, names in os.walk(root):
+        for nm in names:
+            try:
+                total += os.path.getsize(os.path.join(dirpath, nm))
+                files += 1
+            except OSError:
+                pass
+    return files, total
+
+
+def clear_cache(location="temp"):
+    """Delete everything in the cache folder for `location`. -> (files, bytes) freed.
+    The folder itself is kept. A file that cannot be removed (in use) is skipped."""
+    import shutil  # noqa: PLC0415
+    root = cache_root(location)
+    files, total = cache_size(location)
+    if not os.path.isdir(root):
+        return 0, 0
+    for nm in os.listdir(root):
+        p = os.path.join(root, nm)
+        try:
+            if os.path.isdir(p) and not os.path.islink(p):
+                shutil.rmtree(p, ignore_errors=True)
+            else:
+                os.remove(p)
+        except OSError:
+            pass
+    left_f, left_b = cache_size(location)
+    return files - left_f, total - left_b
+
 TAG = "HandTieClips"
 
 VIDEO_EXT = ".mkv"

@@ -827,7 +827,10 @@ reference file replaced under the same name, only shows up when you queue.
 What it plays is the cache, not the delivered video: hops before tone
 correction, without the 40 ms audio crossfade at each join. And the cache lives
 in ComfyUI's temp folder, which is emptied every time ComfyUI starts -- after a
-restart the film row says "not in cache" until you queue again.
+restart the film row says "not in cache" until you queue again. Set
+`cache_location` to `user` to keep the cache across restarts (retake or upsample
+a take after one); it then stays on disk, up to `cache_budget_gb`, until you
+press "clear hop cache" in the cache group.
 
 ### Editing a hop invalidates that hop and everything after it
 
