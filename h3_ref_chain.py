@@ -1473,19 +1473,23 @@ def _decode_take_streamed(vae, lat, label):
         print(f"[{TAG}] sand_tie {label}: disk-backed decode unavailable ({e!r}); "
               "decoding in RAM", flush=True)
         return None
-    if hasattr(vae, "prepare_decode"):
-        vae.prepare_decode(tuple(v.shape))
-    else:
-        mm.load_models_gpu([vae.patcher])
     try:
+        if hasattr(vae, "prepare_decode"):
+            vae.prepare_decode(tuple(v.shape))
+        else:
+            mm.load_models_gpu([vae.patcher])
         with torch.inference_mode():
             fsm.decode(v.to(device=vae.device, dtype=vae.vae_dtype), output_buffer=buf)
-    except Exception as e:  # noqa: BLE001
-        if not _tu._is_oom(e):
-            raise
-        # out of VRAM: ComfyUI's own decode retries tiled; hand it back to that path
+    except BaseException as e:  # noqa: BLE001 -- a cancel too: the file goes with its handle
         del buf, arr
         fh.close()
+        # The decoder's frames in the traceback still hold the output buffer (its mapping
+        # keeps the ~20 GB file); whoever keeps the error must not keep those too.
+        import traceback  # noqa: PLC0415
+        traceback.clear_frames(e.__traceback__.tb_next if e.__traceback__ else None)
+        if not (isinstance(e, Exception) and _tu._is_oom(e)):
+            raise
+        # out of VRAM: ComfyUI's own decode retries tiled; hand it back to that path
         mm.soft_empty_cache()
         print(f"[{TAG}] sand_tie {label}: disk-backed decode ran out of VRAM; "
               "using ComfyUI's tiled decode", flush=True)
@@ -1499,10 +1503,16 @@ def _decode_take_streamed(vae, lat, label):
 
 
 def _release_mmap(handle):
-    """Let a decode buffer's mapping go: drop the last references, collect. The file
-    deletes itself when its handle closes (_open_self_deleting)."""
+    """Let a decode buffer's mapping go: close its file handle (the file deletes itself
+    when the last handle and mapping close, _open_self_deleting), drop the array, collect."""
     import gc  # noqa: PLC0415
+    fh = handle[1] if isinstance(handle, tuple) and len(handle) == 2 else None
     del handle
+    if fh is not None:
+        try:
+            fh.close()
+        except OSError:
+            pass
     gc.collect()
 
 
@@ -3965,14 +3975,19 @@ def _wt_tone_lock(dv, ov, ref, *, start, sigma):
     return dv, ov
 
 
-def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, song=None):
+def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, song=None,
+                   seeds=None):
     """Sample a take: steps 1..K window by window in order, each overlap held to the
     previous window's clean estimate, then the last steps blended over all windows.
 
     `song` (master_audio_file, 11-01): the take's audio latent, encoded from the song.
     It is the sound of every window, frozen (noise_mask 0 on audio, as the motion_context
     song lock), so the picture is drawn to the song; the finished take's sound is the
-    song again, whatever the blended finish did to it."""
+    song again, whatever the blended finish did to it.
+
+    `seeds`: per window, a shot's own seed or None. Window k's own frames (past the overlap
+    it is held on) take their noise from it, so a hop seed set on a shot reaches a fresh
+    take as it reaches a retake of that hop."""
     import comfy.nested_tensor as nt  # noqa: PLC0415
     import comfy.sample as cs  # noqa: PLC0415
     wins = plan["windows"]
@@ -3987,6 +4002,19 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, son
         full_a = song.to(device=full_a.device, dtype=full_a.dtype)
         print(f"[{TAG}] sand_tie {label}: sound = the song, frozen in every window", flush=True)
     nv, na = list(cs.prepare_noise(lat["samples"], int(seed)).unbind())[:2]
+    if any(sd is not None for sd in list(seeds or [])[1:len(wins)]):
+        nv, na = nv.clone(), na.clone()
+    for k, sd in enumerate(seeds or []):
+        if k == 0 or k >= len(wins) or sd is None:
+            continue
+        w, pw = wins[k], wins[k - 1]
+        ovl, ova = max(0, pw["l1"] - w["l0"]), max(0, pw["a1"] - w["a0"])
+        ev, ea = list(cs.prepare_noise(lat["samples"], int(sd)).unbind())[:2]
+        nv[:, :, w["l0"] + ovl:w["l1"]] = ev[:, :, w["l0"] + ovl:w["l1"]]
+        na[..., w["a0"] + ova:w["a1"]] = ea[..., w["a0"] + ova:w["a1"]]
+        print(f"[{TAG}] sand_tie {label}: window {k + 1} draws its own frames from seed {int(sd)}",
+              flush=True)
+        del ev, ea
     hi, lo = sigmas[:k_sw + 1].clone(), sigmas[k_sw:].clone()
     st_v = torch.zeros_like(full_v, dtype=torch.float32)
     st_a = torch.zeros_like(full_a, dtype=torch.float32)
@@ -4261,12 +4289,21 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
     for t, hops in enumerate(groups):
         pl = _wt.plan([h["len"] for h in hops], overlap_n)
         digs = [h["dig"] for h in hops]
-        key = _wt.take_key(salt, digs, ("finished" if WT_FINISHED_HANDOFF else "")
-                           + ("+mc" if WT_MOTION_CONTEXT else "")
-                           + ("+hold" if (WT_HOLD_OVERLAPS and WT_FINISHED_HANDOFF) else "")
-                           + ("+anchor" if WT_TAKE_ANCHOR else "")
-                           + _wt_tone_tag()
-                           + "+m" + _wt_model_fp(model))
+        variant = (("finished" if WT_FINISHED_HANDOFF else "")
+                   + ("+mc" if WT_MOTION_CONTEXT else "")
+                   + ("+hold" if (WT_HOLD_OVERLAPS and WT_FINISHED_HANDOFF) else "")
+                   + ("+anchor" if WT_TAKE_ANCHOR else "")
+                   + _wt_tone_tag()
+                   + "+m" + _wt_model_fp(model)
+                   # the overlap sets the window plan (22 f keeps the keys it had); a
+                   # song-locked take 2+ hears the song from where it starts on the film
+                   + (f"+o{int(overlap_n)}" if int(overlap_n) != 22 else "")
+                   + (f"+p{int(pos)}" if (locked is not None and pos) else ""))
+        key = _wt.take_key(salt, digs, variant)
+        # A retake keeps the stored take's other hops, so it is allowed only when everything
+        # but the hop digests is the same: size, model, sampler, song (chain salt), tone lock,
+        # patches, overlap, where it starts on the song, and every hop's length in order.
+        env = _wt.take_key(salt, [int(h["len"]) for h in hops], variant)
         name = f"__wtake_{t + 1}"
         if hop_store is not None and getattr(hop_store, "has", lambda _k: False)(key):
             # a hit loads the whole take as float32 frames
@@ -4293,8 +4330,8 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                         # every hop changed (e.g. a new seed): nothing to keep, so a fresh take on
                         # the in-order path, not a one-pass retake (11-01: 00004 went there)
                         runs = None
-                    if old_meta.get("mfp") not in (None, _wt_model_fp(model)):
-                        runs = None   # other model patches (SLA, LoRA...): the kept hops don't match
+                    if old_meta.get("env") != env:
+                        runs = None   # other size/model/song/tone/overlap/lengths: keep nothing
                     _ov = list(_latents.from_dict(old[3]) or [])
                     if not _ov or int(_ov[0].shape[2]) != int(pl["latents"]):
                         runs = None
@@ -4316,7 +4353,8 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                     lat = (_wt_sample_seq if WT_SEQUENTIAL else _wt_sample)(
                         lat0, pl, [h["cond"] for h in hops], model=model, sampler=sampler,
                         sigmas=sigmas, seed=hops[0]["seed"], label=f"take {t + 1}",
-                        song=_wt_song(locked, audio_vae, lat0, pos, pl, t))
+                        song=_wt_song(locked, audio_vae, lat0, pos, pl, t),
+                        **({"seeds": [h.get("seed_x") for h in hops]} if WT_SEQUENTIAL else {}))
             if hop_store is not None and hasattr(hop_store, "put_pending"):
                 hop_store.put_pending(key, lat)   # an out-of-memory decode must not cost the sampling
             # Into a disk-backed buffer, not RAM: a 2-minute take is ~21 GB of float32 frames.
@@ -4334,7 +4372,7 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
             del _waud
             if hop_store is not None:
                 hop_store.put(key, imgs, wav, sr, meta={"digs": digs, "windowed_take": t + 1,
-                                                        "mfp": _wt_model_fp(model)},
+                                                        "mfp": _wt_model_fp(model), "env": env},
                               latent=lat)
                 hop_store.set_pointer(name, key)
                 if hasattr(hop_store, "drop_pending"):
@@ -4352,9 +4390,16 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                     [h["hop"] for h in hops], overlap_n))
         keys.append(key)
         nf = min(int(imgs.shape[0]), int(master_imgs.shape[0]) - pos)
-        for _c0 in range(0, nf, 64):      # in slices: imgs may be a disk-backed view
-            _c1 = min(nf, _c0 + 64)
-            master_imgs[pos + _c0:pos + _c1] = imgs[_c0:_c1]
+        try:
+            for _c0 in range(0, nf, 64):      # in slices: imgs may be a disk-backed view
+                _c1 = min(nf, _c0 + 64)
+                master_imgs[pos + _c0:pos + _c1] = imgs[_c0:_c1]
+        except BaseException:
+            _mm = getattr(imgs, "_htc_mmap", None)
+            del imgs
+            if _mm is not None:
+                _release_mmap(_mm)
+            raise
         pos += nf
         w = _batch_wav(wav)
         need = int(round(nf / float(FPS) * sr))
@@ -6491,8 +6536,11 @@ class HandTieClips:
             for _i, _blk in enumerate(blocks):
                 _sh = shots[_i] if _i < len(shots) else None
                 _sh = _sh or {}
+                # same rule as hop_is_start in the loop: every hand_tie hop and every
+                # window of a sand_tie take is assembled as a start (all its refs ride)
                 _start = (_i == 0 or str(_sh.get("anchor") or "") == "restart"
-                          or str(pin_mech) == "hand_tie")
+                          or str(pin_mech) == "hand_tie"
+                          or (str(pin_mech) == "sand_tie" and not swap and WT_TAKE_SHOT))
                 if _sh.get("refs") is not None:
                     _on = _refs.select_for_shot(ref_plan_refs, _sh["refs"], _wired_slots)
                 else:
@@ -7191,7 +7239,10 @@ class HandTieClips:
             _w_off = [nm for nm, on in (
                 ("hop_refine", str(hop_refine) != "off"), ("realism_boost", bool(boost_on)),
                 ("dialogue_lock", dlg is not None),
-                ("start image", start_image is not None)) if on]
+                ("start image", start_image is not None),
+                ("render_from", int(start_at) > 0),
+                ("shot locked", any((_s or {}).get("locked") for _s in shots)),
+                ("contact_sheet", str(contact_sheet) == "on")) if on]
             if _w_off:
                 print(f"[{TAG}] sand_tie: not applied in this mode yet: {', '.join(_w_off)}",
                       flush=True)
@@ -7258,6 +7309,16 @@ class HandTieClips:
                           f"context windows (Comfy-Org/ComfyUI#17425; here: {_pw_why}); a take "
                           "past ~5 hops is split into chained previs sections instead", flush=True)
                     _pv_win = False
+            if _pv_win:
+                # hops too long for two in one window (22 s+): today's chained sections
+                for _tk in _htw.takes(_pshots):
+                    try:
+                        _htw.plan([_plens[j] for j in _tk])
+                    except ValueError as _pe:
+                        print(f"[{TAG}] hand-tie: one previs per take is off for this run "
+                              f"({_pe}); chained previs sections instead", flush=True)
+                        _pv_win = False
+                        break
             for _si, _sec in enumerate(_htw.takes(_pshots) if _pv_win
                                        else _ht.sections(_pshots, _plens)):
                 ht_sections.append(list(_sec))
@@ -7854,13 +7915,15 @@ class HandTieClips:
             # ASSEMBLED as a start (it reads no other hop) yet still overlaps its
             # predecessor by one window and is cut inside it.
             hop_trims = i > 0 and not hop_restart
-            if ht or (str(pin_mech) == "sand_tie" and not swap and WT_TAKE_SHOT):
+            _wt_window = str(pin_mech) == "sand_tie" and not swap and WT_TAKE_SHOT
+            if ht or _wt_window:
                 hop_is_start = True
             if hop_restart:
                 print(f"[{TAG}] hop {i + 1}: ANCHOR RESTART -- start image is "
                       f"frame 0, the previous hop is not relayed", flush=True)
             _push_preview(unique_id, f"hop {i + 1}/{n} sampling…", hop=i + 1, total=n,
-                           frac=(write_pos / float(total_frames)) if total_frames else None)
+                           frac=(write_pos / float(total_frames)) if total_frames else None,
+                          pin_mech=("sand_tie" if windowed else None))
             # The same lint the writer's `validate` runs, on the queue, for a
             # plan nobody generated. A hand-written beat written in the official
             # `<d>` form overruns its hop exactly as a generated one does, and
@@ -8153,13 +8216,16 @@ class HandTieClips:
             # holds the reasoning and why `speaking` is not the same risk
             # as `on`.
             _voice_lift = _voice_rides_hop(voice_every_hop, block)
-            _voice_start = _start_carries_voice(hop_is_start, ht, voice_every_hop, block)
+            # a sand_tie window is assembled as a start like a hand-tie hop, and like one a
+            # quiet window keeps the voice off (a timbre clip with no line makes it talk)
+            _voice_start = _start_carries_voice(hop_is_start, ht or _wt_window,
+                                                voice_every_hop, block)
             hop_voice = voice is not None and (
                 _voice_start or str(hop_script) != "next" or _voice_lift)
-            if ht and hop_is_start and not _voice_start and (
+            if (ht or _wt_window) and hop_is_start and not _voice_start and (
                     voice is not None or slot_voices):
-                print(f"[{TAG}] hop {i + 1}: hand-tie hop with no spoken line; "
-                      "the voice stays off it", flush=True)
+                print(f"[{TAG}] hop {i + 1}: " + ("hand-tie hop" if ht else "sand_tie window")
+                      + " with no spoken line; the voice stays off it", flush=True)
             elif not hop_is_start and voice is not None and not hop_voice:
                 _why = ("no spoken line in this beat"
                         if str(voice_every_hop) == "speaking"
@@ -8392,16 +8458,41 @@ class HandTieClips:
                 # sampled after the loop with every other window of its take.
                 _w_seed = (int(shot["seed"]) if shot.get("seed") is not None
                            else ((int(seed) + i) if seed_per_shot else int(seed)))
+                # A fresh take draws its noise from its first hop's seed, plus a hop's own
+                # seed only where the shot sets one (_wt_sample_seq seeds=). The digest names
+                # that seed, so flipping seed_per_shot re-draws nothing a fresh take would not.
+                _w_first = i == 0 or hop_restart
+                if _w_first:
+                    _wt_take_seed = _w_seed
+                _w_seed_x = (int(shot["seed"]) if (shot.get("seed") is not None and not _w_first)
+                             else None)
+                # What else reaches the window's conditioning (as the per-hop key keys it)
+                _w_extra = {}
+                if hop_voice:
+                    _w_extra["voice_on"] = True
+                if _hop_voice_tags:
+                    _w_extra["voices"] = {t: _store.audio_digest(slot_voices.get(_row_slot[t]))
+                                          for t in _hop_voice_tags}
+                if any(r.get("source") == "refmod" for r in hop_active):
+                    _w_extra["refmods"] = [
+                        {"tag": r["tag"], "strength": round(float(r["strength"]), 4),
+                         "latent": r.get("latent_digest"), "looks": r.get("looks_digest")}
+                        for r in hop_active if r.get("source") == "refmod"]
                 win_hops.append({
                     "hop": i + 1,
                     "cond": _cond_cpu(_hop_ref2va()[0], keep_refs=True),
                     "len": int(render_length),
                     "restart": bool(i == 0 or hop_restart),
                     "seed": _w_seed,
-                    "dig": _wt.digest(block, _w_seed, int(shot.get("steps") or steps),
+                    "seed_x": _w_seed_x,
+                    "dig": _wt.digest(block,
+                                      _w_seed if _w_first else (
+                                          _w_seed_x if _w_seed_x is not None else _wt_take_seed),
+                                      int(shot.get("steps") or steps),
                                       int(render_length),
                                       {k: _store.tensor_digest(t)
-                                       for k, t in sorted((hop_images or {}).items())}),
+                                       for k, t in sorted((hop_images or {}).items())},
+                                      _w_extra),
                 })
                 pbar.update(1)
                 continue

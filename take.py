@@ -18,6 +18,7 @@ import copy
 import re
 
 WINDOW_TAIL = "window"   # a tail value with no sentence in directives.VOCAB
+SNAP_S = 0.5             # a hop's last moment ending this close to its real end ends there
 
 _TIMED = re.compile(
     r"\bAt\s+(\d+):(\d+(?:\.\d+)?)\s*[-–]\s*(\d+):(\d+(?:\.\d+)?)\s*,\s*")
@@ -94,8 +95,15 @@ def compile_take(shots, hop_frames, overlap_frames, fps=24, log=None):
                     "is one shot, so it uses hop "
                     f"{idx[0] + 1}'s. Write a framing/place change as a cut (anchor = restart)")
             own0 = ov if j > 0 else 0.0
+            # A hop is 17n+5 frames, so "6 s" is 5.875 s and "7 s" 7.292 s, while a writer
+            # ends the hop on the whole second. The hop's last moment ends at its real end
+            # (when within SNAP_S of it), and nothing runs past it into the next hop's time.
+            dur = float(hop_frames[i]) / float(fps)
+            last = max((t1 for _t0, t1, _b in parsed[j][1]), default=None)
             for t0, t1, body in parsed[j][1]:
-                a, b = max(t0, own0), t1
+                if last is not None and t1 == last and abs(t1 - dur) <= SNAP_S:
+                    t1 = dur
+                a, b = max(t0, own0), min(t1, dur)
                 if b - a > 1e-6:
                     line.append((starts[j] + a, starts[j] + b, body))
         line.sort(key=lambda e: e[0])

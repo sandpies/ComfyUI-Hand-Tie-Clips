@@ -67,11 +67,14 @@ def plan(hop_lens, overlap):
     return {"frames": total, "latents": f2l(total), "audio": a_index(total), "windows": wins}
 
 
-def digest(block, seed, steps, length, refs):
+def digest(block, seed, steps, length, refs, extra=None):
     """What makes a hop's window what it is: its text, seed, steps, length and the digests
-    of its reference pictures. A retake changes one of these."""
+    of its reference pictures, plus `extra` (what else its conditioning carries: voices,
+    RefMods). A retake changes one of these. An empty `extra` keeps the old digest."""
     payload = {"block": str(block), "seed": int(seed), "steps": int(steps),
                "len": int(length), "refs": dict(sorted((refs or {}).items()))}
+    if extra:
+        payload["extra"] = extra
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()[:24]
 
 

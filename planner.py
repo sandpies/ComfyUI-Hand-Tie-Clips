@@ -228,7 +228,9 @@ SPEECH_MAX_SHARE = 0.85
 # and "together" read as both people saying it: an ending of 'Deal' beside
 # "both" moved both mouths on 2/2 seeds, and the rewrite that gave the other
 # person a closed-mouth action rendered clean on the same two.
-_TOGETHER = re.compile(r"\b(both|together)\b", re.I)
+# "both hands", "both sides": a body or a place, not two speakers.
+_TOGETHER = re.compile(r"\b(both|together)\b(?!\s+(?:hands|arms|feet|legs|eyes|ears|knees|"
+                       r"shoulders|palms|sides|ways|ends)\b)", re.I)
 # ...unless the line IS said by all of them: "say together, at the same time" or
 # "in unison" (or the official compound speaker ID, (S1,S2)) gives one line in
 # several voices, which is what a chant or a shared answer wants.
@@ -236,17 +238,24 @@ _ON_PURPOSE = re.compile(r"\bat the same time\b|\bin unison\b|\(S\d+(?:\s*,\s*S\
 # A busy mouth says no words: a line said while eating, drinking or kissing, or
 # under water, comes out mangled or the mouth stops doing the other thing.
 _BUSY_MOUTH = re.compile(
-    r"\b(?:while|as)\s+(?:\w+\s+){0,2}?(?:eat\w*|chew\w*|drink\w*|sip\w*|swallow\w*|kiss\w*)\b"
+    r"\b(?:while|as)\s+(?:\S+\s+){0,3}?(?:eat(?:s|ing)?|chew(?:s|ing)?|drink(?:s|ing)|"
+    r"sip(?:s|ping)|swallow(?:s|ing)?|kiss(?:es|ing))\b"
     r"|\bmouth(?:ful|\s+full)\b|\bunder\s?water\b", re.I)
 # Only words go inside a line: the voice reads a written sound out as a word.
+# A sound word counts only as a stage direction: *sighs*, (laughs), [gasps], or standing
+# alone between stops ("Sigh. Fine."). Inside a sentence it is a word the person means
+# ("don't make me laugh", "the gasps of the crowd", "let out a sigh").
+_SOUND_WORD = r"(?:sigh|laugh|giggle|chuckle|moan|groan|gasp|sob|gulp|slurp)(?:s|es|ing)?"
 _SPELLED_SOUND = re.compile(
-    r"\*[^*]+\*|\b(?:ha(?:ha)+|he(?:he)+|sighs?|laughs?|giggles?|chuckles?|moans?|groans?|"
-    r"gasps?|sobs?|gulps?|slurps?)\b", re.I)
+    r"\*[^*]+\*|\[[^\]]*\b" + _SOUND_WORD + r"\b[^\]]*\]|\([^)]*\b" + _SOUND_WORD + r"\b[^)]*\)"
+    r"|\b(?:ha(?:ha)+|he(?:he)+)\b"
+    r"|(?:^|(?<=[.!?,;:\u2026\u2014]))\s*(" + _SOUND_WORD + r")\s*(?=[.!?,;:\u2026\u2014]|$)",
+    re.I)
 
 
 def spelled_sounds(line):
     """Sounds written inside a spoken line (a laugh, a sigh, *gasps*): the voice says them."""
-    return [m.group(0) for m in _SPELLED_SOUND.finditer(str(line or ""))]
+    return [(m.group(1) or m.group(0)).strip() for m in _SPELLED_SOUND.finditer(str(line or ""))]
 
 
 def dialogue_warnings(beat, secs):
@@ -297,7 +306,11 @@ def dialogue_warnings(beat, secs):
                 "water). Put the line before or after, or make the sound a hum with "
                 "closed lips.")
         hit = _TOGETHER.search(near)
-        if not together and hit and not _ON_PURPOSE.search(near):
+        # on purpose only where it is said: the speaking sentence, or the one holding the word
+        _hs = s + hit.start() if hit else 0
+        _hk = next((x for x in sentences if x[0] <= _hs < x[1]), (s, e))
+        if not together and hit and not (_ON_PURPOSE.search(masked[s:e])
+                                         or _ON_PURPOSE.search(masked[_hk[0]:_hk[1]])):
             together = True
             out.append(
                 f"'{hit.group(1)}' sits beside a spoken line, and both people "
