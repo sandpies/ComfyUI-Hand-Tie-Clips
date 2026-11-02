@@ -20,6 +20,13 @@ pack — the published package excludes them.
 
 - **Upsampler: small faces keep their person** (issue #3 on the standalone upsampler). A face far from the camera is only a few latent points wide, so the re-draw drew its own (heavier brows, eyeliner, darker eyes). Every face under about 220 px tall in the output is now found in the source (YuNet via OpenCV, downloaded once into `models/facedetection`), followed across frames, cut out and enlarged to close-up size, re-drawn with the same LoRA, sigmas, seed and soundtrack (in one piece when it fits), and blended back with a soft oval; it fades to the main re-draw between 220 and 280 px, and faces from 280 px up keep the main re-draw untouched (a close-up of a medium-shot face only softened it). Up to four faces per clip. In `H3 Video Upsampler`, the file-to-file node and `HandTieClips`' Regen2K upsample alike; no new widget. Without OpenCV the pass is skipped and logged. A face that stays in shot for a whole long clip is re-drawn and pasted in 8-bit, slice by slice: on a 2-minute clip it had run out of memory with 28 GB copies.
 
+### Writing (WRITE and STANDARD)
+- **Lines said together.** A line everyone says at once is written as such ("say together, at the same time", or the compound speaker ID in a standard prompt) and is no longer flagged; a stray "both" or "together" beside a line still is.
+- **Only words inside a line.** A laugh, sigh or gasp written inside a spoken line is said aloud as a word, so the writers put it outside the line, and a new note flags it. Shouted words keep their capitals.
+- **A busy mouth says no words.** No line while eating, drinking, kissing or under water; a new note flags it.
+- **Camera arcs name the side they pass,** and close shots of one moving part say what stays still.
+- **STANDARD intimate scenes:** the single-shot writer's NSFW guide gains staging (what stays anchored, camera moves, first-person framing) and voices (sounds outside lines, partners heard together).
+
 ### Other
 - **`hand_tie`: every hop keeps its own rendered sound.** Hops with no line used to have anything louder than their quietest stretch swapped for a muffled noise bed, so a film switched between real sound on the talking hops and a low hum on the quiet ones, and footsteps, chimes and other sounds the beat named were cut too. That replacement is gone. If H3 invents talk on a quiet hop, give the hop something to do and a sound to make (PROMPTING.md, "Silence renders as speech").
 - **`HandTieClips`: `upsample_tile_tokens` defaults to 0 (auto)**, as the standalone nodes do: it starts from what this GPU managed last time and learns run by run. Saved graphs keep the number they have.

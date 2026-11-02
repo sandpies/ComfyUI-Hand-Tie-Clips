@@ -171,6 +171,10 @@ One move per shot: **type + amount + speed + what stays in frame + where it stop
 - **Ration the push in:** one per scene, stopped at a framing, or it ends staring into the lens.
   Reach for arcs, tracks, rises, drops and holds.
 - **Half a turn at most** around a person, stopping on the face; past their back they warp.
+- An arc names the side it passes on the way ("round her left side"); a move given only a start
+  and an end view can be drawn as a cut.
+- In a close shot of one moving part (hands on a deck, a prop), say what stays still and where,
+  and that only that part moves, or the body and the frame slide with it.
 - Proven: holds, arcs, backs away ahead, rises, starts low tilted up, push in, draws back, tracks
   backward ahead, handheld, cuts, tilt up, a fast zoom to a close, drone high wide, a mounted low
   camera, a helmet POV, a drone alongside. Truck, pedestal and roll are unproven: try one at low

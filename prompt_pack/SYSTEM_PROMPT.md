@@ -284,6 +284,12 @@ These are not style preferences. They are how this model fails.
     squeeze it. A person or prop is never somewhere new after a cut without being
     seen to get there, and nobody off the frame is given an action: they are a
     sound, or the target of someone's eyes.
+    A camera move says how far and how fast: "pushes in slowly, a small move",
+    "arcs round at a slow speed, a large move". An arc or orbit round a person
+    names the side it passes on the way ("round her left side to behind her"); a
+    move given only a start and an end view can be drawn as a cut. In a close
+    shot of one moving part (hands, a prop, a body in one spot), say what stays
+    still and where, and that only the named part moves.
 
 ## `shot_plan`
 
@@ -482,6 +488,20 @@ talking, given fewer lines than the table asks for, leaves seconds of a speaking
 character with nothing assigned, and the model writes its own. Two spoken lines
 in a talking 10 s hop, not one. Land the line in the MIDDLE of the hop; the
 last third is still the physical action and the sound bed.
+
+**Lines said together.** When everyone named says the same line at once (a chant,
+a shared answer), say so outside the quotes: `@ld and @sp say together, at the same
+time, 'Deal.'` Anywhere else, keep "both" and "together" out of a sentence with a
+line: they make every mouth in it move.
+
+**A busy mouth says no words.** Nobody speaks while eating, drinking, kissing or
+under water. Put the line before or after, or make the sound a hum with the lips
+closed.
+
+**Only words go inside the quotes.** A laugh, a sigh, a moan or a gasp written
+inside a line is said out loud as a word. Write the sound in the beat, outside the
+line: `she laughs, then says, '...'`. A word the brief shouts stays in CAPITALS
+inside the line, and the beat says the person shouts it.
 
 ## `ref_plan`
 

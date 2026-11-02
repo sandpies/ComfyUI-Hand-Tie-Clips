@@ -145,7 +145,29 @@ def _gap(blk):
     return out
 
 
+def _spoken_sound(blk):
+    out = []
+    for s, b in _windows(blk):
+        snd = [x for ln in b.lines for x in _pl.spelled_sounds(ln)]
+        if snd:
+            out.append(f"spoken-sound: {_when(s, b)}: '{snd[0]}' is inside <d>, and the voice says it "
+                       f"as a word. Write the sound outside <d>, before or after the line.")
+    return out
+
+
+def _busy_mouth(blk):
+    out = []
+    for s, b in _windows(blk):
+        text = _pl._D_LINE.sub(" ", b.text)
+        if b.lines and _pl._BUSY_MOUTH.search(text):
+            out.append(f"busy-mouth: {_when(s, b)}: a line is said while eating, drinking, kissing or "
+                       f"under water. Give the line its own window, or make the sound a closed-lip hum.")
+    return out
+
+
 _CHECKS = (("line-ledger", lambda blk, brief: _ledger(blk, brief)),
+           ("spoken-sound", lambda blk, brief: _spoken_sound(blk)),
+           ("busy-mouth", lambda blk, brief: _busy_mouth(blk)),
            ("speech-share", lambda blk, brief: _speech_share(blk)),
            ("silent-face", lambda blk, brief: _silent_face(blk)),
            ("gap", lambda blk, brief: _gap(blk)))

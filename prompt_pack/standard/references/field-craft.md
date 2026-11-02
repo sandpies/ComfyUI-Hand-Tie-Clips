@@ -65,6 +65,12 @@ A picture is not its own shot, its own equal time slice, or an automatic endpoin
 
 Cite a label inside the sentence where it acts. Do not append a detached label list.
 
+An arc or orbit round a subject names the side it passes on the way ("arcs round
+her left side to behind her"). A move given only its start and end view can be
+drawn as a cut. In a close range on one moving part (hands, a prop, hips), say
+what stays still and where, and that only the named part moves; otherwise the
+whole body and the frame slide with it.
+
 ## 4. Continuity
 
 Across a cut, carry screen direction, eyelines, possession, contact, momentum, cloth, light, and ongoing audio. State an intentional break.
@@ -98,6 +104,7 @@ Fix before showing if:
 - an endpoint or a reversed anchor has no path
 - pictures are cut one-per-image or sliced into equal time blocks
 - a detached label list is appended
+- an arc or orbit names no side it passes
 - a line, a loud score, dense effects, and a heavy action share one range
 - creature noise, or a silent subject, gets `(Sx)` or `<d>`
 - `performance.md` is on and a post-speech beat shares the speaking shot

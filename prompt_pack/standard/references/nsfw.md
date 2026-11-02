@@ -38,11 +38,34 @@ End a shot on a moving beat (hand still on the breast, skirt still raking, penis
 
 No idle reset at a cut. No “then they begin” if the prior shot already had the motion.
 
-## 5. Header
+## 5. Staging the act
+
+Everyone in a sexual scene is an adult; describe them as adults.
+
+Name what is anchored and what moves: whose body stays in one spot (on the bed,
+against the wall, hips on the edge) and which part alone moves, in which axis and
+rhythm. A beat that only says the motion lets both bodies and the frame drift.
+
+A camera move over the act keeps one move per range: open on a framing, then
+move with type, amplitude and speed (`base-en.md`). An arc round the bodies
+names the side it passes ("round her side to behind her").
+
+First-person POV says what the viewer's own body shows at the frame edges (hands
+at the lower corners, legs either side), names who is in frame ("only <Subject
+2> is in frame"), and never describes the viewer's own face or mouth.
+
+## 6. Voices
+
+Moans, breaths and gasps are sounds, not words: write them outside `<d>`, in the
+action or in `overall_soundscape`, never spelled inside `<d>`. Both partners
+heard at once take the compound ID: `(S1,S2) moan at the same time, overlapping
+voices`. Lines alternate between partners, each with its own ID.
+
+## 7. Header
 
 Append `· nsfw`.
 
-## 6. Self-check
+## 8. Self-check
 
 Fix before showing if:
 
@@ -51,3 +74,6 @@ Fix before showing if:
 - thrusting / penetration has no in-out axis
 - a cut starts a new action instead of picking up the same contact or garment (skip this item when `multishot.md` is on — chain pickup is that file)
 - an undress beat is skipped so sex starts with clothes that should already be out of the way
+- a beat moves bodies with nothing named as anchored
+- a moan or gasp is spelled inside `<d>`
+- a POV shot describes the viewer's own face or mouth

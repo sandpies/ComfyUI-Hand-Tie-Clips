@@ -78,6 +78,19 @@ the gap to the next timestamp. VO laid in post can span shots.
 
 Chain quoted speech and the +4 s quiet budget stay in `multishot.md`.
 
+Inside `<d>` only words. A laugh, sigh, moan or gasp written there is said aloud
+as a word; write it outside `<d>` as an action or a sound, before or after the
+line. A word the user shouts keeps its capitals inside `<d>`, and the delivery
+clause says the person shouts it.
+
+A busy mouth says no words: no line while eating, drinking, kissing or under
+water. Give the line its own range before or after, or make the sound a
+closed-lip hum outside `<d>`.
+
+A line everyone says at once takes the compound ID (`base-en.md`) and says so
+outside `<d>`: `(S1,S2) say together, at the same time`. Anywhere else keep
+"both" and "together" away from a line; they move every mouth near it.
+
 ## 5. Scale and props
 
 Fractions and unit distances are ignored (`two thirds as tall` → ~45–52%;
@@ -117,6 +130,8 @@ Fix before showing if:
   look at the lens
 - a pause is written as “nothing changes” / freeze this face
 - a swallow or “finishes speaking” sits in the same shot as the line
+- a laugh, sigh or other sound is spelled inside `<d>`
+- a line is said while eating, drinking, kissing or under water
 - a fraction or unit distance is doing the work of a crop / in-frame ruler
 - a clip with a line also carries background-critical continuity with no
   second take

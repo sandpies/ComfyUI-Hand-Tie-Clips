@@ -322,8 +322,15 @@ Three rules, all consequences of [law 1](#1-the-prompt-is-additive):
 - **Give the listener a closed-mouth action in the same sentence.** A person with
   nothing to do while the other speaks is animated from whatever is nearby, and
   the nearest thing is usually the line.
-- **Never put `both` or `together` next to a line.** It makes the line theirs
-  jointly, and H3 renders joint speech.
+- **Never put `both` or `together` next to a line,** unless they all say it. It
+  makes the line theirs jointly, and H3 renders joint speech. When that is what
+  you want (a chant, a shared answer), say so: `@ld and @sp say together, at the
+  same time, 'Deal.'`
+- **Only words go inside the quotes.** A laugh, sigh, moan or gasp written inside
+  a line is said out loud as a word: `she laughs, then says, '...'`. A shouted word
+  stays in CAPITALS inside the line, and the beat says they shout it.
+- **A busy mouth says no words.** Nobody speaks while eating, drinking, kissing
+  or under water; put the line before or after.
 - **A very short line needs this most.** A one-word line is half a second of
   audio, the weakest hold on a speaker in the whole exchange.
 

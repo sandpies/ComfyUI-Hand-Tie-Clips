@@ -228,7 +228,25 @@ SPEECH_MAX_SHARE = 0.85
 # and "together" read as both people saying it: an ending of 'Deal' beside
 # "both" moved both mouths on 2/2 seeds, and the rewrite that gave the other
 # person a closed-mouth action rendered clean on the same two.
-_TOGETHER = re.compile(r"\b(both|together|in unison)\b", re.I)
+_TOGETHER = re.compile(r"\b(both|together)\b", re.I)
+# ...unless the line IS said by all of them: "say together, at the same time" or
+# "in unison" (or the official compound speaker ID, (S1,S2)) gives one line in
+# several voices, which is what a chant or a shared answer wants.
+_ON_PURPOSE = re.compile(r"\bat the same time\b|\bin unison\b|\(S\d+(?:\s*,\s*S\d+)+\)", re.I)
+# A busy mouth says no words: a line said while eating, drinking or kissing, or
+# under water, comes out mangled or the mouth stops doing the other thing.
+_BUSY_MOUTH = re.compile(
+    r"\b(?:while|as)\s+(?:\w+\s+){0,2}?(?:eat\w*|chew\w*|drink\w*|sip\w*|swallow\w*|kiss\w*)\b"
+    r"|\bmouth(?:ful|\s+full)\b|\bunder\s?water\b", re.I)
+# Only words go inside a line: the voice reads a written sound out as a word.
+_SPELLED_SOUND = re.compile(
+    r"\*[^*]+\*|\b(?:ha(?:ha)+|he(?:he)+|sighs?|laughs?|giggles?|chuckles?|moans?|groans?|"
+    r"gasps?|sobs?|gulps?|slurps?)\b", re.I)
+
+
+def spelled_sounds(line):
+    """Sounds written inside a spoken line (a laugh, a sigh, *gasps*): the voice says them."""
+    return [m.group(0) for m in _SPELLED_SOUND.finditer(str(line or ""))]
 
 
 def dialogue_warnings(beat, secs):
@@ -251,6 +269,13 @@ def dialogue_warnings(beat, secs):
             f"whatever comes after the last line is cut short or talked over. "
             f"Keep the lines under about {secs * SPEECH_MAX_SHARE:.0f}s "
             f"({int(secs * SPEECH_MAX_SHARE * SPEECH_WPS)} words).")
+    for _a, _b, w in spans:
+        snd = spelled_sounds(w)
+        if snd:
+            out.append(
+                f"'{snd[0]}' is written inside a spoken line, and the voice says it as a "
+                f"word. Write the sound outside the line (she laughs, then says, '...').")
+            break
     # Sentences of the narration alone, so a "both" inside a line is left
     # alone and a full stop inside one does not split the sentence.
     masked = list(text)
@@ -260,17 +285,25 @@ def dialogue_warnings(beat, secs):
     cuts = [0] + [m.end() for m in re.finditer(r"[.!?]+(\s|$)", masked)]
     sentences = [(cuts[k], cuts[k + 1] if k + 1 < len(cuts) else len(masked))
                  for k in range(len(cuts))]
+    busy = together = False
     for k, (s, e) in enumerate(sentences):
         if not any(s <= a < e for a, _b, _w in spans):
             continue
         near = masked[s:sentences[k + 1][1] if k + 1 < len(sentences) else e]
+        if not busy and _BUSY_MOUTH.search(masked[s:e]):
+            busy = True
+            out.append(
+                "a line is said with a busy mouth (eating, drinking, kissing or under "
+                "water). Put the line before or after, or make the sound a hum with "
+                "closed lips.")
         hit = _TOGETHER.search(near)
-        if hit:
+        if not together and hit and not _ON_PURPOSE.search(near):
+            together = True
             out.append(
                 f"'{hit.group(1)}' sits beside a spoken line, and both people "
                 f"mouth it. Give the one who is not speaking an action with "
-                f"closed lips in that sentence instead.")
-            break
+                f"closed lips in that sentence, or, if all of them say it, write "
+                f"'say together, at the same time'.")
     return out
 
 
