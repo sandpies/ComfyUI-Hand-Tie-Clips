@@ -3,7 +3,7 @@
 User-facing. The files named here are in the repository, not in the installed
 pack — the published package excludes them.
 
-## Unreleased
+## 3.4.0 — 2026-11-02
 
 ### New: one continuous take (`pin_mech: sand_tie`)
 
