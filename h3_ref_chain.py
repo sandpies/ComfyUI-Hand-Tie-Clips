@@ -5721,7 +5721,7 @@ class HandTieClips:
                     "default": 0, "min": 0, "max": 1048576, "step": 1024,
                     "tooltip": ("How much of the upsample goes to the GPU at once. 0 = automatic "
                                 "(recommended): it learns what your card can take. A number fixes "
-                                "it; lower uses less VRAM and is slower. Changing it never re- "
+                                "it; lower uses less VRAM and is slower. Changing it never re-"
                                 "renders hops."),
                 }),
                 # APPENDED 2026-10-04, LAST. A socket, so it takes no widget slot.
@@ -5764,7 +5764,7 @@ class HandTieClips:
                     "default": "",
                     "multiline": True,
                     "tooltip": ("Written by the SWAP tab; leave it alone. When set, the node "
-                                "renders one hop from it and ignores SCRIPT. A stale or hand- "
+                                "renders one hop from it and ignores SCRIPT. A stale or hand-"
                                 "edited swap is refused at queue time."),
                 }),
                 # APPENDED 2026-10-14, LAST. Which rail plates a swap's hop rides.
@@ -5826,7 +5826,7 @@ class HandTieClips:
                 # APPENDED 2026-10-28, LAST widgets. Open-H3-Regenerate-2K LoRA selector + seed + cond.
                 "upsample_redraw": (_regen2k_lora_choices(), {
                     "default": REGEN2K_DEFAULT_LORA,
-                    "tooltip": ("The Regen2K LoRA (models/loras) for the upsample's light re- "
+                    "tooltip": ("The Regen2K LoRA (models/loras) for the upsample's light re-"
                                 "draw. Default: open_h3_regenerate_2k_r256pp_bf16.safetensors."),
                 }),
                 "regen2k_model": ("MODEL", {
@@ -7316,6 +7316,14 @@ class HandTieClips:
                           f"context windows (Comfy-Org/ComfyUI#17425; here: {_pw_why}); a take "
                           "past ~5 hops is split into chained previs sections instead", flush=True)
                     _pv_win = False
+            if _pv_win and any(str((s or {}).get("anchor") or "") == "extend"
+                               for s in _pshots[1:]):
+                # `+ extend` opens its own previs section continuing the cached hop before
+                # it, so only the new hop renders (PROMPTING, TIMELINE). One previs per take
+                # would fold it into the take and re-render every hop of it.
+                print(f"[{TAG}] hand-tie: the plan uses anchor=extend, so its previs stays in "
+                      "chained sections (only the extended hops render)", flush=True)
+                _pv_win = False
             if _pv_win:
                 # hops too long for two in one window (22 s+): today's chained sections
                 for _tk in _htw.takes(_pshots):
@@ -7893,6 +7901,7 @@ class HandTieClips:
             mm.throw_exception_if_processing_interrupted()
             _dlg_hop = None
             _dlg_open = []      # hand_tie: hop-clock windows the lock leaves to the previs
+            _ht_tail_hold, _ht_tail_prior = 0, None   # per hop: never a previous hop's mask
             shot = shots[i] or {}
             hop_length = lengths[i]
             # ht_seam_fix v2 (tail discard): a hop with a next hop renders
@@ -9404,10 +9413,10 @@ class HandTieClips:
                         noise=noise, guider=guider, sampler=sampler,
                         sigmas=hop_sigmas, latent_image=latent))[0]
 
-                if ht and locals().get("_ht_tail_hold", 0) > 0:
+                if ht and _ht_tail_hold > 0:
                     # The tail hold's mask must not ride into decode, refine or the cache.
                     sampled = dict(sampled)
-                    if locals().get("_ht_tail_prior") is None:
+                    if _ht_tail_prior is None:
                         sampled.pop("noise_mask", None)
                     else:
                         sampled["noise_mask"] = _ht_tail_prior

@@ -30,8 +30,10 @@ pack — the published package excludes them.
 - **STANDARD intimate scenes:** the single-shot writer's NSFW guide gains staging (what stays anchored, camera moves, first-person framing) and voices (sounds outside lines, partners heard together).
 
 ### Other
-- **hand_tie (experimental): a long take's previs is one video,** sampled in overlapping windows instead of chained pieces, which snapped at the join between pieces. Needs the same ComfyUI update as `sand_tie`; an older ComfyUI, or hops of 22 s or more, keep the chained previs. For long continuous takes, `sand_tie` is the steadier mode.
+- **hand_tie (experimental): a long take's previs is one video,** sampled in overlapping windows instead of chained pieces, which snapped at the join between pieces. Needs the same ComfyUI update as `sand_tie`; an older ComfyUI, hops of 22 s or more, or a plan that uses `+ extend` (so only the new hop renders) keep the chained previs. For long continuous takes, `sand_tie` is the steadier mode.
 - **`hand_tie`: every hop keeps its own rendered sound.** Hops with no line used to have anything louder than their quietest stretch swapped for a muffled noise bed, so a film switched between real sound on the talking hops and a low hum on the quiet ones, and footsteps, chimes and other sounds the beat named were cut too. That replacement is gone. If H3 invents talk on a quiet hop, give the hop something to do and a sound to make (PROMPTING.md, "Silence renders as speech").
+- **`prompt_prefix` before a full H3 prompt** now goes on its own line, so `subject_definitions:` still starts a line (it used to be glued onto the end of the prefix).
+- **Tooltips** rewritten as short instructions, and every input now has one.
 - **`HandTieClips`: `upsample_tile_tokens` defaults to 0 (auto)**, as the standalone nodes do: it starts from what this GPU managed last time and learns run by run. Saved graphs keep the number they have.
 
 ## 3.3.0 — 2026-10-31

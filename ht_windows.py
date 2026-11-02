@@ -39,9 +39,10 @@ a chained section), not on a beat it would restart.
 Only `anchor=restart` splits a take (a cut). `extend` and the PREVIS_MAX split go away.
 A take that fits PREVIS_MAX gets one window: the caller renders it as today.
 
-Not here yet (integration, after core is updated): encoding one conditioning per window,
-the per-window sound pins (window_speaks / song_windows), and the hops reading their
-windows out of the one previs.
+The node does the rest (h3_ref_chain, _ht_previs): one text encode per window, the sound
+pins (hand_tie.window_speaks / song_windows) over the whole previs, and the hops reading
+their join windows out of the one previs. `install` is also how a sand_tie take runs its
+blended finish over all its windows (wtake.py's plan has the same keys).
 """
 
 import re

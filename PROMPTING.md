@@ -961,7 +961,9 @@ alone let each window invent its own street.
 something to do.
 
 **Retakes:** change one hop's beat or seed and re-queue; only that hop's window is drawn again,
-held to its neighbours on both sides. Everything else in the take is reused.
+held to its neighbours on both sides. Everything else in the take is reused. A change to
+anything else about the take (size, model, LoRAs, song, `tone_lock`, a hop's length) renders
+it fresh instead.
 
 **`tone_lock`** pulls each window back toward the take's opening colour and brightness, so a
 long take does not slowly turn brighter and paler (and then snap back at a sentence boundary).

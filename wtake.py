@@ -1,14 +1,16 @@
 """Windowed take (pin_mech=sand_tie): a take is ONE H3 latent, its hops are context windows.
 
-No hop is pinned on another hop's output, so nothing is handed down a chain: every window
-is denoised together with its neighbours at every step (ComfyUI's H3 context windows,
-Comfy-Org/ComfyUI#17425) and they agree over the overlap. Picture and sound are both in
-the one latent. Hop k's window is exactly the hop's own frames, so the per-step work is
-the same as a motion_context chain; a take splits only at anchor=restart.
+The windows are drawn in order for most of the steps, each held on the previous window's
+overlap, then the last steps run over the whole take at once (ComfyUI's H3 context
+windows, Comfy-Org/ComfyUI#17425), so neighbouring windows agree over the overlap. Picture
+and sound are both in the one latent. Hop k's window is exactly the hop's own frames, so
+the per-step work is the same as a motion_context chain; a take splits only at
+anchor=restart.
 
-A retake re-draws only the hops whose text/seed/refs changed: their windows are cut out of
-the stored take latent with the neighbouring overlaps held (noise_mask 0), sampled, and put
-back. Pure geometry here; the sampling lives in h3_ref_chain.
+A retake re-draws only the hops whose text/seed/refs changed (and only when nothing else
+about the take did): their windows are cut out of the stored take latent with the
+neighbouring overlaps held (noise_mask 0), sampled, and put back. Pure geometry here; the
+sampling lives in h3_ref_chain.
 """
 import hashlib
 import json
