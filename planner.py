@@ -906,6 +906,41 @@ def hand_tie_rules(duration=None):
     ])
 
 
+def windowed_rules():
+    """The writing rules a windowed take needs (pin_mech=windowed), as one user-turn
+    block. Same law as PROMPTING.md, 'One continuous take': the joins between windows
+    hold, so what breaks a take is the writing. Each rule cost a long render to learn."""
+    return "\n".join([
+        "This chain renders as ONE CONTINUOUS TAKE: its hops are overlapping windows "
+        "of a single video, not clips cut together. A take ends only at a shot with "
+        "`anchor: restart`, which is the only real cut; every other hop has `join: "
+        "continuous`. Write it as one shot:",
+        "1. Every hop of a take opens with the SAME sentence, word for word: the "
+        "framing, the camera's movement and who is in shot. Nothing else: no place "
+        "if the place changes during the take, no time of day if the light changes. "
+        "Only the take's first opening is used.",
+        "2. After it, write the action on a timeline of `At mm:ss-mm:ss,` "
+        "sentences. Each hop's times are its own (0 to the hop's length).",
+        "3. Every timed sentence boundary is a place the picture can jump. Use as "
+        "few as the story needs: a handful across a minute holds better than one "
+        "per hop.",
+        "4. Name a place in the same words in every sentence set there, time of day "
+        "included. Never add a new background detail in one sentence, and never put "
+        "an arc in one sentence (\"first walks, then stops, then sways\"): a "
+        "sentence is given whole to every window it spans, so each one replays it.",
+        "5. A camera that backs away ahead of someone reaches a new place before "
+        "they do. Write a change of place as a crossing of 5-6 seconds seen from the "
+        "camera: the new place opens up around and beside them while the old one "
+        "stays behind them. A quick \"walks into\" renders as a cut.",
+        "6. Stairs and slopes say which way they rise relative to the camera (\"a "
+        "staircase that rises toward the camera, the camera above them looking down "
+        "the steps\"), or a person facing the camera climbs backwards.",
+        "7. A long walk through one place needs that place's plate on every hop of "
+        "the take, named in the opening sentence (\"walks toward the camera through "
+        "@street\"). Words alone let each window invent its own place.",
+    ])
+
+
 # A music video renders over the song (`master_audio_file`), frozen in the joint
 # AV latent, so the take drives every mouth. Learned on DDP, Nodes MV and
 # Headliner (2026-10-03..07): a quoted line pulls the mouth off the take; crew
@@ -1047,6 +1082,8 @@ def build_user_turn(brief, hops, files, pinned=None, duration=None, pin_mech="",
                 "silent.")
     if pin_mech == "hand_tie":
         lines += ["", hand_tie_rules(duration)]
+    if pin_mech == "windowed":
+        lines += ["", windowed_rules()]
     if mv:
         lines += ["", MV_RULES]
     lines += ["", INTENT_INFERENCE_GUIDE]
@@ -1727,6 +1764,10 @@ async def write_propose(brief, *, complete_fn, hops=3, files=None, pinned=None,
                 "that continue each other without a cut. Say where each "
                 "section starts.")
             lines += ["", hand_tie_rules(duration)]
+    if pin_mech == "windowed":
+        lines += ["", "This chain will render as one continuous take per section "
+                  "(a section ends only at a restart). Say where each take starts "
+                  "and where the place changes inside a take.", windowed_rules()]
     if pinned:
         lines += ["",
                   "These pictures are on the rail. Read each one and say what "
@@ -1882,6 +1923,7 @@ async def write_edit(message, shot_text, ref_text, *, complete_fn, hops=None,
           '  "note": "Brief summary of what changed."\n'
           '}'
         + ("\n\n" + hand_tie_rules(duration) if pin_mech == "hand_tie" else "")
+        + ("\n\n" + windowed_rules() if pin_mech == "windowed" else "")
         # An EDIT is how a `<d>` line gets into an MV: nobody writes the
         # dialogue, they ask for a shot to be changed and the rewrite puts a
         # quoted line in. The rules have to be in the edit's own turn, not only
@@ -3488,6 +3530,10 @@ async def write_ask(brief, *, complete_fn, thread=None, proposal=None,
                            "than by a single running generate.")
         except Exception:
             pass
+    if pin_mech == "windowed":
+        framing.append("The chain renders each take as one continuous video: its "
+                       "hops are overlapping windows of one generate, and a take "
+                       "ends only at a restart, the one real cut.")
     framing.append("Answer now, in prose. Do not produce a plan.")
     if mv:
         # The chat is where an MV gets talked about, and the first thing asked

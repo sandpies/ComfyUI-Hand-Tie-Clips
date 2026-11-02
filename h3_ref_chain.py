@@ -5355,10 +5355,11 @@ class HandTieClips:
                                 "another and texture does not compound (needs a shot plan, overlap 0.9 s). "
                                 "hand_tie_mc uses the previs window as a per-step Motion-Context guide with "
                                 "end-aligned audio carry. windowed renders each take (split only at "
-                                "anchor=restart) as ONE latent, its hops as overlapping context windows "
-                                "sampled together, so nothing is handed hop to hop; a changed hop is "
-                                "re-drawn alone between its kept neighbours (needs ComfyUI with MiniMax "
-                                "H3 context windows, overlap 0.9 s)."),
+                                "anchor=restart) as ONE latent, its hops as overlapping windows: each "
+                                "window is drawn continuing the one before it over the overlap, then "
+                                "the take is finished together, so a take plays as one shot with no "
+                                "cut; a changed hop is re-drawn alone between its kept neighbours "
+                                "(needs ComfyUI with MiniMax H3 context windows, overlap 0.9 s)."),
                 }),
                 # APPENDED, never inserted -- see the note above `pin_mech`.
                 "tone_anchor_ref": (["hop1", "still"], {
