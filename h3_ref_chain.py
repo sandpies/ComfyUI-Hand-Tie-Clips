@@ -3955,8 +3955,15 @@ def _wt_tone_stats(v):
 def _wt_tone_lock(dv, ov, ref, *, start, sigma):
     """Pull a window's clean estimate `dv` (frames from `start` on: the held overlap is already
     the previous window's, locked) to the take's tone `ref` = window 1's per-channel mean/std,
-    and move its running state `ov` (flow: x = (1 - sigma) x0 + sigma eps) by the same x0 shift.
-    Only the global level per channel moves; the frame-to-frame content is untouched."""
+    and move its running state `ov` toward it. Only the global level per channel moves; the
+    frame-to-frame content is untouched.
+
+    Known, kept on purpose (review 11-02): core hands `ov` back already divided by (1 - sigma)
+    (CONST.inverse_noise_scaling), so adding (1 - sigma) x shift here reaches the finish as
+    (1 - sigma)^2 x shift, a weaker pull on the blended finish than on the hand-off (`dv`, which
+    gets the full shift). Every GPU-measured tone render (walk_night_mv_00004 / 00005) ran this
+    way; the full shift on `ov` would change what each tone_lock setting looks like, so it waits
+    for a render to judge it."""
     if ref is None or int(dv.shape[2]) <= int(start):
         return dv, ov
     body = dv[:, :, start:].float()
