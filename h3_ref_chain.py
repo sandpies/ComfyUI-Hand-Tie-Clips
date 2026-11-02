@@ -5132,10 +5132,11 @@ class HandTieClips:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "model": ("MODEL",),
-                "clip": ("CLIP",),
-                "vae": ("VAE",),
-                "audio_vae": ("VAE",),
+                "model": ("MODEL", {
+                    "tooltip": "The MiniMax H3 model, with any LoRAs already applied."}),
+                "clip": ("CLIP", {"tooltip": "The H3 text encoder."}),
+                "vae": ("VAE", {"tooltip": "The H3 video VAE."}),
+                "audio_vae": ("VAE", {"tooltip": "The H3 audio VAE."}),
                 "prompt": ("STRING", {
                     "multiline": True,
                     "dynamicPrompts": False,
@@ -5175,19 +5176,34 @@ class HandTieClips:
                 "seed": ("INT", {
                     "default": 0, "min": 0, "max": 0xffffffffffffffff,
                     "control_after_generate": True,
+                    "tooltip": ("Noise seed. With seed_per_shot on, hop N uses seed + N - 1. A "
+                                "shot can set its own seed on the SCRIPT tab.")
                 }),
                 "seed_per_shot": ("BOOLEAN", {
                     "default": True,
                     "label_on": "vary per hop",
                     "label_off": "same seed every hop",
+                    "tooltip": ("on: each hop draws its own noise (seed + hop number - 1). off: "
+                                "every hop uses seed. A sand_tie take draws from its first hop's "
+                                "seed plus any seed a shot sets.")
                 }),
                 "steps": ("INT", {"default": 14, "min": 1, "max": 50, "tooltip":
                     ("Sampling steps per hop. A shot can set its own. 8 for a turbo LoRA; more "
                      "steps mostly improve generated speech.")}),
-                "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "res_multistep"}),
-                "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "beta"}),
-                "shift_video": ("FLOAT", {"default": 12.0, "min": 0.01, "max": 100.0, "step": 0.01}),
-                "shift_audio": ("FLOAT", {"default": 3.0, "min": 0.01, "max": 100.0, "step": 0.01}),
+                "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "res_multistep",
+                    "tooltip": "Sampler used for every hop."
+                }),
+                "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "beta",
+                    "tooltip": "Scheduler used for every hop."
+                }),
+                "shift_video": ("FLOAT", {"default": 12.0, "min": 0.01, "max": 100.0, "step": 0.01,
+                    "tooltip": ("Schedule shift for the picture (12 is usual). Higher spends more "
+                                "of the steps on large shapes and motion, lower on fine detail.")
+                }),
+                "shift_audio": ("FLOAT", {"default": 3.0, "min": 0.01, "max": 100.0, "step": 0.01,
+                    "tooltip": ("Schedule shift for the sound (3 is usual). Same idea as "
+                                "shift_video.")
+                }),
                 "ref_image_size": (["match", "max"], {
                     "tooltip": ("How large reference pictures go in. match is faster; max keeps more face "
                                 "detail but is slower."),
@@ -5307,10 +5323,9 @@ class HandTieClips:
                 }),
                 "dry_run": (["off", "on", "previs"], {
                     "default": "off",
-                    "tooltip": ("Build every prompt without rendering, to check what each hop will send. "
-                                "Read them on the info output. previs (pin_mech=hand_tie): render only "
-                                "each section's previs and output it, to check it before the hops; it "
-                                "is cached, so the full run then skips it."),
+                    "tooltip": ("on: build every hop's prompt without rendering; read them on the "
+                                "info output. previs (hand_tie only): render just the previews to "
+                                "check them; the full run reuses them."),
                 }),
                 "contact_sheet": (["off", "on"], {
                     "default": "off",
@@ -5413,18 +5428,15 @@ class HandTieClips:
                 # safe; adding a widget is not.
                 "pin_mech": (["auto", "motion_context", "addguide", "hand_tie", "hand_tie_mc", "windowed", "sand_tie"], {
                     "default": "auto",
-                    "tooltip": ("How hops are joined. auto uses Motion-Context when available, AddGuide "
-                                "otherwise. Forcing one fails rather than falling back. hand_tie renders one "
-                                "previs per section and ties every hop to it at both ends, so no hop reads "
-                                "another and texture does not compound (needs a shot plan, overlap 0.9 s). "
-                                "hand_tie_mc uses the previs window as a per-step Motion-Context guide with "
-                                "end-aligned audio carry. sand_tie renders each take (split only at "
-                                "anchor=restart) as ONE latent, its hops as overlapping windows: each "
-                                "window is drawn continuing the one before it over the overlap, then "
-                                "the take is finished together, so a take plays as one shot with no "
-                                "cut; a changed hop is re-drawn alone between its kept neighbours "
-                                "(needs ComfyUI with MiniMax H3 context windows, overlap 0.9 s). windowed is "
-                                "the old name of sand_tie."),
+                    "tooltip": ("How hops are joined. auto (recommended): Motion-Context when "
+                                "installed, else AddGuide. motion_context / addguide: force one; "
+                                "it stops with an error rather than fall back. hand_tie "
+                                "(experimental): renders a small preview of each section and ties "
+                                "every hop to it, so drift does not build up; needs a shot plan. "
+                                "hand_tie_mc: hand_tie with the preview as a Motion-Context "
+                                "guide. sand_tie: each take (up to an anchor: restart) renders as "
+                                "one continuous video with no joins; needs a recent ComfyUI and "
+                                "overlap 0.9 s. windowed is the old name of sand_tie."),
                 }),
                 # APPENDED, never inserted -- see the note above `pin_mech`.
                 "tone_anchor_ref": (["hop1", "still"], {
@@ -5516,11 +5528,11 @@ class HandTieClips:
                 # it is on, so a workflow saved before today keys byte-identical.
                 "hop_refine": (["off", "full", "pin_only", "split"], {
                     "default": "off",
-                    "tooltip": ("A light second pass on each hop to restore texture. full ships the refined "
-                                "result; pin_only uses it only for the next hop's join; off skips it. "
-                                "split is no second pass: the hop's last refine_steps steps are finished "
-                                "in finer steps with no new noise, on refine_model / refine_sampler, and "
-                                "that one latent is both shown and handed on. Not with realism_boost."),
+                    "tooltip": ("A light second pass per hop that restores texture. full: the "
+                                "refined hop is shown and continued from. pin_only: used only for "
+                                "the next hop's join. split: no extra pass; the hop's last "
+                                "refine_steps are finished in finer steps (refine_model / "
+                                "refine_sampler). Not with realism_boost."),
                 }),
                 "refine_denoise": ("FLOAT", {
                     "default": 0.50, "min": 0.05, "max": 1.0, "step": 0.05,
@@ -5597,8 +5609,9 @@ class HandTieClips:
                 # renumbered refine_cond onward in every saved workflow.
                 "refine_align": (["hop_tail", "denoise"], {
                     "default": "denoise",
-                    "tooltip": ("Where the second pass lands on the schedule. hop_tail suits turbo models; "
-                                "denoise is the original behaviour."),
+                    "tooltip": ("Where the second pass starts. hop_tail re-runs the hop's own "
+                                "last steps and suits turbo models; denoise starts from "
+                                "refine_denoise on a schedule of its own."),
                 }),
                 # APPENDED 2026-09-23, LAST, same positional reason.
                 "realism_boost": (["off", "on"], {
@@ -5614,6 +5627,7 @@ class HandTieClips:
                 "boost_lora_1_strength": ("FLOAT", {
                     "default": BOOST_LORA_DEFAULTS[0][1],
                     "min": -4.0, "max": 4.0, "step": 0.05,
+                    "tooltip": "Strength of boost LoRA 1. The recipe uses 0.5."
                 }),
                 "boost_lora_2": (_boost_lora_choices(), {
                     "default": _boost_lora_default(1, _boost_lora_choices()),
@@ -5623,6 +5637,7 @@ class HandTieClips:
                 "boost_lora_2_strength": ("FLOAT", {
                     "default": BOOST_LORA_DEFAULTS[1][1],
                     "min": -4.0, "max": 4.0, "step": 0.05,
+                    "tooltip": "Strength of boost LoRA 2. The recipe uses 1.0."
                 }),
                 # APPENDED 2026-09-28, LAST, same positional reason.
                 "boost_lora_3": (_boost_lora_choices(), {
@@ -5633,14 +5648,15 @@ class HandTieClips:
                 "boost_lora_3_strength": ("FLOAT", {
                     "default": BOOST_LORA_DEFAULTS[2][1],
                     "min": -4.0, "max": 4.0, "step": 0.05,
+                    "tooltip": "Strength of boost LoRA 3."
                 }),
                 # APPENDED 2026-09-29, LAST, same positional reason.
                 "upsample": (["off", "on"], {
                     "default": "off",
-                    "tooltip": ("After the last hop, make the finished film bigger and sharper: the H3 "
-                                "latent upscaler, then one light re-draw, over the whole film at once. "
-                                "Changes only the delivered video, never what a hop continues from. "
-                                "Needs minimax_h3_latent_upscaler_3d_bf16.safetensors in "
+                    "tooltip": ("After the last hop, enlarge and sharpen the finished film (H3 "
+                                "latent upscaler, then one light re-draw). Only the delivered "
+                                "video changes. Needs "
+                                "minimax_h3_latent_upscaler_3d_bf16.safetensors in "
                                 "models/latent_upscale_models."),
                 }),
                 "upsample_megapixels": ("FLOAT", {
@@ -5658,9 +5674,9 @@ class HandTieClips:
                 # APPENDED 2026-09-30, LAST, same positional reason.
                 "prompt_prefix": ("STRING", {
                     "default": "", "multiline": False,
-                    "tooltip": ("Text put at the very start of every hop's prompt, before anything the "
-                                "chain adds. For LoRA trigger words, which work best first. Not "
-                                "tag-resolved: write it as the encoder should read it."),
+                    "tooltip": ("Text put at the very start of every hop's prompt. For LoRA "
+                                "trigger words, which work best first. @tags are not replaced "
+                                "here: write plain text."),
                 }),
                 "prompt_suffix": ("STRING", {
                     "default": "", "multiline": False,
@@ -5683,16 +5699,17 @@ class HandTieClips:
                 }),
                 "boost_lora_4_strength": ("FLOAT", {
                     "default": 1.0, "min": -4.0, "max": 4.0, "step": 0.05,
+                    "tooltip": "Strength of boost LoRA 4."
                 }),
                 # APPENDED 2026-10-04, LAST, same positional reason.
                 "upsample_lora": (_boost_lora_choices(), {
                     "default": "None",
-                    "tooltip": ("Retired (10-25): ignored. The upsample runs the original "
-                                "recipe with no LoRA; the h3upscale guide cost fine detail and "
-                                "drew tile grids. Kept only so saved graphs keep their slots."),
+                    "tooltip": ("Retired: ignored. Kept so saved graphs load with their values in "
+                                "place."),
                 }),
                 "upsample_lora_strength": ("FLOAT", {
                     "default": 1.0, "min": -4.0, "max": 4.0, "step": 0.05,
+                    "tooltip": "Retired with upsample_lora: ignored."
                 }),
                 # The last widget (upsample_dit below is a socket and takes no
                 # widgets_values slot). This slot held split_finish_aug
@@ -5702,27 +5719,23 @@ class HandTieClips:
                 # INT -- and 0 means the recipe value, so it still queues.
                 "upsample_tile_tokens": ("INT", {
                     "default": 0, "min": 0, "max": 1048576, "step": 1024,
-                    "tooltip": ("Upsample VRAM: the largest sequence one tile forward may carry. "
-                                "0 (default) = auto: starts from what this GPU managed last time "
-                                f"({_tu.TOKEN_BUDGET}, the recipe's value, the first time) and "
-                                "learns run by run. A number fixes it: lower = more, smaller "
-                                "tiles -- less memory, slower, the same seamless merge. Delivery "
-                                "only: no hop re-renders when it changes."),
+                    "tooltip": ("How much of the upsample goes to the GPU at once. 0 = automatic "
+                                "(recommended): it learns what your card can take. A number fixes "
+                                "it; lower uses less VRAM and is slower. Changing it never re- "
+                                "renders hops."),
                 }),
                 # APPENDED 2026-10-04, LAST. A socket, so it takes no widget slot.
                 "upsample_dit": ("MODEL", {
-                    "tooltip": ("Optional model for the upsample re-draw instead of the boost "
-                                "model / MODEL wire, e.g. a plain UNETLoader output with no "
-                                "LoRAs. The chain applies its own sigma shift to it."),
+                    "tooltip": ("Optional separate model for the upsample re-draw, e.g. a plain "
+                                "UNETLoader with no LoRAs. Unwired uses the model the hops ran "
+                                "on."),
                 }),
                 # APPENDED 2026-10-14, LAST (recover branch, seam-fix batch). hand_tie only.
                 "ht_seam_fix": (["off", "on"], {
                     "default": "off",
-                    "tooltip": ("pin_mech=hand_tie: on = the seam-fix batch (hops open on their previs window). "
-                                "The sound lock keeps the previous hop's carried audio over the "
-                                "overlap; the sound draft opens on the previous hop's tail; drafts "
-                                "that start the new line inside the overlap are retried (Whisper "
-                                "word times); tail discard; previs end guide kept."),
+                    "tooltip": ("hand_tie only. on: each hop opens on its preview, and the sound "
+                                "at every join carries on from the previous hop, so a line is not "
+                                "restarted or clipped there. off: without these fixes."),
                 }),
                 # APPENDED 2026-10-14, LAST. The SWAP tab's own script.
                 #
@@ -5750,36 +5763,31 @@ class HandTieClips:
                 "swap_script": ("STRING", {
                     "default": "",
                     "multiline": True,
-                    "tooltip": ("SWAP's own six-field H3 contract, written by the SWAP tab. "
-                                "Empty for a chain. Non-empty renders ONE hop from this script "
-                                "and ignores SCRIPT -- and the script is re-checked against "
-                                "SWAP's gate at render time, so a hand-edited or stale swap "
-                                "refuses to queue rather than rendering quietly wrong."),
+                    "tooltip": ("Written by the SWAP tab; leave it alone. When set, the node "
+                                "renders one hop from it and ignores SCRIPT. A stale or hand- "
+                                "edited swap is refused at queue time."),
                 }),
                 # APPENDED 2026-10-14, LAST. Which rail plates a swap's hop rides.
                 # The whitelist, and it is load bearing in BOTH directions.
                 "swap_refs": ("STRING", {
                     "default": "",
-                    "tooltip": ("Comma-separated @tags the swap's single hop rides, written by "
-                                "the SWAP tab. EMPTY = the register default, i.e. every wired "
-                                "picture rides. Written exactly as [] = this hop rides NO plate, "
-                                "which is what keep_person needs so the identity stays off it. "
-                                "Only read when swap_script is set."),
+                    "tooltip": ("Written by the SWAP tab: the @tags its hop uses. Empty = every "
+                                "wired picture; [] = none. Only read when swap_script is set."),
                 }),
                 # APPENDED 2026-10-15, LAST. Off adds no hop-key field.
                 "audio_refine": (["off", "on"], {
                     "default": "off",
-                    "tooltip": ("After the picture is finished, re-noise the soundtrack on its own "
-                                "schedule while the picture stays frozen. Off leaves the hop "
-                                "untouched. Not with master_audio_file, and not with hop_refine=split."),
+                    "tooltip": ("After the picture is finished, re-draw the soundtrack on its own "
+                                "while the picture stays as it is. off leaves the sound as "
+                                "rendered. Not with master_audio_file or hop_refine=split."),
                 }),
                 "audio_denoise": ("FLOAT", {
                     "default": 0.50, "min": 0.05, "max": 1.0, "step": 0.05,
-                    "tooltip": ("A fraction of the schedule, not of the noise. Under beta "
-                                "0.1 starts near sigma 0.34, 0.3 near 0.80 and 0.5 near "
-                                "0.92 (most of the soundtrack is drawn again); 1.0 "
-                                "regenerates it against the finished picture. The log "
-                                "prints the real start sigma."),
+                    "tooltip": ("How much of the soundtrack the audio pass re-draws. It is a "
+                                "share of the steps, not of the noise: with the beta scheduler "
+                                "0.1 already starts at about 0.34 noise, 0.3 at 0.80 and 0.5 at "
+                                "0.92 (most of the sound is new); 1.0 makes it all new to fit the "
+                                "finished picture. The log prints where it really starts."),
                 }),
                 "audio_steps": ("INT", {
                     "default": 5, "min": 1, "max": 30,
@@ -5800,30 +5808,26 @@ class HandTieClips:
                 # APPENDED 2026-10-26, LAST two widgets. Off adds no hop-key field.
                 "dialogue_lock": (list(_dlg.MODES), {
                     "default": "off",
-                    "tooltip": ("Freeze each hop's spoken lines in the soundtrack so the "
-                                "words come out exactly and nobody adds any. lines: each "
-                                "line, H3 makes the rest of the sound. lines+hold: also "
-                                "holds 1.5 s quiet after each line, where extra words "
-                                "start. full: the whole hop, as a song is. The lines come "
-                                "from dialogue_audio_file, or with it empty H3 drafts each "
-                                "hop's sound first and Whisper keeps only the scripted "
-                                "words. Not with master_audio_file, realism_boost, "
-                                "audio_refine or SWAP. Under hand_tie it does nothing."),
+                    "tooltip": ("Holds each hop's spoken lines so the words come out exactly as "
+                                "written and nobody adds any. lines: the lines only. lines+hold: "
+                                "also 1.5 s of quiet after each line, where extra words tend to "
+                                "start. full: the whole hop's sound. Lines come from "
+                                "dialogue_audio_file, or H3 drafts them first and keeps only the "
+                                "scripted words. Not with master_audio_file, realism_boost, "
+                                "audio_refine or SWAP; no effect under hand_tie."),
                 }),
                 "dialogue_audio_file": ("STRING", {
                     "default": "",
-                    "tooltip": ("Optional, for dialogue_lock: one recording laid on the "
-                                "film's timeline, each line where it is spoken and silence "
-                                "between them (any TTS or your own voice). Empty = H3 "
-                                "drafts the lines itself. Set it on the MEDIA tab."),
+                    "tooltip": ("Optional, for dialogue_lock: one recording laid on the film's "
+                                "timeline, each line where it is spoken, silence between (any TTS "
+                                "or your own voice). Empty = H3 drafts the lines. Set it on the "
+                                "MEDIA tab."),
                 }),
                 # APPENDED 2026-10-28, LAST widgets. Open-H3-Regenerate-2K LoRA selector + seed + cond.
                 "upsample_redraw": (_regen2k_lora_choices(), {
                     "default": REGEN2K_DEFAULT_LORA,
-                    "tooltip": ("Open-H3-Regenerate-2K LoRA from models/loras for the 3-step "
-                                "Euler re-draw on [0.8, 24/35, 0.48, 0] "
-                                f"(default: {REGEN2K_DEFAULT_LORA} "
-                                "at upsample_denoise 0.8, seed 42)."),
+                    "tooltip": ("The Regen2K LoRA (models/loras) for the upsample's light re- "
+                                "draw. Default: open_h3_regenerate_2k_r256pp_bf16.safetensors."),
                 }),
                 "regen2k_model": ("MODEL", {
                     "tooltip": ("Optional model for upsample: wire UNETLoader "
@@ -5838,14 +5842,13 @@ class HandTieClips:
                 }),
                 "regen2k_cond": (list(REGEN2K_COND_MODES), {
                     "default": REGEN2K_DEFAULT_COND,
-                    "tooltip": ("Conditioning for the Regen2K upsample re-draw: 'none' uses "
-                                "zeroed-out conditioning (no prompt, no refs); 'hop_text' uses "
-                                "each hop's encoded text prompt with image/video/keyframe refs stripped."),
+                    "tooltip": ("What the Regen2K re-draw follows. hop_text (default): each hop's "
+                                "own text, without its pictures. none: no prompt."),
                 }),
                 "audio_model": ("MODEL", {
-                    "tooltip": ("Optional model for the audio pass. Unwired uses the base "
-                                "model (the refine model when hop_refine=full), never the "
-                                "realism boost model: its LoRAs colour the audio too."),
+                    "tooltip": ("Optional model for the audio pass. Unwired uses the base model "
+                                "(the refine model when hop_refine=full), never the realism boost "
+                                "model, whose LoRAs colour the sound too."),
                 }),
                 # A literal, as every socket here: tools read these types from source.
                 "upsample_settings": ("HTC_UPSAMPLE", {
@@ -5856,23 +5859,20 @@ class HandTieClips:
                 # APPENDED 2026-11-01, LAST widget (after regen2k_cond in widgets_values).
                 "cache_location": (list(_store.CACHE_LOCATIONS), {
                     "default": "temp",
-                    "tooltip": ("Where cache_hops keeps hops. temp: ComfyUI's temp folder, "
-                                "emptied every time ComfyUI starts (no disk left behind). "
-                                "user: ComfyUI's user folder, kept across restarts, so a take "
-                                "can still be retaken or upsampled after one; it stays on disk "
-                                "(up to cache_budget_gb) until you clear it with the button "
-                                "in the cache group."),
+                    "tooltip": ("Where cache_hops keeps hops. temp: emptied every time ComfyUI "
+                                "starts. user: kept across restarts, so a take can still be "
+                                "retaken or upsampled later; it stays until cache_budget_gb "
+                                "pushes it out or you press the clear-cache button."),
                 }),
                 # APPENDED 2026-11-02, LAST widget (after cache_location in widgets_values).
                 "tone_lock": (list(WT_TONE_CHOICES), {
                     "default": WT_TONE_DEFAULT,
-                    "tooltip": ("pin_mech sand_tie only. How hard each window of a take is pulled "
-                                "back to the take's opening colour and brightness, so a long take "
-                                "does not slowly drift brighter or paler. 0.5: half way, people "
-                                "keep their look, the background can still drift a little. 0.75: "
-                                "holds the background closer. full: holds the look tightest, but "
-                                "can darken people and boost their colour. A take whose light is "
-                                "meant to change (night to dawn) changes less the higher this is."),
+                    "tooltip": ("sand_tie only. How hard each window is pulled back to the take's "
+                                "opening colour and brightness, so a long take does not drift "
+                                "brighter or paler. 0.5: people keep their look, the background "
+                                "may drift a little. 0.75: holds it closer. full: tightest, but "
+                                "can darken people and boost their colour. Light meant to change "
+                                "(night to dawn) changes less the higher it is set."),
                 }),
             },
             "hidden": {
