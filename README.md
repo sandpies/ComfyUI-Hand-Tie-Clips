@@ -22,6 +22,27 @@ tags:
 > 🚀 **[Launch the Interactive Node UI Demo in Your Browser (`docs/demo.html`)](https://sandpies.github.io/ComfyUI-Hand-Tie-Clips/demo.html)** — Click through **Script · Refs · Timeline · Media · Write · Swap** and the **`⚙` (`RUN`)** render-controls page live, toggle shot locks, solo-retake hops, and inspect the 10-hop `hand_tie` setup (compatible with both Classic LiteGraph and ComfyUI Vue Nodes 2.0).
 
 <div align="center">
+  <p><strong>New: Sand Tie one-take music video, 2:03, no cuts, song locked</strong></p>
+  <video controls preload="metadata" width="50%" style="max-width:480px; border-radius:8px;" src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/sand-tie-mv-walk-me-through-the-night.mp4">
+    <source src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/sand-tie-mv-walk-me-through-the-night.mp4" type="video/mp4">
+    <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/sand-tie-mv-walk-me-through-the-night.mp4" type="video/mp4">
+  </video>
+</div>
+<div align="center">
+  <p><strong>Sand Tie: two people, one 52 s take, street to boardwalk to bench</strong></p>
+  <video controls preload="metadata" width="50%" style="max-width:480px; border-radius:8px;" src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/sand-tie-two-person-place-change-52s.mp4">
+    <source src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/sand-tie-two-person-place-change-52s.mp4" type="video/mp4">
+    <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/sand-tie-two-person-place-change-52s.mp4" type="video/mp4">
+  </video>
+</div>
+<div align="center">
+  <p><strong>Sand Tie: 65 s walking selfie, one take, upsampled</strong></p>
+  <video controls preload="metadata" width="30%" style="max-width:300px; border-radius:8px;" src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/sand-tie-walking-selfie-65s.mp4">
+    <source src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/sand-tie-walking-selfie-65s.mp4" type="video/mp4">
+    <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/sand-tie-walking-selfie-65s.mp4" type="video/mp4">
+  </video>
+</div>
+<div align="center">
   <p><strong>Hand-Tie 10x8s example</strong></p>
   <video controls preload="metadata" width="50%" style="max-width:480px; border-radius:8px;" src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/hand-tie-10hop-00138.mp4">
     <source src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/hand-tie-10hop-00138.mp4" type="video/mp4">
