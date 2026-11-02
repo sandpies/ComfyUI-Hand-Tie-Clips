@@ -103,7 +103,7 @@ const GROUPS = [
                     // display only, and INPUT_TYPES appends it last so saved
                     // workflows keep their widget indices.
                     "pin_mech",
-                    // tone_lock: windowed takes only (11-02), so it sits with pin_mech.
+                    // tone_lock: sand_tie takes only (11-02), so it sits with pin_mech.
                     "tone_lock",
                     // ht_seam_fix: the seam-fix batch (recover, 2026-10-14).
                     "ht_seam_fix",
@@ -277,11 +277,11 @@ const REFINE_V2_HIDDEN = new Set([
 // remaining in Python's INPUT_TYPES so older saved workflows and unit tests
 // still validate cleanly.
 const HIDDEN_COMBO_OPTIONS = {
-    pin_mech: new Set(["addguide", "hand_tie_mc"]),
+    pin_mech: new Set(["addguide", "hand_tie_mc", "windowed"]),
     upsample_redraw: new Set(["regen2k", "recipe"]),
 };
 const COMBO_UI_ALIAS = {
-    pin_mech: { hand_tie_mc: "hand_tie", addguide: "auto" },
+    pin_mech: { hand_tie_mc: "hand_tie", addguide: "auto", windowed: "sand_tie" },
     upsample_redraw: {
         regen2k: "open_h3_regenerate_2k_r256pp_bf16.safetensors",
         recipe: "open_h3_regenerate_2k_r256pp_bf16.safetensors",

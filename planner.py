@@ -940,7 +940,7 @@ def hand_tie_rules(duration=None):
 
 
 def windowed_rules():
-    """The writing rules a windowed take needs (pin_mech=windowed), as one user-turn
+    """The writing rules a sand_tie take needs (pin_mech=sand_tie; windowed is its old name), as one user-turn
     block. Same law as PROMPTING.md, 'One continuous take': the joins between windows
     hold, so what breaks a take is the writing. Each rule cost a long render to learn."""
     return "\n".join([
@@ -1115,7 +1115,7 @@ def build_user_turn(brief, hops, files, pinned=None, duration=None, pin_mech="",
                 "silent.")
     if pin_mech == "hand_tie":
         lines += ["", hand_tie_rules(duration)]
-    if pin_mech == "windowed":
+    if pin_mech in ("sand_tie", "windowed"):
         lines += ["", windowed_rules()]
     if mv:
         lines += ["", MV_RULES]
@@ -1797,7 +1797,7 @@ async def write_propose(brief, *, complete_fn, hops=3, files=None, pinned=None,
                 "that continue each other without a cut. Say where each "
                 "section starts.")
             lines += ["", hand_tie_rules(duration)]
-    if pin_mech == "windowed":
+    if pin_mech in ("sand_tie", "windowed"):
         lines += ["", "This chain will render as one continuous take per section "
                   "(a section ends only at a restart). Say where each take starts "
                   "and where the place changes inside a take.", windowed_rules()]
@@ -1956,7 +1956,7 @@ async def write_edit(message, shot_text, ref_text, *, complete_fn, hops=None,
           '  "note": "Brief summary of what changed."\n'
           '}'
         + ("\n\n" + hand_tie_rules(duration) if pin_mech == "hand_tie" else "")
-        + ("\n\n" + windowed_rules() if pin_mech == "windowed" else "")
+        + ("\n\n" + windowed_rules() if pin_mech in ("sand_tie", "windowed") else "")
         # An EDIT is how a `<d>` line gets into an MV: nobody writes the
         # dialogue, they ask for a shot to be changed and the rewrite puts a
         # quoted line in. The rules have to be in the edit's own turn, not only
@@ -3563,7 +3563,7 @@ async def write_ask(brief, *, complete_fn, thread=None, proposal=None,
                            "than by a single running generate.")
         except Exception:
             pass
-    if pin_mech == "windowed":
+    if pin_mech in ("sand_tie", "windowed"):
         framing.append("The chain renders each take as one continuous video: its "
                        "hops are overlapping windows of one generate, and a take "
                        "ends only at a restart, the one real cut.")

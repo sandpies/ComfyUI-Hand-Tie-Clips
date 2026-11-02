@@ -218,7 +218,7 @@ function mountPanel(node) {
                     ? "hand-tie MC"
                     : data.pin_mech === "hand_tie"
                     ? "hand-tie"
-                    : data.pin_mech === "windowed"
+                    : ["sand_tie", "windowed"].includes(data.pin_mech)
                     ? "one take"
                     : "pixel pin";
                 mech.title = data.pin_mech === "motion_context"
@@ -227,8 +227,8 @@ function mountPanel(node) {
                     ? "Hand-Tie + Motion-Context: Previs window unpacked into 7 per-step keyframes with Hop k audio carry."
                     : data.pin_mech === "hand_tie"
                     ? "Hand-Tie: Previs windows guide both ends of each hop."
-                    : data.pin_mech === "windowed"
-                    ? "Windowed: each take is one video, its hops overlapping windows; a take ends only at a restart."
+                    : ["sand_tie", "windowed"].includes(data.pin_mech)
+                    ? "Sand Tie: each take is one video, its hops overlapping windows; a take ends only at a restart."
                     : "AddGuide pinned decoded pixels. This is the fallback: Motion-Context was "
                       + "unavailable, the overlap is not one of its context lengths, or the previous "
                       + "hop was cached by a build older than the latent sidecar.";

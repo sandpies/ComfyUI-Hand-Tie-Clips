@@ -1,6 +1,6 @@
-"""Take = shot: one prompt layout for every window of a windowed take (2026-11-01).
+"""Take = shot: one prompt layout for every window of a sand_tie take (2026-11-01).
 
-A take is one continuous shot (pin_mech=windowed: one latent, its hops are context
+A take is one continuous shot (pin_mech=sand_tie: one latent, its hops are context
 windows). Two layers per window:
 
 - SHOT layer, the same words in every window of the take: the take's first beat's lead

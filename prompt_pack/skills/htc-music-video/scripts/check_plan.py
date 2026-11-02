@@ -44,14 +44,14 @@ Part 2 is this skill's lints. Each one is a failure seen on a real render:
                    warp through barriers whose sides were never fixed.
   pin-face         the hop before a continuation does not end on a face toward
                    the camera: the continuation rebuilds identity from that ending.
-                   motion_context only (not windowed: no window rebuilds from an ending).
-  take-lead        (windowed) a hop's opening differs from its take's first hop's:
+                   motion_context only (not sand_tie: no window rebuilds from an ending).
+  take-lead        (sand_tie) a hop's opening differs from its take's first hop's:
                    only the first is used. Same words, or cut with anchor: restart.
-  untimed          (windowed) a take's hop with no `At mm:ss-mm:ss,` sentence: it is
+  untimed          (sand_tie) a take's hop with no `At mm:ss-mm:ss,` sentence: it is
                    rendered as written, not on the take's clock.
-  arc              (windowed) "first ... then" in one timed sentence: every window it
+  arc              (sand_tie) "first ... then" in one timed sentence: every window it
                    spans replays the whole arc.
-  slope            (windowed) stairs or a slope with no direction relative to the
+  slope            (sand_tie) stairs or a slope with no direction relative to the
                    camera: a person facing the lens climbs backwards.
   join-calm       (hand_tie) a hop ends, or the next one starts, on a raised hand
                    or a moving camera: both hops are tied to the same previs frames
@@ -121,7 +121,7 @@ UNCALM = re.compile(r"\b(?:lift\w*|rais\w*|reach\w*|adjust\w*|tuck\w*|wip(?:e|es
                     r"pushes in|pulls? back|zoom\w*|arcs?\b|tracks?\b|pans?\b|tilts?\b|orbit\w*|"
                     r"dolly\w*|crane\w*|push in)", re.I)
 FACE = re.compile(r"\b(camera|lens|face|faces|grin\w*|smil\w*|look\w* (in|at|into))\b", re.I)
-# windowed take lints: an arc in one timed sentence; stairs or a slope with no direction
+# sand_tie take lints: an arc in one timed sentence; stairs or a slope with no direction
 ARC = re.compile(r"\bfirst\b[^.]*\bthen\b", re.I)
 SLOPE = re.compile(r"\b(?:stairs?|staircase|stairway|steps up|escalator|slope|ramp|hillside|uphill|downhill)\b", re.I)
 RISE_REL = re.compile(r"\b(?:toward|towards|away from)\s+(?:the\s+)?(?:camera|lens)\b|\bcamera\s+(?:above|below)\b", re.I)
@@ -202,6 +202,8 @@ def main():
     ap.add_argument("--map", help="scene_map.json written before the beats (references/directing.md)")
     ap.add_argument("--htc")
     a = ap.parse_args()
+    if a.pin_mech == "windowed":   # sand_tie's old name
+        a.pin_mech = "sand_tie"
 
     shot_text = Path(a.shot_plan).read_text(encoding="utf-8")
     ref_text = Path(a.ref_plan).read_text(encoding="utf-8")
@@ -405,18 +407,18 @@ def main():
                                     f"(\"{txt[:70]}\"). Both hops are tied to the same previs frames "
                                     f"there: keep the hands at rest and the camera still in the first and "
                                     f"last 1.3 s, or the join blurs.")
-            elif str(a.pin_mech) != "windowed" and not FACE.search(last):
+            elif str(a.pin_mech) != "sand_tie" and not FACE.search(last):
                 lint.append(f"shot {i}: pin-face: shot {i + 1} continues from this ending, but the last sentence "
                             f"(\"{last[:70]}\") puts no face toward the camera.")
 
-    # windowed: a take is one video, and what breaks it is the writing (SKILL.md, "One take,
-    # windowed"). The node's own parser reads the beats, so this cannot drift from what it renders.
-    if str(a.pin_mech) == "windowed":
+    # sand_tie: a take is one video, and what breaks it is the writing (SKILL.md, "One take,
+    # sand_tie"). The node's own parser reads the beats, so this cannot drift from what it renders.
+    if str(a.pin_mech) == "sand_tie":
         try:
             take = _htc.import_package_module(pack, "take")
         except Exception as e:  # noqa: BLE001
             take = None
-            lint.append(f"windowed: could not load the node's take parser ({e}); take lints skipped.")
+            lint.append(f"sand_tie: could not load the node's take parser ({e}); take lints skipped.")
         if take is not None:
             for grp in take.takes(shots):
                 lead0 = None
@@ -684,7 +686,7 @@ def main():
              and (shots[i].get("directives") or {}).get("join") != "hard_cut"]
     if multi:
         print(f"  shots {multi}: is it clear who raps/sings, and does everyone else have an action?")
-    if conts and str(a.pin_mech) == "windowed":
+    if conts and str(a.pin_mech) == "sand_tie":
         print(f"  shots {conts}: does each take's timeline carry the action on from the last timed "
               f"sentence before it (a take's hops share one opening)?")
     elif conts:

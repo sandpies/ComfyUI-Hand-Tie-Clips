@@ -915,9 +915,9 @@ are for. Otherwise unlock shot 6 and let it re-render against the new shot 5.
 > must not drift. `shots[].locked` in the *shot plan* is this cache pin. Same
 > word, different blocks, unrelated jobs.
 
-## One continuous take (`pin_mech: windowed`)
+## One continuous take (`pin_mech: sand_tie`)
 
-With `pin_mech: windowed` a run of hops is rendered as **one** take: the hops are windows of a
+With `pin_mech: sand_tie` a run of hops is rendered as **one** take: the hops are windows of a
 single video, not clips joined afterwards. A take ends only at `anchor: restart`, which is a
 real cut. The joins between windows hold well; what breaks a take is the writing, so these
 rules matter more here than anywhere else.

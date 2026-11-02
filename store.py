@@ -407,7 +407,7 @@ class HopStore:
         return info
 
     # -- a sampled take waiting for its decode ----------------------------
-    # A windowed take is sampled for many minutes and only then decoded, and the
+    # A sand_tie take is sampled for many minutes and only then decoded, and the
     # entry above needs the decoded frames. Its latent is written here first, so a
     # decode that runs out of memory costs the decode on the re-queue, not the
     # sampling. One at a time: writing one drops any other left behind.

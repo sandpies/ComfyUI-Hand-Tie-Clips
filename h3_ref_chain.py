@@ -1470,7 +1470,7 @@ def _decode_take_streamed(vae, lat, label):
         arr = np.memmap(fh, dtype=np.float32, mode="r+", shape=shape)
         buf = torch.from_numpy(arr)
     except Exception as e:  # noqa: BLE001
-        print(f"[{TAG}] windowed {label}: disk-backed decode unavailable ({e!r}); "
+        print(f"[{TAG}] sand_tie {label}: disk-backed decode unavailable ({e!r}); "
               "decoding in RAM", flush=True)
         return None
     if hasattr(vae, "prepare_decode"):
@@ -1487,13 +1487,13 @@ def _decode_take_streamed(vae, lat, label):
         del buf, arr
         fh.close()
         mm.soft_empty_cache()
-        print(f"[{TAG}] windowed {label}: disk-backed decode ran out of VRAM; "
+        print(f"[{TAG}] sand_tie {label}: disk-backed decode ran out of VRAM; "
               "using ComfyUI's tiled decode", flush=True)
         return None
     vae.process_output(buf)
     out = buf[0].movedim(0, -1)          # [T, H, W, 3], a view: nothing copied
     out._htc_mmap = (arr, fh)            # the view keeps the mapping; this names it
-    print(f"[{TAG}] windowed {label}: decoded {shape[2]} frames to disk "
+    print(f"[{TAG}] sand_tie {label}: decoded {shape[2]} frames to disk "
           f"({nbytes / 2 ** 30:.1f} GB, self-deleting), not RAM", flush=True)
     return out
 
@@ -3814,15 +3814,15 @@ def _wt_sample(lat, plan, conds, *, model, sampler, sigmas, seed, label, song=No
         flat.append(list(c)[0])
     one = len(plan["windows"]) == 1
     guider = _result(_core_call(
-        BasicGuider, "the windowed guider",
+        BasicGuider, "the sand_tie guider",
         model=(model if one else _htw.install(model, plan)),
         conditioning=([flat[0]] if one else flat)))[0]
-    noise = _result(_core_call(RandomNoise, "the windowed noise", noise_seed=int(seed)))[0]
-    print(f"[{TAG}] windowed {label}: {plan['frames']} frames in {len(plan['windows'])} "
+    noise = _result(_core_call(RandomNoise, "the sand_tie noise", noise_seed=int(seed)))[0]
+    print(f"[{TAG}] sand_tie {label}: {plan['frames']} frames in {len(plan['windows'])} "
           f"window(s) of " + "/".join(str(w["f1"] - w["f0"]) for w in plan["windows"])
           + f" f, seed {int(seed)}", flush=True)
     out = dict(_result(_core_call(
-        SamplerCustomAdvanced, "the windowed sampler",
+        SamplerCustomAdvanced, "the sand_tie sampler",
         noise=noise, guider=guider, sampler=sampler, sigmas=sigmas, latent_image=lat))[0])
     out.pop("noise_mask", None)
     if song is not None:
@@ -3929,7 +3929,7 @@ def _wt_song_lat(lat, song):
     v, a = list(lat["samples"].unbind())[:2]
     z = song.to(device=a.device, dtype=a.dtype)
     if tuple(z.shape) != tuple(a.shape):
-        raise RuntimeError(f"{TAG}: windowed song lock: song latent {tuple(z.shape)} "
+        raise RuntimeError(f"{TAG}: sand_tie song lock: song latent {tuple(z.shape)} "
                            f"!= take audio {tuple(a.shape)}")
     out = dict(lat)
     out["samples"] = nt.NestedTensor((v, z.clone()))
@@ -3985,7 +3985,7 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, son
     full_v, full_a = list(lat["samples"].unbind())[:2]
     if song is not None:
         full_a = song.to(device=full_a.device, dtype=full_a.dtype)
-        print(f"[{TAG}] windowed {label}: sound = the song, frozen in every window", flush=True)
+        print(f"[{TAG}] sand_tie {label}: sound = the song, frozen in every window", flush=True)
     nv, na = list(cs.prepare_noise(lat["samples"], int(seed)).unbind())[:2]
     hi, lo = sigmas[:k_sw + 1].clone(), sigmas[k_sw:].clone()
     st_v = torch.zeros_like(full_v, dtype=torch.float32)
@@ -3994,7 +3994,7 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, son
     x0_a = torch.zeros_like(st_a)
     anchor = None
     tone_ref = None
-    print(f"[{TAG}] windowed {label}: {plan['frames']} frames, {len(wins)} windows in order "
+    print(f"[{TAG}] sand_tie {label}: {plan['frames']} frames, {len(wins)} windows in order "
           f"for {k_sw} steps (each held on the one before"
           + (", finished" if WT_FINISHED_HANDOFF else "")
           + f"), then {fin} blended; seed {int(seed)}", flush=True)
@@ -4039,14 +4039,14 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, son
                     conditioning=cond_k, vae=None, latent=sub, context_length=str(ov_f),
                     audio_context_length=ov_f, context_latent=ctx)[0]
             except (ValueError, RuntimeError) as _e:
-                print(f"[{TAG}] windowed window {k + 1}: Motion-Context skipped ({_e}); "
+                print(f"[{TAG}] sand_tie window {k + 1}: Motion-Context skipped ({_e}); "
                       "held by mask only", flush=True)
             del ctx
         guider = _result(_core_call(
-            BasicGuider, "the windowed guider",
+            BasicGuider, "the sand_tie guider",
             model=model, conditioning=cond_k))[0]
         res = _result(_core_call(
-            SamplerCustomAdvanced, "the windowed layout sampler",
+            SamplerCustomAdvanced, "the sand_tie layout sampler",
             noise=noise, guider=guider, sampler=sampler, sigmas=hi, latent_image=sub))
         ov, oa = [t.float().cpu() for t in list(res[0]["samples"].unbind())[:2]]
         dv, da = [t.float().cpu() for t in list(res[1]["samples"].unbind())[:2]]
@@ -4055,8 +4055,8 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, son
             # window's tail (beyond its own held head) is handed on.
             _fm = {"samples": res[0]["samples"]}
             _fz = _result(_core_call(
-                SamplerCustomAdvanced, "the windowed hand-off sampler",
-                noise=_result(_core_call(DisableNoise, "the windowed hand-off noise"))[0],
+                SamplerCustomAdvanced, "the sand_tie hand-off sampler",
+                noise=_result(_core_call(DisableNoise, "the sand_tie hand-off noise"))[0],
                 guider=guider, sampler=sampler, sigmas=lo, latent_image=_fm))[0]
             dv, da = [t.float().cpu() for t in list(_fz["samples"].unbind())[:2]]
             del _fz, _fm
@@ -4072,7 +4072,7 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, son
             x0_v[:, :, l0:l1], x0_a[..., a0:a1] = dv, da
             if WT_TAKE_ANCHOR:
                 anchor = dv[:, :, 0:1].to(full_v.dtype).clone()
-                print(f"[{TAG}] windowed {label}: take anchor = window 1's "
+                print(f"[{TAG}] sand_tie {label}: take anchor = window 1's "
                       + ("finished" if WT_FINISHED_HANDOFF else "step-" + str(k_sw))
                       + " opening frame, shown to windows 2+", flush=True)
         else:
@@ -4091,12 +4091,12 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, son
     if anchor is not None:
         flat = flat[:1] + [_wt_with_anchor([c], anchor)[0] for c in flat[1:]]
     guider = _result(_core_call(
-        BasicGuider, "the windowed finish guider",
+        BasicGuider, "the sand_tie finish guider",
         model=_htw.install(model, plan), conditioning=flat))[0]
     mid = {"samples": nt.NestedTensor((st_v.to(full_v.dtype), st_a.to(full_a.dtype)))}
     out = dict(_result(_core_call(
-        SamplerCustomAdvanced, "the windowed finish sampler",
-        noise=_result(_core_call(DisableNoise, "the windowed finish noise"))[0],
+        SamplerCustomAdvanced, "the sand_tie finish sampler",
+        noise=_result(_core_call(DisableNoise, "the sand_tie finish noise"))[0],
         guider=guider, sampler=sampler, sigmas=lo, latent_image=mid))[0])
     out.pop("noise_mask", None)
     if WT_HOLD_OVERLAPS and WT_FINISHED_HANDOFF:
@@ -4121,7 +4121,7 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, son
                 ra = ra.view(*([1] * (fa.ndim - 1)), ova)
                 fa[..., a0:a0 + ova] = fa[..., a0:a0 + ova] * (1 - ra) + helda * ra
         out["samples"] = _latents.rebuild(out["samples"], [fv, fa])
-        print(f"[{TAG}] windowed {label}: {len(wins) - 1} overlap(s) kept as the next window "
+        print(f"[{TAG}] sand_tie {label}: {len(wins) - 1} overlap(s) kept as the next window "
               "continued from them", flush=True)
     if song is not None:
         out = _wt_song_lat(out, song)
@@ -4136,7 +4136,7 @@ def _wt_retake(lat, pl, a, b, hops, *, overlap_n, model, sampler, sigmas, song=N
     parts = list(_latents.from_dict(lat))
     v, au = parts[0], parts[1]
     if v.ndim != 5 or au.ndim != 4:
-        raise ValueError(f"{TAG}: windowed retake: stored take latent has shapes "
+        raise ValueError(f"{TAG}: sand_tie retake: stored take latent has shapes "
                          f"{tuple(v.shape)} / {tuple(au.shape)}")
     sv = v[:, :, sp["l0"]:sp["l1"]].clone()
     sa = au[..., sp["a0"]:sp["a1"]].clone()
@@ -4226,7 +4226,7 @@ def _wt_song(locked, audio_vae, lat, pos, pl, t):
         return None
     parts = list(_latents.from_dict(lat) or [])
     if len(parts) < 2:
-        raise RuntimeError(f"{TAG}: windowed take {t + 1}: master_audio_file needs a joint "
+        raise RuntimeError(f"{TAG}: sand_tie take {t + 1}: master_audio_file needs a joint "
                            "AV latent")
     t0 = float(pos) / FPS
     t1 = float(pos + int(pl["frames"])) / FPS
@@ -4235,7 +4235,7 @@ def _wt_song(locked, audio_vae, lat, pos, pl, t):
         z = z[0]
     while z.dim() < parts[1].dim():
         z = z.unsqueeze(0)
-    print(f"[{TAG}] windowed take {t + 1}: audio locked [{t0:.2f}s-{t1:.2f}s] of "
+    print(f"[{TAG}] sand_tie take {t + 1}: audio locked [{t0:.2f}s-{t1:.2f}s] of "
           "master_audio_file", flush=True)
     return z.to(dtype=parts[1].dtype).cpu()
 
@@ -4243,7 +4243,7 @@ def _wt_song(locked, audio_vae, lat, pos, pl, t):
 def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, scheduler,
                      steps, overlap_n, width, height, hop_store, salt, up_out=None,
                      locked=None):
-    """pin_mech=windowed: every take as ONE latent over its hops' windows. A stored take
+    """pin_mech=sand_tie: every take as ONE latent over its hops' windows. A stored take
     whose hop digests all match is reused; one where some changed re-draws only those hops
     between the kept ones. -> (master_wav, sample_rate, frames written, store keys)."""
     from comfy_extras.nodes_minimax_h3 import _empty_av_latent  # noqa: PLC0415
@@ -4255,7 +4255,7 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
             groups.append([])
         groups[-1].append(h)
     sigmas = _result(_core_call(
-        BasicScheduler, "the windowed sigma schedule",
+        BasicScheduler, "the sand_tie sigma schedule",
         model=model, scheduler=scheduler, steps=int(steps), denoise=1.0))[0]
     pos, wav_all, sr_out, keys = 0, None, None, []
     for t, hops in enumerate(groups):
@@ -4275,12 +4275,12 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
         hit = hop_store.get(key) if hop_store is not None else None
         if hit is not None:
             imgs, wav, sr = hit[0], hit[1], int(hit[2])
-            print(f"[{TAG}] windowed take {t + 1}: loaded from cache (key {key[:8]})", flush=True)
+            print(f"[{TAG}] sand_tie take {t + 1}: loaded from cache (key {key[:8]})", flush=True)
         else:
             lat = (hop_store.get_pending(key)
                    if hop_store is not None and hasattr(hop_store, "get_pending") else None)
             if lat is not None:
-                print(f"[{TAG}] windowed take {t + 1}: sampled on an earlier run (its decode did "
+                print(f"[{TAG}] sand_tie take {t + 1}: sampled on an earlier run (its decode did "
                       "not finish); decoding it, no sampling", flush=True)
             else:
                 old_key = hop_store.get_pointer(name) if hop_store is not None else None
@@ -4300,7 +4300,7 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                         runs = None
                 if runs:
                     lat = old[3]
-                    print(f"[{TAG}] windowed take {t + 1}: re-drawing hop(s) "
+                    print(f"[{TAG}] sand_tie take {t + 1}: re-drawing hop(s) "
                           + ", ".join(f"{hops[a]['hop']}-{hops[b]['hop']}" if a != b else str(hops[a]["hop"])
                                       for a, b in runs)
                           + "; the rest is kept", flush=True)
@@ -4311,7 +4311,7 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                 else:
                     lat0, _fc = _empty_av_latent(int(width), int(height), int(pl["frames"]))
                     if int(_fc) != int(pl["frames"]):
-                        raise ValueError(f"{TAG}: windowed take {t + 1}: {pl['frames']} frames is "
+                        raise ValueError(f"{TAG}: sand_tie take {t + 1}: {pl['frames']} frames is "
                                          f"off the H3 grid ({_fc})")
                     lat = (_wt_sample_seq if WT_SEQUENTIAL else _wt_sample)(
                         lat0, pl, [h["cond"] for h in hops], model=model, sampler=sampler,
@@ -4343,7 +4343,7 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
             # the take latent as the upsampler's per-window entries (stitch() rebuilds it)
             _tl = hit[3] if (hit is not None and len(hit) > 3) else (None if hit is not None else lat)
             if _tl is None:
-                print(f"[{TAG}] windowed take {t + 1}: cached without its latent (older build); "
+                print(f"[{TAG}] sand_tie take {t + 1}: cached without its latent (older build); "
                       "it is not upsampled", flush=True)
             else:
                 _tv, _ta = list(_latents.from_dict(_tl))[:2]
@@ -5359,19 +5359,20 @@ class HandTieClips:
                 # anywhere but the end silently reassigns every later value in
                 # every saved workflow. Adding options to an existing combo is
                 # safe; adding a widget is not.
-                "pin_mech": (["auto", "motion_context", "addguide", "hand_tie", "hand_tie_mc", "windowed"], {
+                "pin_mech": (["auto", "motion_context", "addguide", "hand_tie", "hand_tie_mc", "windowed", "sand_tie"], {
                     "default": "auto",
                     "tooltip": ("How hops are joined. auto uses Motion-Context when available, AddGuide "
                                 "otherwise. Forcing one fails rather than falling back. hand_tie renders one "
                                 "previs per section and ties every hop to it at both ends, so no hop reads "
                                 "another and texture does not compound (needs a shot plan, overlap 0.9 s). "
                                 "hand_tie_mc uses the previs window as a per-step Motion-Context guide with "
-                                "end-aligned audio carry. windowed renders each take (split only at "
+                                "end-aligned audio carry. sand_tie renders each take (split only at "
                                 "anchor=restart) as ONE latent, its hops as overlapping windows: each "
                                 "window is drawn continuing the one before it over the overlap, then "
                                 "the take is finished together, so a take plays as one shot with no "
                                 "cut; a changed hop is re-drawn alone between its kept neighbours "
-                                "(needs ComfyUI with MiniMax H3 context windows, overlap 0.9 s)."),
+                                "(needs ComfyUI with MiniMax H3 context windows, overlap 0.9 s). windowed is "
+                                "the old name of sand_tie."),
                 }),
                 # APPENDED, never inserted -- see the note above `pin_mech`.
                 "tone_anchor_ref": (["hop1", "still"], {
@@ -5813,7 +5814,7 @@ class HandTieClips:
                 # APPENDED 2026-11-02, LAST widget (after cache_location in widgets_values).
                 "tone_lock": (list(WT_TONE_CHOICES), {
                     "default": WT_TONE_DEFAULT,
-                    "tooltip": ("pin_mech windowed only. How hard each window of a take is pulled "
+                    "tooltip": ("pin_mech sand_tie only. How hard each window of a take is pulled "
                                 "back to the take's opening colour and brightness, so a long take "
                                 "does not slowly drift brighter or paler. 0.5: half way, people "
                                 "keep their look, the background can still drift a little. 0.75: "
@@ -5944,6 +5945,8 @@ class HandTieClips:
         # same call with dry_run=previs before any hop renders.
         _run_args = {k: v for k, v in locals().items() if k != "self"}
         _wt_set_tone(tone_lock)   # before any take key is made: the key names the setting
+        if str(pin_mech) == "windowed":   # sand_tie's name until 11-02; saved graphs keep it
+            pin_mech = "sand_tie"
         # First thing, before a single model is touched: hand the writer's VRAM
         # back. The plan writer stays resident between plans now, which is the
         # right trade everywhere except here -- a 27B and an H3 render do not
@@ -6116,7 +6119,7 @@ class HandTieClips:
                                        else _ht.LINE_START_S)))]
                 for _w in _ht.crossing_lints(shots):
                     print(f"[{TAG}] note: {_w}", flush=True)
-            if str(pin_mech) == "windowed" and not swap and WT_TAKE_SHOT:
+            if str(pin_mech) == "sand_tie" and not swap and WT_TAKE_SHOT:
                 # take = shot: every window of a take gets the take's shot layer word for
                 # word and its slice of ONE action timeline (take.py); every window is
                 # assembled as a start, so none is told it continues or begins anew.
@@ -7172,25 +7175,25 @@ class HandTieClips:
         # into 22-frame windows that guide every hop of the section at both ends.
         # See hand_tie.py. Off for a swap, which is a single guided generate.
         ht = (str(pin_mech) == "hand_tie") and not swap
-        windowed = str(pin_mech) == "windowed" and not swap and not dry
+        windowed = str(pin_mech) == "sand_tie" and not swap and not dry
         win_hops = []
         if windowed:
             _w_ok, _w_why = _htw.probe()
             if not _w_ok:
-                raise ValueError(f"{TAG}: pin_mech=windowed needs ComfyUI with MiniMax H3 context "
+                raise ValueError(f"{TAG}: pin_mech=sand_tie needs ComfyUI with MiniMax H3 context "
                                  f"windows (Comfy-Org/ComfyUI#17425): {_w_why}")
             for _tk in _wt.takes(shots):            # refuse before any text is encoded
                 try:
                     _wt.plan([lengths[j] for j in _tk], overlap_n)
                 except ValueError as _we:
-                    raise ValueError(f"{TAG}: pin_mech=windowed: {_we}. Use overlap 0.9 s and "
+                    raise ValueError(f"{TAG}: pin_mech=sand_tie: {_we}. Use overlap 0.9 s and "
                                      "hop lengths of 17n+5 frames (8 s = 192).") from None
             _w_off = [nm for nm, on in (
                 ("hop_refine", str(hop_refine) != "off"), ("realism_boost", bool(boost_on)),
                 ("dialogue_lock", dlg is not None),
                 ("start image", start_image is not None)) if on]
             if _w_off:
-                print(f"[{TAG}] windowed: not applied in this mode yet: {', '.join(_w_off)}",
+                print(f"[{TAG}] sand_tie: not applied in this mode yet: {', '.join(_w_off)}",
                       flush=True)
         # ht_seam_source, gap_order and guide_carry were REMOVED 2026-10-14 (user): a hop
         # opens on its previs window as designed; no hop reads another hop.
@@ -7851,7 +7854,7 @@ class HandTieClips:
             # ASSEMBLED as a start (it reads no other hop) yet still overlaps its
             # predecessor by one window and is cut inside it.
             hop_trims = i > 0 and not hop_restart
-            if ht or (str(pin_mech) == "windowed" and not swap and WT_TAKE_SHOT):
+            if ht or (str(pin_mech) == "sand_tie" and not swap and WT_TAKE_SHOT):
                 hop_is_start = True
             if hop_restart:
                 print(f"[{TAG}] hop {i + 1}: ANCHOR RESTART -- start image is "

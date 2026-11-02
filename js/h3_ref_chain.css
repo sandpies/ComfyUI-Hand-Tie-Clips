@@ -963,7 +963,7 @@ details.h3e-run-group[open] > .h3e-run-label::before { transform: rotate(90deg);
 .h3rc-meta b { font-weight: 600; color: var(--h3-text); }
 .h3rc-mech { padding: 1px 6px; border-radius: 999px; font-size: var(--h3-fs-xs); letter-spacing: .04em; }
 .h3rc-mech-motion_context { background: color-mix(in srgb, var(--h3-ok) 26%, transparent); color: var(--h3-text); }
-.h3rc-mech-windowed { background: color-mix(in srgb, var(--h3-ok) 26%, transparent); color: var(--h3-text); }
+.h3rc-mech-sand_tie, .h3rc-mech-windowed { background: color-mix(in srgb, var(--h3-ok) 26%, transparent); color: var(--h3-text); }
 .h3rc-mech-addguide_pixels { background: color-mix(in srgb, var(--h3-warn) 30%, transparent); color: var(--h3-text); }
 
 /* Resize grip -- pointer capture, unscaled offsetHeight. */

@@ -1,4 +1,4 @@
-"""Windowed take (pin_mech=windowed): a take is ONE H3 latent, its hops are context windows.
+"""Windowed take (pin_mech=sand_tie): a take is ONE H3 latent, its hops are context windows.
 
 No hop is pinned on another hop's output, so nothing is handed down a chain: every window
 is denoised together with its neighbours at every step (ComfyUI's H3 context windows,
@@ -47,10 +47,10 @@ def plan(hop_lens, overlap):
     lens = [int(x) for x in hop_lens]
     ov = int(overlap)
     if not lens:
-        raise ValueError("a windowed take needs at least one hop")
+        raise ValueError("a sand_tie take needs at least one hop")
     for k, n in enumerate(lens):
         if n % GRID != 5:
-            raise ValueError(f"hop {k + 1} is {n} frames; windowed hops must be 17n+5")
+            raise ValueError(f"hop {k + 1} is {n} frames; sand_tie hops must be 17n+5")
     starts = [0]
     for k, n in enumerate(lens[:-1]):
         stride = n - ov

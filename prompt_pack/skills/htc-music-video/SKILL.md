@@ -48,7 +48,7 @@ Do them in order; read the page named on a stage before doing it. A film skips 2
 | 6 | Fit (MV) | hop kinds and lengths, cuts on downbeats (`fit_cuts.py`, [beats](references/beats.md)) | nothing; shown in stage 8 |
 | 7 | Map | `scene_map.json`: each plate's view, who stands where, every journey's goal, every prop's hops and holder, an outfit per person ([directing](references/directing.md#the-scene-map)); one layout line per scene for the user | the user's eye on it |
 | 8 | Plans | the shot notes for every shot ([the method](#writing-a-shot-the-method)), then `shot_plan.json` + `ref_plan.json` written from them ([beats](references/beats.md), [camera](references/camera.md)) | nothing; check first |
-| 9 | Check | `check_plan.py ... --map scene_map.json` clean (`--no-mv` for a film, `--pin-mech hand_tie` or `--pin-mech windowed` for a one-take piece), every lint fixed or explained, then [before every render](#before-every-render) | nothing |
+| 9 | Check | `check_plan.py ... --map scene_map.json` clean (`--no-mv` for a film, `--pin-mech hand_tie` or `--pin-mech sand_tie` for a one-take piece), every lint fixed or explained, then [before every render](#before-every-render) | nothing |
 | 10 | Graph | workflow via `build_graph.py`, plus a board (hops, shots, lines, why) ([graph](references/graph_render_retake.md)) | the user's first render |
 | 11 | Retakes | diagnosis + replacement beats to paste ([retakes](references/graph_render_retake.md#retakes)) | the next render |
 | 12 | Finish | stitches, title cards, dips to black or white (`transitions.py`, [camera](references/camera.md#transitions)) | the user's go |
@@ -60,23 +60,23 @@ before writing beats.
 
 Decide the join mode (`pin_mech`) in the brief; it changes how the beats are written.
 
-| | `motion_context` (default) | `hand_tie` | `windowed` |
+| | `motion_context` (default) | `hand_tie` | `sand_tie` |
 |---|---|---|---|
 | Use for | several places, scene changes, restarts, cuts inside hops, films with dialogue | one continuous take in one place: a singer in a studio, a walk, a single room | one continuous take that may move: a walk from place to place, someone entering mid-take, a whole song as one shot |
 | How hops join | each hop carries on from the last frames of the hop before | a low-res previs of the whole section is rendered first; every hop is tied to it at both ends, so no hop copies another | each take is ONE video; its hops are overlapping windows drawn in order and finished together. A take ends only at `anchor: restart`, the one real cut |
-| Holds | 5-6 continuations on turbo, more with refine; restart every 4-5 | a whole 2-3 minute one-take song (proven: 12 hops x 15 s, lip sync held on every join) | a 2-minute song-locked take (19 windows), a two-person take with a change of place; window joins hold. What breaks a take is the writing ([one take, windowed](#one-take-windowed)) |
+| Holds | 5-6 continuations on turbo, more with refine; restart every 4-5 | a whole 2-3 minute one-take song (proven: 12 hops x 15 s, lip sync held on every join) | a 2-minute song-locked take (19 windows), a two-person take with a change of place; window joins hold. What breaks a take is the writing ([one take, sand_tie](#one-take-sand_tie)) |
 | Write | cuts and restarts freely; the hop before a continuation ends on a face (rule 8) | one framing, one place, no `[Shot N]` cuts and no restarts; calm join windows (rule 15) | one camera sentence for the whole take; the action on an `At mm:ss-mm:ss,` timeline; few timed sentences |
 | Lines | yes, and `dialogue_lock` if a hop babbles | a master song, or few lines; `dialogue_lock` does nothing here | yes; with a master song the take is drawn to the song |
 | Retake | re-renders the hop and every hop after it | a changed beat can re-render its section's previs and every hop tied to it | re-draws only the changed hop's window, held to its kept neighbours |
 
 All three take `master_audio_file`. Under `hand_tie`, 15 s hops are paired two per previs
-automatically, and a 15 s hop costs roughly 7-9 minutes at 576p on a 32 GB card. `windowed`
+automatically, and a 15 s hop costs roughly 7-9 minutes at 576p on a 32 GB card. `sand_tie`
 needs overlap 0.9 s and a ComfyUI with H3 context windows, and costs about 1.5 minutes per
 8 s hop at 576p on a 32 GB card. Tell the user the total before they queue it.
 
-### One take, windowed
+### One take, sand_tie
 
-Under `pin_mech: windowed` the joins between windows hold; a take breaks where the writing
+Under `pin_mech: sand_tie` the joins between windows hold; a take breaks where the writing
 gives the model a reason to redraw the frame. Every take:
 
 - **Opens on the camera, nothing else.** Every hop of the take opens with the same sentence,
