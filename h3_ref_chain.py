@@ -3863,8 +3863,25 @@ WT_PIN_ATTENTION = True
 # The push is added at each hand-off. Each window's video is pulled to WINDOW 1's per-channel
 # latent mean/std (not the previous window's: that passes the drift on) before it is handed on.
 # Off for takes whose light is meant to change (night to dawn): it would flatten that too.
+# walk_night_mv_00004 (the full lock: mean + spread, all the way) held the background but
+# darkened and over-saturated the people (centre luma 57 -> 40-50, saturation 111 -> 143):
+# one number per channel cannot tell the street from the faces, and stretching the
+# washed-out windows' spread back up boosted colour. Now: level only, half way. Half way
+# still cannot ratchet: an offset o gets o' = (o + d)(1 - s), which settles at d(1 - s)/s
+# (= one window's push d at s = 0.5) instead of climbing. 1.0 + spread = the 00004 lock.
 WT_TONE_LOCK = True
+WT_TONE_STRENGTH = 0.5             # share of the way back to window 1's level per hand-off
+WT_TONE_MATCH_STD = False          # also match the spread (00004: boosted colour on faces)
 WT_TONE_STD_CLAMP = (0.85, 1.18)   # the spread is matched within these ratios only
+
+
+def _wt_tone_tag():
+    """Take-key part for the tone lock; the 00004 full lock keeps its old '+tone' key."""
+    if not WT_TONE_LOCK:
+        return ""
+    if WT_TONE_MATCH_STD and float(WT_TONE_STRENGTH) == 1.0:
+        return "+tone"
+    return f"+tone{float(WT_TONE_STRENGTH):g}" + ("sd" if WT_TONE_MATCH_STD else "")
 
 
 def _wt_with_anchor(cond, anchor):
@@ -3922,10 +3939,13 @@ def _wt_tone_lock(dv, ov, ref, *, start, sigma):
         return dv, ov
     body = dv[:, :, start:].float()
     mu, sd = _wt_tone_stats(body)
-    lo, hi = WT_TONE_STD_CLAMP
-    r = (ref[1] / sd).clamp(lo, hi)
-    fixed = (body - mu) * r + ref[0]
-    shift = fixed - body
+    if WT_TONE_MATCH_STD:
+        lo, hi = WT_TONE_STD_CLAMP
+        target = (body - mu) * (ref[1] / sd).clamp(lo, hi) + ref[0]
+    else:
+        target = body - mu + ref[0]
+    shift = float(WT_TONE_STRENGTH) * (target - body)
+    fixed = body + shift
     dv = dv.clone()
     ov = ov.clone()
     dv[:, :, start:] = fixed.to(dv.dtype)
@@ -4233,7 +4253,7 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                            + ("+mc" if WT_MOTION_CONTEXT else "")
                            + ("+hold" if (WT_HOLD_OVERLAPS and WT_FINISHED_HANDOFF) else "")
                            + ("+anchor" if WT_TAKE_ANCHOR else "")
-                           + ("+tone" if WT_TONE_LOCK else "")
+                           + _wt_tone_tag()
                            + "+m" + _wt_model_fp(model))
         name = f"__wtake_{t + 1}"
         if hop_store is not None and getattr(hop_store, "has", lambda _k: False)(key):
