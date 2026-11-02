@@ -1513,7 +1513,9 @@
         "",
         "open_h3_regenerate_2k_r256pp_bf16.safetensors",
         42,
-        "hop_text"
+        "hop_text",
+        "temp",
+        "0.5"
       ]
     },
     {

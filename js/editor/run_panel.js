@@ -103,6 +103,8 @@ const GROUPS = [
                     // display only, and INPUT_TYPES appends it last so saved
                     // workflows keep their widget indices.
                     "pin_mech",
+                    // tone_lock: windowed takes only (11-02), so it sits with pin_mech.
+                    "tone_lock",
                     // ht_seam_fix: the seam-fix batch (recover, 2026-10-14).
                     "ht_seam_fix",
                     "audio_pin_frames",

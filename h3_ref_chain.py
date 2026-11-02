@@ -3873,6 +3873,18 @@ WT_TONE_LOCK = True
 WT_TONE_STRENGTH = 0.5             # share of the way back to window 1's level per hand-off
 WT_TONE_MATCH_STD = False          # also match the spread (00004: boosted colour on faces)
 WT_TONE_STD_CLAMP = (0.85, 1.18)   # the spread is matched within these ratios only
+# The node's tone_lock widget (11-02): choice -> (strength, match spread). 0.5 = walk_night_mv_00005
+# (people kept, street drift halved, one late snap); full = the 00004 lock (no drift, darker people).
+WT_TONE_CHOICES = {"0.5": (0.5, False), "0.75": (0.75, False), "full": (1.0, True)}
+WT_TONE_DEFAULT = "0.5"
+
+
+def _wt_set_tone(choice):
+    """Set the tone lock from the node's tone_lock widget; an unknown value falls back to the default."""
+    global WT_TONE_STRENGTH, WT_TONE_MATCH_STD
+    key = str(choice) if str(choice) in WT_TONE_CHOICES else WT_TONE_DEFAULT
+    WT_TONE_STRENGTH, WT_TONE_MATCH_STD = WT_TONE_CHOICES[key]
+    return key
 
 
 def _wt_tone_tag():
@@ -5798,6 +5810,17 @@ class HandTieClips:
                                 "(up to cache_budget_gb) until you clear it with the button "
                                 "in the cache group."),
                 }),
+                # APPENDED 2026-11-02, LAST widget (after cache_location in widgets_values).
+                "tone_lock": (list(WT_TONE_CHOICES), {
+                    "default": WT_TONE_DEFAULT,
+                    "tooltip": ("pin_mech windowed only. How hard each window of a take is pulled "
+                                "back to the take's opening colour and brightness, so a long take "
+                                "does not slowly drift brighter or paler. 0.5: half way, people "
+                                "keep their look, the background can still drift a little. 0.75: "
+                                "holds the background closer. full: holds the look tightest, but "
+                                "can darken people and boost their colour. A take whose light is "
+                                "meant to change (night to dawn) changes less the higher this is."),
+                }),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -5915,10 +5938,12 @@ class HandTieClips:
             regen2k_model=None, regen2k_seed=REGEN2K_SEED,
             regen2k_cond=REGEN2K_DEFAULT_COND,
             audio_model=None,
-            upsample_settings=None, cache_location="temp", unique_id=None):
+            upsample_settings=None, cache_location="temp", tone_lock=WT_TONE_DEFAULT,
+            unique_id=None):
         # Every argument, as called: the hand_tie previs-first pass re-runs this
         # same call with dry_run=previs before any hop renders.
         _run_args = {k: v for k, v in locals().items() if k != "self"}
+        _wt_set_tone(tone_lock)   # before any take key is made: the key names the setting
         # First thing, before a single model is touched: hand the writer's VRAM
         # back. The plan writer stays resident between plans now, which is the
         # right trade everywhere except here -- a 27B and an H3 render do not

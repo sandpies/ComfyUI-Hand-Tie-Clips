@@ -956,6 +956,13 @@ something to do.
 **Retakes:** change one hop's beat or seed and re-queue; only that hop's window is drawn again,
 held to its neighbours on both sides. Everything else in the take is reused.
 
+**`tone_lock`** pulls each window back toward the take's opening colour and brightness, so a
+long take does not slowly turn brighter and paler (and then snap back at a sentence boundary).
+`0.5` (default) keeps people looking as they did in the opening; the background can still drift
+a little. `0.75` holds the background closer. `full` holds it tightest but can darken people and
+boost their colour. A take whose light is meant to change (night into dawn) changes less the
+higher this is set.
+
 ## When it goes wrong
 
 | symptom | cause | fix |
