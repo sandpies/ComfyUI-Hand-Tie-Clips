@@ -796,7 +796,7 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
           </details>
 
           <details class="sim-run-group" open>
-            <summary>join &amp; pin (cleaned — 5 essential controls)</summary>
+            <summary>join &amp; pin</summary>
             <div class="sim-axes" style="margin-top:8px;">
               <div class="sim-field">
                 <label>pin mech</label>
@@ -804,7 +804,12 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
                   <option value="auto">auto</option>
                   <option value="motion_context">motion_context (Built-In)</option>
                   <option value="hand_tie" selected>hand_tie (Previs Bridge)</option>
+                  <option value="sand_tie">sand_tie (One Continuous Take)</option>
                 </select>
+              </div>
+              <div class="sim-field">
+                <label>tone lock (sand_tie)</label>
+                <select class="sim-select"><option selected>0.5</option><option>0.75</option><option>full</option></select>
               </div>
               <div class="sim-field">
                 <label>ref image size</label>
@@ -859,7 +864,7 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
       </video>
     </div>
 
-    <h2>Two Ways to Join Shots (<code>pin_mech</code>)</h2>
+    <h2>Three Ways to Join Shots (<code>pin_mech</code>)</h2>
     <table>
       <thead>
         <tr>
@@ -882,6 +887,11 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
           Drop any <code>qwen3vl_4b*.safetensors</code> or <code>qwen3vl_8b*.safetensors</code> into <code>models/text_encoders/</code> — e.g. <a href="https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors"><code>qwen3vl_4b_fp8_scaled.safetensors</code> (Comfy-Org)</a>, <a href="https://huggingface.co/silveroxides/K2Q/tree/main/qwen3vl_4b"><code>qwen3vl_4b</code> (silveroxides/K2Q)</a>, or <a href="https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors"><code>qwen3vl_8b_int8_convrot.safetensors</code> (Comfy-Org)</a>. It loads at the start of the run to compile your beats into continuous bridge moments and unloads from VRAM before H3 starts.<br><br>
           <strong>Caveat:</strong> Because every hop must meet its bridge window, beats that ask for a sudden location change, hard camera angle jump, or fast prop action across a join can cause the previs to cut or morph. It works very well when the camera and subject flow continuously in one setting, and may occasionally need a seed re-roll if a beat moves too far.</td>
         </tr>
+        <tr>
+          <td><strong><code>sand_tie</code></strong><br><em>(One Continuous Take)</em></td>
+          <td><strong>New in 3.4.0</strong><br>Long takes with no joins: <a href="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/sand-tie-mv-walk-me-through-the-night.mp4">2:03 one-take MV</a>, <a href="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/sand-tie-two-person-place-change-52s.mp4">52 s two-person take</a>, <a href="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/sand-tie-walking-selfie-65s.mp4">65 s walking selfie</a></td>
+          <td>Each take (up to <code>anchor: restart</code>) renders as one video; retake one hop and only that hop is redrawn. <code>tone_lock</code> stops long takes drifting brighter. Needs a recent ComfyUI (H3 context windows) and overlap 0.9 s.</td>
+        </tr>
       </tbody>
     </table>
 
@@ -897,18 +907,20 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
     <h3>2. Refine Pass (<code>hop_refine: full</code>) — Honest Limitations</h3>
     <ul>
       <li>Runs a gentle low-sigma detail pass per hop (supports wiring a stock 30-step H3 DiT to <code>refine_model</code> while your main wire runs a Turbo model).</li>
-      <li><strong>The honest truth on chain length:</strong> <code>Refine</code> holds back relay degradation and keeps joins clean, pushing continuous <code>motion_context</code> chains to <strong>5–6 clips on Turbo</strong> before very visible texture changes appear, and <strong>7–8 clips on non-Turbo</strong>. Under <code>motion_context</code>, plan to transition to a cut (<code>anchor: "restart"</code>) every 4–5 clips or so to maintain the integrity of your textures (or use <code>pin_mech: hand_tie</code> for continuous single-take sequences).</li>
+      <li><strong>The honest truth on chain length:</strong> <code>Refine</code> holds back relay degradation and keeps joins clean, pushing continuous <code>motion_context</code> chains to <strong>5–6 clips on Turbo</strong> before very visible texture changes appear, and <strong>7–8 clips on non-Turbo</strong>. Under <code>motion_context</code>, plan to transition to a cut (<code>anchor: "restart"</code>) every 4–5 clips or so to maintain the integrity of your textures (or use <code>pin_mech: sand_tie</code> for one continuous take).</li>
     </ul>
 
     <h3>3. Tiled Upsampler (<code>upsample: on</code>) &amp; Standalone Node</h3>
-    <p>Enlarges the finished film to 1.5–2.0 MP in latent chunks and runs the original MMH3 Ultimate Upscale recipe: one tiled re-draw step from sigma 0.75 (<code>upsample_denoise</code> 0.2), 102-frame chunks with 17 shared, 70000-token tiles with 128 px overlap. An optional <strong>HTC Upsample Settings</strong> node on the <code>upsample_settings</code> socket exposes every one of those numbers. Toggling <code>upsample</code> on a cached chain skips hop generation and runs only the upscaler.</p>
+    <p>Enlarges the finished film to 2.0 MP and re-draws it with the <strong>Open-H3-Regenerate-2K</strong> LoRA (3 steps from sigma 0.6). Small, distant faces are re-drawn as close-ups so they keep their person; tiles size themselves to your GPU. An optional <strong>HTC Upsample Settings</strong> node on the <code>upsample_settings</code> socket exposes all the upsample's settings. Toggling <code>upsample</code> on a cached chain skips hop generation and runs only the upscaler.</p>
 
     <div class="callout">
       <strong>Required Files for Upsampling:</strong>
       <ol style="margin:6px 0 0 0; padding-left:20px;">
         <li><strong>Latent Upscaler (`ComfyUI/models/latent_upscale_models/`):</strong><br>
             Download <code>minimax_h3_latent_upscaler_3d_bf16.safetensors</code> from <a href="https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler">LBH-123-AI/Minimax_h3_latent_Upscaler</a> (or <code>h3_upscaler_lms_v0.1.safetensors</code>).</li>
-        <li><strong><code>upsample_dit</code> wire (optional):</strong> a separate model for the re-draw, e.g. a plain H3 UNETLoader with no LoRAs. No upscale LoRA is needed: <code>upsample_lora</code> is retired and ignored.</li>
+        <li><strong>Regen2K LoRA (`ComfyUI/models/loras/`):</strong><br>
+            Download <a href="https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/blob/main/lora/open_h3_regenerate_2k_r256pp_bf16.safetensors"><code>open_h3_regenerate_2k_r256pp_bf16.safetensors</code></a> and pick it in <code>upsample_redraw</code>.</li>
+        <li><strong><code>upsample_dit</code> wire (optional):</strong> a separate model for the re-draw, e.g. a plain H3 UNETLoader with no LoRAs.</li>
       </ol>
       <p style="margin:8px 0 0 0; font-size:13px;"><em>Want to upscale any existing video outside a chain? Use the included <strong>H3 Video Upsampler (finished clip)</strong> node (<code>workflows/HandTieClips_Upsample_Video.json</code>) or the standalone repo: <a href="https://github.com/sandpies/ComfyUI-H3-Video-Upsampler">sandpies/ComfyUI-H3-Video-Upsampler</a>.</em></p>
     </div>
