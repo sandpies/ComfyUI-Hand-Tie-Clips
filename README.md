@@ -172,6 +172,7 @@ Full authoring guide: **[PROMPTING.md](PROMPTING.md)** · Release history: **[CH
 - **HTC Upsample Settings (`HTCUpsampleSettings`):** Every number of the chain's upsample, on its optional `upsample_settings` socket; unwired, the defaults (Regen2K from 0.6, stepped joins).
 - **HTC Save Video (long-form) (`HTCSaveVideo`):** Replaces RTX Frame Generation -> CreateVideo -> SaveVideo for long films: streams the frames, frame generation per pair on the GPU, NVENC constant quality, a keyframe on every cut.
 - **H3 RefMod Builder (`HTCRefModBuilder`):** Builds reusable visual/voice reference modules for the REFS rail.
+- **H3 Token LoRA (HTC) (`HTCTokenLoRA`):** A LoRA loader with one strength per kind of token: video, reference pictures, prompt and soundtrack. Slots A/B/C plus **Add LoRA**, each with its own strengths and block range; a checkbox switches a slot off. Audio 0 keeps the soundtrack on the plain model (a look LoRA no longer changes voices); reference 0 keeps the reference pictures read by the plain model. All 1 = a normal loader. Chain several to stack LoRAs. Works with chunked feed-forward and sparse attention.
 - **H3 Cache (`HTCH3Cache`):** Residual step cache on the MODEL wire ([silveroxides](https://github.com/silveroxides) / [PlagueKind](https://github.com/PlagueKind); see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)).
 
 </details>

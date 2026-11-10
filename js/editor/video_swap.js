@@ -18,8 +18,8 @@ import { parseRefPlan } from "./ref_rail.js";
 import { createPicker } from "./media_picker.js";
 
 const SWAP_PLAN_URL = "/h3_ref_chain/swap_plan";
-const SWAP_DESCRIBE_URL = "/h3_ref_chain/swap_describe";
 const SWAP_IDS_PROP = "h3_swap_identities";
+const SWAP_PINS_PROP = "h3_swap_pins";
 
 function commit(node, w, value) {
     if (!w) return;
@@ -44,9 +44,10 @@ export function createVideoSwap(node, { onWritten } = {}) {
     root.appendChild(body);
 
     const hint = el("div", "h3e-note h3e-note-hint");
-    hint.textContent = "Standalone guided swap: automatically loads the Character/Head "
-        + "Swap LoRA @ 1.0, lays clip 1 onto AddGuide (frame 0), and writes "
-        + "swap_script. Leaves SCRIPT, REFERENCES and your upstream LoRA stack untouched.";
+    hint.textContent = "Viggle Remake swap & edit: automatically loads viggle_remake_swap "
+        + "or viggle_remake_edit LoRA @ 1.0 via LoraLoaderBypassModelOnly, places clip 1 "
+        + "as <Video 1> with optional keyframe pins (held until sigma < 0.9), and runs "
+        + "the 6-step euler schedule. Leaves SCRIPT and REFERENCES untouched.";
     body.appendChild(hint);
 
     const wVideo = widgetByName(node, "reference_video_file");
@@ -143,7 +144,8 @@ export function createVideoSwap(node, { onWritten } = {}) {
             identSel.appendChild(o);
         }
         identSel.value = "";
-        fillTagPicker(bgTagSel, "\u2014 background picture \u2014");
+        fillTagPicker(bgTagSel, "\u2014 @tag background plate \u2014");
+        rebuildWardrobeDropdown();
         syncControls();
     }
 
@@ -158,21 +160,18 @@ export function createVideoSwap(node, { onWritten } = {}) {
     });
 
     const MODES = [
-        ["replace_person", "Replace person",
-         "Face, build, hairstyle AND wardrobe come from the identity photograph."],
-        ["head_swap", "Head swap (head + hair)",
-         "Face, hair and skin tone from the photograph. The body stays with the "
-         + "clip: build, posture, hands and every garment."],
-        ["face_only", "Face only (features)",
-         "Only the facial features come from the photograph. Hair, ears, "
-         + "expression, build and clothes stay with the clip."],
-        ["keep_person", "Keep the clip's person",
-         "Swaps nobody. The clip is a scene and motion plate, and no identity "
-         + "is needed."],
+        ["replace_person", "Swap person / character (Viggle Swap)",
+         "Viggle Remake swap LoRA: full character replacement (face, build, hairstyle and wardrobe from reference plates)."],
+        ["head_swap", "Head swap (head + hair, Viggle Swap)",
+         "Viggle Remake swap LoRA: face, hair and skin tone from reference plates; body and clothing stay with the clip."],
+        ["face_only", "Face only (features, Viggle Swap)",
+         "Viggle Remake swap LoRA: only facial features come from reference plates; hair, body and clothes stay with the clip."],
+        ["keep_person", "Edit scene / Keep person (Viggle Edit)",
+         "Viggle Remake edit LoRA: keeps the clip's people and edits objects, background, weather or lighting."],
     ];
     const BACKGROUNDS = [
         ["clip", "Background: from the clip", "Same place, props and light as the clip."],
-        ["picture", "Background: from a picture", "Pick a rail @tag below. The action still follows the clip."],
+        ["picture", "Background: from a picture (@tag)", "Pick a rail @tag below. The action still follows the clip."],
         ["free", "Background: free", "The beat chooses the setting from your brief."],
     ];
 
@@ -189,24 +188,79 @@ export function createVideoSwap(node, { onWritten } = {}) {
     }
 
     const modeRow = el("div", "h3e-writer-row");
-    const modeSel = picker(MODES, "What the identity photograph contributes.");
+    const modeSel = picker(MODES, "Viggle Remake mode (Swap vs. Edit) and what the reference contributes.");
     const bgSel = picker(BACKGROUNDS, "Where the setting comes from.");
-    modeRow.appendChild(modeSel);
-    modeRow.appendChild(bgSel);
+    const bgTagSel = el("select", "h3e-select");
+    bgTagSel.title = "The @tag on the REFERENCES rail the background comes from (used when Background: from a picture is selected).";
+    modeRow.append(modeSel, bgSel, bgTagSel);
     body.appendChild(modeRow);
 
     const plateRow = el("div", "h3e-writer-row");
-    const bgTagSel = el("select", "h3e-select");
-    bgTagSel.title = "The @tag the background comes from. Only used by "
-        + "Background: from a picture.";
+    const wardSel = el("select", "h3e-select");
+    wardSel.title = "Optional wardrobe from an @tag plate on the REFERENCES rail.";
     const wardInput = el("input", "h3e-writer-brief");
     wardInput.type = "text";
     wardInput.placeholder = "optional wardrobe / outfit text (e.g. black bikini, red dress, or @tag)";
     wardInput.title = "Optional custom wardrobe from text (or an @tag on the rail). "
         + "Overrides the clothing from the reference photo and the clip.";
-    plateRow.appendChild(bgTagSel);
-    plateRow.appendChild(wardInput);
+
+    function rebuildWardrobeDropdown() {
+        const prev = wardSel.value;
+        wardSel.textContent = "";
+        const defOpt = el("option", null, "\ud83d\udc57 Wardrobe: Keep Reference / Clip");
+        defOpt.value = "";
+        wardSel.appendChild(defOpt);
+        const rows = railRows();
+        if (rows.length) {
+            const railGrp = document.createElement("optgroup");
+            railGrp.label = "\ud83d\udccc From REFERENCES Rail (@tag Plate)";
+            for (const r of rows) {
+                const tag = String(r.tag || "").replace(/^@/, "");
+                const o = el("option", null, `@${tag} (Rail Wardrobe Plate)`);
+                o.value = `@${tag}`;
+                railGrp.appendChild(o);
+            }
+            wardSel.appendChild(railGrp);
+        }
+        if (prev) wardSel.value = prev;
+    }
+
+    wardSel.addEventListener("change", () => {
+        const val = wardSel.value;
+        if (!val) {
+            wardInput.value = "";
+            return;
+        }
+        wardInput.value = val;
+    });
+
+    const pinsInput = el("input", "h3e-writer-brief");
+    pinsInput.type = "text";
+    pinsInput.style.maxWidth = "190px";
+    pinsInput.placeholder = "pins: e.g. 0 or 12, 184 (optional)";
+    pinsInput.title = "Optional 0-based frame indices (one per reference plate, in order) "
+        + "when your reference plates are painted keyframes of the source clip. "
+        + "Held in minimax_keyframes until sigma < 0.9. Leave blank for unpinned reference plates.";
+    if (node.properties?.[SWAP_PINS_PROP]) {
+        pinsInput.value = String(node.properties[SWAP_PINS_PROP]);
+    }
+    pinsInput.addEventListener("change", () => {
+        node.properties ??= {};
+        node.properties[SWAP_PINS_PROP] = String(pinsInput.value || "").trim();
+    });
+    plateRow.append(wardSel, wardInput, pinsInput);
     body.appendChild(plateRow);
+
+    // Optional local add-on (not shipped): may add rows to SWAP and extra
+    // request fields. Absent = nothing happens.
+    let extras = null;
+    import("./personal_studio.js").then((mod) => {
+        if (typeof mod?.mountSwapExtras === "function") {
+            extras = mod.mountSwapExtras(node, {
+                body, bgSel, wardInput, syncControls: () => syncControls(),
+            });
+        }
+    }).catch(() => {});
 
     function fillTagPicker(sel, blankLabel) {
         const rows = railRows();
@@ -242,18 +296,11 @@ export function createVideoSwap(node, { onWritten } = {}) {
     const row = el("div", "h3e-writer-row");
     const brief = el("input", "h3e-writer-brief");
     brief.type = "text";
-    brief.placeholder = "optional -- extra context beyond the clip";
+    brief.placeholder = "optional -- extra context, action, or dialogue beyond the clip";
     row.appendChild(brief);
 
-    const describeBtn = button("Describe frame",
-        "Optional. Captions the clip across 5 frames without touching your "
-        + "script -- useful as a quick check that the frames and the model are "
-        + "working before you write a swap.",
-        () => describeFrame());
-    row.appendChild(describeBtn);
-
     const go = button("Analyze & write swap",
-        "Draft one standalone swap contract. Nothing is committed until you press Accept.",
+        "Draft one standalone swap contract (automatically samples 5 clip frames and scans reference plates).",
         () => run());
     row.appendChild(go);
     body.appendChild(row);
@@ -319,7 +366,7 @@ export function createVideoSwap(node, { onWritten } = {}) {
 
     function setBusy(on) {
         busy = on;
-        describeBtn.disabled = go.disabled = acceptBtn.disabled = on;
+        go.disabled = acceptBtn.disabled = on;
     }
 
     function syncActiveBox() {
@@ -442,53 +489,6 @@ export function createVideoSwap(node, { onWritten } = {}) {
             + "press Clear swap whenever you want to return to your chain.", "hint");
     }
 
-    async function describeFrame() {
-        if (busy) return;
-        const video = String(wVideo?.value || "");
-        if (!video) { say("Pick a reference clip first.", "error"); return; }
-        setBusy(true);
-        say("Captioning 5 frames across MEDIA's trim window\u2026", "hint");
-        try {
-            const r = await fetch(SWAP_DESCRIBE_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    video,
-                    video_start_s: Number(wStart?.value) || 0,
-                    video_end_s: Number(wEnd?.value) || 0,
-                }),
-            });
-            const j = await r.json();
-            if (!j.ok) {
-                say(j.error || "describe failed", "error");
-                return;
-            }
-            const desc = j.description || "";
-            commit(node, wDesc, desc);
-            draftList.textContent = "";
-            if (desc) {
-                draftList.appendChild(el("div", "h3e-writer-draft-line", desc));
-            }
-            const leaked = j.identity_words || [];
-            if (!desc) {
-                say("The model returned an empty description.", "error");
-            } else if (leaked.length) {
-                say("Caption written, but it describes the person ("
-                    + leaked.join(", ") + "). That fights an identity swap: "
-                    + "the clip's caption tells the encoder who is in it. "
-                    + "Edit it in MEDIA, or clear it before rendering a swap.",
-                    "error");
-            } else {
-                say("Clip description written to MEDIA > clip 1 > describe it. "
-                    + "REFERENCES and SCRIPT unchanged.", "hint");
-            }
-        } catch (e) {
-            say(String(e), "error");
-        } finally {
-            setBusy(false);
-        }
-    }
-
     async function run() {
         if (busy) return;
         const video = String(wVideo?.value || "");
@@ -517,6 +517,8 @@ export function createVideoSwap(node, { onWritten } = {}) {
             ? `Writing ${identities.length}-person swap contract (L\u2192R)\u2026`
             : "Writing one-hop swap contract\u2026", "hint");
         try {
+            const rawWard = String(wardInput.value || "").trim();
+            const isWardTag = rawWard.startsWith("@");
             const r = await fetch(SWAP_PLAN_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -537,7 +539,10 @@ export function createVideoSwap(node, { onWritten } = {}) {
                     mode: modeSel.value,
                     background: bgSel.value,
                     background_tag: bgTagSel.value || "",
-                    wardrobe_text: String(wardInput.value || "").trim(),
+                    wardrobe_tag: isWardTag ? rawWard.replace(/^@/, "") : "",
+                    wardrobe_text: isWardTag ? "" : rawWard,
+                    ...(extras?.fields?.() || {}),
+                    pins: String(pinsInput.value || "").trim(),
                 }),
             });
             const j = await r.json();

@@ -3,6 +3,44 @@
 User-facing. The files named here are in the repository, not in the installed
 pack — the published package excludes them.
 
+## 3.5.0 — 2026-11-11
+
+### New: `ic` upsample (in-context re-draw)
+- **`upsample_redraw: ic`** keeps each piece of the film's own frames in view while it is re-drawn, and hears its soundtrack, so faces, lettering and mouths stay the film's own (after NVlabs' Open-H3-Regenerate-2K-IC). Slower than Regen2K. Needs, in `models/loras`, `minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16.safetensors` (200 MB, Kijai) and `minimax_h3_hyperflow_8step_v1.0.safetensors`.
+- **`ic` runs on `upsample_dit`** when it is wired, else on the MODEL wire with the hop LoRAs stripped. That model must be the official, unpruned `minimax_h3_ref2va_*`: fl2va, pruned builds and merges have no time embedder, and the run stops **before any hop renders** and names the fix.
+- **No text encoder needed for `ic`.** The task prompt ships pre-encoded (`upsample_ic_task.safetensors`), so the 26 GB text encoder does not load. Wire `clip` on the upsampler nodes to let it see each piece (NVlabs' recipe); in tests the two looked the same.
+- The H3 Video Upsampler nodes gain `method` (`regen2k` / `ic`) and an optional `clip` input, appended last; saved graphs load as before.
+
+### New: H3 Token LoRA (HTC)
+- A LoRA loader with its own strength for the video, the soundtrack, the reference pictures (and pinned join frames) and the prompt, per LoRA. Set audio 0 and a look or style LoRA leaves the voices to the plain model; all 1 behaves as a normal loader.
+- Several LoRAs in one node: slots A, B, C, and **Add LoRA** for D, E, and so on. Each slot has its own strengths, block range and text-refiner strength. A checkbox switches a slot off and keeps its settings, the gear shows its settings, and the cross removes it. Chain nodes to stack more. Parts of a LoRA that cannot be split by token (timestep/AdaLN, norms) are skipped or applied to everything (`other_keys`). `add_mode` `fp32_stochastic` keeps very small LoRA terms that bf16 would round away. Works with KJNodes' chunked feed-forward and ComfyUI's sparse attention; the upsample re-draws run without it.
+
+### New: `upsample_steps` (chain node, RUN tab → upsample)
+- `3 (recipe)` or `2 (faster)`: the upsample re-draw (Regen2K or `ic`) in 2 steps is about a third faster and looked as good in tests. A wired HTC Upsample Settings node keeps its own steps. `redraw_steps` on the upsampler nodes now also applies to `ic`.
+
+### Changed: Realism Boost is now **Upscale 2nd Pass**
+- The hops render at the canvas size as before; after the last hop the film is sized up to **2nd pass megapixels** (default 1.0) and its texture re-drawn in **2nd pass steps** (default 3) on the 2nd pass LoRAs (recipe: `minimax_h3_lms_v1.0_r64` 0.5 + `h3-realism-people` 1.0). It runs before upsample when both are on.
+- The retired `audio_refine` widgets now hold the 2nd pass settings (same slots, so saved graphs load). A graph still carrying the old untouched values (0.5 / 5) runs the new defaults (1.0 MP / 3 steps).
+
+### Changed: SWAP uses Viggle Remake
+- Swap and edit run on Viggle's `viggle_remake_swap_comfyui` / `viggle_remake_edit_comfyui` LoRAs (loaded by the node, in `models/loras`), with the source clip as `<Video 1>`, its 6-step schedule, and optional **pins** (reference pictures that are painted frames of the clip, held until the end of the noisy steps).
+- The SWAP writer sends a negation back to be rewritten instead of queuing it, and flags a description too short for the hop.
+
+### WRITE
+- **Continuity sheet.** On a film of more than one hop, the Proposal card shows where everyone stands, each hop's start and end, and every cut with its reason; once accepted, the beats are written from it.
+- **Adult staging.** When the brief is explicit, WRITE adds its staging rules (clothing states, anatomy, from-behind framing, POV, joins).
+- **Director co-pilot skill** (`prompt_pack/skills/director-copilot/`, was `htc-music-video`): films and music videos, continuity, performance and adult pages; `build_graph.py` runs the plan audit first and writes nothing while a line is unresolved.
+
+### Fixed
+- **A hard cut no longer flashes the previous shot.** `join: hard_cut` used to read "A clean cut opens a new setup, the same place a moment later.", which on a GPU put one or more frames of the previous shot (or another setup) on screen before the cut, into a new place and in the same place alike. It now reads "A clean cut opens a new scene."; every restart worded this way started clean.
+- **No brightening or dip at motion_context joins.** The post-join level lock and the pixel seam bridge are off (kept behind switches): both pulled frames toward a level from about a second away, which brightened the frames after a join or smeared a camera move backwards across it.
+- **Props get their own retention: `prop`.** A key prop's own picture (one object on a plain backdrop) is introduced as an object that carries its shape, material and colour wherever the action puts it, not as the setting; a prop never counts as a place in the plan checks.
+- The RUN tab keeps your open/closed groups and does not overwrite a field while you type in it; the writer's Start button re-checks when WRITE is reopened.
+
+### Workflows
+- Every shipped workflow's note names each file it loads, with a download link and its folder, plus the optional files for `ic`, Upscale 2nd Pass and SWAP. Tooltips for the 2nd pass, `upsample_dit` and the upsampler's settings rewritten.
+
+
 ## 3.4.0 — 2026-11-02
 
 ### New: one continuous take (`pin_mech: sand_tie`)

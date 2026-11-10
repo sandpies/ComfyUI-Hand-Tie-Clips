@@ -44,7 +44,7 @@
                       "hard_cut",
                       "match_cut"
                     ],
-                    "description": "continuous: The camera and the action carry straight on from the pinned frames in one unbroken take. | match_cut: The shot changes on a matched movement, the new framing picking up the same gesture already underway. | hard_cut: A clean cut opens a new setup, the same place a moment later."
+                    "description": "continuous: The camera and the action carry straight on from the pinned frames in one unbroken take. | match_cut: The shot changes on a matched movement, the new framing picking up the same gesture already underway. | hard_cut: A clean cut opens a new scene."
                   },
                   "camera": {
                     "type": "string",
@@ -224,9 +224,10 @@
                 "enum": [
                   "fully_preserved",
                   "partially_copy",
+                  "prop",
                   "reference"
                 ],
-                "description": "fully_preserved: face, bone structure, and hairstyle carry over exactly | partially_copy: the garment and its cut carry over, moving naturally with the body | reference: the layout, surfaces, and light carry over as the setting"
+                "description": "fully_preserved: face, bone structure, and hairstyle carry over exactly | partially_copy: the garment and its cut carry over, moving naturally with the body | reference: the layout, surfaces, and light carry over as the setting | prop: the object's shape, material, and colour carry over, wherever the action puts it"
               },
               "desc": {
                 "type": "string"

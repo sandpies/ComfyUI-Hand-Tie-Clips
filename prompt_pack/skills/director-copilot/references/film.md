@@ -57,6 +57,18 @@ with hop numbers and running time, plus the viewer pass, before any beats.
 - **One delivery per line;** "excited, whispered and fast" fights itself.
 - **About ten words, one sentence per quote,** single quotes, no ellipses or dashes, plain English
   spelling ("cafe", not "café"); hard names go outside the quote.
+- **An action you only threaten is done.** "Grips the letter to tear it" renders the letter torn:
+  the prompt is additive, so an intention renders as the act. Write only what the body visibly
+  does ("grips the letter in both fists, knuckles white"); the threat lives in the line.
+- **Only spoken words go in quotes.** Text on a screen, a sign or a note is written without
+  quotes ("the screen lights up with one name, Daniel"). A quoted word is read as a line: the model
+  may say it, and the first quote in a hop decides the speaker IDs, so a quoted screen name in a
+  sentence about one person makes that person S1 for the hop. In a dry run, check every hop's
+  `<Subject N> (Sx)` stays the same across the film.
+- **Enough talk.** The ten words cap each quote, not the scene. A dialogue scene runs about two
+  spoken words a second: three or four turns per 10 s hop, each in its own window, a turn of two
+  quotes allowed. Count the words per hop before you build; a hop with one short line plays as a
+  silent film, and the lone line gets said twice. Quick exchanges keep both mouths on screen.
 - **Behaviour, not feeling:** "lowers his gaze, jaw tight", never "he feels guilty".
 - **Every line has a visible listener in a named direction,** never the lens.
 - **The first line goes to the freest face:** the most central, frontal, not busy. To choose the
@@ -107,4 +119,4 @@ business with a sound of its own.
 Check with `check_plan.py ... --no-mv`. Film lints: `eyeline`, `after-line`, `no-stop`, `mouth`,
 `back-view`, `phone`, `outfit`, `pull-in`, `no-eye-target`, `prop-words`, `lens-address`,
 `shot-people`, `early-cut`, `push-in`; with `--map` also `goal-behind`, `sides`, `prop-picture`,
-`prop-holder`.
+`prop-holder`, `prop-retention`, `state`, `plate-lacks`.

@@ -31,7 +31,7 @@ VOCAB = {
                       "frames in one unbroken take.",
         "match_cut":  "The shot changes on a matched movement, the new framing "
                       "picking up the same gesture already underway.",
-        "hard_cut":   "A clean cut opens a new setup, the same place a moment later.",
+        "hard_cut":   "A clean cut opens a new scene.",
     },
     "camera": {
         "hold":       "The camera holds its position throughout.",
@@ -88,6 +88,15 @@ _CAMERA_MOVES = ("pan_follow", "push_in", "pull_back", "orbit", "handheld")
 # Order matters: this is the order the compiled sentences appear in the prompt.
 # `join` leads because it describes how this hop meets the previous one.
 AXES = ("join", "camera", "framing", "pace", "tail")
+
+# "A clean cut opens a new setup, the same place a moment later." rendered a
+# flash of the previous shot before the cut on a GPU: into a new place
+# (2026-11-03) and, a day later, even on a restart
+# in the SAME place (one frame of another setup), while every restart worded
+# "A clean cut opens a new scene." started clean. So hard_cut now always says
+# that. plan.compile_blocks still marks new-place restarts (_new_place), which
+# keeps this constant as the explicit new-place line.
+HARD_CUT_NEW_PLACE = "A clean cut opens a new scene."
 
 # Applied when a shot names no value for the axis. Only `tail` carries one:
 # every other axis is legitimately "unspecified", but an unspecified tail is
@@ -181,6 +190,8 @@ def directive_prose(directives, hop_index, axes=None):
             continue
         value = str(d.get(axis) or "").strip() or DEFAULTS.get(axis, "")
         line = VOCAB.get(axis, {}).get(value)
+        if axis == "join" and value == "hard_cut" and d.get("_new_place"):
+            line = HARD_CUT_NEW_PLACE
         if (axis == "framing" and FRAMING_AS_LANDING and hop_index > 0
                 and str(d.get("join") or "").strip() == "continuous"
                 and str(d.get("camera") or "").strip() in _CAMERA_MOVES

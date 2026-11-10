@@ -84,6 +84,8 @@ from . import dialogue_lock as _dlg
 from . import planner as _planner
 from . import refine_blend as _rblend
 from . import tiled_upsampler as _tu
+from . import upsample_ic as _ic
+from . import token_lora as _tl
 from . import upscale_guide as _ug
 from . import hear as _hear
 from . import hand_tie as _ht
@@ -723,8 +725,14 @@ def _live_cite(live_picture, live_video):
 def _assemble_next(beat, live_picture=None, live_video=None,
                    n_stills=0,
                    identity_ordinals=None, n_subjects=None, tail=None,
-                   continuity="", retention="", wardrobe=False, refvid=""):
-    """Hop 2+ in `next` mode: user text is only the new beat."""
+                   continuity="", retention="", wardrobe=False, refvid="", cut=False):
+    """Hop 2+ in `next` mode: user text is only the new beat.
+
+    `cut` (the shot's join is hard_cut): the pinned frames are the last moment of
+    the previous shot and the hop cuts away from them at once. A continuation is
+    used for a cut so frame 0 is a real picture: a restart has none, and opened on
+    the character sheet's portrait for 4-10 frames (measured 2026-11-04).
+    The hold / live-frame sentences would fight the cut, so they are left out."""
     text = (beat or "").strip() or ADVANCE_BEAT
     cite = _live_cite(live_picture, live_video)
     lock = _identity_lock(n_stills, live_picture,
@@ -812,6 +820,19 @@ def _assemble_next(beat, live_picture=None, live_video=None,
     # (chain_00030..00034). One paragraph: airlock, then the beat.
     text = re.sub(
         r"(?m)^(overall_soundscape|non_diegetic_music):\s*", "", text).strip()
+    if cut:
+        faces = "Faces and hair follow the identity photographs. " if lock else ""
+        return (
+            f"{ret_block}"
+            "The clip opens on the pinned frames, the last moment of the previous "
+            "shot, and cuts away from them at once. "
+            f"{inject}"
+            "What happens next:\n"
+            f"{text}\n\n"
+            f"{faces}"
+            "Clothing, room and lighting follow the next-beat. After the cut, the "
+            f"shot advances through what the next-beat describes, {terminal}"
+        )
     return (
         f"{ret_block}"
         "The clip opens already in progress from the pinned frames. "
@@ -2878,108 +2899,37 @@ def _refine_sampled(sampled, *, model, guider, sampler, scheduler,
         noise=r_noise, guider=guider, sampler=sampler,
         sigmas=r_sigmas, latent_image=sampled))[0]
 
-def _audio_refine_masks(video, audio):
-    """Whole-stream masks for the audio pass: video frozen, audio live.
+# Realism boost (2-Pass):
+#   Pass 1: Low-Res Base/Turbo generation at canvas resolution (1.0 -> 0.0, full
+#           clean audio in one shot, cached in HopStore).
+#   3D Latent Upscale: Pure size-up via the 3D conv latent upscaler
+#                      (models/latent_upscale_models, no LoRA / no denoise during size-up).
+#   Pass 2: High-Res Refine pass on the Boost LoRA stack (LMS 0.5 + Realism-People 1.0
+#           + H3AdaLNLoRAFix), paired with Pass 1's finished audio.
+BOOST_DEFAULT_MEGAPIXELS = 1.0
+BOOST_DEFAULT_DENOISE = 0.30
 
-    A boundary inside the audio stream is the warble the video refine already
-    refused, so this mask has no ramp and no head. 0 holds, 1 denoises.
+
+def _boost_auto_denoise(steps: int) -> float:
+    """Dynamic 2nd-pass schedule fraction scaled to `steps` on H3's shift=12 curve.
+
+    In BasicScheduler('simple'), `total = int(steps / denoise)`:
+    - 1 step  -> 0.20 (sigma [0.75, 0.0], classic 1-step upscale recipe)
+    - 2 steps -> 0.20 (last 2 of 10 steps: [0.75, 0.60, 0.0], LokkenJP 2-step soft recipe)
+    - 3 steps -> 0.30 (last 3 of 10 steps: [0.8372, 0.75, 0.5714, 0.0], LokkenJP 3-step default)
+    - 4 steps -> 0.35 (last 4 of 11 steps: [0.8615, 0.80, 0.7059, 0.5217, 0.0])
+    - 5+ steps -> scales smoothly along `steps / (steps + 7)` capped at 0.50.
     """
-    vmask = torch.zeros((1, 1) + tuple(int(d) for d in video.shape[2:]),
-                        device=video.device, dtype=torch.float32)
-    amask = torch.ones((1, 1) + tuple(int(d) for d in audio.shape[2:]),
-                       device=audio.device, dtype=torch.float32)
-    return vmask, amask
-
-
-def _audio_refine_model(audio_model, hop_refine, refine_model, model):
-    """The model the audio pass runs on. -> (model, role for the log + key).
-
-    Never the boost model. H3 runs text, video and audio through the same
-    blocks, so the realism LoRAs colour the soundtrack too; re-cooking it on
-    them repeats that colour instead of removing it.
-    """
-    if audio_model is not None:
-        return audio_model, "wired"
-    if str(hop_refine) == "full" and refine_model is not None:
-        return refine_model, "refine"
-    return model, "base"
-
-
-def _audio_refine_sampled(sampled, *, model, guider, sampler, scheduler,
-                          steps, denoise, seed, sigma_cache, hop_no,
-                          sampler_label="same", model_label="base"):
-    """Re-noise the soundtrack against the finished picture.
-
-    The video refine holds audio frozen. This pass is the other way round, and
-    it runs only when audio_refine is on: the whole picture stays, the whole
-    soundtrack takes its own schedule. The picture is put back from the input
-    if the sampler moves it, and the mask is stripped so it cannot ride into
-    the next hop. A latent with no audio stream is returned unchanged.
-    """
-    import comfy.nested_tensor as nt  # noqa: PLC0415
-    parts = _latents.from_dict(sampled)
-    if not parts or len(parts) < 2:
-        print(f"[{TAG}] hop {hop_no}: audio refine skipped "
-              "(this hop has no audio stream)", flush=True)
-        return sampled
-    video = _stream_5d(parts[0])
-    audio = _stream_audio(parts[1])
-    vmask, amask = _audio_refine_masks(video, audio)
-    masked = dict(sampled)
-    masked["noise_mask"] = nt.NestedTensor((vmask, amask))
-    ms_obj = getattr(getattr(model, "model", model), "model_sampling", model)
-    key = ("audio_refine", int(steps), round(float(denoise), 4),
-           str(scheduler), id(ms_obj))
-    if key not in sigma_cache:
-        sigma_cache[key] = _result(_core_call(
-            BasicScheduler, "the audio refine sigma schedule",
-            model=model, scheduler=str(scheduler), steps=int(steps),
-            denoise=float(denoise)))[0]
-    r_sigmas = sigma_cache[key]
-    r_noise = _result(_core_call(
-        RandomNoise, "the audio refine noise source",
-        noise_seed=(int(seed) ^ 0xA11D0) & 0x7FFFFFFF))[0]
-    print(f"[{TAG}] hop {hop_no}: audio refine {int(r_sigmas.shape[-1]) - 1} "
-          f"steps denoise={float(denoise):.2f} "
-          f"sigma={float(r_sigmas[0]):.4f}->0 "
-          f"[{sampler_label}/{scheduler}, {model_label} model, picture frozen]",
-          flush=True)
-    out = dict(_result(_core_call(
-        SamplerCustomAdvanced, "the audio refine sampler",
-        noise=r_noise, guider=guider, sampler=sampler,
-        sigmas=r_sigmas, latent_image=masked))[0])
-    out.pop("noise_mask", None)
-    out_parts = _latents.from_dict(out)
-    if not out_parts or len(out_parts) < 2:
-        print(f"[{TAG}] hop {hop_no}: audio refine returned no audio; "
-              "the hop's own soundtrack is kept", flush=True)
-        return sampled
-    src_v = parts[0]
-    got_v = out_parts[0]
-    if tuple(got_v.shape) != tuple(src_v.shape) or not torch.equal(got_v, src_v):
-        print(f"[{TAG}] hop {hop_no}: audio refine moved the picture; "
-              "the frozen video is put back", flush=True)
-        out["samples"] = _latents.rebuild(
-            out["samples"], [src_v] + list(out_parts[1:]))
-    return out
-
-
-# Realism boost: The AI Brief's Singularity dual-sampling recipe, run inside the
-# hop sampler instead of after it. Not a refine -- the hop is sampled ONCE, on a
-# schedule that changes model after its first base step.
-#
-#   BasicScheduler(steps) -> ExtendIntermediateSigmas(2) -> SplitSigmas(2)
-#
-# Extend(2) puts one midpoint in every gap (`linspace(0, 1, 3)[1:-1]`), so the
-# schedule doubles: base 6 is 12 steps, split 2 + 10. Stage 1 is therefore the
-# first base step, halved -- at shift 12 / simple, sigma 1.0 -> 0.984. The boost
-# model then paints the other 10 steps from a latent that is ~98% noise. The
-# original's reference point is base 6; do not re-validate it at 8.
-BOOST_EXTEND = 2
-BOOST_SPLIT = 2
-# (file, strength) per slot, from the original's Final stack: LMS 0.5 under
-# People 1.0. A default only lands when the file is actually installed. Slot 3
-# is not in the original and ships empty.
+    s = max(1, int(steps or 3))
+    if s <= 2:
+        return 0.20
+    if s == 3:
+        return 0.30
+    if s == 4:
+        return 0.35
+    return round(min(0.50, s / (s + 7.0)), 2)
+# (file, strength) per slot: LMS 0.5 under People 1.0. A default only lands
+# when the file is actually installed. Slot 3 ships empty.
 BOOST_LORA_DEFAULTS = (
     ("minimax_h3_lms_v1.0_r64.safetensors", 0.5),
     ("h3-realism-people-t2v-i2v-r2v.safetensors", 1.0),
@@ -2992,6 +2942,10 @@ _BOOST_LOADERS = {}
 # The chain's upsample re-draw: Open-H3-Regenerate-2K LoRA strength (0.25 by
 # default; 0 skips the re-draw and only enlarges with the 3D latent upscaler).
 UPSAMPLE_DENOISE = 0.8
+# upsample_steps widget: the Regen2K / ic re-draw in 3 steps (the recipe) or 2
+# (about a third faster; ic starts one grid point later). A wired
+# HTCUpsampleSettings node keeps its own steps.
+UPSAMPLE_STEPS = ("3 (recipe)", "2 (faster)")
 REGEN2K_DEFAULT_LORA = "open_h3_regenerate_2k_r256pp_bf16.safetensors"
 REGEN2K_REFERENCE_LORA = "open_h3_regenerate_2k_bf16.safetensors"
 REGEN2K_SEED = 42
@@ -3005,10 +2959,37 @@ def _regen2k_lora_choices():
     if REGEN2K_DEFAULT_LORA not in choices:
         choices = [REGEN2K_DEFAULT_LORA] + choices
     choices.append("None")
-    for leg in ("regen2k", "recipe"):
+    for leg in ("regen2k", "recipe", "ic"):
         if leg not in choices:
             choices.append(leg)
     return choices
+
+
+def _ic_selected(upsample_redraw):
+    """upsample_redraw = 'ic' or an IC LoRA file: the in-context upsample."""
+    s = str(upsample_redraw or "").strip()
+    return s.lower() == "ic" or _ic.is_ic_lora(s)
+
+
+def _apply_upsample_steps(settings, upsample_steps, redraw_on):
+    """upsample_steps -> the settings the re-draw reads. Unwired settings and 3
+    steps stay None (the shipped recipe, unchanged); 2 steps become {"steps": 2}.
+    A wired settings node keeps its own steps."""
+    try:
+        n = int(str(upsample_steps or UPSAMPLE_STEPS[0]).split()[0])
+    except ValueError:
+        n = 3
+    if not redraw_on:
+        return settings
+    if settings is not None:
+        if n != 3 and int(settings.get("steps", 3)) != n:
+            print(f"[{TAG}] upsample_steps {n} ignored: the wired upsample_settings "
+                  f"node sets steps {int(settings.get('steps', 3))}", flush=True)
+        return settings
+    if n == 3:
+        return None
+    print(f"[{TAG}] upsample: re-draw in {n} steps (upsample_steps)", flush=True)
+    return {"steps": n}
 
 
 def _resolve_regen2k_lora(val):
@@ -3046,6 +3027,23 @@ def _validate_upsample_redraw(upsample, upsample_redraw, regen2k_model,
             f"{TAG}: upsample requires regen2k_model wired "
             f"(UNETLoader with minimax_h3_fl2va_pruned_int8_convrot, "
             f"{REGEN2K_DEFAULT_LORA}, lora_strength {UPSAMPLE_DENOISE:g}).")
+    if _ic_selected(upsample_redraw):
+        ic_name = _ic.pick_ic_lora(None if str(upsample_redraw).strip().lower() == "ic"
+                                   else str(upsample_redraw).strip())
+        # IC runs on upsample_dit when it is wired (its own model for the
+        # re-draw), else on the MODEL wire's DiT with the hop LoRAs stripped.
+        ic_dit = "upsample_dit" if upsample_dit is not None else "MODEL wire's DiT"
+        if float(upsample_denoise) > 0.0:
+            # files + that DiT, before any hop renders
+            _ic.preflight(None, ic_name, needs_clip=False,
+                          model=(upsample_dit if upsample_dit is not None else model))
+        print(f"[{TAG}] upsample: ic (in-context) with {ic_name or 'NO IC LoRA FOUND'} on the "
+              f"{ic_dit}, LoRAs off, hearing the film's soundtrack "
+              "(upsample_denoise, regen2k_model and regen2k_cond do not apply)", flush=True)
+        if min(int(width), int(height)) < 576:
+            print(f"[{TAG}] WARNING: upsample on {int(width)}x{int(height)} (< 576p); "
+                  "IC was trained on 576p/768p drafts", flush=True)
+        return True
     lora_name = _resolve_regen2k_lora(upsample_redraw)
     if regen2k_model is not None and upsample_dit is not None:
         print(f"[{TAG}] upsample: regen2k_model wins over the wired upsample_dit",
@@ -3235,6 +3233,8 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
     snap = _snapshot_model_state(regen2k_model)
     work_model = (regen2k_model.clone() if hasattr(regen2k_model, "clone")
                   else regen2k_model)
+    if strip_existing_loras and _tl.strip(work_model):
+        print(f"[{TAG}] upsample: token LoRAs off for the Regen2K re-draw", flush=True)
     if strip_existing_loras and getattr(work_model, "patches", None):
         n_stripped = len(work_model.patches)
         work_model.patches = {}
@@ -3348,6 +3348,59 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
     return frames, f"{note} ({r2k_line})"
 
 
+def _run_ic_upsample(base_model, clip, vae, upsample_hops, megapixels, master=None,
+                     upscaler=_tu.UPSCALER_FILE, alloc=None, budget=_tu.TOKEN_BUDGET,
+                     settings=None, ic_lora=None, seed=REGEN2K_SEED):
+    """The in-context (IC) upsample over the stitched hop latents.
+
+    Same pipeline as Regen2K (segments, chunks, stepped joins, tiles, memory),
+    with: the MODEL wire's DiT, hop LoRA weights stripped, HyperFlow + Sharp +
+    IC patched on (upsample_ic.patch_model); each chunk's own hop latents ride
+    as <Video 1> and Qwen sees them (ChunkConds, built before the DiT loads);
+    the audio rows are the film's own generated soundtrack. No face pass: IC
+    keeps faces from the draft."""
+    snap = _snapshot_model_state(base_model)
+    work = base_model.clone() if hasattr(base_model, "clone") else base_model
+    if _tl.strip(work):
+        print(f"[{TAG}] upsample ic: token LoRAs off", flush=True)
+    n_strip = len(getattr(work, "patches", None) or {})
+    if n_strip:
+        work.patches = {}
+        print(f"[{TAG}] upsample ic: stripped {n_strip} hop LoRA patch target(s); IC runs "
+              "on the plain DiT", flush=True)
+    wanted = None if str(ic_lora or "").strip().lower() in ("", "ic") else str(ic_lora).strip()
+    work, sigmas, ic_tag = _ic.patch_model(work, wanted)
+    st = dict(settings) if settings is not None else {}
+    # upsample_settings' steps (3 = the recipe, 2 = one grid point later)
+    sigmas = _ic.ic_sigmas(sigmas, st.get("steps"))
+    st["chunk_frames"] = int(_ic.CHUNK_FRAMES)
+    st["steps"] = len(sigmas) - 1
+    st["start_sigma"] = 0.0
+    st["noise"] = "per_chunk"
+    st["sampler"] = None
+    st.setdefault("seed", int(seed))
+    import comfy.samplers as _cs
+    conds = _ic.ChunkConds(clip, decode=vae.decode, encode=vae.encode)
+    hops = _prepare_regen2k_hops(upsample_hops, regen2k_cond="none")
+    line = (f"upsample: {ic_tag}, euler, sigmas {[round(float(s), 4) for s in sigmas]}, "
+            f"chunks of {_ic.CHUNK_FRAMES} f, audio rows = the film's soundtrack")
+    print(f"[{TAG}] {line}", flush=True)
+    try:
+        frames, note = _tu.upsample_chain(
+            work, _cs.sampler_object("euler"), vae, hops, float(megapixels),
+            master=master, upscaler=str(upscaler), denoise=1.0, alloc=alloc, guide=None,
+            budget=budget, settings=st, sigmas=sigmas, ic=conds)
+    finally:
+        _ic.release()
+        _tu._free(work)
+        _verify_model_unmutated(base_model, snap)
+    misses = _ic.embedder_misses(work)
+    if misses:
+        print(f"[{TAG}] upsample ic: WARNING HyperFlow's endpoint missed the generated rows on "
+              f"{misses} calls", flush=True)
+    return frames, f"{note} ({line})"
+
+
 def _chain_face_pass(frames, face_src, regen2k_model, vae, audio_vae, face_audio, upscaler,
                      budget, r2k_settings, lora_name, strength, strip_existing_loras):
     """Small-face close-ups over the upsampled film `frames`, in place, with the
@@ -3355,6 +3408,8 @@ def _chain_face_pass(frames, face_src, regen2k_model, vae, audio_vae, face_audio
     from . import video_upsampler as _vu  # noqa: PLC0415
     try:
         base = regen2k_model.clone() if hasattr(regen2k_model, "clone") else regen2k_model
+        if strip_existing_loras:
+            _tl.strip(base)
         if strip_existing_loras and getattr(base, "patches", None):
             base.patches = {}
         # Already LoRA'd (a wired regen2k model) -> as is; else the chain's LoRA.
@@ -3421,283 +3476,525 @@ def _boost_model(model, loras):
     return out
 
 
-SWAP_BODY_LORA = "minimax_h3_character_swap_v1.0_ref2va_r64_gl.safetensors"
-SWAP_HEAD_LORA = "minimax_h3_head_swap_v1.0_r32.safetensors"
+SWAP_BODY_LORA = "viggle_remake_swap_comfyui.safetensors"
+SWAP_EDIT_LORA = "viggle_remake_edit_comfyui.safetensors"
+SWAP_HEAD_LORA = "viggle_remake_swap_comfyui.safetensors"
+
+REMAKE_SWAP_SIGMAS = (1.0, 0.990476, 0.965243, 0.923077, 0.8, 0.631579, 0.0)
+REMAKE_EDIT_SIGMAS = (1.0, 0.983607, 0.96, 0.923077, 0.857143, 0.705882, 0.0)
+REMAKE_KEYFRAME_UNTIL = 0.9
+
+
+def _remake_mode_kind(swap_text):
+    """Return 'edit' for Viggle Remake edit/keep_person scripts, else 'swap'."""
+    low = str(swap_text or "").lstrip().lower()
+    if low.startswith(("remake_edit:", "edit_swap:", "keep_person:")):
+        return "edit"
+    if "[video editing + scene" in low or "[video editing + object" in low:
+        return "edit"
+    return "swap"
+
+
+def _parse_swap_pins(swap_text, swap_refs_raw=""):
+    """Extract optional 0-based keyframe pin indices from swap_script or swap_refs."""
+    raw_pins = ""
+    for line in str(swap_text or "").splitlines()[:6]:
+        s = line.strip()
+        if s.lower().startswith("subject_definitions:"):
+            break
+        m = re.match(r"^pins\s*:\s*(.+)$", s, flags=re.I)
+        if m:
+            raw_pins = m.group(1).strip()
+            break
+    if not raw_pins and "|" in str(swap_refs_raw or ""):
+        tail = str(swap_refs_raw).split("|", 1)[1]
+        m = re.search(r"pins\s*[:=]\s*([0-9,\s]+)", tail, flags=re.I)
+        if m:
+            raw_pins = m.group(1).strip()
+    if not raw_pins:
+        return []
+    out = []
+    for tok in raw_pins.replace(",", " ").split():
+        try:
+            v = int(tok)
+            if v >= 0:
+                out.append(v)
+        except ValueError:
+            continue
+    return out
+
+
+def _convert_viggle_peft_lora(src_path, dst_path):
+    """Repack a Viggle Remake diffusers PEFT adapter (r256/r128/r64) into ComfyUI layout."""
+    from safetensors.torch import load_file, save_file
+    w = load_file(src_path)
+    if "proj_in.lora_A.weight" not in w:
+        return False
+    r = int(w["proj_in.lora_A.weight"].shape[0])
+    out = {}
+    qkv_dim = 7168
+
+    def put(name, a_t, b_t, rank):
+        out[f"diffusion_model.{name}.lora_A.weight"] = a_t.contiguous()
+        out[f"diffusion_model.{name}.lora_B.weight"] = b_t.contiguous()
+        out[f"diffusion_model.{name}.alpha"] = torch.tensor(float(rank))
+
+    put("video_patch_proj", w["proj_in.lora_A.weight"], w["proj_in.lora_B.weight"], r)
+    put("final_layer.video_out", w["proj_out.lora_A.weight"], w["proj_out.lora_B.weight"], r)
+    for blk_i in range(50):
+        p, q = f"transformer_blocks.{blk_i}", f"blocks.{blk_i}"
+        a_cat = torch.cat([w[f"{p}.attn.to_{x}.lora_A.weight"] for x in "qkv"])
+        b_cat = a_cat.new_zeros(3 * qkv_dim, 3 * r)
+        for j, x in enumerate("qkv"):
+            b_cat[j * qkv_dim:(j + 1) * qkv_dim, j * r:(j + 1) * r] = w[f"{p}.attn.to_{x}.lora_B.weight"]
+        put(f"{q}.attn.qkv_proj", a_cat, b_cat, 3 * r)
+        put(f"{q}.attn.out_proj", w[f"{p}.attn.to_out.0.lora_A.weight"], w[f"{p}.attn.to_out.0.lora_B.weight"], r)
+        val, gate = w[f"{p}.ff.net.0.proj.lora_B.weight"].chunk(2)
+        put(f"{q}.mlp.fc1", w[f"{p}.ff.net.0.proj.lora_A.weight"], torch.cat([gate, val]), r)
+        put(f"{q}.mlp.fc2", w[f"{p}.ff.net.2.lora_A.weight"], w[f"{p}.ff.net.2.lora_B.weight"], r)
+    save_file(out, dst_path, metadata={"format": "pt"})
+    return True
+
+
+def _resolve_viggle_remake_lora(available, mode_kind):
+    """Find the Viggle Remake ComfyUI LoRA (or auto-convert a PEFT lowrank/fullrank file)."""
+    primary = SWAP_EDIT_LORA if mode_kind == "edit" else SWAP_BODY_LORA
+    candidates_exact = (
+        [
+            SWAP_EDIT_LORA,
+            "viggle_remake_edit_r128_comfyui.safetensors",
+            "viggle_remake_edit_r64_comfyui.safetensors",
+            "viggle_remake_edit.safetensors",
+        ]
+        if mode_kind == "edit" else
+        [
+            SWAP_BODY_LORA,
+            "viggle_remake_swap_r128_comfyui.safetensors",
+            "viggle_remake_swap_r64_comfyui.safetensors",
+            "viggle_remake_swap.safetensors",
+        ]
+    )
+    for want in candidates_exact:
+        for cand in available:
+            base = str(cand).replace("\\", "/").rsplit("/", 1)[-1]
+            if cand == want or base == want:
+                return cand
+    # Check for any Viggle Remake or PEFT adapter matching mode_kind
+    for cand in available:
+        norm = str(cand).replace("\\", "/").lower()
+        if mode_kind in norm and ("viggle" in norm or f"{mode_kind}-r128" in norm or f"{mode_kind}-r64" in norm or f"lora/{mode_kind}" in norm):
+            try:
+                import folder_paths
+                from safetensors import safe_open
+                full_p = folder_paths.get_full_path("loras", cand)
+                if full_p and os.path.isfile(full_p):
+                    with safe_open(full_p, framework="pt", device="cpu") as sf:
+                        keys = set(sf.keys())
+                    if "proj_in.lora_A.weight" in keys:
+                        dst_name = f"viggle_remake_{mode_kind}_converted_comfyui.safetensors"
+                        dst_p = os.path.join(os.path.dirname(full_p), dst_name)
+                        if not os.path.isfile(dst_p):
+                            print(f"[{TAG}] swap: converting PEFT LoRA {cand} -> {dst_name}...", flush=True)
+                            _convert_viggle_peft_lora(full_p, dst_p)
+                        rel_dir = os.path.dirname(str(cand))
+                        return os.path.join(rel_dir, dst_name) if rel_dir else dst_name
+            except Exception as exc:  # noqa: BLE001
+                print(f"[{TAG}] swap: PEFT check/convert skipped for {cand} ({exc!r})", flush=True)
+            return cand
+    return None
+
+
+def _attach_remake_wrappers(model, keyframe_until=REMAKE_KEYFRAME_UNTIL):
+    """Attach Viggle Remake's KeyframeUntil(0.9) + SLA reference protection wrappers."""
+    if not hasattr(model, "add_wrapper_with_key"):
+        return model
+
+    def _remake_keyframe_until_wrapper(executor, x, timestep, context,
+                                       transformer_options={}, minimax_payload=None,
+                                       **kwargs):
+        p = minimax_payload or {}
+        if p.get("keyframes") and float(timestep.flatten()[0]) / 1000.0 < float(keyframe_until):
+            refs = p.get("refs") or []
+            minimax_payload = dict(
+                p,
+                keyframes=None,
+                layout=None,
+                cond_video_latents=[r["latent"] for r in refs if "latent" in r],
+                cond_audio_latents=[r["audio_latent"] for r in refs if r.get("audio_latent") is not None],
+            )
+        if layout := (minimax_payload.get("layout") if minimax_payload else None):
+            if "_h3sla_protected_ranges" in transformer_options:
+                prot = list(transformer_options.get("_h3sla_protected_ranges") or ())
+                for seg in getattr(layout, "segments", ()) or ():
+                    if len(seg) == 3 and seg[2] in ("text", "ref_img"):
+                        span = (int(seg[0]), int(seg[1]))
+                        if span not in prot:
+                            prot.append(span)
+                transformer_options["_h3sla_protected_ranges"] = tuple(prot)
+        if minimax_payload is not None:
+            kwargs["minimax_payload"] = minimax_payload
+        if not isinstance(executor, type) and callable(executor):
+            return executor(x, timestep, context,
+                            transformer_options=transformer_options, **kwargs)
+        return executor.original(x, timestep, context,
+                                 transformer_options=transformer_options, **kwargs)
+
+    out = model.clone()
+    out.add_wrapper_with_key("diffusion_model", "viggle_remake_keyframe_until",
+                             _remake_keyframe_until_wrapper)
+    return out
 
 
 def _swap_lora(model, swap_text):
-    """Auto-load Alissonerdx's Character Swap + Head Swap LoRAs for a swap run.
-
-    Matches `minimax_h3_character_swap_workflow.json` (Nodes 586 -> 1192):
-    - `body_swap:` (`replace_person`) stacks BOTH `minimax_h3_character_swap_v1.0_ref2va_r64_gl`
-      @ 1.0 AND `minimax_h3_head_swap_v1.0_r32` @ 0.5 so body/clothing replacement
-      and facial identity lock work together.
-    - `head_swap:` (`head_swap` / `face_only`) loads `minimax_h3_head_swap_v1.0_r32`
-      @ 1.0 alone so the body and outfit stay with the guide clip.
-    - `keep_person` carries neither trigger prefix and leaves `model` untouched.
+    """Auto-load Viggle Remake's Swap or Edit LoRA via LoraLoaderBypassModelOnly
+    and attach the RemakeKeyframeUntil(0.9) wrapper.
     """
-    low = str(swap_text or "").lstrip().lower()
-    if low.startswith("head_swap:"):
-        specs = [(SWAP_HEAD_LORA, 1.0)]
-    elif low.startswith("body_swap:"):
-        specs = [(SWAP_BODY_LORA, 1.0), (SWAP_HEAD_LORA, 0.5)]
-    else:
-        return model
+    mode_kind = _remake_mode_kind(swap_text)
+    want_default = SWAP_EDIT_LORA if mode_kind == "edit" else SWAP_BODY_LORA
     try:
         import folder_paths
         available = list(folder_paths.get_filename_list("loras"))
     except Exception:
-        return model
-    resolved = []
-    for want, strength in specs:
-        found = None
-        for cand in available:
-            base = str(cand).replace("\\", "/").rsplit("/", 1)[-1]
-            if cand == want or base == want:
-                found = cand
-                break
-        if found:
-            resolved.append((found, float(strength)))
-    if not resolved:
-        print(f"[{TAG}] swap: {specs[0][0]} not found in models/loras; "
-              "rendering with the upstream model as wired", flush=True)
-        return model
+        return _attach_remake_wrappers(model)
+    chosen = _resolve_viggle_remake_lora(available, mode_kind)
+    if not chosen:
+        print(f"[{TAG}] swap: {want_default} not found in models/loras; "
+              "attaching RemakeKeyframeUntil(0.9) onto upstream model as wired",
+              flush=True)
+        return _attach_remake_wrappers(model)
     try:
         import nodes as nodes_mod
-        out = model
-        loaded_labels = []
-        for chosen, strength in resolved:
-            key = "swap:" + chosen
-            loader = _BOOST_LOADERS.get(key)
-            if loader is None:
-                loader = _BOOST_LOADERS[key] = nodes_mod.LoraLoaderModelOnly()
-            out = loader.load_lora_model_only(out, chosen, strength)[0]
-            loaded_labels.append(f"{chosen} @ {strength:g}")
-        fix = getattr(nodes_mod, "NODE_CLASS_MAPPINGS", {}).get("H3AdaLNLoRAFix")
-        if fix is not None:
-            out = _result(_core_call(fix, "the swap AdaLN port",
-                                     model=out, mode="port"))[0]
-        # Pin `<Picture 1..N>` (both Qwen vision tokens in `text` and DiT latent
-        # tokens in `ref_img`) into H3SLAAttention's `_h3sla_protected_ranges`
-        # while leaving `cond` (`AddGuide`) sparse. Without this, SLA at 65%
-        # sparsity (`reference_protection=off`) lets the 41,760 spatially-aligned
-        # `AddGuide` tokens starve out the ~720-1,450 `<Picture 1>` tokens.
-        if hasattr(out, "add_wrapper_with_key"):
-            def _swap_ref_pin_wrapper(executor, x, timestep, context,
-                                      transformer_options={}, minimax_payload=None,
-                                      **kwargs):
-                layout = minimax_payload.get("layout") if minimax_payload else None
-                if layout is not None and "_h3sla_protected_ranges" in transformer_options:
-                    prot = list(transformer_options.get("_h3sla_protected_ranges") or ())
-                    for seg in getattr(layout, "segments", ()) or ():
-                        if len(seg) == 3 and seg[2] in ("text", "ref_img"):
-                            span = (int(seg[0]), int(seg[1]))
-                            if span not in prot:
-                                prot.append(span)
-                    transformer_options["_h3sla_protected_ranges"] = tuple(prot)
-                if minimax_payload is not None:
-                    kwargs["minimax_payload"] = minimax_payload
-                if not isinstance(executor, type) and callable(executor):
-                    return executor(x, timestep, context,
-                                    transformer_options=transformer_options, **kwargs)
-                return executor.original(x, timestep, context,
-                                         transformer_options=transformer_options, **kwargs)
-
-            out = out.clone()
-            out.add_wrapper_with_key("diffusion_model", "htc_swap_ref_pin",
-                                     _swap_ref_pin_wrapper)
-        print(f"[{TAG}] swap: auto-loaded " + " + ".join(loaded_labels)
-              + " (SLA ref_img + vision tokens pinned)", flush=True)
+        key = "remake_bypass:" + chosen
+        loader = _BOOST_LOADERS.get(key)
+        if loader is None:
+            bypass_cls = getattr(nodes_mod, "LoraLoaderBypassModelOnly", None)
+            loader = _BOOST_LOADERS[key] = (
+                bypass_cls() if bypass_cls is not None else nodes_mod.LoraLoaderModelOnly()
+            )
+        if hasattr(loader, "load_lora_model_only"):
+            out = loader.load_lora_model_only(model, chosen, 1.0)[0]
+        else:
+            out = _result(_core_call(loader, "the Viggle Remake bypass LoRA",
+                                     model=model, lora_name=chosen, strength_model=1.0))[0]
+        out = _attach_remake_wrappers(out)
+        print(f"[{TAG}] swap: auto-loaded {chosen} @ 1.0 via LoraLoaderBypassModelOnly "
+              f"(mode={mode_kind}, keyframe_until={REMAKE_KEYFRAME_UNTIL})", flush=True)
         return out
     except Exception as exc:  # noqa: BLE001
-        print(f"[{TAG}] swap: could not auto-load swap LoRA(s) ({exc!r}); "
-              "using upstream model", flush=True)
-        return model
+        print(f"[{TAG}] swap: could not auto-load Viggle Remake LoRA ({exc!r}); "
+              "using upstream model with RemakeKeyframeUntil(0.9)", flush=True)
+        return _attach_remake_wrappers(model)
+
+
+def _remake_lanczos(image, width, height):
+    return comfy.utils.common_upscale(
+        image.movedim(-1, 1), int(width), int(height), "lanczos", "disabled"
+    ).movedim(1, -1)
+
+
+def _remake_cover(image, width, height):
+    h, w = int(image.shape[1]), int(image.shape[2])
+    s = max(width / float(w), height / float(h))
+    sw, sh = max(int(width), round(w * s)), max(int(height), round(h * s))
+    left, top = (sw - int(width)) // 2, (sh - int(height)) // 2
+    return _remake_lanczos(image, sw, sh)[:, top:top + int(height), left:left + int(width)]
+
+
+def _remake_stamps(nf):
+    """Viggle Remake's 2 fps block labels for an nf-frame clip: every 12th frame,
+    merged in pairs, each pair labelled with its mean time ('%.1f').
+    """
+    idx, cursor = [], 0.0
+    while round(cursor) < int(nf):
+        if not idx or round(cursor) > idx[-1]:
+            idx.append(round(cursor))
+        cursor += FPS / 2.0
+    t = [i / 2.0 for i in range(len(idx))]
+    t += t[-1:] * (len(t) % 2)
+    return [(t[i] + t[i + 1]) / 2.0 for i in range(0, len(t), 2)]
+
+
+class _ViggleRemakeNoise:
+    """Draws starting noise in Viggle Remake's reference script order."""
+
+    def __init__(self, seed, skip_shapes):
+        self.seed = int(seed)
+        self.skip = list(skip_shapes or ())
+
+    def generate_noise(self, input_latent):
+        g = torch.Generator().manual_seed(self.seed)
+        for shape in self.skip:
+            torch.randn(shape, generator=g)
+        samples = input_latent["samples"]
+        if hasattr(samples, "unbind"):
+            return comfy.nested_tensor.NestedTensor(
+                [torch.randn(t.shape, generator=g) for t in samples.unbind()]
+            )
+        return torch.randn(samples.shape, generator=g)
+
+
+def _viggle_remake_noise(positive, seed):
+    """Build a _ViggleRemakeNoise object from conditioning's minimax_refs/keyframes."""
+    try:
+        c = positive[0][1] if (positive and len(positive[0]) > 1 and isinstance(positive[0][1], dict)) else {}
+        blocks = list(c.get("minimax_refs") or ()) + list(c.get("minimax_keyframes") or ())
+        skip = [b["latent"].shape for b in blocks if isinstance(b, dict) and isinstance(b.get("latent"), torch.Tensor)]
+        if skip:
+            return _ViggleRemakeNoise(seed, skip)
+    except Exception:
+        pass
+    return _result(_core_call(RandomNoise, "the noise source", noise_seed=int(seed)))[0]
+
+
+def _viggle_remake_conditioning(*, clip, vae, audio_vae, source, prompt,
+                                hop_images, pins, width, height, length, audio=None):
+    """Viggle Remake conditioning (RemakeConditioning from ComfyUI-Viggle-Remake):
+    - <Video 1> source clip in minimax_refs
+    - <Picture 1..N> reference plates in minimax_refs (scaled to short_edge, no area cap)
+    - Optional `pins` placed in minimax_keyframes on the output canvas
+    - Text-only Qwen3-VL tokenization with 2 fps timestamp labels
+    - Source soundtrack zero-padded to 800-sample blocks and held clean (noise_mask=0).
+    """
+    if not (hasattr(clip, "tokenize") and hasattr(clip, "encode_from_tokens_scheduled")
+            and vae is not None and hasattr(vae, "encode")):
+        return None, None
+    import node_helpers
+    import comfy.nested_tensor
+
+    nf = int(length)
+    w, h = int(width), int(height)
+    se = min(w, h)
+    refs = []
+    for _k in sorted((hop_images or {}).keys(), key=lambda x: int(str(x).rsplit("_", 1)[-1])):
+        im = hop_images[_k]
+        if im is not None:
+            refs.append(im[:1, ..., :3])
+    pins_list = [int(p) for p in (pins or ()) if 0 <= int(p) < nf]
+    if len(pins_list) > len(refs):
+        pins_list = pins_list[:len(refs)]
+
+    src = source[..., :3]
+    if int(src.shape[1]) != h or int(src.shape[2]) != w:
+        src = comfy.utils.common_upscale(
+            src.movedim(-1, 1), w, h, "bicubic", "center"
+        ).movedim(1, -1)
+    if int(src.shape[0]) >= nf:
+        src = src[:nf]
+    else:
+        # Bounce-pad short clips to nf (17n+5) frames so Viggle Remake's frame grid holds
+        rev = src.flip(0)
+        while int(src.shape[0]) < nf:
+            need = nf - int(src.shape[0])
+            src = torch.cat([src, rev[:need]], dim=0)
+            rev = rev.flip(0)
+
+    segments = [
+        "<Video 1>: ",
+        *["<%.1f seconds>" % s for s in _remake_stamps(nf)],
+        *["<Picture %d>: " % (idx + 1) for idx in range(len(refs))],
+        str(prompt or ""),
+    ]
+    tok_list = []
+    for seg_s in segments:
+        t_dict = clip.tokenize(seg_s)
+        tok_list.extend(t_dict["qwen3vl_32b"][0])
+    tokens = {"qwen3vl_32b": [tok_list]}
+    positive = clip.encode_from_tokens_scheduled(tokens)
+
+    z = vae.encode(src)
+    blocks = [{
+        "kind": "video",
+        "latent_t": int(z.shape[2]),
+        "latent_h": h // 16,
+        "latent_w": w // 16,
+        "ref_audio_t": 0,
+        "latent": z,
+        "audio_latent": None,
+    }]
+    for r in refs:
+        rh, rw = int(r.shape[1]), int(r.shape[2])
+        th = max(32, round(rh * se / float(min(rh, rw)) / 32) * 32)
+        tw = max(32, round(rw * se / float(min(rh, rw)) / 32) * 32)
+        r_sc = r if (rh, rw) == (th, tw) else _remake_lanczos(r, tw, th)
+        blocks.append({
+            "kind": "image",
+            "latent_h": th // 16,
+            "latent_w": tw // 16,
+            "latent": vae.encode(r_sc),
+        })
+
+    keyframes = []
+    for idx, (r, p_idx) in enumerate(zip(refs, pins_list)):
+        if (int(r.shape[1]), int(r.shape[2])) != (h, w):
+            r_kf = _remake_lanczos(r, w, h) if idx == 0 else _remake_cover(r, w, h)
+        else:
+            r_kf = r
+        keyframes.append({"resolved_frame_index": int(p_idx), "latent": vae.encode(r_kf)})
+    values = {"minimax_refs": blocks, "minimax_keyframes": keyframes} if keyframes else {"minimax_refs": blocks}
+    positive = node_helpers.conditioning_set_values(positive, values)
+
+    audio_sr, audio_latent_fps = 32000, 40
+    n_samp = round((nf + 1) / float(FPS) * audio_sr)
+    wav = torch.zeros(2, n_samp)
+    if audio is not None and isinstance(audio, dict) and "waveform" in audio:
+        w_in = audio["waveform"]
+        while w_in.dim() > 2:
+            w_in = w_in[0]
+        w_in = w_in.detach().float().cpu()
+        sr_in = int(audio.get("sample_rate", audio_sr))
+        w_in = w_in.repeat(2, 1) if int(w_in.shape[0]) == 1 else w_in[:2]
+        w_in = w_in[:, :round(nf / float(FPS) * sr_in)]
+        if sr_in != audio_sr:
+            w_in = _resample_wav(w_in, sr_in, audio_sr)
+        wav = w_in
+    wav = torch.nn.functional.pad(wav, (0, max(0, n_samp - int(wav.shape[1]))))[:, :n_samp]
+    wav = torch.nn.functional.pad(wav, (0, -n_samp % 800))
+    if audio_vae is not None and hasattr(audio_vae, "encode"):
+        za = audio_vae.encode(wav[None].movedim(1, -1))[..., :round(nf / float(FPS) * audio_latent_fps)]
+    else:
+        za = torch.zeros(1, 64, round(nf / float(FPS) * audio_latent_fps))
+
+    video_lat = torch.zeros(1, 24, (nf - 5) // 17 * 5 + 2, h // 16, w // 16)
+    latent = {
+        "samples": comfy.nested_tensor.NestedTensor((video_lat, za)),
+        "noise_mask": comfy.nested_tensor.NestedTensor((torch.ones_like(video_lat), torch.zeros_like(za))),
+    }
+    return positive, latent
 
 
 def _align_swap_prompt_for_guide(block, hop_pictures, hop_ords):
-    """Align a swap prompt with Alissonerdx's `guide_latent_only: true` contract.
-
-    Two bugs broke identity transfer on the first live swap render:
-    1. `_refs.resolve_tags` replaces any subject-bearing `@tag` with `<Subject N>`
-       instead of `<Picture N>`, turning `come from @woman` into
-       `come from <Subject 1>` and leaving `<Picture 1>` completely uncited in
-       `subject_definitions:`.
-    2. `minimax_h3_character_swap_v1.0_ref2va_r64_gl` is trained with
-       `guide_latent_only: true`: the reference clip sits ONLY on
-       `MiniMaxH3AddGuide` (`the guide video`), while `MiniMaxH3ReferenceToVideo`
-       receives ONLY `<Picture 1..N>`.
+    """Align a swap/edit prompt with Viggle Remake's six-section contract:
+    1. `subject_definitions:` (<Video 1> source clip, <Picture N> frames, <Subject N> character)
+    2. `summary:` ([video editing + character replacement] or [video editing + scene editing])
+    3. `retention_analysis:` (<Video 1> fully_preserved, <Picture N> reference, <Subject N> fully_preserved)
+    4. `detailed_description:` ([Shot 1] At 00:00.000 ... + closing lock sentence)
+    5. `overall_soundscape:`
+    6. `non_diegetic_music:`
     """
     text = str(block or "")
+    mode_kind = _remake_mode_kind(text)
+    is_head = text.lstrip().lower().startswith("head_swap:")
+    # Strip internal mode/pin headers before tokenizing for Qwen3-VL
+    text = re.sub(
+        r"^\s*(?:(?:remake_swap|remake_edit|body_swap|head_swap|edit_swap|keep_person)\s*:\s*\n?|"
+        r"pins\s*:\s*[^\n]*\n?)+\s*",
+        "",
+        text,
+        flags=re.I,
+    )
     text = re.sub(
         r"(<(?:Picture|Subject)\s+\d+>)\s*\(\s*@[A-Za-z0-9_]+\s*\)",
         r"\1",
         text,
     )
-    # Any `@tag` after a preposition (`from @woman`, `in @woman`, `of @woman`,
-    # `shown in @woman`, `like @woman`) or inside `subject_definitions:` refers
-    # to the reference PICTURE, never `<Subject N>`.
     for tag, ord_n in (hop_ords or {}).items():
         pic_tok = f"<Picture {ord_n}>"
         text = re.sub(
-            r"\b(from|in|of|like|as)\s+@" + re.escape(tag) + r"\b",
+            r"\b(from|in|of|like|as|matching)\s+@" + re.escape(tag) + r"\b",
             lambda m, p=pic_tok: f"{m.group(1)} {p}",
             text,
             flags=re.I,
         )
+    id_pics = [r for r in (hop_pictures or []) if r.get("subject") is not None]
     if "subject_definitions:" in text and "summary:" in text:
         pre, rest = text.split("summary:", 1)
         for tag, ord_n in (hop_ords or {}).items():
             pre = re.sub(r"@" + re.escape(tag) + r"\b", f"<Picture {ord_n}>", pre)
-        # If `subject_definitions:` still defines `<Subject 1>` as the person in
-        # `<Video 1>` instead of `<Picture 1>`, prepend the canonical BFS
-        # `guide_latent_only` binding so `<Picture 1>` owns the identity.
-        id_pics = [r for r in (hop_pictures or []) if r.get("subject") is not None]
-        if id_pics:
-            low_pre = pre.lower()
-            is_head = low_pre.lstrip().startswith("head_swap:")
-            if is_head:
-                # Strip any stray build/wardrobe clause (`; slender build wearing ... shown in <Picture 1>`)
-                # from a head_swap prompt so `<Picture 1>`'s clothes are never requested.
-                pre = re.sub(
-                    r";\s*[^.\n]*?\bwearing\b[^.\n]*?(?=\s+shown\s+in\s+<Picture|\.)",
-                    "",
-                    pre,
-                    flags=re.I,
-                )
+        if is_head:
             pre = re.sub(
-                r"<Subject\s+1>\s+is\s+the\s+person\s+in\s+<Video\s+1>",
-                "<Subject 1> is the character shown in <Picture 1>",
+                r";\s*[^.\n]*?\bwearing\b[^.\n]*?(?=\s+shown\s+in\s+<Picture|\.)",
+                "",
                 pre,
                 flags=re.I,
             )
-            # Keep whatever physical description the writer emitted in `pre`, and
-            # append the canonical BFS `guide_latent_only` binding so `<Picture 1>`
-            # owns the identity and `the guide video` owns the motion.
-            lines = []
-            for idx, r in enumerate(id_pics):
-                p_ord = (hop_ords or {}).get(r["tag"], idx + 1)
-                desc = str(r.get("desc") or "").strip().rstrip(".")
-                who_d = f"character ({desc})" if desc else "character"
+        defs_body = pre.split("subject_definitions:", 1)[-1].strip()
+        prefix_lines = []
+        if "<Video 1> is the source video" not in defs_body:
+            prefix_lines.append(
+                "<Video 1> is the source video for the editing task: one continuous shot "
+                "supplying the scene, camera movement, framing, timing and performance."
+            )
+        if hop_ords and not re.search(r"<Picture\s+1>\s+(?:is|and\s+<Picture)", defs_body):
+            pic_labels = [f"<Picture {i + 1}>" for i in range(len(hop_ords))]
+            if len(pic_labels) == 1:
+                prefix_lines.append("<Picture 1> is a reference frame of the target video from [Shot 1].")
+            else:
+                prefix_lines.append(
+                    ", ".join(pic_labels[:-1]) + f" and {pic_labels[-1]} are reference frames "
+                    "of the target video from [Shot 1]."
+                )
+        for idx, r in enumerate(id_pics):
+            p_ord = (hop_ords or {}).get(r["tag"], idx + 1)
+            desc = str(r.get("desc") or "").strip().rstrip(".")
+            if desc and desc.lower()[:20] not in defs_body.lower():
                 if is_head:
-                    lines.append(
-                        f"<Subject {idx + 1}> is the {who_d} shown in <Picture {p_ord}>, "
-                        f"whose identity, face, head, hair and skin tone define the "
-                        f"character's head in the target video."
+                    prefix_lines.append(
+                        f"<Subject {idx + 1}> in <Picture {p_ord}> has {desc}; only the head, "
+                        f"face, hair and skin tone come from <Picture {p_ord}> while the body "
+                        "and clothing stay those of <Video 1>."
                     )
                 else:
-                    lines.append(
-                        f"<Subject {idx + 1}> is the {who_d} shown in <Picture {p_ord}>, "
-                        f"whose identity, face, head, hair, skin, body shape, proportions "
-                        f"and clothing define the character in the target video."
+                    prefix_lines.append(
+                        f"<Subject {idx + 1}> in <Picture {p_ord}> is {desc}, replacing the "
+                        "performer in <Video 1>."
                     )
-            if is_head:
-                lines.append(
-                    "The guide video provides the scene, the body, the clothing and the "
-                    "performance: its background, environment, lighting, camera, framing, "
-                    "body build, posture, hands, every garment and accessory, head rotation, "
-                    "gaze direction, lip movement and facial expression, frame by frame; "
-                    "only the head, face and hair of the main subject in the guide video "
-                    "are replaced by "
-                    + (", ".join(f"<Subject {idx + 1}>" for idx in range(len(id_pics))))
-                    + ", meeting the guide video's neck and collar."
+        combined_defs = ("\n".join(prefix_lines) + ("\n" + defs_body if defs_body else "")).strip()
+        text = "subject_definitions:\n" + combined_defs + "\n\nsummary:" + rest
+
+    # Upgrade summary task prefix to Viggle Remake's [video editing + ...]
+    remake_task = (
+        "[video editing + scene editing]"
+        if mode_kind == "edit"
+        else "[video editing + character replacement]"
+    )
+    text = re.sub(
+        r"\[video generation \+ reference\]",
+        remake_task,
+        text,
+        flags=re.I,
+    )
+
+    # Inject retention_analysis: between summary: and detailed_description: if absent
+    if "retention_analysis:" not in text and "detailed_description:" in text:
+        ret_lines = [
+            "<Video 1> (source video editing): fully_preserved - the single continuous shot, "
+            "the camera framing and movement, the lighting, and the motion and timing of every "
+            "action are copied frame for frame."
+        ]
+        for idx, r in enumerate(hop_pictures or []):
+            p_ord = (hop_ords or {}).get(r["tag"], idx + 1)
+            if is_head and r.get("subject") is not None:
+                ret_lines.append(
+                    f"<Picture {p_ord}> (appears in [Shot 1]): reference - a frame of the target "
+                    f"video. The face, head, hair and skin tone of <Subject {idx + 1}> are taken "
+                    f"from <Picture {p_ord}>."
                 )
             else:
-                lines.append(
-                    "The guide video provides the scene and the performance: its background, "
-                    "environment, lighting, camera, framing, body pose, hand and arm movement, "
-                    "head rotation, gaze direction, lip movement and facial expression, frame "
-                    "by frame; only the main subject of the guide video is replaced by "
-                    + (", ".join(f"<Subject {idx + 1}>" for idx in range(len(id_pics))))
-                    + "."
+                ret_lines.append(
+                    f"<Picture {p_ord}> (appears in [Shot 1]): reference - a frame of the target "
+                    f"video. The appearance and details shown in <Picture {p_ord}> are taken from "
+                    f"<Picture {p_ord}>."
                 )
-            existing_defs = pre.split("subject_definitions:", 1)[-1].strip()
-            trig = "head_swap:\n\n" if is_head else ("body_swap:\n\n" if low_pre.lstrip().startswith("body_swap:") else "")
-            combined = ("\n".join(lines) + ("\n" + existing_defs if existing_defs else "")).strip()
-            pre = trig + "subject_definitions:\n" + combined + "\n\n"
-        text = pre + "summary:" + rest
-    # Ensure `(VISUAL)` explicitly cites `<Picture 1>` if it wasn't cited there,
-    # scoped to `head_swap:` vs `body_swap:`.
-    if hop_ords and "(VISUAL)" in text and "<Picture 1>" not in text.split("detailed_description:")[-1]:
-        is_head_vis = text.lstrip().lower().startswith("head_swap:")
-        vis_lead = (
-            "(VISUAL) <Subject 1> keeps the face, head, hair and skin tone from <Picture 1> "
-            "while the body, build, hands and clothing stay those of the guide video. "
-            if is_head_vis else
-            "(VISUAL) <Subject 1> takes the exact place of the guide subject while "
-            "keeping the complete look, face, hair, body shape and clothing from <Picture 1>. "
-        )
-        text = text.replace("(VISUAL) ", vis_lead, 1)
-    text = re.sub(r"<Video\s+1>", "the guide video", text)
+        if id_pics:
+            for idx, r in enumerate(id_pics):
+                p_ord = (hop_ords or {}).get(r["tag"], idx + 1)
+                ret_lines.append(
+                    f"<Subject {idx + 1}> (appears in [Shot 1]): fully_preserved - the appearance "
+                    f"from <Picture {p_ord}> stays identical in every frame."
+                )
+        else:
+            ret_lines.append(
+                "<Subject 1> (appears in [Shot 1]): fully_preserved - the subject's appearance "
+                "stays identical in every frame."
+            )
+        ret_block = "retention_analysis:\n" + "\n".join(ret_lines) + "\n\n"
+        text = text.replace("detailed_description:", ret_block + "detailed_description:", 1)
+
+    # Clean internal (VISUAL) / (SOUND) markers into Viggle Remake timestamped Shot 1 format
+    text = re.sub(r"\[Shot 1\]\s*0\s*to\s*\d+(?:\.\d+)?\s*s\s*\n?\s*\(VISUAL\)\s*", "[Shot 1] At 00:00.000 ", text)
+    text = re.sub(r"\(VISUAL\)\s*", "", text)
+    text = re.sub(r"\n?\s*\(SOUND\)\s*[^\n]*", "", text)
     return text
-
-
-def _boost_sigmas(hop_sigmas, sigma_cache, hop_steps):
-    """(stage-1 sigmas, stage-3 sigmas), sharing the hand-off sigma."""
-    key = ("boost", int(hop_steps))
-    if key not in sigma_cache:
-        ext = _result(_core_call(
-            ExtendIntermediateSigmas, "the boost schedule",
-            sigmas=hop_sigmas, steps=BOOST_EXTEND, start_at_sigma=1.0,
-            end_at_sigma=0.0, spacing="linear"))[0]
-        hi, lo = _result(_core_call(
-            SplitSigmas, "the boost split", sigmas=ext, step=BOOST_SPLIT))[:2]
-        sigma_cache[key] = (hi, lo)
-    return sigma_cache[key]
-
-
-def _boost_sampled(latent, *, model, guider, boost_guider, sampler,
-                   hop_sigmas, sigma_cache, hop_steps, seed, hop_no, label):
-    """One hop, sampled on the realism-boost spine. -> the sampler output dict.
-
-    Stage 2 is the original's "Second Sampling Pass": a SamplerCustomAdvanced on
-    a single sigma, which makes no model call and only scales -- in with
-    `noise_scaling` (sigma*noise + (1-sigma)*x0), out with
-    `inverse_noise_scaling` (/(1-sigma)). Done here with the same two
-    model_sampling methods on the same RandomNoise draw, which is that node's
-    whole effect without loading the model for zero steps. Stage 3's
-    DisableNoise then multiplies by (1-sigma) on the way in and the pair
-    cancels to a correctly noised latent. That is why stage 2 must NOT use
-    DisableNoise (it leaves 1.6% of x0 and no noise -- the orange frames) and
-    why both stages must share the hand-off sigma exactly.
-
-    Video re-noises from stage 1's DENOISED estimate; audio passes on from its
-    OUTPUT, which is already noised at the hand-off sigma. Same wiring as the
-    original.
-    """
-    hi, lo = _boost_sigmas(hop_sigmas, sigma_cache, hop_steps)
-    n1 = int(hi.shape[-1]) - 1
-    n3 = int(lo.shape[-1]) - 1
-    if n3 < 1:
-        raise RuntimeError(
-            f"{TAG}: hop {hop_no}: realism boost needs steps >= 2 -- at "
-            f"{hop_steps} the split leaves the boost model nothing to sample.")
-    s = lo[0]
-    print(f"[{TAG}] hop {hop_no}: realism boost {n1} + {n3} steps, {label}, "
-          f"hand-off sigma {float(s):.4f}", flush=True)
-    noise = _result(_core_call(RandomNoise, "the boost noise source",
-                               noise_seed=int(seed)))[0]
-    out, den = _result(_core_call(
-        SamplerCustomAdvanced, "the boost stage-1 sampler",
-        noise=noise, guider=guider, sampler=sampler,
-        sigmas=hi, latent_image=latent))[:2]
-    out_parts = _latents.from_dict(out)
-    den_parts = _latents.from_dict(den)
-    if not out_parts or not den_parts:
-        raise RuntimeError(f"{TAG}: hop {hop_no}: realism boost could not "
-                           "read the stage-1 latent.")
-    x0 = den_parts[0]
-    n = noise.generate_noise({"samples": x0}).to(x0.device, x0.dtype)
-    ms = model.get_model_object("model_sampling")
-    v = ms.inverse_noise_scaling(s, ms.noise_scaling(s, n, x0))
-    mid = dict(out)
-    mid["samples"] = _latents.rebuild(out["samples"], [v] + out_parts[1:])
-    del den, den_parts, n, x0
-    return _result(_core_call(
-        SamplerCustomAdvanced, "the boost stage-3 sampler",
-        noise=_result(_core_call(DisableNoise, "the boost stage-3 noise"))[0],
-        guider=boost_guider, sampler=sampler, sigmas=lo,
-        latent_image=mid))[0]
 
 
 # hop_refine=split: the refine as the hop's own finish, not a second pass. The
@@ -4599,7 +4896,18 @@ def _pin_inpaint_head(latent, pin_latent, overlap_n):
     return out, v_hold, prev_mask
 
 
-def _calibrate_overlap_latent(sampled, pin_latent, overlap_n, hop_no=0):
+# The mean/std lock of _calibrate_overlap_latent on motion_context joins, OFF
+# (11-08). It matched the new hop's levels to the previous hop's latent from
+# about 1-1.5 s BEFORE the join (prev[-12:-7]), not at it, at full weight for
+# the first ~1 s: when the previous hop darkened in its last second (it ended
+# on a close), the new hop was pushed back up to the earlier level, a visible
+# brightening right after the join (measured: luma 82 -> 98
+# within 6 frames of the seam). Plain Motion-Context had no such lock. The
+# exact causal prefix copy is kept; hand_tie's previs keeps its lock.
+OVERLAP_STATS_LOCK = False
+
+
+def _calibrate_overlap_latent(sampled, pin_latent, overlap_n, hop_no=0, stats=True):
     """Lock Hop k+1's opening latent distribution (`mean + std`) and causal prefix to Hop k's tail.
 
     1. Compares the phase-aligned 5-step tail of `pin_latent` (`steps -5:`,
@@ -4637,6 +4945,9 @@ def _calibrate_overlap_latent(sampled, pin_latent, overlap_n, hop_no=0):
     s_src = src_5.std(dim=(2, 3, 4), keepdim=True).clamp(min=1e-5)
     s_open = open_5.std(dim=(2, 3, 4), keepdim=True).clamp(min=1e-5)
     gain = (s_src / s_open).clamp(0.85, 1.15)
+    if not stats:
+        gain = torch.ones_like(gain)
+        m_src = m_open
 
     body = v_cur[:, :, v_steps:]
     body_cal = (body - m_open) * gain + m_src
@@ -4662,6 +4973,17 @@ def _calibrate_overlap_latent(sampled, pin_latent, overlap_n, hop_no=0):
           f"dMean={float((m_src - m_open).mean().item()):+.4f}, "
           f"prefix={v_steps} steps exact)", flush=True)
     return out
+
+
+# The pixel seam bridge, OFF (11-08). It pulled the 16 frames before a
+# continuation join and the 28 after it toward the level of frames ~1.2 s past
+# the join. Any camera move or cut in that span (a pull-back from a bright close
+# into a dark room) was smeared backwards across the join: one render
+# measured a V-shaped dip centred on the seam that starts in the PREVIOUS hop's
+# already-rendered frames (97 -> 84 before the seam, back to 99 after), which
+# only a post-process can do. The tail dip it was written for sits in the
+# overlap that is trimmed anyway. Kept behind this switch, never deleted.
+SEAM_BRIDGE = False
 
 
 def _bridge_motion_seam(master_imgs, seam_idx, keep_n, pre_n=16, post_n=28):
@@ -5616,39 +5938,43 @@ class HandTieClips:
                 # APPENDED 2026-09-23, LAST, same positional reason.
                 "realism_boost": (["off", "on"], {
                     "default": "off",
-                    "tooltip": ("Two-stage sampling with the boost LoRAs for more realistic texture. It "
-                                "doubles the steps: base 6 is 2 + 10. Not with master_audio_file."),
+                    "tooltip": ("Upscale 2nd Pass, for more realistic texture. The hops render "
+                                "at the canvas size as usual, sound included; after the last hop "
+                                "the film is sized up to 2nd pass megapixels and its texture is "
+                                "re-drawn with the 2nd pass LoRAs below (recipe: "
+                                "minimax_h3_lms_v1.0_r64 0.5 + h3-realism-people 1.0). Runs "
+                                "before upsample when both are on."),
                 }),
                 "boost_lora_1": (_boost_lora_choices(), {
                     "default": _boost_lora_default(0, _boost_lora_choices()),
-                    "tooltip": ("First boost LoRA. The recipe uses minimax_h3_lms_v1.0_r64 at 0.5. None "
+                    "tooltip": ("First 2nd-pass LoRA. The recipe uses minimax_h3_lms_v1.0_r64 at 0.5. None "
                                 "skips it."),
                 }),
                 "boost_lora_1_strength": ("FLOAT", {
                     "default": BOOST_LORA_DEFAULTS[0][1],
                     "min": -4.0, "max": 4.0, "step": 0.05,
-                    "tooltip": "Strength of boost LoRA 1. The recipe uses 0.5."
+                    "tooltip": "Strength of 2nd-pass LoRA 1. The recipe uses 0.5."
                 }),
                 "boost_lora_2": (_boost_lora_choices(), {
                     "default": _boost_lora_default(1, _boost_lora_choices()),
-                    "tooltip": ("Second boost LoRA. The recipe uses h3-realism-people-t2v-i2v-r2v at 1.0. "
+                    "tooltip": ("Second 2nd-pass LoRA. The recipe uses h3-realism-people-t2v-i2v-r2v at 1.0. "
                                 "None skips it."),
                 }),
                 "boost_lora_2_strength": ("FLOAT", {
                     "default": BOOST_LORA_DEFAULTS[1][1],
                     "min": -4.0, "max": 4.0, "step": 0.05,
-                    "tooltip": "Strength of boost LoRA 2. The recipe uses 1.0."
+                    "tooltip": "Strength of 2nd-pass LoRA 2. The recipe uses 1.0."
                 }),
                 # APPENDED 2026-09-28, LAST, same positional reason.
                 "boost_lora_3": (_boost_lora_choices(), {
                     "default": "None",
-                    "tooltip": ("Third boost LoRA, applied on top of the first two. Not in the recipe. "
+                    "tooltip": ("Third 2nd-pass LoRA, applied on top of the first two. Not in the recipe. "
                                 "None skips it."),
                 }),
                 "boost_lora_3_strength": ("FLOAT", {
                     "default": BOOST_LORA_DEFAULTS[2][1],
                     "min": -4.0, "max": 4.0, "step": 0.05,
-                    "tooltip": "Strength of boost LoRA 3."
+                    "tooltip": "Strength of 2nd-pass LoRA 3."
                 }),
                 # APPENDED 2026-09-29, LAST, same positional reason.
                 "upsample": (["off", "on"], {
@@ -5694,12 +6020,12 @@ class HandTieClips:
                 # APPENDED 2026-10-01, LAST, same positional reason.
                 "boost_lora_4": (_boost_lora_choices(), {
                     "default": "None",
-                    "tooltip": ("Fourth boost LoRA, applied on top of the other three. Not in the "
+                    "tooltip": ("Fourth 2nd-pass LoRA, applied on top of the other three. Not in the "
                                 "recipe. None skips it."),
                 }),
                 "boost_lora_4_strength": ("FLOAT", {
                     "default": 1.0, "min": -4.0, "max": 4.0, "step": 0.05,
-                    "tooltip": "Strength of boost LoRA 4."
+                    "tooltip": "Strength of 2nd-pass LoRA 4."
                 }),
                 # APPENDED 2026-10-04, LAST, same positional reason.
                 "upsample_lora": (_boost_lora_choices(), {
@@ -5726,9 +6052,11 @@ class HandTieClips:
                 }),
                 # APPENDED 2026-10-04, LAST. A socket, so it takes no widget slot.
                 "upsample_dit": ("MODEL", {
-                    "tooltip": ("Optional separate model for the upsample re-draw, e.g. a plain "
-                                "UNETLoader with no LoRAs. Unwired uses the model the hops ran "
-                                "on."),
+                    "tooltip": ("Optional separate model for the upsample re-draw: a plain "
+                                "Load Diffusion Model with no LoRAs. Unwired uses the model the "
+                                "hops ran on. upsample_redraw ic runs on this model and needs "
+                                "the official minimax_h3_ref2va (fl2va, pruned and merged models "
+                                "cannot run it; the run stops before any hop if one is wired)."),
                 }),
                 # APPENDED 2026-10-14, LAST (recover branch, seam-fix batch). hand_tie only.
                 "ht_seam_fix": (["off", "on"], {
@@ -5774,36 +6102,42 @@ class HandTieClips:
                     "tooltip": ("Written by the SWAP tab: the @tags its hop uses. Empty = every "
                                 "wired picture; [] = none. Only read when swap_script is set."),
                 }),
-                # APPENDED 2026-10-15, LAST. Off adds no hop-key field.
+                # APPENDED 2026-10-15, LAST. Repurposed 2026-11-04 for Upscale
+                # 2nd Pass settings ("2nd pass chunking", "2nd pass megapixels",
+                # "2nd pass steps") so Upscale 2nd Pass and Upsample are completely
+                # independent stages while saved workflows keep their positional slots.
                 "audio_refine": (["off", "on"], {
                     "default": "off",
-                    "tooltip": ("After the picture is finished, re-draw the soundtrack on its own "
-                                "while the picture stays as it is. off leaves the sound as "
-                                "rendered. Not with master_audio_file or hop_refine=split."),
+                    "tooltip": ("Shown as 2nd pass chunking. off (default): the 2nd pass "
+                                "re-draws the film in one go, which suits 1 MP on most cards. on: "
+                                "long films are cut into overlapping pieces and big frames into "
+                                "tiles, for less VRAM. Turn it on if the 2nd pass runs out of "
+                                "memory."),
                 }),
                 "audio_denoise": ("FLOAT", {
-                    "default": 0.50, "min": 0.05, "max": 1.0, "step": 0.05,
-                    "tooltip": ("How much of the soundtrack the audio pass re-draws. It is a "
-                                "share of the steps, not of the noise: with the beta scheduler "
-                                "0.1 already starts at about 0.34 noise, 0.3 at 0.80 and 0.5 at "
-                                "0.92 (most of the sound is new); 1.0 makes it all new to fit the "
-                                "finished picture. The log prints where it really starts."),
+                    "default": BOOST_DEFAULT_MEGAPIXELS, "min": 0.1, "max": 16.0, "step": 0.05,
+                    "tooltip": ("Shown as 2nd pass megapixels: the size the 2nd pass re-draws "
+                                "at. 1.0 (default) = about 1024x1024 worth of pixels, in the "
+                                "film's own shape. Separate from upsample_megapixels, which "
+                                "sets the final delivery size."),
                 }),
                 "audio_steps": ("INT", {
-                    "default": 5, "min": 1, "max": 30,
-                    "tooltip": "Steps in the audio pass. 4 to 6 is the usual range.",
+                    "default": 3, "min": 1, "max": 30,
+                    "tooltip": ("Shown as 2nd pass steps: how many steps the 2nd pass "
+                                "re-draws in (default 3). More steps change the texture more; "
+                                "how much is re-drawn is set for you from this number."),
                 }),
                 "audio_sampler": (["same"] + comfy.samplers.KSampler.SAMPLERS, {
                     "default": "same",
-                    "tooltip": "Sampler for the audio pass. same uses the hop's.",
+                    "tooltip": "Retired: ignored. Kept so saved graphs load with their values in place.",
                 }),
                 "audio_scheduler": (["same"] + comfy.samplers.KSampler.SCHEDULERS, {
                     "default": "same",
-                    "tooltip": "Scheduler for the audio pass. same uses the hop's.",
+                    "tooltip": "Retired: ignored. Kept so saved graphs load with their values in place.",
                 }),
                 "audio_seed_offset": ("INT", {
                     "default": 0, "min": -1000000000, "max": 1000000000,
-                    "tooltip": "Added to the hop seed for the audio pass's own noise draw.",
+                    "tooltip": "Retired: ignored. Kept so saved graphs load with their values in place.",
                 }),
                 # APPENDED 2026-10-26, LAST two widgets. Off adds no hop-key field.
                 "dialogue_lock": (list(_dlg.MODES), {
@@ -5813,8 +6147,8 @@ class HandTieClips:
                                 "also 1.5 s of quiet after each line, where extra words tend to "
                                 "start. full: the whole hop's sound. Lines come from "
                                 "dialogue_audio_file, or H3 drafts them first and keeps only the "
-                                "scripted words. Not with master_audio_file, realism_boost, "
-                                "audio_refine or SWAP; no effect under hand_tie."),
+                                "scripted words. Not with master_audio_file or SWAP; no effect "
+                                "under hand_tie."),
                 }),
                 "dialogue_audio_file": ("STRING", {
                     "default": "",
@@ -5826,8 +6160,12 @@ class HandTieClips:
                 # APPENDED 2026-10-28, LAST widgets. Open-H3-Regenerate-2K LoRA selector + seed + cond.
                 "upsample_redraw": (_regen2k_lora_choices(), {
                     "default": REGEN2K_DEFAULT_LORA,
-                    "tooltip": ("The Regen2K LoRA (models/loras) for the upsample's light re-"
-                                "draw. Default: open_h3_regenerate_2k_r256pp_bf16.safetensors."),
+                    "tooltip": ("The upsample's re-draw. A Regen2K LoRA (models/loras; default "
+                                "open_h3_regenerate_2k_r256pp_bf16.safetensors), or ic: the "
+                                "in-context re-draw that keeps each piece's own frames and "
+                                "soundtrack in view, so faces, text and mouths stay the film's "
+                                "(slower; needs " + _ic.IC_LORA_SMALL + " and "
+                                + _ic.HYPERFLOW_LORA + " in models/loras)."),
                 }),
                 "regen2k_model": ("MODEL", {
                     "tooltip": ("Optional model for upsample: wire UNETLoader "
@@ -5846,9 +6184,7 @@ class HandTieClips:
                                 "own text, without its pictures. none: no prompt."),
                 }),
                 "audio_model": ("MODEL", {
-                    "tooltip": ("Optional model for the audio pass. Unwired uses the base model "
-                                "(the refine model when hop_refine=full), never the realism boost "
-                                "model, whose LoRAs colour the sound too."),
+                    "tooltip": "Retired with audio_refine: ignored.",
                 }),
                 # A literal, as every socket here: tools read these types from source.
                 "upsample_settings": ("HTC_UPSAMPLE", {
@@ -5873,6 +6209,14 @@ class HandTieClips:
                                 "may drift a little. 0.75: holds it closer. full: tightest, but "
                                 "can darken people and boost their colour. Light meant to change "
                                 "(night to dawn) changes less the higher it is set."),
+                }),
+                # APPENDED 2026-11-10, LAST widget (after tone_lock in widgets_values).
+                "upsample_steps": (list(UPSAMPLE_STEPS), {
+                    "default": UPSAMPLE_STEPS[0],
+                    "tooltip": ("Steps of the upsample re-draw (Regen2K or ic). 3 = the recipe. "
+                                "2 = about a third faster: Regen2K looked the same in "
+                                "side-by-side tests, ic starts later so a little less is "
+                                "re-drawn. A wired upsample_settings node keeps its own steps."),
                 }),
             },
             "hidden": {
@@ -5984,7 +6328,7 @@ class HandTieClips:
             upsample_tile_tokens=0, upsample_dit=None,
             swap_script="", swap_refs="",
              ht_seam_fix="off",
-            audio_refine="off", audio_denoise=0.50, audio_steps=5,
+            audio_refine="off", audio_denoise=BOOST_DEFAULT_MEGAPIXELS, audio_steps=3,
             audio_sampler="same", audio_scheduler="same",
             audio_seed_offset=0, dialogue_lock="off", dialogue_audio_file="",
             upsample_redraw=REGEN2K_DEFAULT_LORA,
@@ -5992,6 +6336,7 @@ class HandTieClips:
             regen2k_cond=REGEN2K_DEFAULT_COND,
             audio_model=None,
             upsample_settings=None, cache_location="temp", tone_lock=WT_TONE_DEFAULT,
+            upsample_steps=UPSAMPLE_STEPS[0],
             unique_id=None):
         # Every argument, as called: the hand_tie previs-first pass re-runs this
         # same call with dry_run=previs before any hop renders.
@@ -6034,7 +6379,7 @@ class HandTieClips:
         swap = str(swap_script or "").strip()
         if swap:
             from . import planner as _swappl
-            swap = _swappl.scrub_swap_pronouns(swap)
+            swap = _swappl.scrub_swap_negations(_swappl.scrub_swap_pronouns(swap))
             try:
                 _errs, _ = _swappl.swap_contract_errors(swap, shape_only=True)
             except Exception as _ge:
@@ -6085,7 +6430,9 @@ class HandTieClips:
         # SWAP replaces the plan wholesale. One shot, one hop, `verbatim`: a swap is
         # a single generate, and letting the chain read it as hop 1 of N would
         # start a chain underneath it.
+        _swap_pins = []
         if swap:
+            _swap_pins = _parse_swap_pins(swap, swap_refs)
             # `refs` is the WHITELIST of plates the hop rides, and it is load
             # bearing in BOTH directions, so the three states are distinct:
             #
@@ -6102,7 +6449,7 @@ class HandTieClips:
             # reading that breaks a swap outright: a hand-typed swap, or any
             # tab that had not yet written swap_refs, rode nothing and rendered
             # with no identity at all. Empty now means the register default.
-            _raw = str(swap_refs or "").strip()
+            _raw = str(swap_refs or "").split("|", 1)[0].strip()
             if _raw == "[]":
                 _sr = []
             elif _raw:
@@ -6119,6 +6466,7 @@ class HandTieClips:
                   + ("plates (none)" if _sr == []
                      else ("plates " + ", ".join(_sr) if _sr
                            else "plates (register default)"))
+                  + (f", pins {_swap_pins}" if _swap_pins else "")
                   + ", shot_plan ignored",
                   flush=True)
 
@@ -6767,29 +7115,18 @@ class HandTieClips:
                   f"detail={refine_detail_sigma:g} latent px (high-band RMS capped)",
                   flush=True)
 
-        # Realism boost. Refused beside the audio lock, whose frozen stream
-        # would reach stage 3 un-noised under DisableNoise. Allowed beside
-        # hop_refine: the refine runs on whatever the boost hands out, both
-        # are in the hop key, and a long boosted chain is the case the refine
-        # was built for. It refines on the MODEL wire (or refine_model), not
-        # the boost model, so it can pull the boost's look back -- said once.
+        # Realism boost (2-Pass): Pass 1 samples low-res base/turbo hops with
+        # full finished audio and caches them cleanly in HopStore; after the hop
+        # loop, pure 3D latent upscale enlarges the film and Pass 2 runs high-res
+        # refine on the Boost LoRA stack (boost_lora_1..4 + H3AdaLNLoRAFix).
         boost_on = str(realism_boost) == "on"
         boost_loras = [(str(boost_lora_1), float(boost_lora_1_strength)),
                        (str(boost_lora_2), float(boost_lora_2_strength)),
                        (str(boost_lora_3), float(boost_lora_3_strength))]
-        # Slot 4 joins the list only when it does something, so a boosted hop
-        # keyed before the slot existed keeps its key (the hop key hashes this
-        # list) and an unset slot 4 costs no cached hop.
         if str(boost_lora_4) != "None" and float(boost_lora_4_strength) != 0.0:
             boost_loras.append((str(boost_lora_4), float(boost_lora_4_strength)))
         split_on = str(hop_refine) == "split"
         if split_on:
-            if boost_on:
-                raise RuntimeError(
-                    f"{TAG}: hop_refine=split does not run with realism_boost: "
-                    "the boost already splits each hop and finishes it on the boost "
-                    "LoRAs. Pick one -- realism_boost with hop_refine full/pin_only, "
-                    "or split without the boost.")
             _k_note = (f"{int(refine_steps)}" if int(refine_steps)
                        else f"{SPLIT_DEFAULT_K} (refine_steps 0)")
             print(f"[{TAG}] hop_refine=split: each hop's last {_k_note} steps are "
@@ -6803,14 +7140,8 @@ class HandTieClips:
         if boost_on:
             if str(hop_refine) != "off":
                 print(f"[{TAG}] realism_boost + hop_refine={hop_refine}: each "
-                      "hop is boosted, then refined on "
-                      + ("the wired refine_model" if refine_model is not None
-                         else "the MODEL wire (not the boost LoRAs)")
-                      + ".", flush=True)
-            if str(master_audio_file or "").strip():
-                raise RuntimeError(
-                    f"{TAG}: realism_boost does not run with master_audio_file: "
-                    "the locked audio would enter the boost stage un-noised.")
+                      "hop is sampled in Pass 1 (with hop_refine), then sized up "
+                      "and refined in Pass 2 on the Boost LoRAs.", flush=True)
             if all(nm == "None" or s == 0.0 for nm, s in boost_loras):
                 raise RuntimeError(
                     f"{TAG}: realism_boost is on with no boost LoRA set -- "
@@ -6828,10 +7159,6 @@ class HandTieClips:
             for _bad, _why in (
                     (str(master_audio_file or "").strip(), "master_audio_file already owns "
                      "the whole soundtrack"),
-                    (boost_on, "realism_boost's second stage would see the frozen sound "
-                     "un-noised"),
-                    (str(audio_refine) == "on", "audio_refine would re-noise the frozen "
-                     "lines"),
                     (str(swap_script or "").strip(), "SWAP is one hop with its own contract")):
                 if _bad:
                     raise RuntimeError(f"{TAG}: dialogue_lock does not run here: {_why}.")
@@ -6854,21 +7181,23 @@ class HandTieClips:
                 print(f"[{TAG}] dialogue_lock {dlg_mode}: H3 drafts each dialogue hop's "
                       f"sound at {dlg['size'][0]}x{dlg['size'][1]}, Whisper keeps the "
                       "scripted words", flush=True)
-        if str(audio_refine) == "on":
-            if split_on:
-                raise RuntimeError(
-                    f"{TAG}: audio_refine does not run with hop_refine=split: "
-                    "split finishes the hop in one latent, and a second audio "
-                    "schedule has no finished picture to freeze.")
-            if str(master_audio_file or "").strip():
-                raise RuntimeError(
-                    f"{TAG}: audio_refine does not run with master_audio_file: "
-                    "the locked soundtrack would be re-noised.")
-
-        # Upsample: Open-H3-Regenerate-2K once over the finished film,
-        # after the last hop. Refused NOW if the upscaler file is missing,
-        # rather than after every hop has rendered.
-        upsample_on = str(upsample) == "on" and not dry and not previs_only
+        # Upscale 2nd Pass (`realism_boost`) and Upsample (`upsample`):
+        # Two completely separate stages with their own settings:
+        #   - Stage 1 (Upscale 2nd Pass): 3D latent upscale to `2nd pass megapixels`
+        #     (`audio_denoise`, default 1.0 MP) + Pass 2 refine (`audio_steps`,
+        #     default 3 steps, dynamic step-scaled denoise, `boost_lora_1..4`).
+        #   - Stage 2 (Upsample): Regen2K / delivery upsample to `upsample_megapixels`
+        #     (default 2.0 MP) with `upsample_redraw` and `upsample_denoise` (0.8).
+        boost_chunking = str(audio_refine) == "on"
+        # Unmigrated workflows saved before 11-04 carry (audio_denoise=0.5, audio_steps=5)
+        # from the retired audio_refine defaults; treat that exact untouched pair as
+        # the 2nd-pass defaults (1.0 MP, 3 steps).
+        _unmig_2p = (abs(float(audio_denoise) - 0.5) < 1e-6 and int(audio_steps) == 5)
+        boost_mp = BOOST_DEFAULT_MEGAPIXELS if _unmig_2p else max(0.1, float(audio_denoise))
+        boost_steps = 3 if _unmig_2p else max(1, int(audio_steps))
+        boost_pass_on = boost_on and not dry and not previs_only
+        real_upsample_on = str(upsample) == "on" and not dry and not previs_only
+        upsample_on = boost_pass_on or real_upsample_on
         regen2k_on = False
         upsample_hops = []
         upsample_guide_factor = 0
@@ -6877,27 +7206,39 @@ class HandTieClips:
             _tu.register_folder()
             if not folder_paths.get_full_path(_tu.FOLDER, str(upsample_model)):
                 raise RuntimeError(
-                    f"{TAG}: upsample is on but {upsample_model} is not in "
-                    f"models/{_tu.FOLDER} "
+                    f"{TAG}: {'upscale 2nd pass' if boost_pass_on else 'upsample'} is on "
+                    f"but {upsample_model} is not in models/{_tu.FOLDER} "
                     "(huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler).")
             _uw, _uh = _tu.target_size(int(width), int(height),
                                        float(upsample_megapixels))
-            print(f"[{TAG}] upsample on: after the last hop the film goes "
-                  f"{int(width)}x{int(height)} -> {_uw}x{_uh} "
-                  f"({float(upsample_megapixels):g} MP) with {upsample_model}. "
-                  "Delivery only; no hop's pin changes.", flush=True)
-            regen2k_on = _validate_upsample_redraw(
-                upsample, upsample_redraw, regen2k_model,
-                upsample_dit, upsample_denoise, width, height, model=model,
-                regen2k_seed=regen2k_seed,
-                refine_model=refine_model, regen2k_cond=regen2k_cond)
-            _ud = float(upsample_denoise)
-            if _ud <= 0.0:
-                print(f"[{TAG}] upsample_denoise 0: no re-draw, the enlarged "
-                      "latent is decoded as is", flush=True)
-                if upsample_dit is not None:
-                    print(f"[{TAG}] upsample_dit is wired but upsample_denoise is "
-                          "0: there is no re-draw for it to run", flush=True)
+            _bw, _bh = _tu.target_size(int(width), int(height), float(boost_mp))
+            if boost_pass_on:
+                _bd = _boost_auto_denoise(boost_steps)
+                print(f"[{TAG}] upscale 2nd pass: Pass 1 low-res {int(width)}x{int(height)} "
+                      f"-> Pure 3D Latent Upscale ({upsample_model}) -> {_bw}x{_bh} "
+                      f"({float(boost_mp):g} MP) -> Pass 2 refine "
+                      f"({boost_steps} steps, auto denoise={_bd:g}, chunking={'on' if boost_chunking else 'off'}).",
+                      flush=True)
+            if real_upsample_on:
+                _src_w, _src_h = (_bw, _bh) if boost_pass_on else (int(width), int(height))
+                print(f"[{TAG}] upsample on: after {'upscale 2nd pass' if boost_pass_on else 'the last hop'} "
+                      f"the film goes {_src_w}x{_src_h} -> {_uw}x{_uh} "
+                      f"({float(upsample_megapixels):g} MP) with {upsample_model}. "
+                      "Delivery only; no hop's pin changes.", flush=True)
+                regen2k_on = _validate_upsample_redraw(
+                    upsample, upsample_redraw, regen2k_model,
+                    upsample_dit, upsample_denoise, width, height, model=model,
+                    regen2k_seed=regen2k_seed,
+                    refine_model=refine_model, regen2k_cond=regen2k_cond)
+                upsample_settings = _apply_upsample_steps(
+                    upsample_settings, upsample_steps, regen2k_on)
+                _ud = float(upsample_denoise)
+                if _ud <= 0.0:
+                    print(f"[{TAG}] upsample_denoise 0: no re-draw, the enlarged "
+                          "latent is decoded as is", flush=True)
+                    if upsample_dit is not None:
+                        print(f"[{TAG}] upsample_dit is wired but upsample_denoise is "
+                              "0: there is no re-draw for it to run", flush=True)
             if str(upsample_lora) != "None":
                 # Retired 10-25: the upsample is the original recipe, no LoRA.
                 print(f"[{TAG}] upsample_lora is retired: {upsample_lora} is ignored; "
@@ -6978,14 +7319,13 @@ class HandTieClips:
                 print(f"[{TAG}] anti-burn: not used with "
                       + ("realism_boost" if boost_on else "hop_refine=split"), flush=True)
             if boost_on:
-                boost_model = _boost_model(model, boost_loras)
-                print(f"[{TAG}] realism boost: "
+                print(f"[{TAG}] realism boost (Pass 2 LoRAs): "
                       + ", ".join(f"{nm} {s:g}" for nm, s in boost_loras
                                   if nm != "None" and s != 0.0), flush=True)
 
         # The steps each hop will really run. A shot's own `steps` outranks the
         # widget, and printing only the widget made a plan pinned to 8 look
-        # like it was obeying a widget set to 2 -- and the boost split with it.
+        # like it was obeying a widget set to 2.
         _hop_steps = [int((sh or {}).get("steps") or steps) for sh in shots]
         _steps_txt = (f"{_hop_steps[0]} steps" if len(set(_hop_steps)) == 1
                       else "steps " + "/".join(str(v) for v in _hop_steps))
@@ -6993,8 +7333,7 @@ class HandTieClips:
                 and set(_hop_steps) != {int(steps)}:
             _steps_txt += f" (set per shot; the steps widget's {int(steps)} is unused)"
         if boost_on:
-            _steps_txt += " -> realism boost " + ", ".join(sorted(
-                {f"{BOOST_SPLIT} + {BOOST_EXTEND * v - BOOST_SPLIT}" for v in _hop_steps}))
+            _steps_txt += " -> Pass 2 realism boost"
         print(
             f"[{TAG}] {n} hop(s), {length}f ({length / FPS:.1f}s) @ {width}x{height} "
             f"({resolution}, {aspect}), overlap {overlap_n}f, "
@@ -8062,7 +8401,11 @@ class HandTieClips:
             # case `continuity_line` exists for.
             hop_subjects = {r["subject"] for r in hop_active
                             if r["subject"] is not None}
-            carried_subjects = (hop_subjects if hop_is_start
+            # A hard cut on a continuation (the pin is only frame 0, then a new
+            # scene) carries nobody across: only the people on this hop's refs.
+            _hop_cut = (not hop_is_start and str((shot.get("directives") or {})
+                                                .get("join") or "") == "hard_cut")
+            carried_subjects = (hop_subjects if (hop_is_start or _hop_cut)
                                 else hop_subjects | prev_subjects)
             prev_subjects = carried_subjects
 
@@ -8099,25 +8442,11 @@ class HandTieClips:
                                    if not hop_is_start else None),
                     video_map=video_ords)
                 if hop_is_start:
-                    # Every chain start, not just hop 1. subject_prose derives
-                    # its own ordinals with no still_shift, which is correct
-                    # exactly when the hop has no pin -- and a restart has
-                    # none: `still_shift` is 0 and `live_p` is None twenty
-                    # lines up, because the pin branch is gated on
-                    # `not hop_is_start`.
-                    #
-                    # Reading `i == 0` here left the consumer below -- which
-                    # already asks `hop_is_start` -- dead for every restart.
-                    # Those hops were handed their reference pictures in the
-                    # DiT and as `<Picture N>` in the tokenizer with NOTHING
-                    # in the prose citing them, and an uncited plate is the
-                    # one thing this pack knows the model free-associates
-                    # into the frame: a cast member who is not in the beat
-                    # walks into the shot. `@tag` did not save it either,
-                    # because `subject_names` was flattening those to bare
-                    # prose on the same off-by-one test.
                     hop_subject_prose = _refs.subject_prose(
                         hop_active, ref_subjects, video_ords)
+            elif swap:
+                block = _align_swap_prompt_for_guide(
+                    block, hop_pictures, hop_ords)
             if hop_is_start and hop_subject_prose and not _d.is_full_h3_prompt(block):
                 block = hop_subject_prose + "\n\n" + block
             # Hop 1 has no _assemble_next to fold this into. A full H3 block is
@@ -8198,6 +8527,7 @@ class HandTieClips:
                     retention=hop_retention,
                     wardrobe=hop_wardrobe,
                     refvid=refvid_line,
+                    cut=str((shot.get("directives") or {}).get("join") or "") == "hard_cut",
                 )
                 print(f"[{TAG}] hop {i + 1} next-beat assembled "
                       f"(Picture {live_p}, Video {live_v}, "
@@ -8402,7 +8732,23 @@ class HandTieClips:
                 pbar.update(1)
                 continue
 
+            _remake_cond_ready = [False]
+
             def _hop_ref2va():
+                if swap and reference_video is not None:
+                    _sw_aud = (_vid_slots[0][1]
+                               if (_vid_slots and _vid_slots[0][1] is not None and audio_vae is not None)
+                               else None)
+                    _rm_c, _rm_lat = _viggle_remake_conditioning(
+                        clip=clip, vae=ref_vae, audio_vae=ref_audio_vae,
+                        source=reference_video, prompt=block,
+                        hop_images=hop_images, pins=_swap_pins,
+                        width=int(width), height=int(height),
+                        length=render_length, audio=_sw_aud,
+                    )
+                    if _rm_c is not None and _rm_lat is not None:
+                        _remake_cond_ready[0] = True
+                        return _rm_c, _rm_lat
                 # Every argument by NAME, none by position. Passing the first
                 # seven positionally worked here and broke for a user on a
                 # different ComfyUI build: their core orders the parameters
@@ -8675,28 +9021,6 @@ class HandTieClips:
                     # pinned from a latent an uninterrupted run never makes.
                     if str(hop_refine) == "pin_only" and i >= n - 1:
                         hop_payload["refine"].append("skipped:last")
-                # Every hop, hop 1 included, and present only when on -- same
-                # byte-identical-when-off rule as the refine above. The LoRA
-                # names and strengths stand in for a fingerprint: the boost
-                # model is derived from `model`, whose fingerprint is already
-                # in chain_salt.
-                if boost_on:
-                    hop_payload["boost"] = [
-                        [[nm, round(s, 4)] for nm, s in boost_loras],
-                        BOOST_EXTEND, BOOST_SPLIT]
-                # Present only when on, same rule as the boost: off must key
-                # byte-identical to a build that had no audio refine.
-                if str(audio_refine) == "on":
-                    hop_payload["audio_refine"] = [
-                        round(float(audio_denoise), 4), int(audio_steps),
-                        str(audio_sampler), str(audio_scheduler),
-                        int(audio_seed_offset),
-                        (None if (dry or audio_model is None)
-                         else _model_fingerprint(audio_model)),
-                        # Which model the pass resolves to: hops cooked on
-                        # the boost model before this field must not hit.
-                        _audio_refine_model(audio_model, hop_refine,
-                                            refine_model, model)[1]]
                 if dlg is not None:
                     hop_payload["dialogue_lock"] = [
                         1, dlg["mode"],
@@ -8740,7 +9064,9 @@ class HandTieClips:
                                                   bool(_ht.SEAMFIX_TONE_MATCH), bool(_ht.SEAMFIX_ANCHOR)]
                 if swap and reference_video is not None:
                     hop_payload["swap_guide"] = [
-                        "gl_v3",
+                        "viggle_remake_v1",
+                        _remake_mode_kind(swap),
+                        list(_swap_pins),
                         min(int(reference_video.shape[0]), int(render_length)),
                         bool(_vid_slots and _vid_slots[0][1] is not None and audio_vae is not None),
                     ]
@@ -8858,9 +9184,9 @@ class HandTieClips:
                     # the upsampler's re-draw wants the one that made it (unless
                     # a guide LoRA, denoise=0, or regen2k_cond=none is active).
                     up_latent = cached_latent
-                    if float(upsample_denoise) > 0.0 and not upsample_guide_factor and (
-                            not regen2k_on or str(regen2k_cond) == "hop_text"):
-                        if regen2k_on:
+                    if boost_pass_on or (float(upsample_denoise) > 0.0 and not upsample_guide_factor and (
+                            not regen2k_on or str(regen2k_cond) == "hop_text")):
+                        if regen2k_on and not boost_pass_on:
                             _tc = _result(_core_call(
                                 MiniMaxH3ReferenceToVideo, "the regen2k hop_text conditioning",
                                 clip=clip, vae=None, audio_vae=None, prompt=block,
@@ -8994,27 +9320,35 @@ class HandTieClips:
                                   f"{_k + 2} ({_ht_tail_hold} latents from step 0; the hop is "
                                   "drawn into it, not snapped to it)", flush=True)
                 elif swap and reference_video is not None:
-                    # Guided swap (Alissonerdx BFS / H3EncodeLD._add_guide):
-                    # lay the guide clip's frames onto the generated timeline
-                    # via MiniMaxH3AddGuide at frame_idx=0 so the swap LoRA's
-                    # guide-latent conditioning follows the performer's pose,
-                    # camera, lighting and background frame by frame.
+                    # Viggle Remake conditioning places <Video 1> into minimax_refs
+                    # and optional pinned keyframes into minimax_keyframes (held until
+                    # sigma < 0.9). Fallback to AddGuide only if clip/vae could not
+                    # run _viggle_remake_conditioning (e.g. offline test stubs).
                     _sw_n = min(int(reference_video.shape[0]), int(render_length))
                     _sw_aud = (_vid_slots[0][1]
                                if (_vid_slots and _vid_slots[0][1] is not None and audio_vae is not None)
                                else None)
-                    cond = _result(_core_call(
-                        MiniMaxH3AddGuide,
-                        "the swap guide clip",
-                        positive=cond, latent=latent, frame_idx=0,
-                        vae=vae, audio_vae=(audio_vae if _sw_aud is not None else None),
-                        image=reference_video[:_sw_n], audio=_sw_aud,
-                    ))[0]
-                    base_cond = cond
-                    print(f"[{TAG}] swap: AddGuide laid {_sw_n} guide frame(s)"
-                          + (" + audio" if _sw_aud is not None else "")
-                          + f" at frame_idx=0 ({int(width)}x{int(height)}, guide_latent_only)",
-                          flush=True)
+                    if _remake_cond_ready[0]:
+                        base_cond = cond
+                        print(f"[{TAG}] swap: Viggle Remake conditioning laid {_sw_n} source frame(s)"
+                              + (" + clean audio" if _sw_aud is not None else "")
+                              + (f" + pins {_swap_pins} (until sigma < {REMAKE_KEYFRAME_UNTIL})"
+                                 if _swap_pins else " (unpinned refs)")
+                              + f" ({int(width)}x{int(height)}, mode={_remake_mode_kind(swap)})",
+                              flush=True)
+                    else:
+                        cond = _result(_core_call(
+                            MiniMaxH3AddGuide,
+                            "the swap guide clip",
+                            positive=cond, latent=latent, frame_idx=0,
+                            vae=vae, audio_vae=(audio_vae if _sw_aud is not None else None),
+                            image=reference_video[:_sw_n], audio=_sw_aud,
+                        ))[0]
+                        base_cond = cond
+                        print(f"[{TAG}] swap: AddGuide laid {_sw_n} guide frame(s)"
+                              + (" + audio" if _sw_aud is not None else "")
+                              + f" at frame_idx=0 ({int(width)}x{int(height)}, fallback)",
+                              flush=True)
                 elif (i == 0 or hop_restart) and start_image is not None:
                     # A restart hop is a chain start. It gets the photograph as
                     # its frame-0 anchor exactly as hop 1 does, and NOTHING from
@@ -9348,18 +9682,33 @@ class HandTieClips:
                 else:
                     shot_seed = (int(seed) + i) if seed_per_shot else int(seed)
                 hop_steps = int(shot.get("steps") or steps)
-                if hop_steps not in sigma_cache:
-                    sigma_cache[hop_steps] = _result(_core_call(
-                        BasicScheduler, "the sigma schedule",
-                        model=model, scheduler=scheduler, steps=hop_steps,
-                        denoise=1.0))[0]
-                hop_sigmas = sigma_cache[hop_steps]
-                if hop_steps != int(steps) or shot.get("seed") is not None:
-                    print(f"[{TAG}] hop {i + 1} override: seed={shot_seed} "
-                          f"steps={hop_steps}", flush=True)
-                noise = _result(_core_call(
-                    RandomNoise, "the noise source",
-                    noise_seed=shot_seed))[0]
+                if swap and _remake_cond_ready[0]:
+                    _rm_sig_tuple = (
+                        REMAKE_EDIT_SIGMAS if _remake_mode_kind(swap) == "edit"
+                        else REMAKE_SWAP_SIGMAS
+                    )
+                    hop_sigmas = torch.tensor(_rm_sig_tuple, dtype=torch.float32)
+                    hop_steps = len(_rm_sig_tuple) - 1
+                    noise = _viggle_remake_noise(cond, shot_seed)
+                    sampler = _result(_core_call(
+                        KSamplerSelect, "the Viggle Remake euler sampler",
+                        sampler_name="euler"))[0]
+                    print(f"[{TAG}] swap: Viggle Remake 6-step euler schedule "
+                          f"({_remake_mode_kind(swap)} sigmas, seed={shot_seed})",
+                          flush=True)
+                else:
+                    if hop_steps not in sigma_cache:
+                        sigma_cache[hop_steps] = _result(_core_call(
+                            BasicScheduler, "the sigma schedule",
+                            model=model, scheduler=scheduler, steps=hop_steps,
+                            denoise=1.0))[0]
+                    hop_sigmas = sigma_cache[hop_steps]
+                    if hop_steps != int(steps) or shot.get("seed") is not None:
+                        print(f"[{TAG}] hop {i + 1} override: seed={shot_seed} "
+                              f"steps={hop_steps}", flush=True)
+                    noise = _result(_core_call(
+                        RandomNoise, "the noise source",
+                        noise_seed=shot_seed))[0]
                 if _ab_hop and pin_mech_used == "motion_context":
                     if antiburn_model is None:
                         antiburn_model = _boost_model(
@@ -9372,21 +9721,6 @@ class HandTieClips:
                         sampler=sampler, hop_sigmas=hop_sigmas,
                         plain_steps=ANTIBURN_PLAIN_STEPS, hop_no=i + 1)
                     del _ab_guider
-                elif boost_model is not None:
-                    # Same conditioning on both guiders, so the pin and the
-                    # guides reach the boost stage too. The latent that comes
-                    # out is an ordinary hop latent on the hop canvas: the
-                    # decode, the next hop's pin and the cache take it as is.
-                    boost_guider = _result(_core_call(
-                        BasicGuider, "the boost guider",
-                        model=boost_model, conditioning=cond))[0]
-                    sampled = _boost_sampled(
-                        latent, model=model, guider=guider,
-                        boost_guider=boost_guider, sampler=sampler,
-                        hop_sigmas=hop_sigmas, sigma_cache=sigma_cache,
-                        hop_steps=hop_steps, seed=shot_seed, hop_no=i + 1,
-                        label=f"{sampler_name}/{scheduler}")
-                    del boost_guider
                 elif split_on:
                     # The finish runs on its own guider only when it has its
                     # own model; the conditioning is the hop's either way, so
@@ -9430,7 +9764,8 @@ class HandTieClips:
                         elif locals().get("_mc_prior_mask") is not None:
                             sampled["noise_mask"] = locals().get("_mc_prior_mask")
                     sampled = _calibrate_overlap_latent(
-                        sampled, pin_latent, overlap_n, hop_no=i + 1)
+                        sampled, pin_latent, overlap_n, hop_no=i + 1,
+                        stats=OVERLAP_STATS_LOCK)
                 elif (ht and i > 0 and not locals().get("_free", True)
                         and prev_sampled is not None):
                     if locals().get("_mc_inpaint_hold", 0) > 0:
@@ -9567,30 +9902,6 @@ class HandTieClips:
                         refined_for_pin = _drop_latent_tail(refined_for_pin, _xtra)
                     print(f"[{TAG}] hop {i + 1}: dropped the last {_xtra} rendered frames "
                           f"(the bright tail); delivers {hop_length}f (ht_seam_fix)", flush=True)
-                if str(audio_refine) == "on":
-                    # After the picture is final, including a video refine and
-                    # the dropped tail. The cache stores this latent, so a hit
-                    # does not run the pass again.
-                    _am, _am_role = _audio_refine_model(
-                        audio_model, hop_refine, refine_model, model)
-                    _aguider = guider if _am is model else _result(_core_call(
-                        BasicGuider, "the audio refine guider",
-                        model=_am, conditioning=cond))[0]
-                    _asched = (str(scheduler) if str(audio_scheduler) == "same"
-                               else str(audio_scheduler))
-                    _asamp = sampler if str(audio_sampler) == "same" else _result(
-                        _core_call(
-                            KSamplerSelect, "the audio refine sampler choice",
-                            sampler_name=str(audio_sampler)))[0]
-                    sampled = _audio_refine_sampled(
-                        sampled, model=_am, guider=_aguider, sampler=_asamp,
-                        scheduler=_asched, steps=int(audio_steps),
-                        denoise=float(audio_denoise),
-                        seed=(int(shot_seed) + int(audio_seed_offset)) & 0x7FFFFFFF,
-                        sigma_cache=sigma_cache, hop_no=i + 1,
-                        sampler_label=(sampler_name if str(audio_sampler) == "same"
-                                       else str(audio_sampler)),
-                        model_label=_am_role)
                 if _sfix and _ht.SEAMFIX_ANCHOR:
                     if _mean_ref[0] is None or i == 0:
                         _, _mean_ref[0] = _mean_anchor(sampled, None, 0.0)
@@ -9683,9 +9994,9 @@ class HandTieClips:
                     # differ, and the upsampler redraws what was delivered.
                     up_latent = (this_sampled if refined_for_pin is None
                                  else _latent_cpu(sampled))
-                    up_cond = (_cond_cpu(base_cond, keep_refs=(not regen2k_on))
-                               if (float(upsample_denoise) > 0.0 and not upsample_guide_factor
-                                   and (not regen2k_on or str(regen2k_cond) == "hop_text"))
+                    up_cond = (_cond_cpu(base_cond, keep_refs=(boost_pass_on or not regen2k_on))
+                               if (boost_pass_on or (float(upsample_denoise) > 0.0 and not upsample_guide_factor
+                                   and (not regen2k_on or str(regen2k_cond) == "hop_text")))
                                else None)
 
                 # base_cond is deleted with cond because it is usually the
@@ -9910,7 +10221,12 @@ class HandTieClips:
                         f"different length than planned.")
                 seam_marks.append(int(write_pos))
                 master_imgs[write_pos:write_pos + keep_n] = imgs[overlap_n:]
-                _bridge_motion_seam(master_imgs, int(write_pos), int(keep_n))
+                # A hard cut on a continuation (_assemble_next cut=) is a new
+                # scene and never takes the bridge (it pulsed the new scene
+                # toward the old one). The 0.2 s freeze that used to
+                # follow a cut is gone: the user saw it fix nothing (11-05).
+                if SEAM_BRIDGE and str((shot.get("directives") or {}).get("join") or "") != "hard_cut":
+                    _bridge_motion_seam(master_imgs, int(write_pos), int(keep_n))
                 write_pos += keep_n
                 head_n = _audio_samples(overlap_n, sr)
                 master_wav = _xfade_keep(
@@ -10123,47 +10439,6 @@ class HandTieClips:
                 print(f"[{TAG}] upsample: hop_refine=pin_only cached the "
                       "refined latent, not the delivered one; cached hops are "
                       "upsampled from the refined version", flush=True)
-            # The chain is done: what it pinned (hop DiT, text encoder) can give way
-            # to the upsampled film (float16) and the re-draw's working set.
-            _ram_room(int(master_imgs.shape[0]) * int(_uh) * int(_uw) * 3 * 2 * 2,
-                      "the upsample", evict_active=True)
-            _log_upsample_resources(int(master_imgs.shape[0]), _uw, _uh,
-                                    regen2k=regen2k_on)
-            # Under realism_boost the re-draw runs on the boost model. At
-            # denoise 0.2 the re-draw repaints the fine band, which is where
-            # the boost's look lives; on the MODEL wire it painted the base's
-            # texture back over it. Same sigma curve either way -- the boost
-            # model is built on the shifted model -- so the recipe is intact.
-            _up_model = boost_model if boost_model is not None else model
-            if upsample_dit is not None:
-                # Its own model, shifted the way the hops were so the re-draw
-                # lands on the same sigma. Nothing drawn on the MODEL wire or
-                # in the boost reaches it.
-                if not regen2k_on:
-                    _up_model = _result(_core_call(
-                        MiniMaxH3SigmaShift, "the sigma shift (upsample_dit)",
-                        model=upsample_dit, shift_video=float(shift_video),
-                        shift_audio=float(shift_audio)))[0]
-                    print(f"[{TAG}] upsample: re-drawing on the wired upsample_dit"
-                          + (", not the realism boost model" if boost_model is not None
-                             else ", not the MODEL wire"), flush=True)
-            elif not regen2k_on and boost_model is not None:
-                print(f"[{TAG}] upsample: re-drawing on the realism boost "
-                      "model, not the MODEL wire", flush=True)
-            if regen2k_on:
-                _up_model = (regen2k_model if regen2k_model is not None
-                             else upsample_dit if upsample_dit is not None
-                             else _raw_refine_model if _raw_refine_model is not None
-                             else _raw_model)
-            if not regen2k_on and str(upsample_lora) != "None" and float(upsample_lora_strength) != 0.0:
-                # On top of the re-draw model, so the render's own LoRAs (or the
-                # boost's) stay under it. Delivery only: no hop key sees it.
-                import nodes as nodes_mod  # noqa: PLC0415
-                _up_model = nodes_mod.LoraLoaderModelOnly().load_lora_model_only(
-                    _up_model, str(upsample_lora), float(upsample_lora_strength))[0]
-                print(f"[{TAG}] upsample: re-draw LoRA {upsample_lora} "
-                      f"{float(upsample_lora_strength):g}", flush=True)
-            _push_preview(unique_id, "upsampling", hop=n, total=n, frac=1.0)
             # 0 = auto (the upsampler's memory plan for this machine). Anything
             # else under a floor no tile could fit (e.g. a stale split_finish_aug
             # value cast to INT) is the recipe's budget.
@@ -10173,53 +10448,138 @@ class HandTieClips:
             if _up_budget not in (0, _tu.TOKEN_BUDGET):
                 print(f"[{TAG}] upsample: tile budget {_up_budget} tokens (recipe "
                       f"{_tu.TOKEN_BUDGET}): more, smaller tiles", flush=True)
+            _up_model = None
+            _up_guide = None
             try:
-                _up_guide = None
-                if regen2k_on:
-                    _up_imgs, upsample_note = _run_regen2k_upsample(
-                        _up_model, sampler, vae, upsample_hops,
-                        float(upsample_megapixels),
+                # Stage 1: Upscale 2nd Pass (independent from Stage 2 Upsample)
+                if boost_pass_on:
+                    _ram_room(int(master_imgs.shape[0]) * int(_bh) * int(_bw) * 3 * 2 * 2,
+                              "upscale 2nd pass", evict_active=True)
+                    _log_upsample_resources(int(master_imgs.shape[0]), _bw, _bh,
+                                            regen2k=False)
+                    _boost_base = model
+                    if upsample_dit is not None:
+                        _boost_base = _result(_core_call(
+                            MiniMaxH3SigmaShift, "the sigma shift (upsample_dit)",
+                            model=upsample_dit, shift_video=float(shift_video),
+                            shift_audio=float(shift_audio)))[0]
+                        print(f"[{TAG}] upscale 2nd pass: building 2nd-pass LoRA stack on "
+                              "wired upsample_dit", flush=True)
+                    elif refine_model is not None:
+                        _boost_base = _result(_core_call(
+                            MiniMaxH3SigmaShift, "the sigma shift (boost refine_model)",
+                            model=_raw_refine_model if _raw_refine_model is not None else refine_model,
+                            shift_video=float(shift_video),
+                            shift_audio=float(shift_audio)))[0]
+                        print(f"[{TAG}] upscale 2nd pass: building 2nd-pass LoRA stack on "
+                              "wired refine_model", flush=True)
+                    else:
+                        print(f"[{TAG}] upscale 2nd pass: building 2nd-pass LoRA stack on "
+                              "the MODEL wire", flush=True)
+                    boost_model = _boost_model(_boost_base, boost_loras)
+                    _push_preview(unique_id, "upsampling", hop=n, total=n, frac=1.0)
+                    _boost_settings = {
+                        "steps": int(boost_steps),
+                        "chunking": bool(boost_chunking),
+                        "tiling": bool(boost_chunking),
+                    }
+                    _boost_den = _boost_auto_denoise(int(boost_steps))
+                    _boost_out_hops = [] if real_upsample_on else None
+                    _b_imgs, _b_note = _tu.upsample_chain(
+                        boost_model, sampler, vae, upsample_hops,
+                        float(boost_mp),
                         master=(master_imgs if (tone_on or anchor_on) else None),
                         upscaler=str(upsample_model),
-                        alloc=_alloc_master, budget=_up_budget,
-                        settings=upsample_settings,
-                        regen2k_lora=str(upsample_redraw),
-                        lora_strength=float(upsample_denoise),
-                        regen2k_seed=int(regen2k_seed),
-                        strip_existing_loras=(regen2k_model is None),
-                        regen2k_cond=str(regen2k_cond),
-                        face_src=master_imgs, audio_vae=audio_vae,
-                        face_audio=({"waveform": _batch_wav(master_wav), "sample_rate": int(sr)}
-                                    if master_wav is not None and sr else None))
-                else:
-                    if (upsample_guide_factor and float(upsample_denoise) > 0.0
-                            and float(upsample_lora_strength) != 0.0):
-                        _ug.install()
-                        # The caption alone, no references: what the LoRA learned
-                        # the guide under. Width/height/length only size the
-                        # latent this discards.
-                        _cap_cond = _cond_cpu(_result(_core_call(
-                            MiniMaxH3ReferenceToVideo, "the h3upscale caption",
-                            clip=clip, vae=ref_vae, audio_vae=ref_audio_vae,
-                            prompt=_ug.CAPTION, width=int(width),
-                            height=int(height), length=5,
-                            ref_image_size=ref_image_size))[0], keep_refs=True)
-                        _offload_text_encoder(clip, _up_model)
-                        _up_guide = _tu.Guide(
-                            factor=int(upsample_guide_factor), cond=_cap_cond,
-                            decode=None, encode=vae.encode, pixels=_ug.guide_pixels)
-                        del _cap_cond
-                    _up_imgs, upsample_note = _tu.upsample_chain(
-                        _up_model, sampler, vae, upsample_hops,
-                        float(upsample_megapixels),
-                        master=(master_imgs if (tone_on or anchor_on) else None),
-                        upscaler=str(upsample_model),
-                        denoise=float(upsample_denoise),
-                        alloc=_alloc_master, guide=_up_guide,
-                        budget=_up_budget, settings=upsample_settings)
-                master_imgs = _up_imgs
-                del _up_imgs
-                print(f"[{TAG}] {upsample_note}", flush=True)
+                        denoise=_boost_den,
+                        alloc=_alloc_master, guide=None,
+                        budget=_up_budget, settings=_boost_settings,
+                        out_hops=_boost_out_hops)
+                    master_imgs = _b_imgs
+                    del _b_imgs
+                    upsample_note = f"2nd pass {_b_note}"
+                    print(f"[{TAG}] {upsample_note}", flush=True)
+                    if real_upsample_on and _boost_out_hops:
+                        upsample_hops = _boost_out_hops
+                        _tu._free_all_gpu()
+
+                # Stage 2: Upsample (Regen2K or classic recipe, independent from Stage 1)
+                if real_upsample_on:
+                    _ram_room(int(master_imgs.shape[0]) * int(_uh) * int(_uw) * 3 * 2 * 2,
+                              "the upsample", evict_active=True)
+                    _log_upsample_resources(int(master_imgs.shape[0]), _uw, _uh,
+                                            regen2k=regen2k_on)
+                    _up_model = model
+                    if upsample_dit is not None and not regen2k_on:
+                        _up_model = _result(_core_call(
+                            MiniMaxH3SigmaShift, "the sigma shift (upsample_dit)",
+                            model=upsample_dit, shift_video=float(shift_video),
+                            shift_audio=float(shift_audio)))[0]
+                        print(f"[{TAG}] upsample: re-drawing on the wired upsample_dit, "
+                              "not the MODEL wire", flush=True)
+                    if regen2k_on:
+                        _up_model = (regen2k_model if regen2k_model is not None
+                                     else upsample_dit if upsample_dit is not None
+                                     else _raw_refine_model if _raw_refine_model is not None
+                                     else _raw_model)
+                    if not regen2k_on and str(upsample_lora) != "None" and float(upsample_lora_strength) != 0.0:
+                        import nodes as nodes_mod  # noqa: PLC0415
+                        _up_model = nodes_mod.LoraLoaderModelOnly().load_lora_model_only(
+                            _up_model, str(upsample_lora), float(upsample_lora_strength))[0]
+                        print(f"[{TAG}] upsample: re-draw LoRA {upsample_lora} "
+                              f"{float(upsample_lora_strength):g}", flush=True)
+                    _push_preview(unique_id, "upsampling", hop=n, total=n, frac=1.0)
+                    _up_guide = None
+                    if regen2k_on and _ic_selected(upsample_redraw) and float(upsample_denoise) > 0.0:
+                        _up_model = upsample_dit if upsample_dit is not None else _raw_model
+                        _up_imgs, _u_note = _run_ic_upsample(
+                            _up_model, clip, vae, upsample_hops, float(upsample_megapixels),
+                            master=(master_imgs if (tone_on or anchor_on) else None),
+                            upscaler=str(upsample_model), alloc=_alloc_master,
+                            budget=_up_budget, settings=upsample_settings,
+                            ic_lora=str(upsample_redraw), seed=int(regen2k_seed))
+                    elif regen2k_on:
+                        _up_imgs, _u_note = _run_regen2k_upsample(
+                            _up_model, sampler, vae, upsample_hops,
+                            float(upsample_megapixels),
+                            master=(master_imgs if (tone_on or anchor_on) else None),
+                            upscaler=str(upsample_model),
+                            alloc=_alloc_master, budget=_up_budget,
+                            settings=upsample_settings,
+                            regen2k_lora=str(upsample_redraw),
+                            lora_strength=float(upsample_denoise),
+                            regen2k_seed=int(regen2k_seed),
+                            strip_existing_loras=(regen2k_model is None),
+                            regen2k_cond=str(regen2k_cond),
+                            face_src=master_imgs, audio_vae=audio_vae,
+                            face_audio=({"waveform": _batch_wav(master_wav), "sample_rate": int(sr)}
+                                        if master_wav is not None and sr else None))
+                    else:
+                        if (upsample_guide_factor and float(upsample_denoise) > 0.0
+                                and float(upsample_lora_strength) != 0.0):
+                            _ug.install()
+                            _cap_cond = _cond_cpu(_result(_core_call(
+                                MiniMaxH3ReferenceToVideo, "the h3upscale caption",
+                                clip=clip, vae=ref_vae, audio_vae=ref_audio_vae,
+                                prompt=_ug.CAPTION, width=int(width),
+                                height=int(height), length=5,
+                                ref_image_size=ref_image_size))[0], keep_refs=True)
+                            _offload_text_encoder(clip, _up_model)
+                            _up_guide = _tu.Guide(
+                                factor=int(upsample_guide_factor), cond=_cap_cond,
+                                decode=None, encode=vae.encode, pixels=_ug.guide_pixels)
+                            del _cap_cond
+                        _up_imgs, _u_note = _tu.upsample_chain(
+                            _up_model, sampler, vae, upsample_hops,
+                            float(upsample_megapixels),
+                            master=(master_imgs if (tone_on or anchor_on) else None),
+                            upscaler=str(upsample_model),
+                            denoise=float(upsample_denoise),
+                            alloc=_alloc_master, guide=_up_guide,
+                            budget=_up_budget, settings=upsample_settings)
+                    master_imgs = _up_imgs
+                    del _up_imgs
+                    upsample_note = f"{upsample_note} -> {_u_note}" if upsample_note else _u_note
+                    print(f"[{TAG}] {_u_note}", flush=True)
             except mm.InterruptProcessingException:
                 raise
             except Exception as _ue:  # noqa: BLE001

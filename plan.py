@@ -332,7 +332,8 @@ def check_place_handoff(shots, ref_plan=None):
     if not ref_plan or len(shots) < 2:
         return warnings
     # A ref with no subject is a place plate. Faces ride people, not rooms.
-    places = {r["tag"] for r in (ref_plan.get("refs") or []) if not r.get("subject")}
+    places = {r["tag"] for r in (ref_plan.get("refs") or [])
+              if not r.get("subject") and r.get("retention") != "prop"}
     if not places:
         return warnings
 
@@ -553,7 +554,33 @@ def compile_blocks(shots, establish=None, ref_plan=None):
         print(f"[{TAG}] note: {w}", flush=True)
     for w in check_over_delivery(shots):
         print(f"[{TAG}] note: {w}", flush=True)
-    return [_d.compile_shot(s, i, establish) for i, s in enumerate(shots)]
+    return [_d.compile_shot(s, i, establish) for i, s in enumerate(mark_new_places(shots, ref_plan))]
+
+
+def mark_new_places(shots, ref_plan=None):
+    """Copy of `shots` with directives["_new_place"] on every restart whose place
+    refs share nothing with the hop before it, so its hard_cut reads as a new
+    scene rather than "the same place a moment later". Places are refs with no
+    subject that are not props; a hop's places are its own refs (a restart) or,
+    failing that, the @places its beat names; a continuation keeps the last ones."""
+    if not ref_plan:
+        return list(shots)
+    places = {r["tag"] for r in (ref_plan.get("refs") or [])
+              if not r.get("subject") and r.get("retention") != "prop"}
+    out, current = [], set()
+    for i, s in enumerate(shots):
+        here = {t for t in (s.get("refs") or []) if t in places}
+        if not here:
+            low = (s.get("beat") or "").lower()
+            here = {t for t in places if ("@" + t).lower() in low}
+        restart = str(s.get("anchor") or "") == "restart"
+        if i and restart and here and current and not (here & current):
+            s = dict(s)
+            s["directives"] = dict(s.get("directives") or {}, _new_place=True)
+        if here:
+            current = here
+        out.append(s)
+    return out
 
 
 def describe(shots):

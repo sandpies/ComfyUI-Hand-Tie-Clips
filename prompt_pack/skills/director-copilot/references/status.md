@@ -75,6 +75,17 @@ can only move a rule down.
 **Story**
 - Three or four turns per minute; a tease held 2-3 s with `tail: hold`.
 
+**Continuity**
+- A restart that cuts on an action into a clearly new angle (low three-quarter from the person's
+  front, the camera tracking with them to their next spot) read as a clean cut, where the same
+  restart opening on a near-identical two-shot or a same-side over-the-shoulder read as a jump.
+  Held twice.
+- A spot phrase rewritten to the furniture's real orientation in the plate (naming the wall it
+  runs along) kept the furniture in place; a phrase the room could not hold had moved it mid-room.
+- Rerouting a walk to open floor the plate shows ended the clipping through furniture.
+- Naming the garment's defining cut (neckline) in the outfit phrase fixed a close restart that had
+  redrawn the garment plainer.
+
 ## Failed (tried on purpose; do not rely on it)
 
 - A hop's end state in its own short last window ("At 00:15.800-00:17.000, @kyo stands with her lips
@@ -86,7 +97,7 @@ can only move a rule down.
   camera holds") held a steady medium, with the same LoRA on (user's previs A/B).
 - "Raps into the camera" as a hop's ending: on a one-take rap MV the camera moved forward at the
   end of hops 1 and 2, both ending on it (user-watched). "Into" reads as travel toward the lens.
-  Write "her eyes on the lens" (rule 18).
+  Write "her eyes on the lens" (rule 22).
 - A recurring prop held by words alone: the gist held, the design changed every appearance.
 - A run away from the camera without "her back to the camera": it played in reverse.
 - A run toward a place, shot from in front: the place came out behind her.
@@ -103,9 +114,28 @@ can only move a rule down.
 
 ## Unproven (from one failure; test before a piece depends on it)
 
+- Dialogue density of about two words a second (three or four capped turns per 10 s hop) without
+  gibberish or swapped mouths. Written after a chain ran at 0.7 words a second and played thin.
+
 - `dialogue_lock` on a `motion_context` film: safe so far (lip sync and sound bed held), never yet
   seen removing babble. Does nothing under `hand_tie`.
 - A prop sheet for a prop that changes state.
+- A continuity sheet vetted before the beats, with spots as fixed phrases checked as `states`
+  (in a two-person single-room piece, every blocking slip came from positions written differently
+  from shot to shot).
+- Off-frame eyeline side matching the person's side in the wide (a pull-back drew the person on
+  the side the eyes pointed).
+- A continuation written as one take (camera moves, no `[Shot N]` cuts) with the cuts in restarts.
+- A restart opening on a different size or angle than the previous hop's end (same framing read
+  as a jump cut).
+- No footstep sound to close a shot after a step; every step with an end mark (an extra step back
+  and forth appeared otherwise).
+- A lone short line in a long window being said twice; fill the window with the line plus an
+  action.
+- The adult page's laws (rear torso lock, first-person POV, busy mouth, the anal map sentences
+  repeated in every window): held in single-clip writing; untested across hops and joins.
+- Life, energy and expression kept small to medium in chains, pose-locked at joins (carried over
+  from single-clip writing, where large is the default).
 - A reveal kept dry by naming the room sound across the cut.
 - A high angle over sheeted people with no plate from that height (eye level twice).
 - A view that turns round with every person given a side again.

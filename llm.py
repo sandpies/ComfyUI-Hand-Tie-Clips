@@ -183,7 +183,7 @@ SERVER_EXES = (("ninfer", "ninfer-serve.exe"),)
 # A model to serve, when the backend needs one named on the command line.
 # Filled in by the route from the node's own widgets; kept here so the default
 # is discoverable in one place rather than at the call site.
-DEFAULT_MODEL_FILE = "Qwen3.8-27B-Uncensored-HauhauCS-Aggressive-DFlash2-ninfer-v3.ninfer"
+DEFAULT_MODEL_FILE = "swift-1.5-qwen3.8-27b-orcarouter-dflash2-nvfp4.ninfer"
 
 
 def _server_exe(name):
@@ -245,9 +245,12 @@ def _server_args(name, model_file=None):
         model = str(model_file or os.path.join("C:\\ninfer\\models",
                                                DEFAULT_MODEL_FILE))
         port = (BACKENDS["ninfer"]["default_base"].rsplit(":", 1)[-1])
+        spec = (["--spec", "dflash2", "--draft-tokens", "7"]
+                if "dflash" in os.path.basename(model).lower()
+                else ["--spec", "mtp", "--draft-tokens", "3"])
         return [model, "--host", "127.0.0.1", "--port", port,
                 "--max-context", "65536", "--vision", "--no-thinking",
-                "--spec", "mtp", "--draft-tokens", "3", "--lm-head-draft"]
+                *spec, "--lm-head-draft"]
     return []
 
 

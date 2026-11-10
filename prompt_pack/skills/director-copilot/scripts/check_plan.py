@@ -102,6 +102,16 @@ With --map scene_map.json (written before the beats, see references/directing.md
   cast-missing     someone in the scene's cast has no row on a continuation hop of it.
   prop-holder      the map says who holds a prop on a hop, and that person is not
                    in the hop's beat.
+  prop-retention   a prop's picture row is not `retention: "prop"`: read as a
+                   setting, it can pull its plain backdrop in as the room.
+  state            a state or outfit in the map's "states" (wet hair, a borrowed
+                   jacket, blood, mud, tears) is missing from a shot of that person
+                   in a hop where it holds. A cut redraws the person from the sheet,
+                   so a state written once is gone at the next cut; repeat its one
+                   fixed phrase, word for word, in every shot they are in.
+  plate-lacks      a beat asks a plate for something the map says it does not have
+                   ("lacks": a floor-to-ceiling partition has no top edge). The model
+                   draws the impossible thing or improvises around it.
 """
 from __future__ import annotations
 
@@ -134,7 +144,7 @@ SOUND = re.compile(r"\b(?:sound\w*|hum\w*|wind|rain\w*|drum\w*|tick\w*|siren\w*|
                    r"chim\w*|roar\w*|hiss\w*|clank\w*|clang\w*|creak\w*|buzz\w*|echo\w*|click\w*|wail\w*|"
                    r"rustl\w*|splash\w*|patter\w*|crackl\w*|rumbl\w*|whir\w*|thump\w*|"
                    r"knock\w*|bang\w*|slam\w*|squeak\w*|whisper\w*|puls\w*|throb\w*|bass|chord|score|"
-                   r"piano|strings?|drone)\b", re.I)
+                   r"piano|strings?|drone|ring\w*|engine|thunder)\b", re.I)
 CAM_DIR = re.compile(r"\b(facing|faces|looking|looks|pointed|pointing|aimed|turned)\b", re.I)
 DIALOGUE = re.compile(r"<d>", re.I)
 # changes of state that each take seconds; a run or walk that carries on is not counted
@@ -142,7 +152,7 @@ STATE_MOVE = re.compile(r"\b(walks? (?:round|around|across|over to|up to)|crosse
                     r"opens? (?:the |a |his |her )?(?:[\w']+ )?door|gets? (?:in|into|out)|"
                     r"sits? down|stands? up|slides? (?:back )?(?:in|out)|steps? (?:out of|into))\b", re.I)
 BARRIER = re.compile(r"\b(bars|gate|gates|glass (?:walls?|panes?|doors?|partition)|window|railings?|fence|grille|cage)\b", re.I)
-BARRIER_SIDE = re.compile(r"\b(side|stays? fixed)\b", re.I)
+BARRIER_SIDE = re.compile(r"\b(side|stay(?:s|ing)? fixed)\b", re.I)
 SONG_WORDS = re.compile(r"\b(hooks?|chorus(?:es)?|verses?|pre-?hooks?|refrain|intro|outro|"
                         r"(?:first|last|next|final|opening) (?:line|bar|lines|bars)|line for line)\b", re.I)
 PRONOUN = re.compile(r"\b(they|them|themselves)\b", re.I)
@@ -662,6 +672,11 @@ def main():
                 lint.append(f"prop-picture: the {name} appears in hops {hops} with no picture. Words alone redraw "
                             f"it in every appearance; make one (the object alone on plain grey), tag it, give it a row.")
             if pic:
+                row = next((r for r in all_refs if r.get("tag") == pic), None)
+                if row is not None and not row.get("subject") and row.get("retention", "reference") != "prop":
+                    lint.append(f"prop-retention: @{pic} is the {name}'s picture but its row has retention "
+                                f"{row.get('retention', 'reference')!r}; set \"retention\": \"prop\" so it is read "
+                                f"as an object, not the setting.")
                 miss = [h for h in hops if pic not in sched.get(h, set())]
                 if miss:
                     lint.append(f"prop-picture: @{pic}'s row does not ride hops {miss}, where the {name} appears.")
@@ -671,6 +686,55 @@ def main():
                                                     tags_in(shots[h - 1].get("beat") or "", people)):
                     lint.append(f"prop-holder: the map says {who} holds the {name} on hop {h}, but {who} is not in "
                                 f"that hop's beat.")
+
+    # --- states and plate geometry from the map ---
+    if a.map:
+        # someone only looked at, spoken to or sat beside is not "in" the shot for a state check
+        TARGET = re.compile(r"\b(?:eyes|gaze|glances?|looks?|looking|stares?|staring|watch\w*|turns?|faces?|"
+                            r"to|toward|towards|at|on|from|beside|behind|with|past|of)\s+(?:\w+\s+){0,2}?@(\w+)",
+                            re.I)
+        for name, st in (smap.get("states") or {}).items():
+            who, phrase = str(st.get("who") or ""), str(st.get("phrase") or "").strip()
+            if not who or not phrase:
+                lint.append(f"state: '{name}' needs both 'who' and 'phrase'.")
+                continue
+            for h in sorted({int(x) for x in st.get("hops") or []}):
+                if not 1 <= h <= len(shots):
+                    continue
+                beat = shots[h - 1].get("beat") or ""
+                segs = [g for g in re.split(r"\[Shot\s+\d+\]", beat, flags=re.I) if g.strip()] or [beat]
+                for k, seg in enumerate(segs, 1):
+                    mine = [t for _, t in tags_in(seg, tags) if same_base(t, who)]
+                    if not mine:
+                        continue
+                    named = len(re.findall(r"@" + re.escape(mine[0]) + r"\b", seg, re.I))
+                    looked = len([m for m in TARGET.finditer(seg) if same_base(m.group(1), who)])
+                    # an insert of only a body part ("@a's hands open the folder") does not show the hair or outfit
+                    looked += len(re.findall(r"@" + re.escape(mine[0]) + r"'s\s+(?:hands?|fingers?|feet|foot|"
+                                             r"shoes?|wrists?|lips)\b", seg, re.I))
+                    looked += len(re.findall(r"\b(?:hands?|fingers?|feet|shoes?)\s+of\s+[^.]{0,40}?@"
+                                             + re.escape(mine[0]) + r"\b", seg, re.I))
+                    if named <= looked:
+                        continue          # only looked at / spoken to: not shown in this shot
+                    if phrase.lower() not in seg.lower():
+                        where = f"[Shot {k}]" if len(segs) > 1 else "the beat"
+                        lint.append(f"shot {h}: state: {where} shows @{mine[0]} but drops '{name}' "
+                                    f"(\"{phrase}\"). Each cut redraws them from the sheet; repeat the phrase "
+                                    f"word for word in every shot they are in while it holds.")
+        for pl, info in (smap.get("places") or {}).items():
+            lacks = [str(x) for x in (info.get("lacks") or []) if str(x).strip()]
+            if not lacks:
+                continue
+            hops_here = {int(h) for sc in smap.get("scenes") or [] if sc.get("place") == pl
+                         for h in sc.get("hops") or []}
+            for i, s in enumerate(shots, 1):
+                beat = s.get("beat") or ""
+                if i not in hops_here and f"@{pl}".lower() not in beat.lower():
+                    continue
+                for x in lacks:
+                    if x.lower() in beat.lower():
+                        lint.append(f"shot {i}: plate-lacks: the beat asks @{pl} for \"{x}\", which the map says "
+                                    f"the plate does not have. Rewrite the action around what the plate shows.")
 
     pushes = [i for i, s in enumerate(shots, 1) if re.search(r"\bpush(?:es)?\s+(?:\w+ly\s+)?in\b", s.get("beat") or "", re.I)]
     if len(pushes) > max(1, len(shots) // 4):

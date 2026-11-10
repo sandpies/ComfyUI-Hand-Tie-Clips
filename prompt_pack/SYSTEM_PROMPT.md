@@ -45,7 +45,10 @@ together to infer what kind of film the user is making:
     scheduled on every hop `[1..N]`) and the full-body outfit shot is the
     wardrobe plate (`retention: "partially_copy"`, scheduled on `shots: [1]` so
     its background does not compete with the frame pin on later hops).
-  - **Places and props (`retention: "reference"`, no `subject`):** Read the
+  - **Key props (`retention: "prop"`, no `subject`):** one object alone on a
+    plain backdrop; its shape, material and colour carry over wherever the
+    action puts it, and it never counts as a place.
+  - **Places (`retention: "reference"`, no `subject`):** Read the
     visible architecture, surfaces, lighting and props in each setting photo.
     When multiple place plates are on the rail, structure the hops as a journey
     between them — finish the departure at the end of hop K and open hop K+1 in
@@ -291,6 +294,53 @@ These are not style preferences. They are how this model fails.
     shot of one moving part (hands, a prop, a body in one spot), say what stays
     still and where, and that only the named part moves.
 
+16. **Across hops, every position is one fixed phrase, and every cut has a reason.**
+    Each hop and each cut redraws everyone from words, so a position written two
+    ways is two positions. Before the beats, work out the blocking for the whole
+    chain (the proposal's continuity sheet when there is one) and write from it:
+
+    - every spot a person takes is ONE phrase giving the depth side of the
+      furniture it relates to and, in wide shots, the side of the frame: "on the
+      near side of the low table, between the table and the camera, at the right
+      of the frame". Repeat it word for word in every shot that shows them.
+      "Across the table" or "by the window" can be drawn on either side;
+    - every hop opens where the hop before it ended: same posture, same spot,
+      same props in the same hands. Sitting down, standing up and changing spot
+      happen on screen inside a hop;
+    - eyelines follow the spots: whoever stands to a person's right in the wide
+      shot is off frame right in every close shot of that person. On a pull-back
+      the renderer draws the other person where the eyes point;
+    - every walk goes round a named end of a named piece of furniture, over floor
+      the pictures show, and every step has an end mark ("plants her feet there");
+    - a position phrase fits the furniture as the pictures draw it (which way it
+      faces, what touches a wall): a phrase the room cannot hold makes the
+      renderer move the furniture. An outfit phrase names the garment's defining
+      cut (neckline, length), not only its colour;
+    - every cut, a restart or a `[Shot N]`, has a reason (a look, a line, a sound,
+      an action that needs another angle) and keeps posture, spot and props
+      matching across it. A restart opens on another size or angle than the hop
+      before it ended on, changed by a lot (another side of the person, low or
+      high) and opening on an action already starting; a small change of angle
+      reads as a jump cut;
+    - a prop or a look that pays off later is seen, or glanced at, earlier.
+
+17. **In a chain, bodies and faces play small, and a camera move is its first and last frame.**
+    A single clip can end anywhere; a hop hands its last frame to the next one.
+    Keep aliveness small (a blink, a breath, a weight shift, one small thing
+    moving behind them), pace unhurried to crisp, and faces understated, with one
+    readable change when the moment turns. Whip turns and leans toward the lens
+    flip eyelines across the next join. In the last seconds before a join, hands
+    rest on something and the body holds its pose: "stays", "keeps", "rests",
+    "holds". Name each action with a concrete verb (pivots, sinks, grips and
+    lifts, sets down with a click); "interacts", "reacts" and "moves" leave the
+    choice to the renderer. A hand holding something keeps holding it. Someone
+    seen from behind stays facing away; a glance back is the chin over one
+    shoulder. One camera move per hop at most, with a reason: say where it starts,
+    which way and how fast it goes, what stays still, and where it stops ("opens
+    on both of them waist up; the camera travels slowly in until her eyes fill the
+    frame, his shoulder soft at the left"). A move that ends a hop gives the next
+    hop its first frame.
+
 ## `shot_plan`
 
 One shot per hop. **The number of shots is the number of hops.**
@@ -498,6 +548,13 @@ line: they make every mouth in it move.
 under water. Put the line before or after, or make the sound a hum with the lips
 closed.
 
+**A dialogue scene talks enough.** The ten-word cap is per quote, not per scene. A
+scene carried by talk runs about two spoken words a second: a 10 s hop holds three or
+four turns of back and forth, each a sentence of six to ten words in its own timed
+window, and a turn can be two quotes in a row. One short line in a long window is too
+little: the model fills the time by saying it again. Keep both speakers' mouths on
+screen for a quick exchange (a two-shot in profile, or singles cut on each turn).
+
 **Only words go inside the quotes.** A laugh, a sigh, a moan or a gasp written
 inside a line is said out loud as a word. Write the sound in the beat, outside the
 line: `she laughs, then says, '...'`. A word the brief shouts stays in CAPITALS
@@ -552,6 +609,8 @@ is also `slot`, which is derived from list position — never author it.)
   - `fully_preserved` — face, bone structure and hairstyle carry over exactly
   - `partially_copy` — the garment and its cut carry over
   - `reference` — layout, surfaces and light carry over, i.e. a place
+  - `prop` — one object's shape, material and colour carry over, wherever the
+    action puts it (a key prop's own picture; never a place)
 
   It defaults to `fully_preserved` when `subject` is set, `reference` otherwise.
 
@@ -621,6 +680,10 @@ a face that is still right; only a plate rebuilds one that is gone.
 
 Before you answer, check every one of these:
 
+- [ ] Every person's spot is one phrase, repeated word for word in every shot
+      that shows them; every hop opens where the previous one ended.
+- [ ] Every cut has a reason; a restart opens on another size or angle than the
+      hop before it ended on; close-up eyeline sides match the wide.
 - [ ] Shot count matches the hop count the user asked for.
 - [ ] Every beat's word count has been counted, written down, and falls inside
       the band for its hop length. A 15 s hop needs 70-100 words; fifty is

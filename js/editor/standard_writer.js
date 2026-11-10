@@ -138,10 +138,20 @@ export function createStandardWriter(node, { onWritten } = {}) {
         badge.textContent = parts.length ? "Ref2VA" : "T2VA";
     }
 
+    let personal = null;
+
     function syncButtons() {
         planBtn.disabled = busy || !brief.value.trim();
         writeBtn.disabled = busy || !planBox.value.trim();
         acceptBtn.disabled = busy || !blockBox.value.trim();
+        if (personal?.fastBtn) {
+            personal.fastBtn.disabled = busy || !brief.value.trim();
+        }
+    }
+
+    function setBusyState(on) {
+        busy = Boolean(on);
+        syncButtons();
     }
 
     function say(text, kind) {
@@ -151,8 +161,30 @@ export function createStandardWriter(node, { onWritten } = {}) {
         status.textContent = text || "";
     }
 
+    import("./personal_studio.js").then((mod) => {
+        if (typeof mod?.mountPersonalStudio === "function") {
+            personal = mod.mountPersonalStudio(node, {
+                body,
+                row,
+                brief,
+                planBox,
+                blockBox,
+                say,
+                saveDraft,
+                startImage,
+                voiceFiles,
+                setBusyState,
+                isBusy: () => busy,
+            });
+            syncButtons();
+        }
+    }).catch(() => {});
+
     async function run(stage) {
         if (busy) return;
+        if (personal && personal.usePersonalEngine()) {
+            return personal.runPersonal(stage, false);
+        }
         busy = true;
         syncButtons();
         say(stage === "plan" ? "Planning the clip…" : "Writing the prompt block…", "hint");
@@ -223,7 +255,16 @@ export function createStandardWriter(node, { onWritten } = {}) {
     function render() {
         renderMode();
         syncButtons();
+        if (root.open) {
+            personal?.refreshStatus?.(false);
+        }
     }
+
+    root.addEventListener("toggle", () => {
+        if (root.open) {
+            personal?.refreshStatus?.(false);
+        }
+    });
 
     render();
     return { root, render };

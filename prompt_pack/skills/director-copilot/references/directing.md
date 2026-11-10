@@ -123,6 +123,10 @@ Read each next cut against that line:
  ],
  "props": {
   "box": {"picture": "box", "hops": [1, 2, 5], "holder": {"1": "a", "2": "a", "5": "b"}}
+ },
+ "states": {
+  "soaked": {"who": "a", "phrase": "her hair wet", "hops": [2, 3]},
+  "his coat on her": {"who": "a", "phrase": "in his long black coat", "hops": [3, 4, 5]}
  }
 }
 ```
@@ -133,7 +137,16 @@ Read each next cut against that line:
   entry with the sides swapped.
 - `cast`: everyone physically in the scene. Each needs a row on every continuation hop of it, or
   their features land on the nearest look-alike; a restart needs only who it shows.
-- `props`: every prop in more than one hop, with its picture tag and holder per hop.
+- `props`: every prop in more than one hop, with its picture tag and holder per hop. The
+  picture's ref row has `retention: "prop"` (lint `prop-retention`).
+- `states`: every look that changes in the story (soaked, a borrowed coat, blood, mud, tears,
+  a new outfit), with one fixed phrase and the hops where it holds. A cut redraws the person from
+  the sheet, so a state written once is gone at the next cut; lint `state` wants the phrase word
+  for word in every shot that shows them (a shot that only looks at them, or shows only their
+  hands, is exempt).
+- `lacks` on a place: what its plate does not have that a beat might ask for (a floor-to-ceiling
+  partition has no top edge; a car with no sunroof). Lint `plate-lacks` flags a beat that asks
+  for it. Fill it by looking at the plate at full size.
 
 Show the user one layout line per scene before the beats; it catches a wrong side cheaply.
 

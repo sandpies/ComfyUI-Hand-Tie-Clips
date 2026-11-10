@@ -34,7 +34,8 @@ The camera can be "you": the singer performs to the lens and the camera has no b
 A plate is a picture of a place (no people) that rides the hops set there. Optional, but it gives
 the look control. A **key prop** (one the story turns on, seen in several hops or close inserts)
 gets its own picture the same way: one object, plain neutral background, even light, no hands, no
-text, its own tag. A prop that changes state needs a **prop sheet**: one generation showing each
+text, its own tag, and `retention: "prop"` on its ref row (not `reference`, which reads it as
+the setting). A prop that changes state needs a **prop sheet**: one generation showing each
 state the story uses plus any part a hand works.
 
 ### Which places get a plate

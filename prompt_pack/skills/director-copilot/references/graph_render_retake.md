@@ -8,13 +8,18 @@ they are; their sampler choice is not a bug), else the pack's `workflows/HandTie
 ```
 python scripts/build_graph.py TEMPLATE.json --list          # every widget and its value
 python scripts/build_graph.py TEMPLATE.json OUT.json \
-    --shot shot_plan.json --ref ref_plan.json \
+    --shot shot_plan.json --ref ref_plan.json --map scene_map.json --waivers waivers.json \
     --set pin_mech=motion_context "aspect=16:9 landscape" master_audio_file=<song file> \
           master_audio_start_s=<from fit_cuts> cache_hops=on \
           "establish=" "prompt_prefix=<one line of look, e.g. Cinematic heist film music video, moody teal and amber lighting>" \
     --save-prefix video/HANDTIECLIPS/<project> --sla-heavy --title "<project> (MV)"
 ```
 
+- **The audit gate:** with `--shot`/`--ref` the script runs `check_plan.py` on the plan with the
+  map and writes nothing while any error, warning or lint is unresolved. Errors must be fixed.
+  Anything else is fixed or listed in `waivers.json` as `{"match": "text of the line", "why": "the
+  reason it is safe"}`; a waiver without a reason is refused. The passed run prints every waiver:
+  that is the audit you hand the user.
 - `pin_mech`: `motion_context` for many places, `hand_tie` for one take (SKILL.md). Under
   `hand_tie` also set `last_frame_guide=off` and `dialogue_lock=off`.
 - `establish` empty (`"establish="`) when `prompt_prefix` carries the look. It is added to hop 1
@@ -41,7 +46,10 @@ python scripts/build_graph.py TEMPLATE.json OUT.json \
 
 With `cache_hops` on, a hop whose inputs did not change loads from disk. To retake one hop, change
 only that shot. A `motion_context` continuation after it re-renders too (it starts from the changed
-frames); under `hand_tie` a changed beat can re-render its section's previs and every hop tied to it. `locked: true` reuses a
+frames), and so does the next continuation after that, up to the next restart: a restart starts
+fresh, so it and everything after it load from cache. Tell the user how far the re-render runs
+(changed hop to the hop before the next restart), and when you can choose where a fix goes, prefer
+a hop followed by a restart; under `hand_tie` a changed beat can re-render its section's previs and every hop tied to it. `locked: true` reuses a
 shot's old render even when its inputs changed (needs a stable `id`); its join with a changed
 neighbour was never generated, so lock continuations with care.
 

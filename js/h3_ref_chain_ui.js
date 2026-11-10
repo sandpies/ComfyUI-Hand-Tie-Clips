@@ -400,7 +400,10 @@ function mountEditor(node) {
             // WRITE is a <details> and its contents are loaded on first open --
             // opening it here keeps that laziness (nothing is fetched until you
             // visit the tab) while making the pane usable once you have.
-            if (id === "write") writer.root.open = true;
+            if (id === "write") {
+                writer.root.open = true;
+                writer.refreshIfLoaded?.();
+            }
             if (id === "timeline") timeline.render();
             if (id === "standard") {
                 standard.root.open = true;
@@ -695,6 +698,13 @@ applyVisibility();
     const onQueued = () => {
         try {
             runPanel.sync();
+            writer.refreshIfLoaded?.();
+            setTimeout(() => {
+                try {
+                    writer.refreshIfLoaded?.();
+                    standard.render?.();
+                } catch (_) {}
+            }, 2500);
         } catch (err) {
             console.warn("[HandTieClips] run panel resync failed:", err);
         }

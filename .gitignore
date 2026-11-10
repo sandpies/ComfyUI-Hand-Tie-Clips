@@ -52,3 +52,7 @@ tools/
 docs/DEVLOG.md
 docs/LEVER_AUDIT.md
 docs/ARCHITECTURE.md
+
+# Optional local add-on; never tracked or published.
+htc_personal/
+js/editor/personal_studio.js

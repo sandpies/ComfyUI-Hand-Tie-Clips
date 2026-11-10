@@ -137,21 +137,25 @@ const GROUPS = [
                 // widget itself is declared last so a saved workflow keeps its
                 // indices. It belongs beside the schedule it replaces.
                 "refine_align"]],
-    // Its own group, not part of refine: boost changes how the hop is sampled.
-    // The three LoRAs are combos on this node rather than loader nodes on the
-    // canvas -- deliberately, to keep the graph short; the speed stack itself
-    // stays drawn upstream.
-    ["realism boost", ["realism_boost", "boost_lora_1", "boost_lora_1_strength",
-                       "boost_lora_2", "boost_lora_2_strength",
-                       "boost_lora_3", "boost_lora_3_strength",
-                    "boost_lora_4", "boost_lora_4_strength"]],
+    // Upscale 2nd Pass (Pass 1 low-res base/turbo -> Pure 3D Latent Upscale
+    // -> Pass 2 high-res refine on 2nd-pass LoRAs). Uses its own independent
+    // widgets (audio_denoise -> 2nd pass megapixels, audio_steps -> 2nd pass
+    // steps, audio_refine -> 2nd pass chunking) so Upscale 2nd Pass and
+    // Upsample (Regen2K) are completely separate stages.
+    ["upscale 2nd pass", ["realism_boost",
+                          "audio_denoise", "upsample_model",
+                          "audio_steps", "audio_refine",
+                          "boost_lora_1", "boost_lora_1_strength",
+                          "boost_lora_2", "boost_lora_2_strength",
+                          "boost_lora_3", "boost_lora_3_strength",
+                          "boost_lora_4", "boost_lora_4_strength"]],
     // After the last hop, over the whole film: it changes what is delivered,
     // never what a hop is generated from, so it sits after every group that
     // does.
     ["upsample", ["upsample", "upsample_model", "upsample_megapixels",
                   "upsample_denoise", "upsample_lora", "upsample_lora_strength",
                   "upsample_tile_tokens",
-                  "upsample_redraw", "regen2k_seed", "regen2k_cond"]],
+                  "upsample_redraw", "upsample_steps", "regen2k_seed", "regen2k_cond"]],
     // Wrap every hop's finished prompt: LoRA trigger words first, a trailing
     // camera/body clause last, outside everything the chain adds.
     ["prompt wrap", ["prompt_prefix", "prompt_suffix"]],
@@ -172,7 +176,6 @@ const GROUPS = [
     // node face. audio_model stays a wire.
     ["soundtrack", ["music_gain_db", "music_duck", "music_fit",
                     "music_fade_s",
-                    "audio_refine", "audio_denoise", "audio_steps",
                     "audio_sampler", "audio_scheduler", "audio_seed_offset",
                     "dialogue_lock"]],
 ];
@@ -208,7 +211,7 @@ const WIDE = new Set(["seed"]);
  */
 const GROUP_MASTER = {
     "refine": "hop_refine",
-    "realism boost": "realism_boost",
+    "upscale 2nd pass": "realism_boost",
     "upsample": "upsample",
     // cache_hops and dry_run both default to off, and both own dials that do
     // nothing while they are: a budget for a cache that is off, and a preview
@@ -267,10 +270,17 @@ const REFINE_V2_HIDDEN = new Set([
     "pin_noise",
     "tone_compensate",
     "tone_anchor",
-    // Retired 10-25 (the upsample runs the original recipe, no LoRA): owned so
+    //Retired 10-25 (the upsample runs the original recipe, no LoRA): owned so
     // the raw widgets stay hidden, never drawn.
     "upsample_lora",
     "upsample_lora_strength",
+    // Retired 11-04 (audio_refine removed; Pass 1 renders full finished audio;
+    // audio_refine/audio_denoise/audio_steps slots are exposed in upscale 2nd pass
+    // as '2nd pass chunking', '2nd pass megapixels', and '2nd pass steps'):
+    // owned so the remaining 3 raw widgets stay hidden, never drawn.
+    "audio_sampler",
+    "audio_scheduler",
+    "audio_seed_offset",
 ]);
 
 // Per-widget legacy combo values hidden from the RUN panel dropdowns while
@@ -288,8 +298,27 @@ const COMBO_UI_ALIAS = {
     },
 };
 
-export function labelFor(w) {
+const BOOST_GROUP_LABELS = {
+    realism_boost: "upscale 2nd pass",
+    audio_denoise: "2nd pass megapixels",
+    upsample_model: "2nd pass upscaler",
+    audio_steps: "2nd pass steps",
+    audio_refine: "2nd pass chunking",
+    boost_lora_1: "2nd pass lora 1",
+    boost_lora_1_strength: "2nd pass lora 1 strength",
+    boost_lora_2: "2nd pass lora 2",
+    boost_lora_2_strength: "2nd pass lora 2 strength",
+    boost_lora_3: "2nd pass lora 3",
+    boost_lora_3_strength: "2nd pass lora 3 strength",
+    boost_lora_4: "2nd pass lora 4",
+    boost_lora_4_strength: "2nd pass lora 4 strength",
+};
+
+export function labelFor(w, groupTitle = "") {
     const n = String(w.name || "");
+    if (groupTitle === "upscale 2nd pass" && BOOST_GROUP_LABELS[n]) {
+        return BOOST_GROUP_LABELS[n];
+    }
     return LABELS[n] || n.replace(/_/g, " ");
 }
 
@@ -378,7 +407,14 @@ function numberField(node, w, onChange) {
         push();
         i.value = String(w.value ?? "");          // show the clamped value back
     });
-    return { input: i, read: () => { i.value = String(w.value ?? ""); } };
+    return {
+        input: i,
+        read: () => {
+            if (typeof document === "undefined" || document.activeElement !== i) {
+                i.value = String(w.value ?? "");
+            }
+        },
+    };
 }
 
 function textField(node, w, onChange) {
@@ -386,7 +422,14 @@ function textField(node, w, onChange) {
     i.type = "text";
     i.value = String(w.value ?? "");
     i.addEventListener("input", () => commitWidget(node, w, i.value, onChange));
-    return { input: i, read: () => { i.value = String(w.value ?? ""); } };
+    return {
+        input: i,
+        read: () => {
+            if (typeof document === "undefined" || document.activeElement !== i) {
+                i.value = String(w.value ?? "");
+            }
+        },
+    };
 }
 
 /** null when this widget's type is not one the panel can draw. */
@@ -528,6 +571,7 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
     /** Widgets this panel actually drew, so the caller hides exactly those. */
     const owned = [];
     const readers = [];
+    const openByTitle = new Map();
     let builtFor = null;   // the suppression set the current DOM was built for
 
     function suppressedSet() {
@@ -557,6 +601,7 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
         builtFor = [...skip].sort().join(",");
 
         const groupMarks = [];
+        const peerReaders = new Map();
         for (const [title, names] of GROUPS) {
             const master = GROUP_MASTER[title];
             // When the master is off the whole group is one dimmed line. Its
@@ -569,7 +614,10 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
                 : false;
 
             const group = el("details", "h3e-run-group");
-            group.open = !isOff;
+            group.open = openByTitle.has(title) ? openByTitle.get(title) : !isOff;
+            group.addEventListener("toggle", () => {
+                openByTitle.set(title, group.open);
+            });
             const det = el("summary", "h3e-run-label");
             // The state lives IN the summary, so a collapsed group still says
             // what it is and that it is off -- a bare "REFINE" with a closed
@@ -593,21 +641,32 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
                     owned.push(name);
                     continue;
                 }
+                let selfRead = null;
                 // Also re-run every group's off-state mark, so flipping `upsample` to
                 // on clears "· off" at once (it stayed stale until the next rebuild).
-                // Only the marks: render() would rewrite inputs mid-typing.
+                // Only the marks and mirrored peer fields: render() would rewrite the
+                // active input mid-typing.
                 const f = fieldFor(node, w, () => {
                     paintDigest();
                     for (const m of groupMarks) m();
+                    const peers = peerReaders.get(name);
+                    if (peers) {
+                        for (const pr of peers) {
+                            if (pr !== selfRead) pr();
+                        }
+                    }
                     onChange?.();
                 });
                 if (!f) {                          // stays a native dial below
                     rejected.push(`${name}:${widgetType(w) || "?"}`);
                     continue;
                 }
+                selfRead = f.read;
+                if (!peerReaders.has(name)) peerReaders.set(name, []);
+                peerReaders.get(name).push(f.read);
                 const l = el("label",
                     WIDE.has(name) ? "h3e-field h3e-run-wide" : "h3e-field");
-                l.appendChild(el("span", null, labelFor(w)));
+                l.appendChild(el("span", null, labelFor(w, title)));
                 l.appendChild(f.input);
                 // The tooltip is the widget's own, straight from INPUT_TYPES.
                 // Set on the label, which wraps both the caption and the
@@ -619,6 +678,22 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
                 if (tip) {
                     l.title = tip;
                     f.input.title = tip;
+                }
+                if (name === "realism_boost") {
+                    const migrate2ndPassDefaults = () => {
+                        const mpW = widgetByName(node, "audio_denoise");
+                        const stW = widgetByName(node, "audio_steps");
+                        if (mpW && stW && Math.abs(Number(mpW.value) - 0.5) < 1e-6 && Number(stW.value) === 5) {
+                            mpW.value = 1.0;
+                            stW.value = 3;
+                            return true;
+                        }
+                        return false;
+                    };
+                    migrate2ndPassDefaults();
+                    f.input.addEventListener("change", () => {
+                        if (migrate2ndPassDefaults()) render();
+                    });
                 }
                 if (name === "speed_mode") {
                     // A second listener on the same select: comboField's own
@@ -656,6 +731,7 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
             // flipping hop_refine to `full` un-collapses the dials it was
             // hiding without waiting for a rebuild.
             if (master) {
+                let wasOff = isOff;
                 const mark = () => {
                     const off = OFF_VALUES.has(
                         String(widgetByName(node, master)?.value ?? "").toLowerCase());
@@ -666,13 +742,17 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
                         : "";
                     // Opening a group by hand is a deliberate request to see
                     // the dials, so a user who opened an off group keeps it
-                    // open until they collapse it themselves. Only the OFF
-                    // transition auto-closes, and only going off.
-                    if (off) group.open = false;
+                    // open until they collapse it themselves. Only a change in
+                    // the master's off state transitions `group.open`.
+                    if (off !== wasOff) {
+                        group.open = !off;
+                        openByTitle.set(title, group.open);
+                        wasOff = off;
+                    }
                 };
                 readers.push(mark);
                 groupMarks.push(mark);
-                state.textContent = "";
+                mark();
             }
         }
 

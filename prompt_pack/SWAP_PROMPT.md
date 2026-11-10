@@ -113,12 +113,16 @@ person.
 ## Describe the reference person's look, never the reference photo's backdrop
 
 In `subject_definitions:`, explicitly describe the physical appearance of the
-person shown in `<Picture 1>` (`@identity_tag`): sex, skin tone, facial
-structure, hair color and hairstyle, body build, and the exact clothing/outfit
-worn in `<Picture 1>` (unless the mode is `head_swap` or `face_only`, where
-clothing and body stay with `<Video 1>`). The guide-latent swap LoRAs use that
-explicit physical description in `subject_definitions:` to lock `<Subject 1>`
-onto `<Picture 1>` from frame 0.
+person shown in `<Picture 1>` (`@identity_tag`): explicit racial/ethnic descent
+(e.g. East Asian woman, Latina woman, Black woman, Caucasian woman — judged
+strictly from facial bone structure and eye shape so dyed, red, blonde, or
+cosplay hair never causes H3 to infer a generic/wrong ethnicity), skin tone,
+facial bone structure, eye shape and color, hair color and hairstyle, body
+build, and the exact clothing/outfit worn in `<Picture 1>` (unless the mode is
+`head_swap` or `face_only`, where clothing and body stay with `<Video 1>`, or a
+custom wardrobe override is specified). The Viggle Remake swap LoRA uses that
+explicit racial/ethnic and physical description in `subject_definitions:` to
+lock `<Subject 1>` onto `<Picture 1>` from frame 0.
 
 Leave out `<Picture 1>`'s own background, studio lighting and static pose so
 those never fight the scene and motion of `<Video 1>`.
@@ -126,6 +130,17 @@ those never fight the scene and motion of `<Video 1>`.
 Naming and describing `<Subject 1>` from `<Picture 1>` in `subject_definitions:`
 and citing `<Subject 1>` + `@identity_tag` in `detailed_description:` is what
 makes the identity transfer take hold immediately.
+
+## Clean interaction points and zero anatomy conflicts
+
+When the clip contains physical contact, dancing, combat, or intimate motion,
+describe what is anchored in space (whose feet, knees, hands, or back rest on
+which surface) and which body part moves along which axis, matching the frame
+sequence of `<Video 1>`. Describe only camera-visible anatomy for the angle
+shown in `<Video 1>` (for example, on a rear-facing clip, describe the back,
+shoulders, hair, and hips rather than front-of-face eye details). If the user
+brief mentions `portrait` (`9:16`) or `landscape` (`16:9`), treat that as the
+clip's frame aspect ratio rather than a wall painting or outdoor scenery.
 
 ## Two things that must not move
 

@@ -1065,7 +1065,7 @@ const patch = { server_url: url.value, keep_warm: unload.checked };
             } else if (j.proposal) {
                 // A proposal is accepted by READING it, and Accepting it
                 // stores the proposal and writes nothing to the plan.
-                renderProposalCard(j.proposal, note);
+                renderProposalCard(j.proposal, note, j.warnings);
             } else if (j.diffs) {
                 renderEditCard(j, note);
             } else if (j.shot_plan) {
@@ -1081,12 +1081,14 @@ const patch = { server_url: url.value, keep_warm: unload.checked };
                 if (!j.proposal && !j.shot_plan && !j.text) {
                     addTurn("assistant", j.error || "the writer failed");
                 }
+                loadConn(false);
             } else if (j.warnings?.length) {
                 say((j.warnings || []).map((w) => `• ${w}`).join("\n"), "warn");
             }
         } catch (e) {
             say(String(e), "error");
             addTurn("assistant", String(e));
+            loadConn(false);
         } finally {
             setBusy(false);
         }
@@ -1128,7 +1130,7 @@ const patch = { server_url: url.value, keep_warm: unload.checked };
         return row;
     }
 
-    function renderProposalCard(p, note) {
+    function renderProposalCard(p, note, warnings) {
         const c = cardShell("proposal", "PROPOSAL",
             p?.shots?.count ? `${p.shots.count} hops` : "");
         const b = c.bodyEl;
@@ -1153,6 +1155,41 @@ const patch = { server_url: url.value, keep_warm: unload.checked };
                 b.appendChild(el("div", "h3e-cardbox-row",
                     `hops ${s.from ?? "?"}–${s.to ?? "?"}${s.why ? ` — ${s.why}` : ""}`));
             }
+        }
+        // The continuity sheet: the blocking the beats will be written from.
+        // It is the part worth reading slowest -- a wrong side caught here
+        // costs a sentence, caught in a render it costs the machine.
+        const ct = p.continuity;
+        if (ct && typeof ct === "object") {
+            const txt = (v) => (v == null ? "" : String(v));
+            if (Array.isArray(ct.spots) && ct.spots.length) {
+                b.appendChild(el("div", "h3e-cardbox-k", "where everyone stands"));
+                for (const s of ct.spots) {
+                    b.appendChild(el("div", "h3e-cardbox-row",
+                        `${txt(s.code)}${s.who ? ` (@${String(s.who).replace(/^@/, "")})` : ""}: ${txt(s.phrase)}`));
+                }
+            }
+            if (Array.isArray(ct.hops) && ct.hops.length) {
+                b.appendChild(el("div", "h3e-cardbox-k", "start → end, hop by hop"));
+                for (const h of ct.hops) {
+                    b.appendChild(el("div", "h3e-cardbox-row",
+                        `${txt(h.hop)}. ${txt(h.start)} → ${txt(h.action)} → ${txt(h.end)}`
+                        + (h.end_framing ? ` [ends: ${txt(h.end_framing)}]` : "")));
+                }
+            }
+            if (Array.isArray(ct.cuts) && ct.cuts.length) {
+                b.appendChild(el("div", "h3e-cardbox-k", "cuts, and why"));
+                for (const k of ct.cuts) {
+                    b.appendChild(el("div", "h3e-cardbox-row",
+                        `${txt(k.at)}: ${txt(k.why)}${k.matches ? ` (matches: ${txt(k.matches)})` : ""}`));
+                }
+            }
+            if (ct.weak_spots) {
+                b.appendChild(field("weak spots", txt(ct.weak_spots)));
+            }
+        }
+        if (Array.isArray(warnings) && warnings.length && warnings.join("\n") !== note) {
+            b.appendChild(field("check", warnings.join("; ")));
         }
         // Accepting a proposal stores it and writes NOTHING to the plan. That
         // is the point of the card: you agree to the shape before a beat is
@@ -1363,10 +1400,17 @@ c.acts.appendChild(button("Accept edit",
 
     // Only reach the network when the section is actually opened. A panel that
     // probes a server on every node creation would make every canvas load wait
-    // on a timeout for people who never use this.
+    // on a timeout for people who never use this. Re-probe whenever Settings
+    // or the tab is re-opened so a writer killed by a render flips Start back on.
     let loaded = false;
     root.addEventListener("toggle", () => {
-        if (root.open && !loaded) {
+        if (root.open) {
+            loaded = true;
+            loadConn(false);
+        }
+    });
+    cog.addEventListener("toggle", () => {
+        if (cog.open) {
             loaded = true;
             loadConn(false);
         }
@@ -1394,6 +1438,9 @@ c.acts.appendChild(button("Accept edit",
     return {
         root,
         restore,
+        refreshIfLoaded() {
+            if (loaded) loadConn(false);
+        },
         syncHops() {
             // A hop count the user typed is an instruction, not a stale value:
             // writing four hops against a six-shot plan is a normal thing to

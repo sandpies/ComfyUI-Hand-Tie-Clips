@@ -1,9 +1,12 @@
-# htc-music-video (agent skill)
+# Director co-pilot (agent skill)
 
-An agent skill that directs and produces music videos and short films with the Hand-Tie-Clips
-node, back and forth with the user: brief → song or script → story, cast and voices → plate
-prompts → directed shot plans (camera, multi-shot hops, eyelines, dialogue and silence) →
-checked → graph → retakes.
+An agent skill that directs and produces short films, microdramas, dialogue scenes and music
+videos with the Hand-Tie-Clips node, back and forth with the user. It reasons like a director
+and a script supervisor before it writes: the scene's want and turn, the set read from the plate,
+blocking as fixed position phrases, coverage, a cut list where every cut has a reason, and a
+START → END row per hop that the user vets. Beats are then written from that sheet, checked, and
+read back as the node will send them: brief → song or script → story, cast and voices → plates →
+continuity sheet → directed shot plans → check → graph → retakes.
 
 It is for **agent harnesses that load skills** (a folder with a `SKILL.md` plus scripts the agent
 can run), with any model behind them, hosted or local. It is not a chat prompt: the agent has to
@@ -11,7 +14,7 @@ run the scripts. For a plain chat app, use `prompt_pack/AUTHORING_PROMPT.md` ins
 
 ## Install
 
-The skill is in the GitHub repository (`prompt_pack/skills/htc-music-video/`), not in the
+The skill is in the GitHub repository (`prompt_pack/skills/director-copilot/`), not in the
 Comfy registry download, which ships the node only. Clone or download it from GitHub.
 
 Copy this whole folder into your harness's skills folder (for example `~/.claude/skills/` for

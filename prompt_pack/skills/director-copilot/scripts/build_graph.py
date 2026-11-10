@@ -15,6 +15,16 @@ INPUT_TYPES (sockets take no slot; `seed` is followed by a hidden
 template is from another node version and nothing is written.
 
 Use `--list` to print every widget name with its current value.
+
+**The audit gate.** With --shot/--ref, nothing is written until `check_plan.py` has
+run on the plan with the scene map (`--map scene_map.json`) and every error,
+warning and lint it prints is either fixed or waived in writing:
+
+    --waivers waivers.json   [{"match": "text from the flagged line", "why": "proven safe because ..."}]
+
+A flagged line is waived when it contains a waiver's `match`; every waiver needs a
+`why`. The checker must run its part 1 (the node's own validator); if it cannot,
+nothing is written. `--no-mv` is passed when the graph has no master_audio_file.
 """
 from __future__ import annotations
 
@@ -78,6 +88,56 @@ def coerce(kind, raw):
     return raw
 
 
+def save_prefix_slot(pack):
+    """Index of filename_prefix among HTCSaveVideo's widgets (sockets take no slot)."""
+    src = (pack / "save_video.py").read_text(encoding="utf-8")
+    i = src.index("class HTCSaveVideo")
+    body = src[src.index("def INPUT_TYPES", i):src.index("RETURN_TYPES", i)]
+    items = re.findall(r'^\s{12,20}"([a-z_0-9]+)":\s*\(\s*(\[|"[A-Z_]+"|[A-Za-z_\.\(\)]+)', body, re.M)
+    widgets = [n for n, t in items if t == "[" or t.strip('"') in SCALARS or not t.strip('"').isupper()]
+    return widgets.index("filename_prefix") if "filename_prefix" in widgets else None
+
+
+def audit(a, pack, w, slot):
+    """Run check_plan.py on the plan and refuse to write while anything is unresolved."""
+    import subprocess
+    if not (a.shot and a.ref):
+        sys.exit("audit gate: give both --shot and --ref (the checker reads them together).")
+    if not a.map:
+        sys.exit("audit gate: --map scene_map.json is required (references/directing.md, 'The scene map'). "
+                 "Write the map before the beats; the checker reads sides, goals, props, states and plate "
+                 "geometry from it.")
+    pin = str(w[slot["pin_mech"]]) if "pin_mech" in slot else "motion_context"
+    mv = bool(str(w[slot["master_audio_file"]]).strip()) if "master_audio_file" in slot else False
+    cmd = [sys.executable, str(Path(__file__).resolve().parent / "check_plan.py"), a.shot, a.ref,
+           "--pin-mech", pin, "--map", a.map] + ([] if mv else ["--no-mv"]) + (["--htc", a.htc] if a.htc else [])
+    cmd += ["--refs-dir", a.refs_dir] if a.refs_dir else []
+    out = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8").stdout
+    if "SKIPPED: could not import the node's validator" in out:
+        sys.exit("audit gate: check_plan.py could not run the node's validator (run with ComfyUI's Python). "
+                 "Nothing written.")
+    flagged = [ln.strip() for ln in out.splitlines() if re.match(r"^\s{2}[EWL] ", ln)]
+    waivers = []
+    if a.waivers:
+        waivers = json.loads(Path(a.waivers).read_text(encoding="utf-8"))
+        bad = [x for x in waivers if not str(x.get("match") or "").strip() or not str(x.get("why") or "").strip()]
+        if bad:
+            sys.exit(f"audit gate: every waiver needs a 'match' and a 'why'; {len(bad)} do not.")
+    open_ = [f for f in flagged if not any(str(x["match"]) in f for x in waivers)]
+    errors = [f for f in flagged if f.startswith("E ")]
+    if errors or open_:
+        print(f"audit gate: {len(open_)} unresolved line(s) from check_plan.py; nothing written.")
+        for f in (errors + [x for x in open_ if x not in errors]):
+            print("  ", f[:240])
+        print("Fix each one, or add a waiver with the reason it is safe (--waivers).")
+        sys.exit(3)
+    used = [x for x in waivers if any(str(x["match"]) in f for f in flagged)]
+    print(f"audit gate: passed ({len(flagged)} flagged line(s), all waived by {len(used)} waiver(s); "
+          f"pin_mech {pin}, {'music video' if mv else 'film'}).")
+    for x in used:
+        print(f"   waived '{x['match'][:60]}': {x['why'][:120]}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("template")
@@ -93,6 +153,9 @@ def main():
                     help="replace the LoRA loader's stack with these LoRAs (in order)")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--htc")
+    ap.add_argument("--map", help="scene_map.json; required with --shot/--ref (the audit gate)")
+    ap.add_argument("--waivers", help="JSON list of {match, why}: flagged lines proven safe")
+    ap.add_argument("--refs-dir", help="reference folder for the checker (default <ComfyUI>/input/h3_refs)")
     a = ap.parse_args()
 
     pack = _htc.find_pack(a.htc)
@@ -143,6 +206,12 @@ def main():
     if a.title:
         node["title"] = a.title
     for n in g["nodes"]:
+        if a.save_prefix and n.get("type") == "HTCSaveVideo":
+            vals = n.get("widgets_values")
+            k = save_prefix_slot(pack)
+            if isinstance(vals, list) and k is not None and len(vals) > k and isinstance(vals[k], str):
+                vals[k] = a.save_prefix
+                changed.append("HTCSaveVideo prefix")
         if a.save_prefix and n.get("type") in ("SaveVideo", "VHS_VideoCombine"):
             vals = n.get("widgets_values")
             if isinstance(vals, list) and vals and isinstance(vals[0], str):
@@ -173,6 +242,8 @@ def main():
                 changed.append(f"SLA reference_protection {cur} -> Heavy Enforcement")
             else:
                 print(f"SLA reference_protection: {cur}")
+    if a.shot or a.ref:
+        audit(a, pack, w, slot)
     Path(a.out).write_text(json.dumps(g, indent=1, ensure_ascii=False), encoding="utf-8")
     print("wrote", a.out)
     for c in changed:

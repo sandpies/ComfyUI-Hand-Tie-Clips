@@ -1038,6 +1038,13 @@ things to read every time before you queue:
   write one short line and stop. The panel now warns with the arithmetic, and
   the fix is to write the extra sentences yourself.
 
+**On a film of more than one hop, the proposal carries a continuity sheet.**
+Before any beat, WRITE's Proposal card shows where everyone stands (one fixed
+phrase per spot, with the side of the furniture and of the frame), each hop's
+start and end, and every cut with its reason. Read it slowest: a wrong side
+caught on the card costs a sentence, caught in a render it costs the machine.
+Once you accept it, the beats are written from it, word for word.
+
 Everything the panel flags is a warning rather than a rejection, because all of
 it is legitimate to want on purpose. Read the warnings, fix what you meant
 differently, and queue.

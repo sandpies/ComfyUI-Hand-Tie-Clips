@@ -77,8 +77,11 @@ times counted from the hop's start.
 
 - A restart can cut anywhere; it opens on its own refs.
 - A `motion_context` continuation's `[Shot 1]` continues the pin: same place, angle and pose, no
-  cut in its first 2 s. The hop before it ends on a face (rule 8). Angle changes happen inside
-  hops; the seams stay quiet.
+  cut in its first 2 s. The hop before it ends on a face (rule 8). Prefer the continuation as one
+  take whose camera moves (pull back, drift, arc) to the next framing; put the cuts in restarts.
+  The seams stay quiet.
+- A restart opens on another size or angle than the previous hop's last frame, chosen by the cut
+  list's reason (a look, a line, a sound, an action).
 - Plan each hop's last frame: it is the next hop's first.
 
 ## Journeys

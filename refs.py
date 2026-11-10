@@ -32,6 +32,9 @@ RETENTION = {
     "fully_preserved": "face, bone structure, and hairstyle carry over exactly",
     "partially_copy": "the garment and its cut carry over, moving naturally with the body",
     "reference": "the layout, surfaces, and light carry over as the setting",
+    # A key prop's own picture (one object on a plain backdrop). Read as a
+    # setting it could pull its backdrop in as the room (2026-11-04).
+    "prop": "the object's shape, material, and colour carry over, wherever the action puts it",
 }
 
 # `file` is the reference: a basename under <ComfyUI input>/h3_refs. `slot` is

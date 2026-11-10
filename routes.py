@@ -297,6 +297,37 @@ def _payload():
     }
 
 
+def _local_addon():
+    """An optional local add-on package beside this file (not shipped).
+
+    Returns the module, or None when it is absent or fails to import, so the
+    public pack never depends on it.
+    """
+    try:
+        from . import htc_personal as addon
+    except Exception:
+        return None
+    return addon
+
+
+async def _addon_writer_ready(llm):
+    """Let a local add-on start the writer first; no-op without one."""
+    if _local_addon() is None:
+        return False
+    try:
+        from .htc_personal import routes_ext as ext
+    except Exception:
+        return False
+    fn = getattr(ext, "ensure_writer_ready", None)
+    if fn is None:
+        return False
+    try:
+        await fn(llm, auto_wake=True)
+        return True
+    except Exception:
+        return False
+
+
 def register():
     """Attach the route if a PromptServer exists. Never raises on import."""
     try:
@@ -1118,6 +1149,15 @@ def register():
         except Exception as exc:
             return web.json_response(
                 {"ok": False, "error": f"SWAP failed to load: {exc}"})
+        if await _addon_writer_ready(_llm):
+            conn = _llm.load_conn()
+        if not conn.get("model"):
+            try:
+                found = await _llm.models(conn["server_url"])
+                if found:
+                    conn["model"] = found[0]["id"]
+            except Exception:
+                pass
         if not conn.get("model"):
             return web.json_response(
                 {"ok": False, "error": "no model is selected -- open WRITE, "
@@ -1202,6 +1242,15 @@ def register():
         background_tag = str(body.get("background_tag") or "").lstrip("@").strip()
         wardrobe_tag = str(body.get("wardrobe_tag") or "").lstrip("@").strip()
         wardrobe_text = str(body.get("wardrobe_text") or "").strip()
+        pins = str(body.get("pins") or "").strip()
+        place_rule = str(body.get("place_rule") or "").strip()
+        light_rule = str(body.get("light_rule") or "").strip()
+        style_rule = str(body.get("style_rule") or "").strip()
+        colour_rule = str(body.get("colour_rule") or "").strip()
+        # Optional look overrides arrive as finished text (a local add-on may
+        # send them); a place override moves the setting off the clip.
+        if place_rule and background in ("", "clip"):
+            background = "free"
         try:
             start = float(body.get("video_start_s") or 0.0)
         except (TypeError, ValueError):
@@ -1226,6 +1275,15 @@ def register():
         except Exception as exc:
             return web.json_response(
                 {"ok": False, "error": f"SWAP failed to load: {exc}"})
+        if await _addon_writer_ready(_llm):
+            conn = _llm.load_conn()
+        if not conn.get("model"):
+            try:
+                found = await _llm.models(conn["server_url"])
+                if found:
+                    conn["model"] = found[0]["id"]
+            except Exception:
+                pass
         if not conn.get("model"):
             return web.json_response(
                 {"ok": False, "error": "no model is selected -- open WRITE, "
@@ -1251,6 +1309,7 @@ def register():
         print(f"[{TAG}] SWAP: mode={mode} background={background or 'clip'}"
               + (f" background_tag=@{background_tag}" if background_tag else "")
               + (f" wardrobe=@{wardrobe_tag}" if wardrobe_tag else "")
+              + (f" pins={pins}" if pins else "")
               + (f" identities={','.join('@' + t for t in ident_tags)}"
                  if ident_tags else " identity=none"),
               flush=True)
@@ -1358,43 +1417,58 @@ def register():
         # Automatically describe each identity reference image (`@tag` -> `<Picture N>`)
         # before writing the swap plan, mirroring BFS's `ref_details` VLM pass and
         # scoping strictly to what `mode` transfers (head/hair only for `head_swap`,
-        # facial features only for `face_only`, full body + outfit for `replace_person`).
+        # facial features only for `face_only`, full body + outfit for `replace_person`),
+        # while describing `background_tag` as a setting plate and `wardrobe_tag` as a garment plate!
         ident_looks = {}
-        for idx, im in enumerate(images):
+        plate_notes = []
+        ident_tag_set = set(ident_tags)
+        pic_idx = 0
+        for im in images:
             t_name = str(im.get("tag") or "").lstrip("@").strip()
             if not t_name or not im.get("data_url"):
                 continue
-            if mode == "head_swap":
+            pic_idx += 1
+            if t_name in ident_tag_set:
+                if mode == "head_swap":
+                    look_sys = (
+                        "Describe ONLY the racial/ethnic descent (e.g. East Asian woman, Latina woman, Black woman, Caucasian woman, "
+                        "judged strictly from facial bone structure and eye shape regardless of dyed/cosplay hair), skin tone, "
+                        "facial bone structure, eye shape and color, hair color, and hairstyle of the person in this reference image "
+                        "in one compact noun phrase (18-28 words). State ONLY what is present using positive words (never write no, not, "
+                        "without, never, or pronouns he, she, they, their). Start with 'an East Asian woman', 'a Latina woman', 'a woman', or 'a man'."
+                    )
+                elif mode == "face_only":
+                    look_sys = (
+                        "Describe ONLY the racial/ethnic descent (judged strictly from facial bone structure and eye shape), "
+                        "skin tone, facial bone structure, eye shape and color, nose, lips, and jawline of the person in this reference image "
+                        "in one compact noun phrase (15-25 words). State ONLY what is present using positive words (never write no, not, "
+                        "without, never, or pronouns he, she, they, their). Start with 'an East Asian woman', 'a Latina woman', 'a woman', or 'a man'."
+                    )
+                else:
+                    cloth_clause = (
+                        ""
+                        if (wardrobe_tag or wardrobe_text)
+                        else ", and exact clothing/outfit worn (colors, cut, fabric)"
+                    )
+                    look_sys = (
+                        "Describe ONLY the physical appearance of the person in this reference image in one compact noun phrase (25-45 words): "
+                        "explicit racial/ethnic descent (judged strictly from facial bone structure and eye shape regardless of dyed/cosplay hair), "
+                        "skin tone, facial bone structure, eye shape and color, hair color and hairstyle, body build" + cloth_clause
+                        + ". State ONLY what is present using positive words (never write no, not, without, never, or pronouns he, she, they, their). "
+                        "Start with 'an East Asian woman', 'a Latina woman', 'a Black woman', 'a Caucasian woman', 'a woman', or 'a man'."
+                    )
+            elif t_name == background_tag and background == "picture":
                 look_sys = (
-                    "Describe ONLY the head, face, skin tone, facial structure, eye color, "
-                    "hair color, and hairstyle of the person in this reference image in one "
-                    "compact noun phrase (15-25 words). Do NOT mention body build, clothing, "
-                    "tops, skirts, outfits, accessories, background, lighting, or pose. "
-                    "Do NOT use pronouns (he, she, they, their). Start with 'a woman' or 'a man'."
+                    "Describe ONLY the room, architecture, key furniture, surface materials, and lighting of this background setting image "
+                    "in one compact noun phrase (20-35 words). State ONLY what is present using positive words (never mention people, pronouns, or negations)."
                 )
-            elif mode == "face_only":
+            elif t_name == wardrobe_tag:
                 look_sys = (
-                    "Describe ONLY the facial features, skin tone, facial structure, eye color, "
-                    "nose, lips, and jawline of the person in this reference image in one "
-                    "compact noun phrase (12-22 words). Do NOT mention hair, hairstyle, body "
-                    "build, clothing, outfits, background, lighting, or pose. "
-                    "Do NOT use pronouns (he, she, they, their). Start with 'a woman' or 'a man'."
+                    "Describe ONLY the clothing, garment cut, fabric, colors, and footwear shown in this wardrobe reference image "
+                    "in one compact noun phrase (15-30 words). State ONLY what is present using positive words (never mention face, hair, background, pronouns, or negations)."
                 )
             else:
-                cloth_clause = (
-                    " Do NOT mention clothing or outfit (a custom wardrobe override is used)."
-                    if (wardrobe_tag or wardrobe_text)
-                    else ", and exact clothing/outfit worn (colors, cut, fabric)."
-                )
-                look_sys = (
-                    "Describe ONLY the physical appearance of the person in this "
-                    "reference image in one compact noun phrase (25-45 words): "
-                    "sex, skin tone, facial structure, eye color, hair color and "
-                    "hairstyle, body build" + cloth_clause
-                    + " Do NOT describe the background, lighting, or pose. "
-                    "Do NOT use pronouns (he, she, they, their). Start with 'a woman' "
-                    "or 'a man'."
-                )
+                continue
             try:
                 look_msg = [
                     {"role": "system", "content": look_sys},
@@ -1407,30 +1481,38 @@ def register():
                     },
                 ]
                 raw_look = await _llm.complete(
-                    conn["server_url"], conn["model"], look_msg, temperature=0.35
+                    conn["server_url"], conn["model"], look_msg, temperature=0.30
                 )
-                clean_look = _planner.scrub_swap_pronouns(
-                    " ".join(str(raw_look or "").split()).strip(" .\"'")
+                clean_look = _planner.scrub_swap_negations(
+                    _planner.scrub_swap_pronouns(
+                        " ".join(str(raw_look or "").split()).strip(" .\"'")
+                    )
                 )
                 if clean_look:
-                    ident_looks[t_name] = clean_look
-                    print(f"[{TAG}] SWAP @{t_name} (<Picture {idx + 1}>, {mode}) look: {clean_look}",
-                          flush=True)
+                    if t_name in ident_tag_set:
+                        ident_looks[t_name] = clean_look
+                        print(f"[{TAG}] SWAP @{t_name} (<Picture {pic_idx}>, {mode}) look: {clean_look}",
+                              flush=True)
+                    elif t_name == background_tag:
+                        plate_notes.append(f"Background plate @{t_name} (<Picture {pic_idx}>): {clean_look}.")
+                    elif t_name == wardrobe_tag:
+                        plate_notes.append(f"Wardrobe plate @{t_name} (<Picture {pic_idx}>): {clean_look}.")
             except Exception as _le:
                 print(f"[{TAG}] SWAP could not auto-describe @{t_name}: {_le!r}",
                       flush=True)
 
         enriched_brief = brief
-        if ident_looks:
-            look_lines = [
-                f"Reference look for @{t} (<Subject {idx + 1}> in <Picture {idx + 1}>, {mode} only): {lk}."
-                for idx, (t, lk) in enumerate(ident_looks.items())
-            ]
+        extra_lines = [
+            f"Reference look for @{t} (<Subject {idx + 1}> in <Picture {idx + 1}>, {mode} only): {lk}."
+            for idx, (t, lk) in enumerate(ident_looks.items())
+        ] + plate_notes
+        if extra_lines:
             enriched_brief = (
                 (brief + "\n" if brief else "")
-                + "\n".join(look_lines)
+                + "\n".join(extra_lines)
             ).strip()
 
+        clean_wtext = _planner.scrub_swap_negations(_planner.scrub_swap_pronouns(wardrobe_text))
         try:
             out = await _planner.write_swap_plan(
                 enriched_brief, complete_fn=complete_fn, identity_tag=ident_tag,
@@ -1438,8 +1520,13 @@ def register():
                 rail_tags=rail_tags, images=images, duration=duration,
                 mode=mode, background=background,
                 background_tag=background_tag, wardrobe_tag=wardrobe_tag,
-                wardrobe_text=wardrobe_text,
-                clip_s=clip.get("seconds"), clip_sound=clip.get("sound"))
+                wardrobe_text=clean_wtext,
+                clip_s=clip.get("seconds"), clip_sound=clip.get("sound"),
+                pins=pins,
+                place_rule=place_rule,
+                light_rule=light_rule,
+                style_rule=style_rule,
+                colour_rule=colour_rule)
         except _llm.LLMError as exc:
             return web.json_response({"ok": False, "error": str(exc)})
         except Exception as exc:
@@ -1448,7 +1535,7 @@ def register():
         if ident_looks and out.get("swap_script") and "subject_definitions:" in out["swap_script"]:
             out["ident_looks"] = ident_looks
             for idx, (t, lk) in enumerate(ident_looks.items()):
-                w_note = f", wearing {wardrobe_text}" if wardrobe_text else ""
+                w_note = f", wearing {clean_wtext}" if clean_wtext else ""
                 if lk.lower()[:24] not in out["swap_script"].lower():
                     out["swap_script"] = re.sub(
                         r"(@" + re.escape(t) + r"\b)",
@@ -1456,12 +1543,15 @@ def register():
                         out["swap_script"],
                         count=1,
                     )
-                elif wardrobe_text and wardrobe_text.lower() not in out["swap_script"].lower():
+                elif clean_wtext and clean_wtext.lower() not in out["swap_script"].lower():
                     out["swap_script"] = out["swap_script"].replace(
                         "subject_definitions:\n",
-                        f"subject_definitions:\n<Subject {idx + 1}> wears {wardrobe_text}.\n",
+                        f"subject_definitions:\n<Subject {idx + 1}> wears {clean_wtext}.\n",
                         1,
                     )
+            out["swap_script"] = _planner.scrub_swap_negations(
+                _planner.scrub_swap_pronouns(out["swap_script"])
+            )
         if vision_notes:
             out["warnings"] = list(out.get("warnings") or []) + vision_notes
         if "ref_plan" in out:
@@ -1781,5 +1871,12 @@ def register():
             print(f"[{TAG}] seam_clip failed for {a[:8]}|{b[:8]}: {exc!r}", flush=True)
             return web.json_response({"ok": False, "error": str(exc)}, status=500)
         return resp or _missing(f"the {a[:8]}|{b[:8]} join")
+
+    addon = _local_addon()
+    if hasattr(addon, "register_personal_routes"):
+        try:
+            addon.register_personal_routes(instance)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[{TAG}] local add-on routes skipped: {exc!r}", flush=True)
 
     return True

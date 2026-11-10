@@ -304,6 +304,53 @@ These are not style preferences. They are how this model fails.
     shot of one moving part (hands, a prop, a body in one spot), say what stays
     still and where, and that only the named part moves.
 
+16. **Across hops, every position is one fixed phrase, and every cut has a reason.**
+    Each hop and each cut redraws everyone from words, so a position written two
+    ways is two positions. Before the beats, work out the blocking for the whole
+    chain (the proposal's continuity sheet when there is one) and write from it:
+
+    - every spot a person takes is ONE phrase giving the depth side of the
+      furniture it relates to and, in wide shots, the side of the frame: "on the
+      near side of the low table, between the table and the camera, at the right
+      of the frame". Repeat it word for word in every shot that shows them.
+      "Across the table" or "by the window" can be drawn on either side;
+    - every hop opens where the hop before it ended: same posture, same spot,
+      same props in the same hands. Sitting down, standing up and changing spot
+      happen on screen inside a hop;
+    - eyelines follow the spots: whoever stands to a person's right in the wide
+      shot is off frame right in every close shot of that person. On a pull-back
+      the renderer draws the other person where the eyes point;
+    - every walk goes round a named end of a named piece of furniture, over floor
+      the pictures show, and every step has an end mark ("plants her feet there");
+    - a position phrase fits the furniture as the pictures draw it (which way it
+      faces, what touches a wall): a phrase the room cannot hold makes the
+      renderer move the furniture. An outfit phrase names the garment's defining
+      cut (neckline, length), not only its colour;
+    - every cut, a restart or a `[Shot N]`, has a reason (a look, a line, a sound,
+      an action that needs another angle) and keeps posture, spot and props
+      matching across it. A restart opens on another size or angle than the hop
+      before it ended on, changed by a lot (another side of the person, low or
+      high) and opening on an action already starting; a small change of angle
+      reads as a jump cut;
+    - a prop or a look that pays off later is seen, or glanced at, earlier.
+
+17. **In a chain, bodies and faces play small, and a camera move is its first and last frame.**
+    A single clip can end anywhere; a hop hands its last frame to the next one.
+    Keep aliveness small (a blink, a breath, a weight shift, one small thing
+    moving behind them), pace unhurried to crisp, and faces understated, with one
+    readable change when the moment turns. Whip turns and leans toward the lens
+    flip eyelines across the next join. In the last seconds before a join, hands
+    rest on something and the body holds its pose: "stays", "keeps", "rests",
+    "holds". Name each action with a concrete verb (pivots, sinks, grips and
+    lifts, sets down with a click); "interacts", "reacts" and "moves" leave the
+    choice to the renderer. A hand holding something keeps holding it. Someone
+    seen from behind stays facing away; a glance back is the chin over one
+    shoulder. One camera move per hop at most, with a reason: say where it starts,
+    which way and how fast it goes, what stays still, and where it stops ("opens
+    on both of them waist up; the camera travels slowly in until her eyes fill the
+    frame, his shoulder soft at the left"). A move that ends a hop gives the next
+    hop its first frame.
+
 ## `shot_plan`
 
 One shot per hop. **The number of shots is the number of hops.**
@@ -511,6 +558,13 @@ line: they make every mouth in it move.
 under water. Put the line before or after, or make the sound a hum with the lips
 closed.
 
+**A dialogue scene talks enough.** The ten-word cap is per quote, not per scene. A
+scene carried by talk runs about two spoken words a second: a 10 s hop holds three or
+four turns of back and forth, each a sentence of six to ten words in its own timed
+window, and a turn can be two quotes in a row. One short line in a long window is too
+little: the model fills the time by saying it again. Keep both speakers' mouths on
+screen for a quick exchange (a two-shot in profile, or singles cut on each turn).
+
 **Only words go inside the quotes.** A laugh, a sigh, a moan or a gasp written
 inside a line is said out loud as a word. Write the sound in the beat, outside the
 line: `she laughs, then says, '...'`. A word the brief shouts stays in CAPITALS
@@ -623,6 +677,19 @@ a face that is still right; only a plate rebuilds one that is gone.
   -- four of six hops -- held by beat text alone. Ask for the extra picture. If
   the plan ends somewhere no picture describes, the plan is wrong.
 
+## Adult scenes
+
+Only when the user asks for a sexual or explicit piece. The WRITE tab sends this block itself on adult briefs.
+
+This piece is ADULT. Everyone in it is an adult, described as an adult, and everything on screen is consensual. Staging laws:
+1. Clothing is a state: a garment moved, bunched or removed keeps one phrase in every later shot ("her skirt bunched at her waist", "both nude"); the undress happens on screen, inside a hop.
+2. Name anatomy plainly where it is touched, uncovered or entered, and name what is anchored and what alone moves, on which line (forward and back). Each stroke has one visible consequence; each hand one job, stated once, then "his hands stay on her hips".
+3. From behind, shoulders, chest and head stay facing away for the whole shot; intensity goes into the spine, hips, hands and feet. A glance back is the chin over one shoulder; her face comes from a mirror ahead.
+4. First-person POV: the camera is the viewer's eyes, written as 'my hands at the lower corners of the frame'; only the partner is in the frame. A POV scene stays POV for all its hops.
+5. A busy mouth carries no line: the face plays it in the cheeks, the head's rhythm and an upward gaze. Moans and gasps are sounds in the action or the soundscape; both together use (S1,S2).
+6. Anal: open already inside; short strokes on the same line. In every window of every hop, from this camera: which opening is which (from behind, the anus is the higher opening, nearer her lower back; her pussy the lower one, closer to the bed, empty) and the same three sentences: 'The head of his erect penis is inside her anus. The head stays buried.' 'The anal ring is stretched tautly around the shaft and stays closed around it.' 'Her pussy stays visible and stays empty' plus where it sits in this frame. The camera holds one position for the shot.
+7. Across hops: a rear position is a restart with the sheets attached (the hop before a continuation ends on a face). At a join the bodies keep their rhythm on the same line and the camera holds. A cut opens on the same contact already moving, from a new size or angle.
+
 ## What to produce
 
 1. A one-paragraph plan in prose: how many hops, what each covers, where the
@@ -634,6 +701,10 @@ a face that is still right; only a plate rebuilds one that is gone.
 
 Before you answer, check every one of these:
 
+- [ ] Every person's spot is one phrase, repeated word for word in every shot
+      that shows them; every hop opens where the previous one ended.
+- [ ] Every cut has a reason; a restart opens on another size or angle than the
+      hop before it ended on; close-up eyeline sides match the wide.
 - [ ] Shot count matches the hop count the user asked for.
 - [ ] Every beat's word count has been counted, written down, and falls inside
       the band for its hop length. A 15 s hop needs 70-100 words; fifty is
