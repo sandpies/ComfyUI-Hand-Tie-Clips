@@ -549,7 +549,7 @@
       <div style="display:flex; gap:6px;">
         <button class="action-btn primary" id="preset-10hop" onclick="loadPreset('loradaddy10')">🎬 Load 10-Hop Hand-Tie Example</button>
         <button class="action-btn" id="preset-4hop" onclick="loadPreset('carolyn4')">Load 4-Hop Street Vlog (motion_context)</button>
-        <button class="action-btn" id="preset-simple" onclick="setScriptMode('simple')">✨ Load Simple 1-Clip + Realism Boost</button>
+        <button class="action-btn" id="preset-simple" onclick="setScriptMode('simple')">✨ Load Simple 1-Clip</button>
       </div>
     </div>
 
@@ -625,15 +625,15 @@
             </details>
           </div>
 
-          <!-- SIMPLE MODE VIEW (Standard MMH3 ref2va / t2va Prompting + Realism Boost) -->
+          <!-- SIMPLE MODE VIEW (Standard MMH3 ref2va / t2va Prompting) -->
           <div id="sim-simple-view" style="display:none;">
             <div style="background:rgba(232,255,71,0.08); border:1px solid rgba(232,255,71,0.35); border-radius:4px; padding:7px 10px; margin-bottom:8px; font-size:11.5px; color:#e8e8e8;">
-              <strong style="color:var(--h3-accent);">✨ Simple Mode (Standard MMH3 <code>ref2va</code> / <code>t2va</code> Studio + Realism Boost):</strong> Paste any standard 6-field MiniMax H3 <code>ref2va</code> / <code>t2va</code> prompt (<code>subject_definitions:</code>, <code>summary:</code>, <code>detailed_description:</code>, etc.) or plain prose directly here with <code>chains = 1</code>. HTC passes structured H3 prompts straight through untouched while giving you the visual <code>REFS</code> rail, <strong><code>realism_boost: on</code></strong> (<code>steps = 6</code> → 2 base + 10 realism LoRA steps) + <strong><code>audio_refine: on</code></strong> (5 steps), and <strong>2 MP Guided Upsampling</strong>!
+              <strong style="color:var(--h3-accent);">✨ Simple Mode (Standard MMH3 <code>ref2va</code> / <code>t2va</code> Studio):</strong> Paste any standard 6-field MiniMax H3 <code>ref2va</code> / <code>t2va</code> prompt (<code>subject_definitions:</code>, <code>summary:</code>, <code>detailed_description:</code>, etc.) or plain prose directly here with <code>chains = 1</code>. HTC passes structured H3 prompts straight through untouched while giving you the visual <code>REFS</code> rail, <code>steps = 8</code> (6–8 lets the audio resolve; 4 with a 4-step turbo), and <strong>2 MP Guided Upsampling</strong>.
             </div>
             <div class="h3e-active-card">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:11.5px;">
                 <span style="color:var(--h3-accent); font-weight:700;">STANDARD MMH3 6-FIELD PROMPT (ref2va / t2va) OR PLAIN PROSE</span>
-                <span style="color:#9a9a9a;">chains = 1 · 15.0s (362f) · steps = 6 (2 + 10 realism_boost) · audio_refine = on · upsample = on</span>
+                <span style="color:#9a9a9a;">chains = 1 · 15.0s (362f) · steps = 8 · upsample = on</span>
               </div>
               <textarea class="sim-textarea" id="sim-simple-text" style="min-height:175px; font-family:ui-monospace, SFMono-Regular, Consolas, monospace; font-size:11.5px;">subject_definitions:
 &lt;Subject 1&gt; is the young woman in &lt;Picture 1&gt;. The collage grid is identity only. She has dark hair in an updo with loose face-framing strands and small flower clips, a white triangle bikini with blue flowers, blue string ties at the neck and hips, and bare feet.
@@ -854,19 +854,15 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
           </details>
 
           <details class="sim-run-group" open>
-            <summary>refine · realism boost · upsample · soundtrack (audio refine)</summary>
+            <summary>refine · upscale 2nd pass · upsample</summary>
             <div class="sim-axes" style="margin-top:8px;">
               <div class="sim-field">
                 <label>hop refine</label>
                 <select class="sim-select"><option>off</option><option selected>full (v2.4)</option><option>pin_only</option></select>
               </div>
               <div class="sim-field">
-                <label>realism boost</label>
-                <select class="sim-select"><option>off</option><option>on (2 + 10 steps)</option></select>
-              </div>
-              <div class="sim-field">
-                <label>audio refine (pair w/ boost)</label>
-                <select class="sim-select"><option>off</option><option selected>on (5 steps @ 0.5)</option></select>
+                <label>upscale 2nd pass</label>
+                <select class="sim-select"><option>off</option><option>on (2–3 steps)</option></select>
               </div>
               <div class="sim-field">
                 <label>upsample</label>
@@ -880,7 +876,7 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
     </div>
 
     <div style="text-align:center; margin:16px 0 24px;">
-      <div style="font-weight:600; margin-bottom:6px;">Simple Mode (15s · Realism Boost + 2 MP Upsample) example</div>
+      <div style="font-weight:600; margin-bottom:6px;">Simple Mode (15s · 2 MP Upsample) example</div>
       <video controls preload="metadata" width="50%" style="max-width:480px; width:50%; margin:0 auto; border-radius:8px; border:1px solid var(--border); background:#000;">
         <source src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/simple-realism-boost-2mp-00008.mp4" type="video/mp4">
         <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/simple-realism-boost-2mp-00008.mp4" type="video/mp4">
@@ -920,11 +916,11 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
 
     <h2>Built-In Finishing (<code>⚙ RUN</code> Page)</h2>
 
-    <h3>1. Realism Boost + Audio Refine (Built for <code>Simple</code> Mode / 1–2 Hop Hero Clips)</h3>
+    <h3>1. Single clips (<code>Simple</code> mode) + upscale 2nd pass</h3>
     <ul>
-      <li><strong>Using HTC for standard single generations (<code>ref2va</code> / <code>t2va</code>):</strong> You don't need a multi-hop chain to use Hand Tie Clips — switch <strong><code>SCRIPT</code></strong> to <strong><code>Simple</code></strong> mode (<code>chains = 1</code> in <code>⚙ RUN</code>) and paste your standard <strong>6-field MiniMax H3 <code>ref2va</code> / <code>t2va</code> prompt</strong> (<code>subject_definitions:</code>, <code>summary:</code>, <code>detailed_description:</code>, etc.) or plain prose. HTC passes structured H3 prompts straight through untouched while giving you the visual <strong><code>REFS</code></strong> rail, <strong><code>realism_boost</code></strong>, and <strong><code>upsample</code></strong> on a single clip!</li>
-      <li><strong><code>realism_boost: on</code></strong> runs a 2-stage split schedule inside the sampler (at <code>steps = 6</code>: <strong>2 base steps</strong> set composition, then <strong>10 realism LoRA steps</strong> paint skin and lighting with <em>no fresh noise</em>).</li>
-      <li><strong>Important Audio Note:</strong> Because stage 2 adds no noise, the audio stream only gets those first 2 noisy steps and <strong>will sound thin or under-converged on its own</strong>. When using <code>realism_boost</code>, turn on <strong><code>audio_refine: on</code></strong> (under the <strong>Soundtrack</strong> group, <code>4–5</code> steps) — it re-samples the soundtrack cleanly while keeping your finished video 100% frozen.</li>
+      <li><strong>Using HTC for standard single generations (<code>ref2va</code> / <code>t2va</code>):</strong> You don't need a multi-hop chain to use Hand Tie Clips — switch <strong><code>SCRIPT</code></strong> to <strong><code>Simple</code></strong> mode (<code>chains = 1</code> in <code>⚙ RUN</code>) and paste your standard <strong>6-field MiniMax H3 <code>ref2va</code> / <code>t2va</code> prompt</strong> (<code>subject_definitions:</code>, <code>summary:</code>, <code>detailed_description:</code>, etc.) or plain prose. HTC passes structured H3 prompts straight through untouched while giving you the visual <strong><code>REFS</code></strong> rail, the <strong>upscale 2nd pass</strong> and <strong><code>upsample</code></strong> on a single clip.</li>
+      <li><strong>Steps (author's advice):</strong> run the first pass at <strong>6–8 steps</strong> so the audio fully resolves, unless you use a 4-step turbo LoRA.</li>
+      <li><strong>Upscale 2nd pass</strong> (<code>⚙ RUN</code> → <strong>upscale 2nd pass</strong>) re-draws the finished clip at a higher resolution. <strong>2–3 steps</strong> is plenty; pick by taste. Its LoRA slots are for your own LoRAs and use case — HTC does not suggest any.</li>
     </ul>
 
     <h3>2. Refine Pass (<code>hop_refine: full</code>) — Honest Limitations</h3>
@@ -933,19 +929,26 @@ Fast club techno. A distorted four-on-the-floor kick, a rolling low bass, closed
       <li><strong>The honest truth on chain length:</strong> <code>Refine</code> holds back relay degradation and keeps joins clean, pushing continuous <code>motion_context</code> chains to <strong>5–6 clips on Turbo</strong> before very visible texture changes appear, and <strong>7–8 clips on non-Turbo</strong>. Under <code>motion_context</code>, plan to transition to a cut (<code>anchor: "restart"</code>) every 4–5 clips or so to maintain the integrity of your textures (or use <code>pin_mech: sand_tie</code> for one continuous take).</li>
     </ul>
 
-    <h3>3. Tiled Upsampler (<code>upsample: on</code>) &amp; Standalone Node</h3>
-    <p>Enlarges the finished film to 2.0 MP and re-draws it with the <strong>Open-H3-Regenerate-2K</strong> LoRA (3 steps from sigma 0.6). Small, distant faces are re-drawn as close-ups so they keep their person; tiles size themselves to your GPU. An optional <strong>HTC Upsample Settings</strong> node on the <code>upsample_settings</code> socket exposes all the upsample's settings. Toggling <code>upsample</code> on a cached chain skips hop generation and runs only the upscaler.</p>
+    <h3>3. Upsample (<code>upsample: on</code>) &amp; standalone nodes</h3>
+    <p>After the last hop the film is sized up to <code>upsample_megapixels</code> (default 2.0 MP) and re-drawn. Choose how in <strong><code>⚙ RUN</code> → UPSAMPLE → upsample method</strong>:</p>
+    <ul>
+      <li><strong><code>regen2k</code></strong> (default): re-draws detail with an <strong>Open-H3-Regenerate-2K</strong> LoRA, picked in <strong>regen2k lora</strong> (3 steps from sigma 0.6). Small, distant faces are re-drawn as close-ups so they keep their person.</li>
+      <li><strong><code>ic</code></strong> (in-context): keeps each piece's own frames in view, and hears its soundtrack, while it re-draws, so faces, lettering and mouths stay the film's own. Slower. Needs the plain, unpruned <code>minimax_h3_ref2va_*</code> DiT with no LoRAs, on <code>upsample_dit</code> (or the MODEL wire); the run stops before any hop if the model cannot run it.</li>
+      <li><strong>upsample steps</strong>: <code>3 (recipe)</code> or <code>2 (faster)</code>, for both methods.</li>
+    </ul>
+    <p>Tiles size themselves to your GPU. With a <a href="https://github.com/kijai/ComfyUI-KJNodes">ComfyUI-KJNodes</a> older than 2026-09-06, sparse attention falls back to dense by itself and the log says so; update KJNodes to get it back. An optional <strong>HTC Upsample Settings</strong> node on the <code>upsample_settings</code> socket exposes all the upsample's settings. Toggling <code>upsample</code> on a cached chain skips hop generation and runs only the upsample.</p>
 
     <div class="callout">
       <strong>Required Files for Upsampling:</strong>
       <ol style="margin:6px 0 0 0; padding-left:20px;">
-        <li><strong>Latent Upscaler (`ComfyUI/models/latent_upscale_models/`):</strong><br>
+        <li><strong>Latent Upscaler (<code>ComfyUI/models/latent_upscale_models/</code>):</strong><br>
             Download <code>minimax_h3_latent_upscaler_3d_bf16.safetensors</code> from <a href="https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler">LBH-123-AI/Minimax_h3_latent_Upscaler</a> (or <code>h3_upscaler_lms_v0.1.safetensors</code>).</li>
-        <li><strong>Regen2K LoRA (`ComfyUI/models/loras/`):</strong><br>
-            Download <a href="https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/blob/main/lora/open_h3_regenerate_2k_r256pp_bf16.safetensors"><code>open_h3_regenerate_2k_r256pp_bf16.safetensors</code></a> and pick it in <code>upsample_redraw</code>.</li>
-        <li><strong><code>upsample_dit</code> wire (optional):</strong> a separate model for the re-draw, e.g. a plain H3 UNETLoader with no LoRAs.</li>
+        <li><strong><code>regen2k</code> LoRA (<code>ComfyUI/models/loras/</code>):</strong><br>
+            Download <a href="https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/blob/main/lora/open_h3_regenerate_2k_r256pp_bf16.safetensors"><code>open_h3_regenerate_2k_r256pp_bf16.safetensors</code></a>.</li>
+        <li><strong><code>ic</code> only (<code>ComfyUI/models/loras/</code>):</strong> <a href="https://huggingface.co/Kijai/MiniMax-H3-experimental/blob/main/loras/minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16.safetensors"><code>minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16</code></a> (200 MB) + <a href="https://huggingface.co/videorebirth/hyperflow/blob/main/minimax_h3_hyperflow_8step_v1.0.safetensors"><code>minimax_h3_hyperflow_8step_v1.0</code></a> (+ <a href="https://huggingface.co/Alissonerdx/Minimax-H3-ComfyUI/blob/main/loras/minimax_h3_lms_v1.0_r64.safetensors"><code>minimax_h3_lms_v1.0_r64</code></a> if you have it), and the DiT <a href="https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors"><code>minimax_h3_ref2va_int8_convrot</code></a>.</li>
+        <li><strong><code>upsample_dit</code> wire (optional for <code>regen2k</code>):</strong> a separate model for the re-draw, e.g. a plain H3 UNETLoader with no LoRAs.</li>
       </ol>
-      <p style="margin:8px 0 0 0; font-size:13px;"><em>Want to upscale any existing video outside a chain? Use the included <strong>H3 Video Upsampler (finished clip)</strong> node (<code>workflows/HandTieClips_Upsample_Video.json</code>) or the standalone repo: <a href="https://github.com/sandpies/ComfyUI-H3-Video-Upsampler">sandpies/ComfyUI-H3-Video-Upsampler</a>.</em></p>
+      <p style="margin:8px 0 0 0; font-size:13px;"><em>Want to upscale any existing video outside a chain? Use the included <strong>H3 Video Upsampler (file to file)</strong> node (<code>workflows/HandTieClips_Upsample_Video_File.json</code>), <strong>H3 Video Upsampler (finished clip)</strong> (<code>workflows/HandTieClips_Upsample_Video.json</code>) or the standalone repo: <a href="https://github.com/sandpies/ComfyUI-H3-Video-Upsampler">sandpies/ComfyUI-H3-Video-Upsampler</a>.</em></p>
     </div>
 
     <h2>Quick Start (60 Seconds)</h2>
@@ -1185,10 +1188,10 @@ git clone https://github.com/sandpies/ComfyUI-Hand-Tie-Clips.git</code></pre>
       if (b10) b10.classList.remove("primary");
       if (b4) b4.classList.remove("primary");
       const subEl = document.getElementById("sim-script-sub");
-      if (subEl) subEl.textContent = "Simple · 1 clip · 15.0s (362f) master · realism_boost + audio_refine + upsample on";
+      if (subEl) subEl.textContent = "Simple · 1 clip · 15.0s (362f) master · upsample on";
       document.getElementById("cnt-script").textContent = "1";
       document.getElementById("sim-digest").textContent =
-        "1024×768 · 15s ×1 (15.1s) · 6 steps (2+10 realism_boost) · audio_refine on · upsample on";
+        "1024×768 · 15s ×1 (15.1s) · 8 steps · upsample on";
     } else {
       if (sv) sv.style.display = "block";
       if (smv) smv.style.display = "none";

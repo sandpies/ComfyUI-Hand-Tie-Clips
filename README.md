@@ -63,7 +63,7 @@ tags:
 
 | Tab / Surface | What It Does |
 |---|---|
-| **🎬 SCRIPT** (`Simple` & `Shots`) | Switch to **`Simple`** mode (`chains = 1`) to paste standard **MiniMax H3 `ref2va` / `t2va` 6-field prompts** (passed through untouched!) or plain prose for single-clip generations with **`realism_boost: on`** + **`audio_refine: on`** — or switch to **`Shots`** mode to author per-hop cards (5 s – 15 s each) with camera, framing, pace, and join controls. |
+| **🎬 SCRIPT** (`Simple` & `Shots`) | Switch to **`Simple`** mode (`chains = 1`) to paste standard **MiniMax H3 `ref2va` / `t2va` 6-field prompts** (passed through untouched!) or plain prose for single-clip generations with the **upscale 2nd pass** — or switch to **`Shots`** mode to author per-hop cards (5 s – 15 s each) with camera, framing, pace, and join controls. |
 | **🖼️ REFS** (`@tags` & `RefMod`) | Drop up to 9 character/setting stills straight onto the node. Assign stable `@tags`, subject numbers, per-photo megapixel caps, per-hop schedules (`rides hops`), and per-character voice clips without wiring `Load Image` chains. |
 | **🎞️ TIMELINE** (Retake Board) | Scrub every rendered hop, inspect the exact join frames, **lock** the shots you want to keep, or click `⏵` on Shot 3 to re-roll *only* Shot 3 while Shots 1–2 load from the lossless cache. |
 | **🎵 MEDIA** (Clips, Voices & Lip-Sync) | Load a starting frame, up to 3 reference videos, 3 voice timbre clips, a background music bed (with auto-ducking), or a **Master Audio File** that locks lip-sync across the entire film. |
@@ -85,13 +85,13 @@ tags:
 
 ## Built-In Finishing (`⚙ RUN` Page)
 
-### 1. Realism Boost + Audio Refine (Built for `Simple` Mode / Standard `ref2va` & `t2va` Clips)
-- **Using HTC for standard single generations (`ref2va` / `t2va`):** You don't need a multi-hop chain to use Hand Tie Clips — switch **`SCRIPT`** to **`Simple`** mode (`chains = 1` in `⚙ RUN`) and paste your standard **6-field MiniMax H3 `ref2va` / `t2va` prompt** (`subject_definitions:`, `summary:`, `detailed_description:`, etc.) or plain prose. HTC detects structured H3 prompts and passes them through untouched while giving you the visual **`REFS`** rail, **`realism_boost`**, and **`upsample`** on a single clip — which is what **`realism_boost: on`** is built for!
-- **`realism_boost: on`** runs a 2-stage split schedule inside the sampler (at `steps = 6`: **2 base steps** set composition, then **10 realism LoRA steps** paint skin and lighting with *no fresh noise*).
-- **Important Audio Note:** Because stage 2 adds no noise, the audio stream only gets those first 2 noisy steps and **will sound thin or under-converged on its own**. When using `realism_boost`, turn on **`audio_refine: on`** (under the **Soundtrack** group, `4–5` steps) — it re-samples the soundtrack cleanly while keeping your finished video 100% frozen.
+### 1. Single clips (`Simple` mode) + upscale 2nd pass
+- **Using HTC for standard single generations (`ref2va` / `t2va`):** You don't need a multi-hop chain to use Hand Tie Clips — switch **`SCRIPT`** to **`Simple`** mode (`chains = 1` in `⚙ RUN`) and paste your standard **6-field MiniMax H3 `ref2va` / `t2va` prompt** (`subject_definitions:`, `summary:`, `detailed_description:`, etc.) or plain prose. HTC detects structured H3 prompts and passes them through untouched while giving you the visual **`REFS`** rail, the **upscale 2nd pass** and **`upsample`** on a single clip.
+- **Steps (author's advice):** run the first pass at **6–8 steps** so the audio fully resolves, unless you use a 4-step turbo LoRA.
+- **Upscale 2nd pass** (`⚙ RUN` → **upscale 2nd pass**) re-draws the finished clip at a higher resolution. **2–3 steps** is plenty; pick by taste. Its LoRA slots are for your own LoRAs and use case — HTC does not suggest any.
 
 <div align="center">
-  <p><strong>Simple Mode (15s · Realism Boost + 2 MP Upsample) example</strong></p>
+  <p><strong>Simple Mode (15s · 2 MP Upsample) example</strong></p>
   <video controls preload="metadata" width="50%" style="max-width:480px; border-radius:8px;" src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/simple-realism-boost-2mp-00008.mp4">
     <source src="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips/resolve/main/docs/img/simple-realism-boost-2mp-00008.mp4" type="video/mp4">
     <source src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/simple-realism-boost-2mp-00008.mp4" type="video/mp4">
@@ -102,21 +102,26 @@ tags:
 - Runs a gentle low-sigma detail pass per hop (supports wiring a stock 30-step H3 DiT to `refine_model` while your main wire runs a Turbo model).
 - **The honest truth on chain length:** `Refine` holds back relay degradation and keeps joins clean, pushing continuous `motion_context` chains to **5–6 clips on Turbo** before very visible texture changes appear, and **7–8 clips on non-Turbo**. Under `motion_context`, plan to transition to a cut (`anchor: "restart"`) every 4–5 clips or so to maintain the integrity of your textures (or use `pin_mech: sand_tie` for one continuous take with no joins).
 
-### 3. Tiled Upsampler (`upsample: on`) & Standalone Node
-Enlarges the finished film to 2.0 MP in latent chunks and re-draws it with the **Open-H3-Regenerate-2K** LoRA: 3 Euler steps from sigma 0.6 on Regen2K's schedule (`[0.6, 0.48, 0.3, 0]`; 0.8 is the original recipe, sharper but faces drift more), overlapping chunks re-drawn together so joins don't show, sparse attention for speed, at LoRA strength `upsample_denoise` 0.8 (0 only enlarges), each hop's own text prompt as conditioning (`regen2k_cond`), seed 42, 102-frame chunks with 17 shared, tiles sized for your GPU automatically (`upsample_tile_tokens` 0 learns what your card can take; a number fixes it). On by default in the shipped workflows. An optional **HTC Upsample Settings** node on the `upsample_settings` socket exposes every one of those numbers. Toggling `upsample` on a cached chain skips hop generation and runs only the upscaler.
+### 3. Upsample (`upsample: on`) & standalone nodes
+After the last hop the film is sized up to `upsample_megapixels` (default 2.0 MP) in latent chunks and re-drawn. Choose how in **`⚙ RUN` → UPSAMPLE → upsample method**:
+- **`regen2k`** (default): re-draws detail with an **Open-H3-Regenerate-2K** LoRA, picked in **regen2k lora**. 3 Euler steps from sigma 0.6 (0.8 is the original recipe: sharper, but faces drift more), LoRA strength `upsample_denoise` 0.8 (0 only enlarges), each hop's own prompt as conditioning (`regen2k_cond`), seed 42.
+- **`ic`** (in-context): keeps each piece's own frames in view, and hears its soundtrack, while it re-draws, so faces, lettering and mouths stay the film's own. Slower. It needs the plain, unpruned `minimax_h3_ref2va_*` DiT with no LoRAs, on `upsample_dit` (or on the MODEL wire if `upsample_dit` is empty); fl2va, pruned and merged models cannot run it, and the run stops before any hop renders and names the fix. No text encoder is loaded for it.
+- **upsample steps**: `3 (recipe)` or `2 (faster)`, about a third faster and re-draws a little less. Applies to both methods.
+
+Long films are cut into overlapping chunks (102 frames, 17 shared) that are re-drawn together, so the joins don't show; tiles size themselves to your GPU (`upsample_tile_tokens` 0 learns what your card can take; a number fixes it). Sparse attention is used for speed. With a [ComfyUI-KJNodes](https://github.com/kijai/ComfyUI-KJNodes) older than 2026-09-06, sparse attention falls back to dense by itself and the log says so; update KJNodes to get it back. On by default in the shipped workflows. An optional **HTC Upsample Settings** node on the `upsample_settings` socket exposes every number. Toggling `upsample` on a cached chain skips the hops and runs only the upsample.
 
 **Required Files for Upsampling:**
 1. **Latent Upscaler (`ComfyUI/models/latent_upscale_models/`):**
    Download `minimax_h3_latent_upscaler_3d_bf16.safetensors` from [LBH-123-AI/Minimax_h3_latent_Upscaler](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) (or `h3_upscaler_lms_v0.1.safetensors`).
-2. **Regen2K LoRA (`ComfyUI/models/loras/`):**
-   Download [`open_h3_regenerate_2k_r256pp_bf16.safetensors`](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/blob/main/lora/open_h3_regenerate_2k_r256pp_bf16.safetensors) (3.77 GB, a rank-256 compression of NVlabs' [Open-H3-Regenerate-2K](https://huggingface.co/Efficient-Large-Model/Open-H3-Regenerate-2K) LoRA). Pick it (or another Regen2K LoRA) in `upsample_redraw`.
-3. **`upsample_dit` wire (optional):** a separate model for the re-draw, e.g. a plain H3 UNETLoader with no LoRAs. Unwired, the re-draw uses the boost model or the MODEL wire, with hop LoRAs stripped.
+2. **`regen2k` LoRA (`ComfyUI/models/loras/`):**
+   Download [`open_h3_regenerate_2k_r256pp_bf16.safetensors`](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/blob/main/lora/open_h3_regenerate_2k_r256pp_bf16.safetensors) (3.77 GB, a rank-256 compression of NVlabs' [Open-H3-Regenerate-2K](https://huggingface.co/Efficient-Large-Model/Open-H3-Regenerate-2K) LoRA).
+3. **`ic` only (`ComfyUI/models/loras/`):** [`minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16`](https://huggingface.co/Kijai/MiniMax-H3-experimental/blob/main/loras/minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16.safetensors) (200 MB) + [`minimax_h3_hyperflow_8step_v1.0`](https://huggingface.co/videorebirth/hyperflow/blob/main/minimax_h3_hyperflow_8step_v1.0.safetensors) (+ [`minimax_h3_lms_v1.0_r64`](https://huggingface.co/Alissonerdx/Minimax-H3-ComfyUI/blob/main/loras/minimax_h3_lms_v1.0_r64.safetensors) if you have it), and the DiT [`minimax_h3_ref2va_int8_convrot`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors).
+4. **`upsample_dit` wire (optional for `regen2k`):** a separate model for the re-draw, e.g. a plain H3 UNETLoader with no LoRAs. Unwired, the re-draw uses the MODEL wire with the hop LoRAs stripped.
 
 The old h3upscale x2 LoRA is retired: `upsample_lora` is ignored.
 
-*Want to upscale any existing video outside a chain? Use the included **H3 Video Upsampler (file to file)** node (`workflows/HandTieClips_Upsample_Video_File.json`, flat RAM at any length) or **H3 Video Upsampler (finished clip)** (`workflows/HandTieClips_Upsample_Video.json`) or the standalone repo: [sandpies/ComfyUI-H3-Video-Upsampler](https://github.com/sandpies/ComfyUI-H3-Video-Upsampler).*
 
----
+*Want to upscale any existing video outside a chain? Use the included **H3 Video Upsampler (file to file)** node (`workflows/HandTieClips_Upsample_Video_File.json`, flat RAM at any length) or **H3 Video Upsampler (finished clip)** (`workflows/HandTieClips_Upsample_Video.json`) or the standalone repo: [sandpies/ComfyUI-H3-Video-Upsampler](https://github.com/sandpies/ComfyUI-H3-Video-Upsampler).*
 
 ## Quick Start (60 Seconds)
 
