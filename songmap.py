@@ -1591,8 +1591,14 @@ def _torch_hub_bundle_present(filename):
     is enforced only for Whisper and not for the separator.
     """
     root = _torch_cache_root()
-    p = os.path.join(root, "hub", "torchaudio", "models", filename)
-    return os.path.isfile(p), p
+    # torchaudio saves under torch.hub.get_dir() itself (".../torch/hub/torchaudio/
+    # models"); an extra "hub" here meant the weights were never seen as present.
+    # The old spelling is still checked in case an older torchaudio used it.
+    p = os.path.join(root, "torchaudio", "models", filename)
+    if os.path.isfile(p):
+        return True, p
+    old = os.path.join(root, "hub", "torchaudio", "models", filename)
+    return os.path.isfile(old), p
 
 
 def resolve_device(device=None):
@@ -2213,6 +2219,12 @@ def _cache_load(path):
     return None
 
 
+def _heard(sm):
+    """Did a listened map actually hear the song (a vocal stem or any lyric line)?"""
+    return bool(sm) and sm.get("path") == "listened" and bool(
+        sm.get("stem") or sm.get("lines"))
+
+
 def _cache_store(path, sm):
     # A tempo-only result must not overwrite a listened one: the listened entry is
     # strictly more work and the next `listen=True` would silently recompute it.
@@ -2222,8 +2234,10 @@ def _cache_store(path, sm):
         existing = _cache_load(path)
     except Exception:  # noqa: BLE001
         existing = None
-    if existing is not None and (existing.get("path") == "listened") \
-            and sm.get("path") != "listened":
+    # A listen that heard nothing is not worth protecting, so the rule keys on
+    # `_heard`: a tempo-only result or an empty listen never overwrites a listen
+    # that heard the song, and either may replace an empty listen.
+    if existing is not None and _heard(existing) and not _heard(sm):
         return
     try:
         os.makedirs(_CACHE_DIR, exist_ok=True)
@@ -2271,6 +2285,14 @@ def song_map(path, *, listen=False, status=_print, allow_download=False,
     #    check failed on a run whose cache was doing the reporting.
     #
     # So: listen wants a listened entry, and only listen wants one at all.
+    # A listen that heard nothing (no stem, no lines: weights missing) is cached as
+    # "listened" too; replaying it made a later --allow-download run return the
+    # same empty answer without ever trying. Only a listen that heard something
+    # stands in for a new one.
+    if cached is not None and listen and not _heard(cached):
+        status("%s: cached listen heard nothing, listening again"
+               % os.path.basename(path))
+        cached = None
     if cached is not None and (cached.get("path") == "listened") == bool(listen):
         status(f"{os.path.basename(path)}: cached ({cached.get('path')}, "
                f"{cached['bpm']:.2f} BPM)")

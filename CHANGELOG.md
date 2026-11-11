@@ -3,6 +3,13 @@
 User-facing. The files named here are in the repository, not in the installed
 pack — the published package excludes them.
 
+## 3.5.1 — 2026-11-11
+
+### Fixes
+- **Upsample method is now a choice you can see.** The RUN panel's UPSAMPLE group has an **upsample method** select (`regen2k` / `ic`) right before the Regen2K LoRA select. In 3.5.0, `ic` was the last entry of the LoRA list. The LoRA select now lists LoRA files only and is greyed out under `ic`; switching back to `regen2k` restores the LoRA you had picked. Saved workflows load unchanged (the select writes the same `upsample_redraw` value).
+- **Sparse attention with an old ComfyUI-KJNodes.** A KJNodes build from before 2026-09-06 patches the H3 blocks without core's `attention` argument, and the upsampler stopped in block 0 with `unexpected keyword argument 'attention'`. The upsampler now detects this, runs dense attention instead and says so in the log (`dense (ComfyUI-KJNodes is too old for sparse attention: update it)`). Updating KJNodes brings sparse back.
+- **WRITE MV listening.** A song whose cached listen heard nothing (no vocals found, or a failed download) is listened to again instead of reusing the empty result, and an empty listen never overwrites a good one. The Demucs vocal separator weights are now found where torch keeps them.
+
 ## 3.5.0 — 2026-11-11
 
 ### New: `ic` upsample (in-context re-draw)
