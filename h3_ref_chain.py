@@ -2955,11 +2955,14 @@ _HT_PREVIS_FIRST = True
 
 
 def _regen2k_lora_choices():
-    choices = [c for c in _boost_lora_choices() if c != "None"]
-    if REGEN2K_DEFAULT_LORA not in choices:
-        choices = [REGEN2K_DEFAULT_LORA] + choices
+    # The two re-draw methods first (Regen2K default, then ic), so ic is not
+    # option 100+ below every LoRA file in models/loras (user 11-11: "no option
+    # to choose r2k or ic"). Order only; the saved value is the string either way.
+    rest = [c for c in _boost_lora_choices()
+            if c not in ("None", REGEN2K_DEFAULT_LORA, "ic")]
+    choices = [REGEN2K_DEFAULT_LORA, "ic"] + rest
     choices.append("None")
-    for leg in ("regen2k", "recipe", "ic"):
+    for leg in ("regen2k", "recipe"):
         if leg not in choices:
             choices.append(leg)
     return choices

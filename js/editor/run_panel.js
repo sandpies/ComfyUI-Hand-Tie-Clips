@@ -251,6 +251,42 @@ function commitWidget(node, w, value, onChange) {
 // Display names that differ from the widget name with underscores spaced.
 const LABELS = { ht_seam_fix: "seam fix", upsample_redraw: "regen2k lora" };
 
+/* -- upsample method -------------------------------------------------------
+ * upsample_redraw holds BOTH the method and the Regen2K LoRA file ("ic", or a
+ * LoRA name). Left as one combo, `ic` sat as option 100+ under a label saying
+ * "regen2k lora" -- no user would ever find the mode (user 11-11). The panel
+ * shows a UI-only `upsample method` select (regen2k | ic) that writes the same
+ * widget; the LoRA select lists files only and is disabled under ic. Nothing new
+ * is saved: widgets_values keep exactly the strings they always had. */
+export const REDRAW_DEFAULT_LORA = "open_h3_regenerate_2k_r256pp_bf16.safetensors";
+export function redrawMethodOf(value) {
+    const s = String(value ?? "").trim();
+    return (s.toLowerCase() === "ic" || /regenerate_2k_ic/i.test(s)) ? "ic" : "regen2k";
+}
+export function setRedrawMethod(node, w, method) {
+    const props = (node.properties ||= {});
+    if (method === "ic") {
+        if (redrawMethodOf(w.value) !== "ic") props.htc_last_regen2k_lora = String(w.value ?? "");
+        return "ic";
+    }
+    if (redrawMethodOf(w.value) === "regen2k") return String(w.value ?? REDRAW_DEFAULT_LORA);
+    const last = String(props.htc_last_regen2k_lora || "");
+    return last && redrawMethodOf(last) === "regen2k" && !["None", "regen2k", "recipe"].includes(last)
+        ? last : REDRAW_DEFAULT_LORA;
+}
+function redrawMethodField(node, w, onChange) {
+    const s = el("select", "h3e-select");
+    for (const [v, text] of [["regen2k", "regen2k"], ["ic", "ic (in-context, slower)"]]) {
+        const o = el("option", null, text);
+        o.value = v;
+        s.appendChild(o);
+    }
+    s.value = redrawMethodOf(w.value);
+    s.addEventListener("change", () =>
+        commitWidget(node, w, setRedrawMethod(node, w, s.value), onChange));
+    return { input: s, read: () => { s.value = redrawMethodOf(w.value); } };
+}
+
 // Redundant v1 refine plumbing dials hidden in the RUN panel under Universal
 // Refine v2 (their native widgets remain owned/hidden and keep their optimal
 // defaults: same sampler, simple scheduler, base cond, freeze audio, linear
@@ -288,7 +324,7 @@ const REFINE_V2_HIDDEN = new Set([
 // still validate cleanly.
 const HIDDEN_COMBO_OPTIONS = {
     pin_mech: new Set(["addguide", "hand_tie_mc", "windowed"]),
-    upsample_redraw: new Set(["regen2k", "recipe"]),
+    upsample_redraw: new Set(["regen2k", "recipe", "ic"]),
 };
 const COMBO_UI_ALIAS = {
     pin_mech: { hand_tie_mc: "hand_tie", addguide: "auto", windowed: "sand_tie" },
@@ -297,6 +333,9 @@ const COMBO_UI_ALIAS = {
         recipe: "open_h3_regenerate_2k_r256pp_bf16.safetensors",
     },
 };
+
+// Display text for combo options (the saved value stays the raw option).
+const OPTION_TEXT = {};
 
 const BOOST_GROUP_LABELS = {
     realism_boost: "upscale 2nd pass",
@@ -333,16 +372,30 @@ function comboField(node, w, onChange) {
         return alias[sv] || sv;
     };
     const s = el("select", "h3e-select");
+    const shown = OPTION_TEXT[w.name] || {};
     for (const opt of opts) {
         const so = String(opt);
         if (hidden && hidden.has(so)) continue;
-        const o = el("option", null, so);
+        const o = el("option", null, shown[so] || so);
         o.value = so;
         s.appendChild(o);
     }
-    s.value = norm(w.value);
+    // Under the ic method the Regen2K LoRA does not apply: show that, disabled.
+    let icNote = null;
+    if (w.name === "upsample_redraw") {
+        icNote = el("option", null, "(ic uses its own LoRAs)");
+        icNote.value = "ic";
+        s.appendChild(icNote);
+    }
+    const paint = () => {
+        const ic = icNote && redrawMethodOf(w.value) === "ic";
+        if (icNote) icNote.hidden = !ic;
+        s.disabled = Boolean(ic);
+        s.value = ic ? "ic" : norm(w.value);
+    };
+    paint();
     s.addEventListener("change", () => commitWidget(node, w, s.value, onChange));
-    return { input: s, read: () => { s.value = norm(w.value); } };
+    return { input: s, read: paint };
 }
 
 function toggleField(node, w, onChange) {
@@ -640,6 +693,33 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
                     // while omitting the redundant selectors from the RUN panel.
                     owned.push(name);
                     continue;
+                }
+                if (name === "upsample_redraw") {
+                    // UI-only mode switch right before the LoRA select (see
+                    // redrawMethodField). It writes upsample_redraw, so it reads
+                    // and repaints through the same peer list as that widget.
+                    let mRead = null;
+                    const mf = redrawMethodField(node, w, () => {
+                        paintDigest();
+                        for (const m of groupMarks) m();
+                        for (const pr of (peerReaders.get(name) || [])) {
+                            if (pr !== mRead) pr();
+                        }
+                        onChange?.();
+                    });
+                    mRead = mf.read;
+                    if (!peerReaders.has(name)) peerReaders.set(name, []);
+                    peerReaders.get(name).push(mf.read);
+                    const ml = el("label", "h3e-field h3e-run-method");
+                    ml.appendChild(el("span", null, "upsample method"));
+                    ml.appendChild(mf.input);
+                    ml.title = mf.input.title = ("regen2k: the Open-H3-Regenerate-2K LoRA re-draw "
+                        + "(pick the file in regen2k lora). ic: the in-context re-draw that keeps "
+                        + "each piece's own frames and soundtrack in view (faces, text, mouths "
+                        + "stay the film's; slower; needs the IC + HyperFlow LoRAs and the "
+                        + "ref2va DiT on upsample_dit).");
+                    grid.appendChild(ml);
+                    n += 1;
                 }
                 let selfRead = null;
                 // Also re-run every group's off-state mark, so flipping `upsample` to
