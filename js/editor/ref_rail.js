@@ -168,6 +168,7 @@ export function parseRefPlan(text) {
             desc: r.desc || "",
             shots: Array.isArray(r.shots) ? r.shots.slice() : null,
             mp: r.mp == null ? 0 : Number(r.mp) || 0,
+            qwen_mp: r.qwen_mp == null ? 0 : Number(r.qwen_mp) || 0,
             source: r.source === "refmod" ? "refmod" : "image",
             strength: r.strength == null ? 1 : Number(r.strength),
             voice: r.voice || "",
@@ -214,6 +215,8 @@ export function refPlanToJson(plan) {
         // Omitted when uncapped, so a plan authored before this existed round
         // trips byte-identical and no diff appears from merely opening it.
         if (r.mp) out.mp = r.mp;
+        // Same rule: absent is "auto", so old plans round trip unchanged.
+        if (r.qwen_mp) out.qwen_mp = r.qwen_mp;
         // Omitted when empty, so a plan written before row voices existed
         // round trips byte-identical.
         if (r.voice) out.voice = r.voice;
@@ -605,7 +608,7 @@ export function createRefRail(node, { getPlan, setPlan, onChange, hopCount,
             }, {
                 blankLabel: "full",
                 titles: Object.fromEntries(mpOpts.map((v) =>
-                    [String(v), `Cap this picture at ${v} MP before the encoder sees it.`])),
+                    [String(v), `Cap the video model's copy of this picture at ${v} MP.`])),
             });
             mp.classList.add("h3e-mp");
             mp.title = r.source === "refmod"
@@ -614,6 +617,35 @@ export function createRefRail(node, { getPlan, setPlan, onChange, hopCount,
                   + "faster step; 'full' leaves the file alone. Feed a face big and a "
                   + "location plate small.";
             row.appendChild(mp);
+
+            /* What Qwen3-VL (the text encoder) is shown of this picture,
+             * apart from the copy `mp` caps for the video model. Read from
+             * the ORIGINAL file, so it can be bigger than the render.
+             * Blank = auto (qwen_view.py): sheets and garments ~1 MP, props
+             * ~0.15 MP, everything else as Core sends it. Costs a few seconds
+             * of text encode, almost nothing in the sampler. A RefMod row has
+             * no file to read, and puts its strength in this cell instead. */
+            if (r.source !== "refmod") {
+                const qOpts = REF_MP.map(String);
+                if (r.qwen_mp && !qOpts.includes(String(r.qwen_mp))) {
+                    qOpts.push(String(r.qwen_mp));
+                    qOpts.sort((a, b) => Number(a) - Number(b));
+                }
+                const qmp = select(qOpts, r.qwen_mp ? String(r.qwen_mp) : "", (v) => {
+                    r.qwen_mp = v ? Number(v) : 0;
+                    commit();
+                }, {
+                    blankLabel: "auto",
+                    titles: Object.fromEntries(qOpts.map((v) =>
+                        [String(v), `Show the text encoder the original file at ${v} MP.`])),
+                });
+                qmp.classList.add("h3e-qmp");
+                qmp.title = "What the text encoder (Qwen) sees of this picture, read from the "
+                    + "original file. 'auto': character sheets and garments ~1 MP, props "
+                    + "~0.15 MP, plates as rendered. Bigger helps likeness; the video "
+                    + "model's copy (the MP box) is unchanged.";
+                row.appendChild(qmp);
+            }
 
             if (r.source === "refmod") {
                 const strength = el("input", "h3e-input");

@@ -260,6 +260,12 @@
                 "minimum": 0,
                 "maximum": 16.0,
                 "description": "Per-reference pixel budget in MEGApixels, set by the person on the rail. Do not author it: omit the field. It is here so a hand-written plan can carry one, and a written value is discarded on the pinned path. A set value has a 0.3 MP floor and a 16 MP ceiling; 0 means no cap."
+              },
+              "qwen_mp": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 16.0,
+                "description": "How many MEGApixels of this picture the text encoder (Qwen3-VL) is shown, set by the person on the rail. Do not author it: omit the field. 0 or absent means auto."
               }
             }
           },

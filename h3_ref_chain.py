@@ -93,6 +93,7 @@ from . import ht_windows as _htw
 from . import face_pass as _fp
 from . import wtake as _wt
 from . import take as _take
+from . import qwen_view as _qv
 # One definition, in refs.py -- routes.py publishes that copy to the editor, so
 # a second constant here meant the node's slot count and the number the UI was
 # told could drift apart.
@@ -1187,6 +1188,9 @@ def _core_call(node_cls, what, **kw):
     argument, and what that Core actually takes, so the report names the
     problem instead of a traceback.
     """
+    if getattr(node_cls, "__name__", "") == "MiniMaxH3ReferenceToVideo" and kw.get("ref_images"):
+        # Every reference encode passes here: Qwen gets its planned views.
+        kw["clip"] = _qv.wrap(kw.get("clip"), kw["ref_images"])
     try:
         return node_cls.execute(**kw)
     except TypeError as e:
@@ -6828,6 +6832,7 @@ class HandTieClips:
         # and throws it away.
         slot_images = {}
         slot_videos = {}
+        _qv.reset()
         # id(presentation tensor) -> stored DiT block. Built once per run.
         # The hop that cites the row is the only one that receives either.
         refmod_image_blocks = {}
@@ -6899,6 +6904,12 @@ class HandTieClips:
             _im = _media.load_image(_r["file"], cap_mp=_r.get("mp") or 0.0)
             if _im is not None and _im.shape[0] > 0:
                 slot_images[_r["slot"]] = _im[:1]
+                # Qwen's own view of this row (qwen_view.py): sheets from the
+                # original file, props small. The DiT copy above is untouched.
+                _qv.register(slot_images[_r["slot"]], _r.get("retention"),
+                             path=_media.resolve(_r["file"], kinds={"image"}),
+                             render_area=int(width) * int(height), tag=_r["tag"],
+                             qwen_mp=_r.get("qwen_mp") or 0.0)
         _wired_slots = set(slot_images) | set(slot_videos)
 
         # Every @tag, checked against the hop it is written on BEFORE hop 1
@@ -8952,6 +8963,10 @@ class HandTieClips:
                     **({"voices": {t: _store.audio_digest(
                             slot_voices.get(_row_slot[t]))
                         for t in _hop_voice_tags}} if _hop_voice_tags else {}),
+                    # What Qwen is shown apart from the DiT copy (qwen_view.py).
+                    # Absent when nothing differs, so those keys still hit.
+                    **({"qwen_view": _qv.key(hop_images)}
+                       if _qv.key(hop_images) else {}),
                     # A mod voice used to be fused onto its clip. The same
                     # inputs now render it beside, so those hops must miss.
                     **({"voice_bind": "beside"}

@@ -1378,7 +1378,7 @@ def _merge_register(base_text, patch_text, keep=None):
 # in h3_refs. `voice_start` / `voice_end` go with `voice`: a window the
 # writer cannot see is a window Accept would otherwise erase.
 RAIL_ONLY_FIELDS = ("mp", "source", "strength", "voice", "voice_start",
-                    "voice_end")
+                    "voice_end", "qwen_mp")
 
 
 def _restore_rail_only(ref_text, pinned):
@@ -1736,7 +1736,7 @@ def _stub_missing_subjects(ref_text):
     out_refs = []
     for r in refs:
         row = {"tag": r["tag"]}
-        for k in ("file", "subject", "retention", "desc", "shots", "mp"):
+        for k in ("file", "subject", "retention", "desc", "shots", "mp", "qwen_mp"):
             if r.get(k) not in (None, "", [], 0, 0.0):
                 row[k] = r[k]
         # parse_ref_plan fills the defaults in; carry only what differs, or

@@ -984,6 +984,7 @@ const patch = { server_url: url.value, keep_warm: unload.checked };
                     // so the server can put it back, or every write silently
                     // resets every row to "full".
                     mp: r.mp ? Number(r.mp) : null,
+                    qwen_mp: r.qwen_mp ? Number(r.qwen_mp) : null,
                     // Same reason: the rail owns these and the writer never sees
                     // them. Without them Accept turned every RefMod row back into
                     // a still.

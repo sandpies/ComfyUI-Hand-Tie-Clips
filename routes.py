@@ -169,6 +169,10 @@ def _pinned_refs(raw, limit):
             mp = float(r.get("mp") or 0) or None
         except (TypeError, ValueError):
             mp = None
+        try:
+            qwen_mp = float(r.get("qwen_mp") or 0) or None
+        except (TypeError, ValueError):
+            qwen_mp = None
         # `source` / `strength` / `voice` ride for the same reason as `mp`:
         # planner.RAIL_ONLY_FIELDS puts them back. Defaults go up as None so a
         # plain still does not come back with `source: image` written on it.
@@ -196,6 +200,7 @@ def _pinned_refs(raw, limit):
             "retention": str(r.get("retention") or ""),
             "desc": str(r.get("desc") or ""),
             "mp": mp,
+            "qwen_mp": qwen_mp,
             "source": source,
             "strength": strength,
             "voice": voice,

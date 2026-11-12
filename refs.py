@@ -44,7 +44,8 @@ RETENTION = {
 # A plan from before the sockets were removed carries an authored `slot` and no
 # `file`; that is detected, kept as `legacy_slot`, and reported by check().
 REF_FIELDS = ("tag", "file", "slot", "subject", "retention", "desc", "shots",
-              "mp", "source", "strength", "voice", "voice_start", "voice_end")
+              "mp", "source", "strength", "voice", "voice_start", "voice_end",
+              "qwen_mp")
 
 # A video RefMod shares the encoder's three video slots with the MEDIA clips
 # and, on a continuation, the pin clip. Image rows share the nine picture slots.
@@ -272,6 +273,22 @@ def _norm_ref(raw, i):
                   f"ceiling -- this field is MEGApixels, not pixels. Use 0 for "
                   f"no cap.")
 
+    # What Qwen3-VL is shown of this picture (qwen_view.py), apart from the
+    # DiT copy `mp` caps. Absent and 0 are "auto": sheets and garments from
+    # the original at ~1 MP, props small, everything else as Core sends it.
+    # Same floor and ceiling as `mp`, for the same units-mistake reason.
+    qwen_mp = raw.get("qwen_mp")
+    if qwen_mp in (None, "", 0, 0.0):
+        qwen_mp = 0.0
+    else:
+        try:
+            qwen_mp = float(qwen_mp)
+        except (TypeError, ValueError):
+            _fail(f"{where} (@{tag}): qwen_mp {qwen_mp!r} is not a number")
+        if qwen_mp < REF_MP_MIN or qwen_mp > REF_MP_MAX:
+            _fail(f"{where} (@{tag}): qwen_mp {qwen_mp:g} is outside "
+                  f"{REF_MP_MIN:g}-{REF_MP_MAX:g} MP (MEGApixels). Use 0 for auto.")
+
     shots = raw.get("shots")
     if shots is not None:
         if not isinstance(shots, (list, tuple)):
@@ -298,6 +315,7 @@ def _norm_ref(raw, i):
         "desc": str(raw.get("desc") or "").strip(),
         "shots": shots,
         "mp": mp,
+        "qwen_mp": qwen_mp,
         "source": source,
         "strength": strength,
         "voice": voice,
