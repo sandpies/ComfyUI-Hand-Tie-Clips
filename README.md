@@ -112,7 +112,8 @@ Long films are cut into overlapping chunks (102 frames, 17 shared) that are re-d
 
 **Required Files for Upsampling:**
 1. **Latent Upscaler (`ComfyUI/models/latent_upscale_models/`):**
-   Download `minimax_h3_latent_upscaler_3d_bf16.safetensors` from [LBH-123-AI/Minimax_h3_latent_Upscaler](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) (or `h3_upscaler_lms_v0.1.safetensors`).
+   Download [`minimax_h3_latent_upscaler_3d_conv_v1_bf16.safetensors`](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler/blob/main/minimax_h3_latent_upscaler_3d_conv_v1/minimax_h3_latent_upscaler_3d_conv_v1_bf16.safetensors) from [LBH-123-AI/Minimax_h3_latent_Upscaler](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) (the old name `minimax_h3_latent_upscaler_3d_bf16.safetensors` still loads, as does `h3_upscaler_lms_v0.1.safetensors`).
+   Or the 2D one, [`minimax_h3_latent_upscaler_2d_conv_v1_bf16.safetensors`](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler/blob/main/minimax_h3_latent_upscaler_2d_conv_v1/minimax_h3_latent_upscaler_2d_conv_v1_bf16.safetensors) (182M parameters against the 3D one's 345M), picked in `upsample_model`: it takes `upsample_sharpness` 1-6 (1 = most faithful, about the 3D one's look; 6 = sharpest). The standalone upsampler nodes have the same `sharpness` widget.
 2. **`regen2k` LoRA (`ComfyUI/models/loras/`):**
    Download [`open_h3_regenerate_2k_r256pp_bf16.safetensors`](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/blob/main/lora/open_h3_regenerate_2k_r256pp_bf16.safetensors) (3.77 GB, a rank-256 compression of NVlabs' [Open-H3-Regenerate-2K](https://huggingface.co/Efficient-Large-Model/Open-H3-Regenerate-2K) LoRA).
 3. **`ic` only (`ComfyUI/models/loras/`):** [`minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16`](https://huggingface.co/Kijai/MiniMax-H3-experimental/blob/main/loras/minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16.safetensors) (200 MB) + [`minimax_h3_hyperflow_8step_v1.0`](https://huggingface.co/videorebirth/hyperflow/blob/main/minimax_h3_hyperflow_8step_v1.0.safetensors) (+ [`minimax_h3_lms_v1.0_r64`](https://huggingface.co/Alissonerdx/Minimax-H3-ComfyUI/blob/main/loras/minimax_h3_lms_v1.0_r64.safetensors) if you have it), and the DiT [`minimax_h3_ref2va_int8_convrot`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors).
@@ -143,7 +144,7 @@ git clone https://github.com/sandpies/ComfyUI-Hand-Tie-Clips.git
 |---|---|
 | **Turbo / SLA / AdaLN Nodes** | [ComfyUI-PlagueKind-Nodes](https://github.com/PlagueKind/ComfyUI-PlagueKind-Nodes) & [ComfyUI-KJNodes](https://github.com/kijai/ComfyUI-KJNodes) |
 | **Upscaler LoRA & Standalone Pack** | [sandpies/ComfyUI-H3-Video-Upsampler (HF)](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler) · [GitHub](https://github.com/sandpies/ComfyUI-H3-Video-Upsampler) |
-| **3D Latent Upscaler Weights** | [LBH-123-AI/Minimax_h3_latent_Upscaler](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) (`models/latent_upscale_models/`) |
+| **Latent Upscaler Weights (3D / 2D)** | [LBH-123-AI/Minimax_h3_latent_Upscaler](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) (`models/latent_upscale_models/`) |
 | **Hand-Tie Previs Compiler (`models/text_encoders/`)** | [`qwen3vl_4b_fp8_scaled.safetensors` (5.2 GB)](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors) · [`silveroxides/K2Q (4B)`](https://huggingface.co/silveroxides/K2Q/tree/main/qwen3vl_4b) · [`qwen3vl_8b_int8_convrot.safetensors` (9.3 GB)](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors) |
 
 </details>

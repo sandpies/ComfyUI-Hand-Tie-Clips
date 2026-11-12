@@ -2995,6 +2995,16 @@ def _apply_upsample_steps(settings, upsample_steps, redraw_on):
     return {"steps": n}
 
 
+def _apply_upsample_sharpness(settings, sharpness):
+    """upsample_sharpness -> the settings the latent upscale reads. Tier 1 with
+    unwired settings stays None (the shipped recipe, unchanged); the widget
+    wins over any sharpness already in the settings."""
+    n = _tu.clamp_sharpness(sharpness)
+    if n == _tu.SHARPNESS and (settings is None or "sharpness" not in settings):
+        return settings
+    return dict(settings or {}, sharpness=n)
+
+
 def _resolve_regen2k_lora(val):
     s = str(val or "").strip()
     if not s or s in ("regen2k", "recipe"):
@@ -3426,7 +3436,8 @@ def _chain_face_pass(frames, face_src, regen2k_model, vae, audio_vae, face_audio
             r2k_settings.get("chunk_join", _tu.CHAIN_DEFAULTS["chunk_join"]),
             True, r2k_settings.get("tiling", True),
             float(r2k_settings.get("redraw_start", _tu.CHAIN_DEFAULTS["redraw_start"])),
-            str(int(r2k_settings.get("steps", len(_tu.REGEN2K_SIGMAS) - 1))))
+            str(int(r2k_settings.get("steps", len(_tu.REGEN2K_SIGMAS) - 1))),
+            sharpness=int(r2k_settings.get("sharpness", _tu.SHARPNESS)))
         _img, note = _fp.apply(frames[:n], face_src[:n], fn, float(_vu.H3_FPS))
         return note
     except mm.InterruptProcessingException:
@@ -5984,9 +5995,8 @@ class HandTieClips:
                     "default": "off",
                     "tooltip": ("After the last hop, enlarge and sharpen the finished film (H3 "
                                 "latent upscaler, then one light re-draw). Only the delivered "
-                                "video changes. Needs "
-                                "minimax_h3_latent_upscaler_3d_bf16.safetensors in "
-                                "models/latent_upscale_models."),
+                                "video changes. Needs the latent upscaler (upsample_model) "
+                                "in models/latent_upscale_models."),
                 }),
                 "upsample_megapixels": ("FLOAT", {
                     "default": _tu.MEGAPIXELS, "min": 0.1, "max": 16.0, "step": 0.05,
@@ -6014,9 +6024,12 @@ class HandTieClips:
                 }),
                 # APPENDED 2026-10-01, LAST, same positional reason.
                 "upsample_model": (_tu.choices(), {
-                    "default": _tu.UPSCALER_FILE,
+                    "default": _tu.default_upscaler(),
                     "tooltip": ("The latent upscaler upsample enlarges with, from "
-                                "models/latent_upscale_models. h3_upscaler_lms_v0.1 is the same network "
+                                "models/latent_upscale_models (huggingface.co/LBH-123-AI/"
+                                "Minimax_h3_latent_Upscaler). The 3D file is the recipe; the 2D "
+                                "one (minimax_h3_latent_upscaler_2d_conv_v1) takes "
+                                "upsample_sharpness. h3_upscaler_lms_v0.1 is the 3D network "
                                 "fine-tuned on Alissonerdx's sharpness data: a sharper enlarge, which "
                                 "needs less re-draw (try a lower upsample_denoise)."),
                 }),
@@ -6221,6 +6234,14 @@ class HandTieClips:
                                 "side-by-side tests, ic starts later so a little less is "
                                 "re-drawn. A wired upsample_settings node keeps its own steps."),
                 }),
+                # APPENDED 2026-11-12, LAST widget (after upsample_steps in widgets_values).
+                "upsample_sharpness": ("INT", {
+                    "default": _tu.SHARPNESS, "min": 1, "max": _tu.SHARPNESS_MAX, "step": 1,
+                    "tooltip": ("Sharpness of the latent upscaler when upsample_model is the 2D "
+                                f"one ({_tu.UPSCALER_2D_FILE}): 1 = most faithful to the "
+                                "render (softest), 6 = sharpest. Also used by the upscale 2nd "
+                                "pass. The 3D upscaler has no tiers and ignores it."),
+                }),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -6339,7 +6360,7 @@ class HandTieClips:
             regen2k_cond=REGEN2K_DEFAULT_COND,
             audio_model=None,
             upsample_settings=None, cache_location="temp", tone_lock=WT_TONE_DEFAULT,
-            upsample_steps=UPSAMPLE_STEPS[0],
+            upsample_steps=UPSAMPLE_STEPS[0], upsample_sharpness=_tu.SHARPNESS,
             unique_id=None):
         # Every argument, as called: the hand_tie previs-first pass re-runs this
         # same call with dry_run=previs before any hop renders.
@@ -7207,11 +7228,15 @@ class HandTieClips:
         if upsample_on:
             import folder_paths  # noqa: PLC0415
             _tu.register_folder()
-            if not folder_paths.get_full_path(_tu.FOLDER, str(upsample_model)):
+            try:
+                _found_up = _tu.resolve_upscaler(upsample_model)[0]
+            except RuntimeError as _ue:
                 raise RuntimeError(
                     f"{TAG}: {'upscale 2nd pass' if boost_pass_on else 'upsample'} is on "
-                    f"but {upsample_model} is not in models/{_tu.FOLDER} "
-                    "(huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler).")
+                    f"but {_ue}") from None
+            if _found_up != str(upsample_model):
+                print(f"[{TAG}] upsample_model {upsample_model}: installed as {_found_up} "
+                      "(the same 3D weights, renamed on HF 2026-11-10)", flush=True)
             _uw, _uh = _tu.target_size(int(width), int(height),
                                        float(upsample_megapixels))
             _bw, _bh = _tu.target_size(int(width), int(height), float(boost_mp))
@@ -7235,6 +7260,8 @@ class HandTieClips:
                     refine_model=refine_model, regen2k_cond=regen2k_cond)
                 upsample_settings = _apply_upsample_steps(
                     upsample_settings, upsample_steps, regen2k_on)
+                upsample_settings = _apply_upsample_sharpness(
+                    upsample_settings, upsample_sharpness)
                 _ud = float(upsample_denoise)
                 if _ud <= 0.0:
                     print(f"[{TAG}] upsample_denoise 0: no re-draw, the enlarged "
@@ -10485,6 +10512,7 @@ class HandTieClips:
                         "steps": int(boost_steps),
                         "chunking": bool(boost_chunking),
                         "tiling": bool(boost_chunking),
+                        "sharpness": _tu.clamp_sharpness(upsample_sharpness),
                     }
                     _boost_den = _boost_auto_denoise(int(boost_steps))
                     _boost_out_hops = [] if real_upsample_on else None

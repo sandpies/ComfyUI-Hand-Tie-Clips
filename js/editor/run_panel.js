@@ -143,7 +143,7 @@ const GROUPS = [
     // steps, audio_refine -> 2nd pass chunking) so Upscale 2nd Pass and
     // Upsample (Regen2K) are completely separate stages.
     ["upscale 2nd pass", ["realism_boost",
-                          "audio_denoise", "upsample_model",
+                          "audio_denoise", "upsample_model", "upsample_sharpness",
                           "audio_steps", "audio_refine",
                           "boost_lora_1", "boost_lora_1_strength",
                           "boost_lora_2", "boost_lora_2_strength",
@@ -152,7 +152,7 @@ const GROUPS = [
     // After the last hop, over the whole film: it changes what is delivered,
     // never what a hop is generated from, so it sits after every group that
     // does.
-    ["upsample", ["upsample", "upsample_model", "upsample_megapixels",
+    ["upsample", ["upsample", "upsample_model", "upsample_sharpness", "upsample_megapixels",
                   "upsample_denoise", "upsample_lora", "upsample_lora_strength",
                   "upsample_tile_tokens",
                   "upsample_redraw", "upsample_steps", "regen2k_seed", "regen2k_cond"]],
@@ -341,6 +341,7 @@ const BOOST_GROUP_LABELS = {
     realism_boost: "upscale 2nd pass",
     audio_denoise: "2nd pass megapixels",
     upsample_model: "2nd pass upscaler",
+    upsample_sharpness: "2nd pass upscaler sharpness",
     audio_steps: "2nd pass steps",
     audio_refine: "2nd pass chunking",
     boost_lora_1: "2nd pass lora 1",
