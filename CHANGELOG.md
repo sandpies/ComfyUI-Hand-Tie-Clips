@@ -3,6 +3,31 @@
 User-facing. The files named here are in the repository, not in the installed
 pack — the published package excludes them.
 
+## 4.0.0 — 2026-11-16
+
+### New
+- **No external attention / AdaLN packs needed.** `HTCSparseAttention` (sparse + low-VRAM attention on Comfy Kitchen), a built-in AdaLN LoRA port (in `HTCTokenLoRA`, the upsamplers and realism boost, plus the `HTCAdaLNFix` node) and built-in low-VRAM head/FFN chunking for the upsampler. The Starter workflow now uses `HTCSparseAttention` + `HTCTokenLoRA` instead of PlagueKind's SLA / AdaLN / LowVRAM nodes and LTX's LoRA loader. Your own workflows keep whatever nodes they use.
+- **SandTie PromptRig.** The STANDARD tab is now SandTie Scribe (19 dials, Reference Bible, Eye Scan, Video → Beats), and the same rig ships as the `SandTiePromptRig` node: prompt only for a stock H3 node, or direct `positive` + `latent`.
+- **Control Room UI.** The node editor is reorganised into tabs (Script, Refs, Timeline, Media, Write, Swap, Standard, Run, Studio) with split / retake / focus layouts and dock or floating studio windows.
+- **Studio tab (music videos).** Concept + lyrics from your local writer, song generation through an installed YuE2 node, beat/section editor, asset image graphs, and hand-off to WRITE. Everything it needs is optional and detected.
+- **WRITE plans blocking first.** Plans of 2+ hops write a continuity sheet (spots, start → end per hop, cuts) before the beats, read the start image, and lint screen direction, cut joins and camera conflicts (warnings only).
+- **RefMods.** Multi-picture bundles (each still keeps its aspect and its own `<Picture>`), embedded voice latents, RefLoRA files from `models/loras/`, per-shot strength, step curves (`early_lock`, `late_detail`, `fade`, `mid_peak`), yaw-based member picking, rembg or SAM cut-outs with blurred backgrounds, thumbnails and header edits from the REFS tab.
+- **Tone:** `chroma` mode for `tone_compensate` and sand_tie `tone_lock` holds colour balance and saturation while leaving face brightness alone.
+- **Upsampler:** `chunk_join = windowed` uses core context windows (needs a ComfyUI with MiniMax H3 context windows).
+- **Steering dials:** `HTCSteeringDials` / `HTCMakeSteeringDial` (see README).
+- **Lip-sync to vocals:** with `master_audio_file` set and `dialogue_lock = off`, `dialogue_audio_file = auto:vocals` (or a vocal stem file) drives the mouths from the vocals; the delivered MP4 keeps the full mix.
+- **Diagnostics:** `info` and the preview card report seam health (colour / brightness / MAD jump at each join) and motion overload.
+
+### Changed
+- Encoding is batched: reference VAE encodes, Qwen encodes and text-encoder offloads are grouped so fewer model swaps happen per chain.
+- The nInfer writer reads `.ninfer` headers (ternary / text-only builds start correctly), takes a model folder, and has a context-size setting.
+
+### Experimental (off by default)
+- sand_tie `WT_PIN_MODE = "tail5"`, Late-Lock take anchor (`WT_ANCHOR_LATE_PROG`) and the swap `<Video 1>` fade (`SWAP_VIDEO_FADE`) are module switches in `h3_ref_chain.py`, off until tested. Off keeps 3.5.1's take cache keys.
+
+### Fixes
+- Sparse attention, FFN chunking and steering dials fall back safely on a ComfyUI-KJNodes older than 2026-09-06 instead of stopping in block 0.
+
 ## 3.5.1 — 2026-11-11
 
 ### Fixes

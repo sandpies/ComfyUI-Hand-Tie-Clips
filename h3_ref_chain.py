@@ -1188,9 +1188,15 @@ def _core_call(node_cls, what, **kw):
     argument, and what that Core actually takes, so the report names the
     problem instead of a traceback.
     """
-    if getattr(node_cls, "__name__", "") == "MiniMaxH3ReferenceToVideo" and kw.get("ref_images"):
-        # Every reference encode passes here: Qwen gets its planned views.
-        kw["clip"] = _qv.wrap(kw.get("clip"), kw["ref_images"])
+    if getattr(node_cls, "__name__", "") == "MiniMaxH3ReferenceToVideo":
+        if kw.get("ref_images"):
+            # Every reference encode passes here: Qwen gets its planned views.
+            kw["clip"] = _qv.wrap(kw.get("clip"), kw["ref_images"])
+        for _vk in ("vae", "audio_vae"):
+            _v = kw.get(_vk)
+            _w = getattr(_v, "_for_ref2va", None)
+            if callable(_w):
+                kw[_vk] = _w(kw)
     try:
         return node_cls.execute(**kw)
     except TypeError as e:
@@ -1224,12 +1230,42 @@ class _EncodeCache:
         self._cache = {}
         self.hits = 0
         self.misses = 0
+        self._refmod_mode = None
+        self._refmod_img_ids = None
+        self._refmod_vid_ids = None
+        self._refmod_aud_ids = None
+
+    def _for_ref2va(self, kw):
+        if self._refmod_mode == "vis" and (self._refmod_img_ids or self._refmod_vid_ids):
+            flags = (
+                [id(t) in (self._refmod_img_ids or ()) for t in (kw.get("ref_images") or {}).values() if t is not None]
+                + [id(t) in (self._refmod_vid_ids or ()) for t in (kw.get("ref_videos") or {}).values() if t is not None]
+            )
+            if any(flags):
+                return _SkipRefModEncode(self, flags, (1, 24, 1, 2, 2))
+        elif self._refmod_mode == "aud" and self._refmod_aud_ids:
+            flags = []
+            va = kw.get("ref_video_audios") or {}
+            for k, vf in (kw.get("ref_videos") or {}).items():
+                if vf is None:
+                    continue
+                if va.get("ref_video_audio_" + str(k).rsplit("_", 1)[-1]) is not None:
+                    flags.append(False)
+            for a in (kw.get("ref_audios") or {}).values():
+                if a is not None:
+                    flags.append(id(a) in self._refmod_aud_ids)
+            if any(flags):
+                return _SkipRefModEncode(self, flags, (1, 32, 2, 1))
+        return self
 
     @staticmethod
     def _key(inner_id, x):
         c = x.detach().cpu().contiguous().reshape(-1)
-        digest = hashlib.sha1(c.view(torch.uint8).numpy().tobytes()).hexdigest()
+        digest = hashlib.sha1(memoryview(c.view(torch.uint8).numpy())).hexdigest()
         return (inner_id, tuple(x.shape), str(x.dtype), digest)
+
+    def has_cached(self, x):
+        return self._key(id(self._inner), x) in self._cache
 
     def encode(self, x):
         k = self._key(id(self._inner), x)
@@ -1245,6 +1281,80 @@ class _EncodeCache:
 
     def __getattr__(self, name):
         return getattr(self._inner, name)
+
+
+class _SkipRefModEncode:
+    """Wrap a VAE/AudioVAE for MiniMaxH3ReferenceToVideo so pre-encoded RefMod
+    slots return a zero-cost CPU placeholder instead of staging and running the
+    VAE on GPU only for `refmod.splice_blocks()` to discard the result.
+    """
+
+    def __init__(self, inner, skip_flags, dummy_shape):
+        self._inner = inner
+        self._skip_flags = list(skip_flags)
+        self._dummy_shape = dummy_shape
+        self._idx = 0
+
+    def encode(self, x):
+        i = self._idx
+        self._idx += 1
+        if i < len(self._skip_flags) and self._skip_flags[i]:
+            return torch.zeros(self._dummy_shape, dtype=torch.float32)
+        return self._inner.encode(x)
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+
+_QWEN_COND_CACHE = {}
+_QWEN_COND_CACHE_MAX = 2
+
+
+def _clone_lat_copy(lat):
+    if not isinstance(lat, dict) or "samples" not in lat:
+        return lat
+    out = dict(lat)
+    s = lat["samples"]
+    try:
+        import comfy.nested_tensor as nt  # noqa: PLC0415
+        if hasattr(s, "unbind"):
+            out["samples"] = nt.NestedTensor([t.detach().cpu().clone() for t in s.unbind()])
+        elif hasattr(s, "clone"):
+            out["samples"] = s.detach().cpu().clone()
+    except Exception:
+        out = _latent_cpu(lat)
+    return out
+
+
+def _qwen_cond_key(node_cls, clip, ref_vae, ref_audio_vae, prompt, w, h, length,
+                   ref_image_size, imgs, vids, vauds, auds, vis_skip, aud_skip):
+    patcher = getattr(clip, "patcher", None)
+    if patcher is None:
+        return None
+    v_id = id(getattr(ref_vae, "_inner", ref_vae)) if (ref_vae is not None and not all(vis_skip)) else 0
+    a_id = id(getattr(ref_audio_vae, "_inner", ref_audio_vae)) if (ref_audio_vae is not None and not all(aud_skip)) else 0
+    qvk = _qv.key(imgs)
+    qvk_str = json.dumps(qvk, sort_keys=True) if qvk else ""
+    puuid = getattr(patcher, "patches_uuid", None)
+    return (
+        id(node_cls),
+        id(patcher),
+        str(puuid) if puuid is not None else "",
+        v_id,
+        a_id,
+        tuple(bool(x) for x in (vis_skip or ())),
+        tuple(bool(x) for x in (aud_skip or ())),
+        str(prompt),
+        int(w),
+        int(h),
+        int(length),
+        str(ref_image_size),
+        qvk_str,
+        tuple((str(k), _store.tensor_digest(t)) for k, t in sorted((imgs or {}).items())),
+        tuple((str(k), _store.tensor_digest(t)) for k, t in sorted((vids or {}).items())),
+        tuple((str(k), _store.audio_digest(a)) for k, a in sorted((vauds or {}).items())),
+        tuple((str(k), _store.audio_digest(a)) for k, a in sorted((auds or {}).items())),
+    )
 
 
 def _validate_anchors(shots, start_image_file):
@@ -2191,24 +2301,296 @@ def _push_preview(unique_id, status, frame=None, hop=0, total=0,
     _PREVIEW.submit(payload, frames)
 
 
+def _clip_on_device(patcher, target_dev):
+    if patcher is None:
+        return False
+    target_str = str(target_dev)
+    base_uuid = getattr(patcher, "clone_base_uuid", None)
+    for lm in getattr(mm, "current_loaded_models", None) or ():
+        lm_m = getattr(lm, "model", None)
+        if lm_m is None:
+            continue
+        same = (lm_m is patcher) or (
+            base_uuid is not None and getattr(lm_m, "clone_base_uuid", None) == base_uuid
+        )
+        if not same:
+            continue
+        try:
+            if int(lm.model_loaded_memory() or 0) > 0:
+                return True
+        except Exception:
+            pass
+        try:
+            cur = lm_m.current_loaded_device()
+            if cur is not None and getattr(cur, "type", "cpu") != "cpu" and str(cur) == target_str:
+                return True
+        except Exception:
+            pass
+    try:
+        if int(patcher.loaded_size() or 0) > 0:
+            return True
+    except Exception:
+        pass
+    try:
+        cur_dev = patcher.current_loaded_device()
+        if cur_dev is not None and getattr(cur_dev, "type", "cpu") != "cpu" and str(cur_dev) == target_str:
+            return True
+    except Exception:
+        pass
+    m = getattr(patcher, "model", None)
+    if m is not None and hasattr(m, "parameters"):
+        try:
+            for p in m.parameters():
+                if getattr(p.device, "type", "cpu") != "cpu" and str(p.device) == target_str:
+                    return True
+        except Exception:
+            pass
+    return False
+
+
 def _offload_text_encoder(clip, model):
-    te_dev = getattr(clip.patcher, "load_device", None)
+    if clip is None or getattr(clip, "patcher", None) is None:
+        return
+    patcher = clip.patcher
+    te_dev = getattr(patcher, "load_device", None)
     dit_dev = getattr(model, "load_device", None)
     if te_dev is not None and dit_dev is not None and str(te_dev) != str(dit_dev):
         return
-    try:
-        clip.patcher.model.to(mm.text_encoder_offload_device())
-    except Exception as e:
-        print(f"[{TAG}] TE offload skipped: {e}", flush=True)
+    offload_dev = mm.text_encoder_offload_device()
+    if te_dev is not None and str(te_dev) == str(offload_dev):
         return
     try:
         dev = mm.get_torch_device()
-        mm.free_memory(mm.get_total_memory(dev) * 0.9, dev)
+    except Exception:
+        dev = te_dev
+    if dev is not None and getattr(dev, "type", "cpu") == "cpu":
+        return
+    # Guard against evicting the DiT/VAE when CLIP was never loaded onto GPU
+    # (e.g., pre-encoded hops or cached runs): nothing to offload means 0 ms.
+    if hasattr(patcher, "loaded_size") and not _clip_on_device(patcher, dev):
+        return
+
+    unloaded = False
+    if hasattr(mm, "unload_model_and_clones") and hasattr(patcher, "clone_base_uuid"):
+        try:
+            mm.unload_model_and_clones(patcher)
+            unloaded = True
+        except Exception:
+            unloaded = False
+
+    if not unloaded:
+        try:
+            patcher.model.to(offload_dev)
+        except Exception as e:
+            print(f"[{TAG}] TE offload skipped: {e}", flush=True)
+            return
+        try:
+            keep = []
+            base_uuid = getattr(patcher, "clone_base_uuid", None)
+            for lm in list(getattr(mm, "current_loaded_models", None) or ()):
+                lm_m = getattr(lm, "model", None)
+                if lm_m is not None and (
+                    lm_m is patcher
+                    or (base_uuid is not None and getattr(lm_m, "clone_base_uuid", None) == base_uuid)
+                ):
+                    continue
+                keep.append(lm)
+            mm.free_memory(1e30, dev, keep_loaded=keep)
+        except Exception as e:
+            print(f"[{TAG}] VRAM purge skipped: {e}", flush=True)
+    else:
+        try:
+            m = getattr(patcher, "model", None)
+            if m is not None and hasattr(m, "parameters"):
+                if any(getattr(p.device, "type", "cpu") != "cpu" for p in m.parameters()):
+                    m.to(offload_dev)
+        except Exception:
+            pass
+
+    try:
         mm.soft_empty_cache()
         free = mm.get_free_memory(dev) / (1024 ** 3)
         print(f"[{TAG}] TE evicted; {free:.1f} GB free for the DiT", flush=True)
     except Exception as e:
         print(f"[{TAG}] VRAM purge skipped: {e}", flush=True)
+
+
+def _offload_vae(vae_obj):
+    if vae_obj is None:
+        return
+    inner = getattr(vae_obj, "_inner", vae_obj)
+    patcher = getattr(inner, "patcher", None)
+    if patcher is None:
+        return
+    try:
+        dev = mm.get_torch_device()
+    except Exception:
+        dev = getattr(patcher, "load_device", None)
+    if dev is not None and getattr(dev, "type", "cpu") == "cpu":
+        return
+    if hasattr(patcher, "loaded_size") and not _clip_on_device(patcher, dev):
+        return
+    unloaded = False
+    if hasattr(mm, "unload_model_and_clones") and hasattr(patcher, "clone_base_uuid"):
+        try:
+            mm.unload_model_and_clones(patcher)
+            unloaded = True
+        except Exception:
+            unloaded = False
+    if not unloaded:
+        try:
+            patcher.unpatch_model(device_to=getattr(patcher, "offload_device", torch.device("cpu")))
+            unloaded = True
+        except Exception:
+            pass
+    if unloaded:
+        try:
+            mm.soft_empty_cache()
+        except Exception:
+            pass
+
+
+def _prewarm_ref2va_batch(specs, ref_vae, ref_audio_vae, *, clip=None, model=None,
+                          skip_img_ids=(), skip_vid_ids=(), skip_aud_ids=()):
+    """Stage 1 (VideoVAE once -> offload) + Stage 2 (AudioVAE once -> offload)
+    across a batch of Ref2VA specs before Qwen3-VL 32B loads into VRAM."""
+    if not specs or (ref_vae is None and ref_audio_vae is None):
+        return
+    if getattr(MiniMaxH3ReferenceToVideo, "__module__", "") != "comfy_extras.nodes_minimax_h3":
+        return
+    can_vis = (ref_vae is not None
+               and hasattr(ref_vae, "has_cached")
+               and callable(getattr(getattr(ref_vae, "_inner", ref_vae), "encode", None)))
+    can_aud = (ref_audio_vae is not None
+               and hasattr(ref_audio_vae, "has_cached")
+               and callable(getattr(getattr(ref_audio_vae, "_inner", ref_audio_vae), "encode", None)))
+    if not can_vis and not can_aud:
+        return
+    has_any_vis = can_vis and any(
+        any(t is not None and id(t) not in skip_img_ids for t in (sp[4] or {}).values())
+        or any(t is not None and id(t) not in skip_vid_ids for t in (sp[5] or {}).values())
+        for sp in specs
+    )
+    has_any_aud = can_aud and any(
+        (can_vis and any(
+            vf is not None
+            and (sp[6] or {}).get("ref_video_audio_" + str(k).rsplit("_", 1)[-1]) is not None
+            and id((sp[6] or {}).get("ref_video_audio_" + str(k).rsplit("_", 1)[-1])) not in skip_aud_ids
+            for k, vf in (sp[5] or {}).items()
+        ))
+        or any(a is not None and id(a) not in skip_aud_ids for a in (sp[7] or {}).values())
+        for sp in specs
+    )
+    if not has_any_vis and not has_any_aud:
+        return
+    try:
+        from comfy_extras.nodes_minimax_h3 import (  # noqa: PLC0415
+            CANVAS_MULTIPLE as _H3_CANVAS_MULT,
+            REF_IMAGE_SHORT_EDGE as _H3_REF_SHORT,
+            adapt_canvas as _h3_adapt_canvas,
+            temporal_shape as _h3_temporal_shape,
+            _resize as _h3_resize,
+        )
+    except Exception:
+        return
+
+    offloaded_te = False
+
+    # Stage 1: VideoVAE across all entries (resident once, then offloaded)
+    if has_any_vis:
+        vis_misses_0 = ref_vae.misses
+        seen_vis = set()
+        for w_canv, h_canv, rlen, ref_sz, imgs, vids, _vauds, _auds in specs:
+            for img in (imgs or {}).values():
+                if img is None or id(img) in skip_img_ids:
+                    continue
+                op_k = ("img", id(img), int(w_canv), int(h_canv), str(ref_sz))
+                if op_k in seen_vis:
+                    continue
+                seen_vis.add(op_k)
+                ih, iw = int(img.shape[1]), int(img.shape[2])
+                if str(ref_sz) == "match":
+                    scale = min(1.0, math.sqrt((int(w_canv) * int(h_canv)) / (iw * ih)))
+                else:
+                    scale = min(1.0, float(_H3_REF_SHORT) / min(iw, ih))
+                tw = max(_H3_CANVAS_MULT, round(iw * scale / _H3_CANVAS_MULT) * _H3_CANVAS_MULT)
+                th = max(_H3_CANVAS_MULT, round(ih * scale / _H3_CANVAS_MULT) * _H3_CANVAS_MULT)
+                resized = _h3_resize(img[:1], tw, th, "disabled")
+                if not ref_vae.has_cached(resized):
+                    if not offloaded_te:
+                        _offload_text_encoder(clip, model)
+                        offloaded_te = True
+                    ref_vae.encode(resized)
+                del resized
+            for vf in (vids or {}).values():
+                if vf is None or id(vf) in skip_vid_ids:
+                    continue
+                op_k = ("vid", id(vf), int(rlen))
+                if op_k in seen_vis:
+                    continue
+                seen_vis.add(op_k)
+                fc = _h3_temporal_shape(int(rlen))[0]
+                vh, vw = int(vf.shape[1]), int(vf.shape[2])
+                cw, ch = _h3_adapt_canvas(vw, vh)
+                if vw * vh < cw * ch:
+                    cw = max(_H3_CANVAS_MULT, round(vw / _H3_CANVAS_MULT) * _H3_CANVAS_MULT)
+                    ch = max(_H3_CANVAS_MULT, round(vh / _H3_CANVAS_MULT) * _H3_CANVAS_MULT)
+                frames = _h3_resize(vf, cw, ch, "disabled")
+                if frames.shape[0] > fc:
+                    frames = frames[:fc]
+                nf = int(frames.shape[0])
+                if nf >= 5:
+                    while nf % 17 != 5:
+                        nf -= 1
+                    frames = frames[:nf]
+                    if not ref_vae.has_cached(frames):
+                        if not offloaded_te:
+                            _offload_text_encoder(clip, model)
+                            offloaded_te = True
+                        ref_vae.encode(frames)
+                del frames
+        if ref_vae.misses > vis_misses_0:
+            _offload_vae(ref_vae)
+
+    # Stage 2: AudioVAE across all entries (resident once, then offloaded)
+    if has_any_aud:
+        aud_misses_0 = ref_audio_vae.misses
+        vae_sr = int(getattr(ref_audio_vae, "audio_sample_rate", 32000))
+        seen_aud = set()
+        aud_items = []
+        for _w_c, _h_c, _rlen, _rsz, _imgs, vids, vauds, auds in specs:
+            if can_vis:
+                for vk, vf in (vids or {}).items():
+                    if vf is None:
+                        continue
+                    st = (vauds or {}).get("ref_video_audio_" + str(vk).rsplit("_", 1)[-1])
+                    if st is not None and id(st) not in skip_aud_ids and isinstance(st, dict) and torch.is_tensor(st.get("waveform")):
+                        ak = (id(st["waveform"]), int(st.get("sample_rate") or vae_sr), vae_sr)
+                        if ak not in seen_aud:
+                            seen_aud.add(ak)
+                            aud_items.append(st)
+            for a in (auds or {}).values():
+                if a is not None and id(a) not in skip_aud_ids and isinstance(a, dict) and torch.is_tensor(a.get("waveform")):
+                    ak = (id(a["waveform"]), int(a.get("sample_rate") or vae_sr), vae_sr)
+                    if ak not in seen_aud:
+                        seen_aud.add(ak)
+                        aud_items.append(a)
+        if aud_items:
+            import comfy.audio as _ca  # noqa: PLC0415
+            for a in aud_items:
+                wf = a["waveform"]
+                asr = int(a.get("sample_rate") or vae_sr)
+                if asr != vae_sr:
+                    wf = _ca.resample(wf, asr, vae_sr)
+                x_in = wf[:1].movedim(1, -1)
+                if not ref_audio_vae.has_cached(x_in):
+                    if not offloaded_te:
+                        _offload_text_encoder(clip, model)
+                        offloaded_te = True
+                    ref_audio_vae.encode(x_in)
+                del x_in, wf
+        if ref_audio_vae.misses > aud_misses_0:
+            _offload_vae(ref_audio_vae)
 
 
 def _ram_room(nbytes, label, evict_active=False):
@@ -2292,22 +2674,25 @@ def _resample_wav(wav, src_sr, dst_sr):
     return _music.resample(wav, src_sr, dst_sr)
 
 
+_MASTER_AUDIO_CACHE = {}
+
+
 def _prepare_master_audio(path, start_s=0.0):
-    """Load the take once: stereo, native rate kept, plus a 32 kHz copy.
+    """Load the take once: stereo, native rate kept, plus a 32 kHz copy."""
+    resolved = _media.resolve(path, kinds={"audio", "video"})
+    off_req = max(0.0, float(start_s or 0.0))
+    cache_key = None
+    if resolved:
+        try:
+            st = os.stat(resolved)
+            cache_key = (os.path.normcase(os.path.normpath(resolved)), int(st.st_mtime_ns),
+                         int(st.st_size), round(off_req, 6))
+            hit = _MASTER_AUDIO_CACHE.get(cache_key)
+            if hit is not None:
+                return dict(hit)
+        except OSError:
+            cache_key = None
 
-    `start_s` drops the head of the file, and it is applied HERE rather than at
-    the three places the take is sliced -- the hop encode, the pin the next hop
-    inherits, and the delivered passthrough. Cutting once at load leaves the
-    chain's own clock 0-based, so `hop_audio_window_s`, the length guard and
-    the passthrough all keep reading exactly as they did; three offsets applied
-    at three call sites is the arithmetic that eventually disagrees with itself
-    by one hop. It also means the digest is taken AFTER the cut, so sliding the
-    window invalidates the hop cache without anything being added to the salt.
-
-    The window's WIDTH is not a parameter. It is `total_frames / FPS`, decided
-    by duration x shots - overlap, so there is nothing here to choose but where
-    it opens.
-    """
     got = _media.load_audio(path)
     if got is None:
         raise ValueError(
@@ -2316,7 +2701,7 @@ def _prepare_master_audio(path, start_s=0.0):
     wav = _alock.force_stereo(got["waveform"].contiguous().cpu())
     sr = int(got["sample_rate"])
     full_s = float(wav.shape[-1]) / float(sr) if sr else 0.0
-    off = max(0.0, float(start_s or 0.0))
+    off = off_req
     if off > 0.0:
         cut = int(round(off * sr))
         if cut >= int(wav.shape[-1]):
@@ -2325,8 +2710,6 @@ def _prepare_master_audio(path, start_s=0.0):
                 f"master_audio_file is {full_s:.2f}s long, so the window "
                 f"opens past the end of the take.")
         wav = wav[..., cut:].contiguous()
-        # To the sample, not to the widget: a 0.1-step slider on a 48 kHz file
-        # rounds, and the printed number should be the cut that happened.
         off = cut / float(sr)
     wav32 = _resample_wav(wav, sr, _alock.VAE_SR)
     digest = _store.audio_digest({"waveform": wav, "sample_rate": sr})
@@ -2335,8 +2718,47 @@ def _prepare_master_audio(path, start_s=0.0):
           + (f"; window opens at {off:.2f}s, "
              f"{wav.shape[-1] / sr:.2f}s usable" if off > 0.0 else ""),
           flush=True)
-    return {"path": path, "wav": wav, "sr": sr, "wav32": wav32,
-            "digest": digest, "offset": off, "full_s": full_s}
+    res = {"path": path, "wav": wav, "sr": sr, "wav32": wav32,
+           "wav32_driver": wav32, "driver_note": "",
+           "digest": digest, "offset": off, "full_s": full_s}
+    if cache_key is not None:
+        if len(_MASTER_AUDIO_CACHE) >= 2:
+            _MASTER_AUDIO_CACHE.pop(next(iter(_MASTER_AUDIO_CACHE)), None)
+        _MASTER_AUDIO_CACHE[cache_key] = dict(res)
+    return res
+
+
+def _with_master_audio_driver(locked, driver_spec=""):
+    """Attach optional vocal-stem lip-sync driver while keeping `wav` as unmodified mix."""
+    drv_raw = str(driver_spec or "").strip()
+    if locked is None or not drv_raw:
+        return locked
+    out = dict(locked)
+    wav, sr, off = out["wav"], int(out["sr"]), float(out.get("offset") or 0.0)
+    if drv_raw.lower() in ("auto:vocals", "__auto_vocals__", "vocals"):
+        voc, vnote = _alock.separate_vocals_driver(wav, sr, cache_key=f"{out['digest']}:vocals")
+        if voc is not None:
+            out["wav32_driver"] = _resample_wav(_alock.force_stereo(voc), sr, _alock.VAE_SR)
+            out["digest"] = _store.audio_digest({"waveform": voc, "sample_rate": sr}) + "+voc"
+            out["driver_note"] = f"; lip-sync driver = {vnote}"
+        else:
+            out["driver_note"] = f"; vocal driver fallback to full mix ({vnote})"
+    else:
+        got_d = _media.load_audio(drv_raw)
+        if got_d is None:
+            raise ValueError(
+                f"{TAG}: vocal lip-sync driver {drv_raw!r} did not load from h3_refs/.")
+        dwav = _alock.force_stereo(got_d["waveform"].contiguous().cpu())
+        dsr = int(got_d["sample_rate"])
+        if off > 0.0:
+            dcut = min(int(dwav.shape[-1]), int(round(off * dsr)))
+            dwav = dwav[..., dcut:].contiguous()
+        dwav = _alock.fit_samples(dwav, max(1, int(round(float(wav.shape[-1]) / float(sr) * dsr))))
+        out["wav32_driver"] = _resample_wav(dwav, dsr, _alock.VAE_SR)
+        out["digest"] = _store.audio_digest({"waveform": dwav, "sample_rate": dsr}) + "+stem"
+        out["driver_note"] = f"; lip-sync driver = {drv_raw!r} (final MP4 keeps full mix)"
+    print(f"[{TAG}] master_audio_file{out['driver_note']}", flush=True)
+    return out
 
 
 def _encode_locked_slice(audio_vae, wav32, t0, t1, audio_latent_len):
@@ -3327,9 +3749,10 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
         if isinstance(cf_val, _tu._DefaultInt) and r2k_sigmas is not None:
             cf_plan, _ = _tu._regen2k_chunk_frames(
                 w_px, h_px, _plan_budget, overlap_px=ov_px)
-        if (r2k_settings.get("chunking") is False
-                and _tu.seq_len(w_px, h_px, int(sv.shape[2]))
-                <= _tu.WHOLE_CLIP_MAX * int(_plan_budget)):
+        if (r2k_settings.get("chunk_join") == "windowed"
+                or (r2k_settings.get("chunking") is False
+                    and _tu.seq_len(w_px, h_px, int(sv.shape[2]))
+                    <= _tu.WHOLE_CLIP_MAX * int(_plan_budget))):
             n_chunks += 1
         elif r2k_sigmas is not None:
             n_chunks += len(_tu.regen2k_chunks(
@@ -3470,12 +3893,12 @@ def _boost_model(model, loras):
     Built from the model AFTER the sigma shift, so both stages sample the same
     noise curve -- the stage-2 hand-off only cancels if they do. The LoRAs
     land after the drawn speed stack, as the original's Final stack does: turbo
-    stays under them. Then the AdaLN port, when PlagueKind's node is installed,
+    stays under them. Then the built-in MIT AdaLN port (`htc_adaln.fix_model`),
     because a dense LoRA on a pruned base otherwise drops its 51 AdaLN keys
-    with an error line each; the fix is measured at ~0.02% of the modulation
-    signal, so its absence is logged, not refused.
+    with an error line each.
     """
     import nodes as nodes_mod
+    from . import htc_adaln as _adaln
     out = model
     for slot, (name, strength) in enumerate(loras):
         if name == "None" or float(strength) == 0.0:
@@ -3484,13 +3907,9 @@ def _boost_model(model, loras):
         if loader is None:
             loader = _BOOST_LOADERS[slot] = nodes_mod.LoraLoaderModelOnly()
         out = loader.load_lora_model_only(out, name, float(strength))[0]
-    fix = getattr(nodes_mod, "NODE_CLASS_MAPPINGS", {}).get("H3AdaLNLoRAFix")
-    if fix is None:
-        print(f"[{TAG}] realism boost: H3AdaLNLoRAFix not installed, boost "
-              "LoRAs apply unported", flush=True)
-    else:
-        out = _result(_core_call(fix, "the boost AdaLN port",
-                                 model=out, mode="port"))[0]
+    out, _rep = _adaln.fix_model_safe(out, mode="port")
+    if _rep.get("keys"):
+        print(f"[{TAG}] realism boost {_adaln.format_report(_rep)}", flush=True)
     return out
 
 
@@ -4180,35 +4599,31 @@ WT_MOTION_CONTEXT = True     # each window gets the previous window's overlap as
 # reference and anchor tokens stay at full attention under sparse-attention patches.
 WT_TAKE_SHOT = True
 WT_TAKE_ANCHOR = True
+# Untested switches (Tier A, 11-16): OFF until a same-seed render A/B passes. Off keeps the
+# 3.5.1 take keys and behaviour byte-for-byte.
+WT_ANCHOR_LATE_PROG = 0.0    # Late-Lock: e.g. 0.65 = hold the Frame-0 take anchor out of the first 65% of steps
+WT_PIN_MODE = "full"         # "full" = pin all overlap (3.5.1); "tail5" = Motion-Context pins only the last 5f (2 latents)
 WT_PIN_ATTENTION = True
+SWAP_VIDEO_FADE = None       # e.g. (0.55, 0.20): cosine V-slice fade on SWAP <Video 1> (fade_start, end_strength)
 
-# Tone lock (11-02). walk_night_mv_00003 measured an exposure ratchet: every window came out
-# brighter and less saturated than the one before (background luma 50 -> 98 over 9 windows),
-# the plate's neon washing out, until one window snapped back to the plate and it climbed again.
-# The push is added at each hand-off. Each window's video is pulled to WINDOW 1's per-channel
-# latent mean/std (not the previous window's: that passes the drift on) before it is handed on.
-# Off for takes whose light is meant to change (night to dawn): it would flatten that too.
-# walk_night_mv_00004 (the full lock: mean + spread, all the way) held the background but
-# darkened and over-saturated the people (centre luma 57 -> 40-50, saturation 111 -> 143):
-# one number per channel cannot tell the street from the faces, and stretching the
-# washed-out windows' spread back up boosted colour. Now: level only, half way. Half way
-# still cannot ratchet: an offset o gets o' = (o + d)(1 - s), which settles at d(1 - s)/s
-# (= one window's push d at s = 0.5) instead of climbing. 1.0 + spread = the 00004 lock.
 WT_TONE_LOCK = True
 WT_TONE_STRENGTH = 0.5             # share of the way back to window 1's level per hand-off
 WT_TONE_MATCH_STD = False          # also match the spread (00004: boosted colour on faces)
+WT_TONE_CHROMA = False             # post-decode CIE Lab chroma-only lock (L* preserved)
 WT_TONE_STD_CLAMP = (0.85, 1.18)   # the spread is matched within these ratios only
 # The node's tone_lock widget (11-02): choice -> (strength, match spread). 0.5 = walk_night_mv_00005
-# (people kept, street drift halved, one late snap); full = the 00004 lock (no drift, darker people).
-WT_TONE_CHOICES = {"0.5": (0.5, False), "0.75": (0.75, False), "full": (1.0, True)}
+# (people kept, street drift halved, one late snap); full = the 00004 lock (no drift, darker people);
+# chroma = gentle 0.5 level handoff + CIE Lab chroma-only stabilization (L* face brightness preserved).
+WT_TONE_CHOICES = {"0.5": (0.5, False), "0.75": (0.75, False), "full": (1.0, True), "chroma": (0.5, False)}
 WT_TONE_DEFAULT = "0.5"
 
 
 def _wt_set_tone(choice):
     """Set the tone lock from the node's tone_lock widget; an unknown value falls back to the default."""
-    global WT_TONE_STRENGTH, WT_TONE_MATCH_STD
+    global WT_TONE_STRENGTH, WT_TONE_MATCH_STD, WT_TONE_CHROMA
     key = str(choice) if str(choice) in WT_TONE_CHOICES else WT_TONE_DEFAULT
     WT_TONE_STRENGTH, WT_TONE_MATCH_STD = WT_TONE_CHOICES[key]
+    WT_TONE_CHROMA = (key == "chroma")
     return key
 
 
@@ -4216,6 +4631,8 @@ def _wt_tone_tag():
     """Take-key part for the tone lock; the 00004 full lock keeps its old '+tone' key."""
     if not WT_TONE_LOCK:
         return ""
+    if WT_TONE_CHROMA:
+        return f"+tone{float(WT_TONE_STRENGTH):g}+chroma"
     if WT_TONE_MATCH_STD and float(WT_TONE_STRENGTH) == 1.0:
         return "+tone"
     return f"+tone{float(WT_TONE_STRENGTH):g}" + ("sd" if WT_TONE_MATCH_STD else "")
@@ -4224,7 +4641,7 @@ def _wt_tone_tag():
 def _wt_with_anchor(cond, anchor):
     """Conditioning plus the take anchor: the take's own finished opening frame (latent 0,
     a single-frame latent like any encoded reference still) as one more DiT-side
-    reference image. Not cited in the text: it is the shot itself, not a subject."""
+    reference image. Tagged `htc_late_anchor` so Late Lock can inject it late."""
     if anchor is None:
         return cond
     out = []
@@ -4232,9 +4649,83 @@ def _wt_with_anchor(cond, anchor):
         d2 = dict(d) if isinstance(d, dict) else {}
         refs = list(d2.get("minimax_refs") or [])
         refs.append({"kind": "image", "latent_h": int(anchor.shape[3]),
-                     "latent_w": int(anchor.shape[4]), "latent": anchor})
+                     "latent_w": int(anchor.shape[4]), "latent": anchor,
+                     "htc_late_anchor": True})
         d2["minimax_refs"] = refs
         out.append([emb, d2])
+    return out
+
+
+def _wt_tail5_keyframes(x0_v, x0_a, pw, ov_f, ova, v_dtype, a_dtype):
+    """tail5 Motion-Context keyframes: the previous window's last 2 latents (1 + 4 frames)
+    as ONE keyframe at `ov_f - 5`, plus the end-aligned audio overlap at frame 0.
+
+    One keyframe, not one per latent: core lays a keyframe out with the 1,4,4,4,4 token
+    pattern counted from its own first latent (PackedLayout._video_grid), so a lone
+    4-frame latent would be read as a 1-frame key token. Windows start on the 5-latent
+    grid and hops are 17n+5, so `l1 - 2` is a 1-frame key latent and the pair is exact."""
+    l1, a1 = int(pw["l1"]), int(pw["a1"])
+    return [
+        {"resolved_frame_index": ov_f - 5,
+         "latent": x0_v[:, :, l1 - 2:l1].to(v_dtype).clone()},
+        {"resolved_frame_index": 0.0,
+         "audio_latent": x0_a[..., a1 - ova:a1].to(a_dtype).clone()},
+    ]
+
+
+_WT_LATE_ANCHOR_SEQ = 0
+
+
+def _wt_late_anchor_wrapper(model, min_prog=WT_ANCHOR_LATE_PROG):
+    """Hold `htc_late_anchor` out of `minimax_payload` during early steps (`prog < min_prog`)
+    so motion/pose settle freely before snapping back to Window 1's opening color/texture."""
+    global _WT_LATE_ANCHOR_SEQ
+    if model is None or not hasattr(model, "add_wrapper_with_key") or float(min_prog) <= 0.0:
+        return model
+    from contextvars import ContextVar  # noqa: PLC0415
+    import comfy.patcher_extension as _pe  # noqa: PLC0415
+
+    _WT_LATE_ANCHOR_SEQ += 1
+    key = f"htc_wt_late_anchor_{_WT_LATE_ANCHOR_SEQ}"
+    start_var = ContextVar(key, default=1000.0)
+    gate = float(min_prog)
+
+    def _schedule(executor, noise, latent_image, sampler, sigmas, *args, **kwargs):
+        try:
+            sampling = executor.class_obj.model_patcher.get_model_object("model_sampling")
+            start = float(sampling.timestep(sigmas[0]))
+        except Exception:
+            start = 1000.0
+        tok = start_var.set(start)
+        try:
+            return executor(noise, latent_image, sampler, sigmas, *args, **kwargs)
+        finally:
+            start_var.reset(tok)
+
+    def _wrapper(executor, x, timestep, context, transformer_options={}, **kwargs):
+        payload = kwargs.get("minimax_payload")
+        refs = (payload or {}).get("refs") or ()
+        if not payload or not any(isinstance(r, dict) and r.get("htc_late_anchor") for r in refs):
+            return executor(x, timestep, context, transformer_options=transformer_options, **kwargs)
+        start = start_var.get()
+        sigma = min(1.0, max(0.0, float(timestep.flatten()[0]) / max(start, 1e-8)))
+        prog = 1.0 - sigma
+        if prog >= gate:
+            return executor(x, timestep, context, transformer_options=transformer_options, **kwargs)
+        kept_refs = [r for r in refs if not (isinstance(r, dict) and r.get("htc_late_anchor"))]
+        kfs = payload.get("keyframes") or []
+        mixed = {k: v for k, v in payload.items() if k != "layout"}
+        mixed["refs"] = kept_refs
+        mixed["cond_video_latents"] = ([kf["latent"] for kf in kfs if kf.get("latent") is not None]
+                                       + [r["latent"] for r in kept_refs if "latent" in r])
+        mixed["cond_audio_latents"] = ([kf["audio_latent"] for kf in kfs if kf.get("audio_latent") is not None]
+                                       + [r["audio_latent"] for r in kept_refs if r.get("audio_latent") is not None])
+        return executor(x, timestep, context, transformer_options=transformer_options,
+                        **dict(kwargs, minimax_payload=mixed))
+
+    out = model.clone()
+    out.add_wrapper_with_key(_pe.WrappersMP.OUTER_SAMPLE, key, _schedule)
+    out.add_wrapper_with_key(_pe.WrappersMP.DIFFUSION_MODEL, key, _wrapper)
     return out
 
 
@@ -4364,7 +4855,8 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, son
         if k > 0 or song is not None:
             vm = torch.ones((1, 1) + tuple(sv.shape[2:]), dtype=torch.float32)
             am = torch.ones((1, 1) + tuple(sa.shape[2:]), dtype=torch.float32)
-            vm[:, :, :ovl] = 0.0
+            pin_off = (max(0, ovl - 2) if (str(WT_PIN_MODE) == "tail5" and ovl > 2) else 0)
+            vm[:, :, pin_off:ovl] = 0.0
             am[..., :ova] = 0.0
             if song is not None:
                 am[...] = 0.0
@@ -4376,22 +4868,30 @@ def _wt_sample_seq(lat, plan, conds, *, model, sampler, sigmas, seed, label, son
             cond_k = _wt_with_anchor(cond_k, anchor)
         if k > 0 and WT_MOTION_CONTEXT:
             # The hold alone is not followed: under the mask the held frames are re-noised
-            # every step, so early on the model barely sees them and composes its own take
-            # (windowed_v2 cut at every overlap end). Motion-Context hands them CLEAN, as
-            # keyframes, every step -- picture and end-aligned sound.
+            # every step, so early on the model barely sees them and composes its own take.
+            # tail5 pins only the final 5f (2 latents) immediately before the new body, while
+            # full pins all ovl frames; audio overlap always stays pinned.
             pw = wins[k - 1]
             ov_f = int(pw["f1"] - w["f0"])
-            ctx = {"samples": nt.NestedTensor((
-                x0_v[:, :, pw["l0"]:pw["l1"]].to(full_v.dtype).clone(),
-                x0_a[..., pw["a0"]:pw["a1"]].to(full_a.dtype).clone()))}
-            try:
-                cond_k = _HTCMotionContext().apply(
-                    conditioning=cond_k, vae=None, latent=sub, context_length=str(ov_f),
-                    audio_context_length=ov_f, context_latent=ctx)[0]
-            except (ValueError, RuntimeError) as _e:
-                print(f"[{TAG}] sand_tie window {k + 1}: Motion-Context skipped ({_e}); "
-                      "held by mask only", flush=True)
-            del ctx
+            if str(WT_PIN_MODE) == "tail5" and ovl > 2 and ov_f >= 22:
+                _kfs = _wt_tail5_keyframes(x0_v, x0_a, pw, ov_f, ova, full_v.dtype, full_a.dtype)
+                _emb, _ed = cond_k[0][0], dict(cond_k[0][1])
+                _kept_kfs = [dict(kf) for kf in (_ed.get("minimax_keyframes") or ())
+                             if kf.get("resolved_frame_index", 0) >= ov_f]
+                _ed["minimax_keyframes"] = _kept_kfs + _kfs
+                cond_k = [[_emb, _ed]]
+            else:
+                ctx = {"samples": nt.NestedTensor((
+                    x0_v[:, :, pw["l0"]:pw["l1"]].to(full_v.dtype).clone(),
+                    x0_a[..., pw["a0"]:pw["a1"]].to(full_a.dtype).clone()))}
+                try:
+                    cond_k = _HTCMotionContext().apply(
+                        conditioning=cond_k, vae=None, latent=sub, context_length=str(ov_f),
+                        audio_context_length=ov_f, context_latent=ctx)[0]
+                except (ValueError, RuntimeError) as _e:
+                    print(f"[{TAG}] sand_tie window {k + 1}: Motion-Context skipped ({_e}); "
+                          "held by mask only", flush=True)
+                del ctx
         guider = _result(_core_call(
             BasicGuider, "the sand_tie guider",
             model=model, conditioning=cond_k))[0]
@@ -4580,13 +5080,14 @@ def _wt_song(locked, audio_vae, lat, pos, pl, t):
                            "AV latent")
     t0 = float(pos) / FPS
     t1 = float(pos + int(pl["frames"])) / FPS
-    z = _encode_locked_slice(audio_vae, locked["wav32"], t0, t1, int(parts[1].shape[-1]))
+    _drv32 = locked.get("wav32_driver", locked["wav32"])
+    z = _encode_locked_slice(audio_vae, _drv32, t0, t1, int(parts[1].shape[-1]))
     while z.dim() > parts[1].dim():
         z = z[0]
     while z.dim() < parts[1].dim():
         z = z.unsqueeze(0)
     print(f"[{TAG}] sand_tie take {t + 1}: audio locked [{t0:.2f}s-{t1:.2f}s] of "
-          "master_audio_file", flush=True)
+          "master_audio_file" + (locked.get("driver_note") or ""), flush=True)
     return z.to(dtype=parts[1].dtype).cpu()
 
 
@@ -4599,6 +5100,8 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
     from comfy_extras.nodes_minimax_h3 import _empty_av_latent  # noqa: PLC0415
     if WT_PIN_ATTENTION:
         model = _pin_attention(model)
+    if WT_TAKE_ANCHOR and float(WT_ANCHOR_LATE_PROG) > 0.0:
+        model = _wt_late_anchor_wrapper(model, WT_ANCHOR_LATE_PROG)
     groups = []
     for h in win_hops:
         if h["restart"] or not groups:
@@ -4613,8 +5116,11 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
         digs = [h["dig"] for h in hops]
         variant = (("finished" if WT_FINISHED_HANDOFF else "")
                    + ("+mc" if WT_MOTION_CONTEXT else "")
+                   + ("+pin5" if (str(WT_PIN_MODE) == "tail5" and int(overlap_n) > 5) else "")
                    + ("+hold" if (WT_HOLD_OVERLAPS and WT_FINISHED_HANDOFF) else "")
-                   + ("+anchor" if WT_TAKE_ANCHOR else "")
+                   + ("+anchor" + (f"+late{int(round(float(WT_ANCHOR_LATE_PROG) * 100))}"
+                                   if float(WT_ANCHOR_LATE_PROG) > 0.0 else "")
+                      if WT_TAKE_ANCHOR else "")
                    + _wt_tone_tag()
                    + "+m" + _wt_model_fp(model)
                    # the overlap sets the window plan (22 f keeps the keys it had); a
@@ -4712,6 +5218,12 @@ def _windowed_render(win_hops, master_imgs, *, model, vae, audio_vae, sampler, s
                     [h["hop"] for h in hops], overlap_n))
         keys.append(key)
         nf = min(int(imgs.shape[0]), int(master_imgs.shape[0]) - pos)
+        if WT_TONE_LOCK and WT_TONE_CHROMA and nf > 8:
+            _, _cnote = _tone.chroma_stabilize_take(
+                imgs[:nf], ref_frames=min(int(hops[0]["len"]) if hops else 192, nf),
+                in_place=True)
+            if _cnote:
+                print(f"[{TAG}] sand_tie take {t + 1}: {_cnote}", flush=True)
         try:
             for _c0 in range(0, nf, 64):      # in slices: imgs may be a disk-backed view
                 _c1 = min(nf, _c0 + 64)
@@ -5510,8 +6022,9 @@ class HandTieClips:
                 }),
                 "overlap": (["0.9 s", "0.2 s", "1.6 s"], {
                     "default": "0.9 s",
-                    "tooltip": ("How much of the previous hop each hop continues from. 0.9 s is the default "
-                                "and usually right."),
+                    "tooltip": ("How much of the previous hop each hop continues from. 0.9 s (22f) is the "
+                                "standard overlap; 1.6 s (39f) gives wider motion memory and lands cleanly "
+                                "on the 40 Hz / 24 fps 3-frame audio grid."),
                 }),
                 "seed": ("INT", {
                     "default": 0, "min": 0, "max": 0xffffffffffffffff,
@@ -5606,9 +6119,9 @@ class HandTieClips:
                 }),
                 "tone_compensate": (_tone.MODES, {
                     "default": "off",
-                    "tooltip": ("Evens out the brightness shift between hops. anchor holds the whole chain "
-                                "to one look; the other modes correct each join; off leaves hops as "
-                                "rendered."),
+                    "tooltip": ("Evens out colour/brightness drift between hops. anchor locks whole chain "
+                                "tone; chroma holds Lab color balance/saturation while keeping face brightness "
+                                "untouched; frame_shift / gain_bias / lut smooth each join; off leaves hops as rendered."),
                 }),
                 # ---------------------------------------------------------
                 # APPEND-ONLY ZONE. `widgets_values` in a saved workflow is a
@@ -6172,10 +6685,9 @@ class HandTieClips:
                 }),
                 "dialogue_audio_file": ("STRING", {
                     "default": "",
-                    "tooltip": ("Optional, for dialogue_lock: one recording laid on the film's "
-                                "timeline, each line where it is spoken, silence between (any TTS "
-                                "or your own voice). Empty = H3 drafts the lines. Set it on the "
-                                "MEDIA tab."),
+                    "tooltip": ("For dialogue_lock: a timed line recording (empty = H3 drafts lines). "
+                                "Or with master_audio_file set and dialogue_lock=off: set 'auto:vocals' (or "
+                                "a vocal stem file) to lip-sync H3 to isolated vocals while keeping the full mix in the MP4."),
                 }),
                 # APPENDED 2026-10-28, LAST widgets. Open-H3-Regenerate-2K LoRA selector + seed + cond.
                 "upsample_redraw": (_regen2k_lora_choices(), {
@@ -6223,12 +6735,10 @@ class HandTieClips:
                 # APPENDED 2026-11-02, LAST widget (after cache_location in widgets_values).
                 "tone_lock": (list(WT_TONE_CHOICES), {
                     "default": WT_TONE_DEFAULT,
-                    "tooltip": ("sand_tie only. How hard each window is pulled back to the take's "
-                                "opening colour and brightness, so a long take does not drift "
-                                "brighter or paler. 0.5: people keep their look, the background "
-                                "may drift a little. 0.75: holds it closer. full: tightest, but "
-                                "can darken people and boost their colour. Light meant to change "
-                                "(night to dawn) changes less the higher it is set."),
+                    "tooltip": ("sand_tie only. Keeps long continuous takes from washing out or drifting warm. "
+                                "0.5: gentle level anchor (people keep their look). 0.75: tighter level lock. "
+                                "full: strongest level + spread lock (can darken faces in dark scenes). "
+                                "chroma: holds color balance & saturation to the opening seconds while keeping face brightness untouched."),
                 }),
                 # APPENDED 2026-11-10, LAST widget (after tone_lock in widgets_values).
                 "upsample_steps": (list(UPSAMPLE_STEPS), {
@@ -6762,8 +7272,11 @@ class HandTieClips:
         # Empty string is off. The lock is not entered, the cache key does
         # not grow a new field, delivered audio stays generated. That is
         # the byte-identical claim.
-        locked = (_prepare_master_audio(master_audio_file,
-                                        master_audio_start_s)
+        _master_drv = (str(dialogue_audio_file or "").strip()
+                       if str(dialogue_lock or "off") == "off" else "")
+        locked = (_with_master_audio_driver(
+                      _prepare_master_audio(master_audio_file, master_audio_start_s),
+                      _master_drv)
                   if str(master_audio_file or "").strip() else None)
 
         # Slots 2 and 3. All three decode at the same reference_video_size --
@@ -6837,67 +7350,142 @@ class HandTieClips:
         # The hop that cites the row is the only one that receives either.
         refmod_image_blocks = {}
         refmod_video_blocks = {}
+        refmod_audio_blocks = {}
+        if ref_vae is not None:
+            ref_vae._refmod_mode = "vis"
+            ref_vae._refmod_img_ids = refmod_image_blocks
+            ref_vae._refmod_vid_ids = refmod_video_blocks
+        if ref_audio_vae is not None:
+            ref_audio_vae._refmod_mode = "aud"
+            ref_audio_vae._refmod_aud_ids = refmod_audio_blocks
+        refmod_row_entries = {}
+        refmod_dummy_voices = {}
+        refmod_any_step_curve = False
+        _refmod_hop_cache = {}
         for _r in ref_plan_refs:
             if not _r["file"]:
                 continue
             if _r.get("source") == "refmod":
-                if float(_r.get("strength") or 0.0) <= 0.0:
+                _has_shot_pos = any(float(_v or 0.0) > 0.0 for _v in (_r.get("shot_strengths") or {}).values())
+                if float(_r.get("strength") or 0.0) <= 0.0 and not _has_shot_pos:
                     raise ValueError(
                         f"[{TAG}] @{_r['tag']} has strength 0, which drops the "
                         f"RefMod. Remove the row, or set a strength above 0.")
-                _loaded = _refmod.load_visual(_r["file"])
-                if _loaded is None:
+                _loaded_list = _refmod.load_bundle_visuals(
+                    _r["file"], members_filter=_r.get("members"))
+                if not _loaded_list:
                     continue
-                # A video RefMod may be a subject. A character mod built from
-                # several stills is stored as one clip, so refusing a subject
-                # here refused the whole point of the builder. `subject_prose`
-                # cites each subject at the slot it occupies, so this one is
-                # defined as the person in <Video N>.
-                _r["kind"] = _loaded["kind"]
-                _r["latent_digest"] = _loaded["digest"]
-                # A mod assembled in the builder carries the name of its
-                # voice. The row inherits it, so a character is put
-                # together once; a voice typed on the row still wins,
-                # because the rail is the more specific statement.
-                # The window comes with it, unless the row sets its own:
-                # the row trim is the one on the rail, beside the waveform.
-                if not _r.get("voice"):
-                    _inherited = _refmod.stored_voice(_r["file"])
-                    if _inherited:
-                        _r["voice"] = _inherited["file"]
-                        if not (_r.get("voice_start") or _r.get("voice_end")):
-                            _r["voice_start"] = _inherited["start"]
-                            _r["voice_end"] = _inherited["end"]
-                        print(f"[{TAG}] @{_r['tag']}: voice {_inherited['file']} "
-                              f"from the RefMod", flush=True)
-                _block = _refmod.visual_block(_loaded, _r["strength"])
-                # The kept photographs when the builder stored them, so Qwen
-                # reads a face at the resolution it was photographed, not a
-                # VAE decode of it. Keyed per hop through `looks_digest`.
-                _looks = _loaded.get("looks")
-                _r["looks_digest"] = _loaded.get("looks_digest")
-                _pixels = _refmod.presentation_pixels(
-                    vae, _loaded["latent"], _r.get("mp") or 0.0,
-                    looks=_looks, kind=_loaded["kind"])
-                if _loaded["kind"] == "image":
-                    _pixels = _pixels[:1]
-                    slot_images[_r["slot"]] = _pixels
-                    refmod_image_blocks[id(_pixels)] = _block
+                _audio_lat = _refmod.load_audio_latent(_r["file"])
+                _all_vid = all(_x["kind"] == "video" for _x in _loaded_list)
+                _r["kind"] = "video" if _all_vid else "image"
+                _r["latent_digest"] = "|".join(_x["digest"] for _x in _loaded_list)
+                _looks_digests = [_x.get("looks_digest") for _x in _loaded_list if _x.get("looks_digest")]
+                _r["looks_digest"] = "|".join(_looks_digests) if _looks_digests else None
+                _eff_sc = str(_r.get("step_curve") or "full").strip().lower()
+                if _eff_sc == "full":
+                    _eff_sc = str(_loaded_list[0].get("default_step_curve") or "full").strip().lower()
+                _r["step_curve"] = _eff_sc
+                if _eff_sc != "full":
+                    refmod_any_step_curve = True
+                _inherited = _refmod.stored_voice(_r["file"])
+                if not _r.get("voice") and _inherited:
+                    _r["voice"] = _inherited["file"]
+                    if not (_r.get("voice_start") or _r.get("voice_end")):
+                        _r["voice_start"] = _inherited["start"]
+                        _r["voice_end"] = _inherited["end"]
+                    print(f"[{TAG}] @{_r['tag']}: voice {_inherited['file']} "
+                          f"from the RefMod", flush=True)
+                _items_data = []
+                _total_pics = 0
+                _total_vids = 0
+                _total_toks = 0
+                _kept_looks_total = 0
+                _n_vis_mems = sum(1 for _x in _loaded_list if _x["kind"] == "image")
+                _auto_qwen_mp = (max(0.38, min(0.85, 2.2 / _n_vis_mems))
+                                 if _n_vis_mems >= 2 else 0.0)
+                _applied_qwen_cap = 0.0
+                for _item in _loaded_list:
+                    _looks = _item.get("looks")
+                    if _looks is not None and _item["kind"] == "video":
+                        _looks = _qv.cap_refmod_looks(_looks, max_frames=4)
+                    if _looks is not None:
+                        _row_qmp = float(_r.get("qwen_mp") or 0.0)
+                        _row_mp = float(_r.get("mp") or 0.0)
+                        if _row_qmp > 0.0:
+                            _cap_target = _row_qmp
+                        elif _row_mp > 0.0 and _auto_qwen_mp > 0.0:
+                            _cap_target = min(_row_mp, _auto_qwen_mp)
+                            _applied_qwen_cap = _cap_target
+                        elif _row_mp > 0.0:
+                            _cap_target = _row_mp
+                        else:
+                            _cap_target = _auto_qwen_mp
+                            if _auto_qwen_mp > 0.0:
+                                _applied_qwen_cap = _auto_qwen_mp
+                    else:
+                        _cap_target = float(_r.get("mp") or 0.0)
+                    _pixels = _refmod.presentation_pixels(
+                        vae, _item["latent"], _cap_target,
+                        looks=_looks, kind=_item["kind"])
+                    if _item["kind"] == "image":
+                        _pixels = _pixels[:1]
+                        _total_pics += 1
+                    else:
+                        if int(_pixels.shape[0]) < 5:
+                            raise ValueError(
+                                f"[{TAG}] @{_r['tag']} decodes to "
+                                f"{int(_pixels.shape[0])} frames. A video reference "
+                                f"needs at least 5. Re-extract it with more latent "
+                                f"frames, or save it as an image mod.")
+                        _total_vids += 1
+                    _total_toks += int(_item["tokens"])
+                    if _looks is not None:
+                        _kept_looks_total += int(_looks.shape[0])
+                    _items_data.append({"loaded": _item, "pixels": _pixels})
+                _r["picture_count"] = max(1, _total_pics) if _r["kind"] != "video" else 0
+                _r["video_count"] = _total_vids
+                refmod_row_entries[_r["slot"]] = {
+                    "items": _items_data,
+                    "audio": _audio_lat,
+                    "step_curve": _eff_sc,
+                }
+                if _items_data[0]["loaded"]["kind"] == "image":
+                    slot_images[_r["slot"]] = _items_data[0]["pixels"]
                 else:
-                    if int(_pixels.shape[0]) < 5:
-                        raise ValueError(
-                            f"[{TAG}] @{_r['tag']} decodes to "
-                            f"{int(_pixels.shape[0])} frames. A video reference "
-                            f"needs at least 5. Re-extract it with more latent "
-                            f"frames, or save it as an image mod.")
-                    slot_videos[_r["slot"]] = _pixels
-                    refmod_video_blocks[id(_pixels)] = _block
-                _view = (f"Qwen sees {int(_looks.shape[0])} kept photo"
-                         f"{'s' if int(_looks.shape[0]) != 1 else ''}"
-                         if _looks is not None else
+                    slot_videos[_r["slot"]] = _items_data[0]["pixels"]
+                _row_vfile = os.path.basename(str(_r.get("voice") or "").strip()).lower()
+                _lat_vfile = os.path.basename(str((_audio_lat or {}).get("name") or "").strip()).lower()
+                _inh_vfile = os.path.basename(str((_inherited or {}).get("file") or "").strip()).lower()
+                _voice_matches_latent = (
+                    _audio_lat is not None
+                    and (
+                        not _row_vfile
+                        or (
+                            _lat_vfile
+                            and _row_vfile == _lat_vfile
+                            and abs(float(_r.get("voice_start") or 0.0) - float((_inherited or {}).get("start") or 0.0)) < 1e-3
+                            and abs(float(_r.get("voice_end") or 0.0) - float((_inherited or {}).get("end") or 0.0)) < 1e-3
+                            and (not _inh_vfile or _row_vfile == _inh_vfile)
+                        )
+                    )
+                )
+                if _voice_matches_latent:
+                    _dummy_wav = {"waveform": torch.zeros((1, 1, 3200), dtype=torch.float32), "sample_rate": 32000}
+                    refmod_dummy_voices[_r["slot"]] = _dummy_wav
+                    _r["audio_latent_digest"] = _audio_lat["digest"]
+                    refmod_audio_blocks[id(_dummy_wav)] = _refmod.audio_block(
+                        _audio_lat, strength=min(1.0, float(_r.get("strength") or 1.0)), step_curve=_eff_sc)
+                    print(f"[{TAG}] @{_r['tag']}: using pre-encoded RefMod audio latent "
+                          f"({_audio_lat['ref_audio_t']}f, skips AudioVAE)", flush=True)
+                _view = (f"Qwen sees {_kept_looks_total} kept photo"
+                         f"{'s' if _kept_looks_total != 1 else ''}"
+                         + (f" ({_applied_qwen_cap:.2f} MP cap)" if _applied_qwen_cap > 0.0 else "")
+                         if _kept_looks_total else
                          "Qwen sees a decode (no kept photos; rebuild to keep them)")
-                print(f"[{TAG}] @{_r['tag']}: RefMod {_loaded['kind']} "
-                      f"{_loaded['tokens']} tokens, strength {_r['strength']:g}, "
+                _sc_note = f", curve={_eff_sc}" if _eff_sc != "full" else ""
+                _mem_note = f", {len(_items_data)} members" if len(_items_data) > 1 else ""
+                print(f"[{TAG}] @{_r['tag']}: RefMod {_r['kind']} "
+                      f"{_total_toks} tokens, strength {_r['strength']:g}{_mem_note}{_sc_note}, "
                       f"{_view}", flush=True)
                 continue
             _r["kind"] = "image"
@@ -6953,8 +7541,10 @@ class HandTieClips:
         # above, because the refmod arm returns early and a voice belongs to
         # both arms equally -- a face is a face whether it arrived as a still
         # or as a mod.
-        slot_voices = {}
+        slot_voices = dict(refmod_dummy_voices)
         for _r in ref_plan_refs:
+            if _r["slot"] in refmod_dummy_voices:
+                continue
             _vf = str(_r.get("voice") or "")
             if not _vf or (_r["slot"] not in _wired_slots and _r.get("file")):
                 continue
@@ -7062,6 +7652,14 @@ class HandTieClips:
         # Skipped on a dry run: it only feeds the hop cache key, and a dry run
         # writes no cache. Hashing patched weights is not free.
         model_fp = None if dry else _model_fingerprint(model)
+        if swap and not dry and reference_video is not None and SWAP_VIDEO_FADE:
+            model = _refmod.attach_ref_video_fade_wrapper(
+                model, fade_start=SWAP_VIDEO_FADE[0], end_strength=SWAP_VIDEO_FADE[1])
+            print(f"[{TAG}] swap: Reference Video Fade active (fade {SWAP_VIDEO_FADE[0]:g} -> "
+                  f"{SWAP_VIDEO_FADE[1]:g} on <Video 1> V-rows)", flush=True)
+        if not dry and refmod_any_step_curve:
+            model = _refmod.attach_step_curve_wrapper(model)
+            print(f"[{TAG}] RefMod per-step denoising curve wrapper active", flush=True)
         vae_fp = None if dry else _vae_fingerprint(vae)
         # Same reasoning as model_fp: a hop refined under a different model is a
         # different hop, and serving it from cache is the silent-wrong-output
@@ -7468,6 +8066,7 @@ class HandTieClips:
         # them seams. The node that writes the frames is the only thing that
         # knows for certain, so it says so on `info`.
         seam_marks = []
+        hop_motion_scores = []
         master_wav = None
         sr = None
         prev_imgs = None
@@ -7596,13 +8195,17 @@ class HandTieClips:
         # target that already fell short; anchored on the still it holds the
         # thing the user actually chose. The still also lets hop 1 itself be
         # pulled, which the hop1 mode cannot do by construction.
-        anchor_on = tone_mode == "anchor" and float(tone_anchor) > 0.0
+        anchor_on = tone_mode in ("anchor", "chroma") and float(tone_anchor) > 0.0
         anchor_from_still = anchor_on and str(tone_anchor_ref) == "still"
         anchor_ref = None
         if anchor_from_still:
-            anchor_ref = _tone.anchor_stats(start_image)
-            print(f"[{TAG}] tone anchor set from the start image: "
-                  + _tone.anchor_note(anchor_ref), flush=True)
+            anchor_ref = (_tone.chroma_stats(start_image) if tone_mode == "chroma"
+                          else _tone.anchor_stats(start_image))
+            if anchor_ref is not None and tone_mode == "anchor":
+                print(f"[{TAG}] tone anchor set from the start image: "
+                      + _tone.anchor_note(anchor_ref), flush=True)
+            elif anchor_ref is not None and tone_mode == "chroma":
+                print(f"[{TAG}] chroma anchor set from the start image (L* preserved)", flush=True)
         sheet_rows = []
 
         # pin_mech=hand_tie: one previs per section, compiled here, rendered at
@@ -7612,6 +8215,13 @@ class HandTieClips:
         ht = (str(pin_mech) == "hand_tie") and not swap
         windowed = str(pin_mech) == "sand_tie" and not swap and not dry
         win_hops = []
+        if not dry and not swap and not windowed and n > 1 and locked is None:
+            _off3_ov = (int(overlap_n) % 3) != 0
+            _off3_hops = [idx + 1 for idx, ln in enumerate(lengths) if (int(ln) % 3) != 0]
+            if _off3_ov or _off3_hops:
+                print(f"[{TAG}] audio grid note: 40 Hz audio vs 24 fps video aligns cleanly on "
+                      "multiples of 3 frames (overlap 1.6 s / 39f and 6 s / 8 s / 10 s / 12 s hops) "
+                      "to avoid 1/3-step audio seam rounding.", flush=True)
         if windowed:
             _w_ok, _w_why = _htw.probe()
             if not _w_ok:
@@ -7783,6 +8393,8 @@ class HandTieClips:
                 print(f"[{TAG}] hand-tie: tone_compensate={tone_mode} is replaced by the "
                       f"hand-tie tone match (each hop pulled onto its windows)", flush=True)
 
+        _ht_prewarm = [None]
+
         def _ht_previs(i, pre_encode_hop=None):
             """Render (or load) the hand-tie previs for hop i's section, and cut it
             into windows. Called at the section's first hop, after that hop's
@@ -7790,6 +8402,18 @@ class HandTieClips:
             prose, voices and prefix/suffix, so it is assembled the same way,
             from those same values (read here at call time)."""
             nonlocal prev_imgs
+            _pv_s = _compiled_specs.get(i)
+            _pv_hop_ords = _pv_s["hop_ords"] if _pv_s else hop_ords
+            _pv_vid_ords = _pv_s["video_ords"] if _pv_s else video_ords
+            _pv_subj_prose = _pv_s["hop_subject_prose"] if _pv_s else hop_subject_prose
+            _pv_vord = _pv_s["_voice_ord"] if _pv_s else _voice_ord
+            _pv_binds = _pv_s["_bindings"] if _pv_s else _bindings
+            _pv_pre = _pv_s["_pre"] if _pv_s else _pre
+            _pv_suf = _pv_s["_suf"] if _pv_s else _suf
+            _pv_h_imgs = _pv_s["hop_images"] if _pv_s else hop_images
+            _pv_h_vids = _pv_s["hop_videos"] if _pv_s else hop_videos
+            _pv_h_vauds = _pv_s["hop_video_audios"] if _pv_s else hop_video_audios
+            _pv_h_rauds = _pv_s["hop_ref_audios"] if _pv_s else hop_ref_audios
             _si = ht_pos[i][0]
             _lay = ht_layouts[_si]
             pblock = ht_previs_raw[_si]
@@ -7834,25 +8458,25 @@ class HandTieClips:
             def _pv_assemble(pblock):
                 if ref_plan_refs:
                     pblock = _refs.resolve_tags(
-                        pblock, hop_ords, _refs.subjects(ref_plan_refs),
+                        pblock, _pv_hop_ords, _refs.subjects(ref_plan_refs),
                         where=f"hand-tie previs {_si + 1}",
                         declared={r["tag"] for r in ref_plan_refs},
-                        subject_names=None, video_map=video_ords)
-                if hop_subject_prose and not _d.is_full_h3_prompt(pblock):
-                    pblock = hop_subject_prose + "\n\n" + pblock
+                        subject_names=None, video_map=_pv_vid_ords)
+                if _pv_subj_prose and not _d.is_full_h3_prompt(pblock):
+                    pblock = _pv_subj_prose + "\n\n" + pblock
                 if refvid_line and not _d.is_full_h3_prompt(pblock):
                     pblock = pblock.rstrip() + "\n\n" + refvid_line
-                if _voice_ord and f"<Audio {_voice_ord}>" not in pblock:
+                if _pv_vord and f"<Audio {_pv_vord}>" not in pblock:
                     pblock = (pblock.rstrip() + f"\n\nThe speaker's voice follows "
-                              f"<Audio {_voice_ord}> as a timbre reference.")
-                if _bindings:
+                              f"<Audio {_pv_vord}> as a timbre reference.")
+                if _pv_binds:
                     _pst = ([_m.start() for _m in re.finditer(r"<d>", pblock)]
                             + [_a for _a, _b in _planner.spoken_spans(pblock)])
-                    pblock = _refs.bind_voices(pblock, _bindings, _pst)
-                if _pre:
-                    pblock = _pre + " " + pblock.lstrip()
-                if _suf:
-                    pblock = pblock.rstrip() + " " + _suf
+                    pblock = _refs.bind_voices(pblock, _pv_binds, _pst)
+                if _pv_pre:
+                    pblock = _pv_pre + " " + pblock.lstrip()
+                if _pv_suf:
+                    pblock = pblock.rstrip() + " " + _pv_suf
                 return pblock
 
             pblock = _pv_assemble(pblock)
@@ -7887,11 +8511,11 @@ class HandTieClips:
                         "wblocks": _wblocks} if _wpl else {}),
                     "seed": _p_seed, "steps": _p_steps,
                     "refs": {k: _store.tensor_digest(t)
-                             for k, t in sorted((hop_images or {}).items())},
+                             for k, t in sorted((_pv_h_imgs or {}).items())},
                     "videos": {k: _store.tensor_digest(t)
-                               for k, t in sorted((hop_videos or {}).items())},
+                               for k, t in sorted((_pv_h_vids or {}).items())},
                     "audios": {k: _store.audio_digest(a)
-                               for k, a in sorted((hop_ref_audios or {}).items())},
+                               for k, a in sorted((_pv_h_rauds or {}).items())},
                     "start": _store.tensor_digest(start_image),
                     **({"from": _from} if _from else {}),
                     **({"canvas": [pv_w, pv_h]} if (pv_w, pv_h) != (int(width), int(height))
@@ -8000,6 +8624,13 @@ class HandTieClips:
                                     if (int(pv_w) * int(pv_h) <= 524288
                                         and str(ref_image_size) in ("0.75 MP", "1.0 MP"))
                                     else ref_image_size)
+                    if _ht_prewarm[0] is not None:
+                        _ht_prewarm[0]((
+                            int(pv_w), int(pv_h), int(_p_len), _pv_ref_size,
+                            hop_images, hop_videos,
+                            (hop_video_audios or None),
+                            (None if _mute else hop_ref_audios),
+                        ))
                     # Windowed: one conditioning entry per context window, in window
                     # order (ht_windows' handler gives window k entry k); every entry
                     # carries the same references and the take's full length.
@@ -8016,14 +8647,22 @@ class HandTieClips:
                         )
                         _pc_k, _pl = _result(packed)[0], _result(packed)[1]
                         del packed
-                        if refmod_image_blocks or refmod_video_blocks:
+                        if refmod_image_blocks or refmod_video_blocks or refmod_audio_blocks:
                             _pc_k = _refmod.splice_blocks(
                                 _pc_k, hop_images, hop_videos,
-                                refmod_image_blocks, refmod_video_blocks)
+                                refmod_image_blocks, refmod_video_blocks,
+                                hop_audios=(None if _mute else hop_ref_audios),
+                                audio_ids=(None if _mute else refmod_audio_blocks))
                         _pc = _pc + list(_pc_k)
                     if _wblocks:
                         print(f"[{TAG}] hand-tie previs {_si + 1}: {len(_wblocks)} window "
                               "prompts encoded", flush=True)
+                    # Encode the section's first hop while Qwen 32B (`clip`) is
+                    # already in VRAM (and VAEs are offloaded), then evict 32B
+                    # BEFORE AddGuide / audio lock stage VAEs for the previs.
+                    if pre_encode_hop is not None and not previs_only and not _sh.get("locked"):
+                        _ht_pre_ref2va[i] = pre_encode_hop()
+                    _offload_text_encoder(clip, model)
                     if start_image is not None and (i == 0 or str(_sh.get("anchor") or "") == "restart"):
                         # The section opens on the photograph, so window A does.
                         _pc = _result(_core_call(
@@ -8105,12 +8744,6 @@ class HandTieClips:
                         _pl = _splice_locked_audio(_pl, _encode_locked_slice(
                             audio_vae, _sil, 0.0, _p_len / float(FPS), int(_pa[1].shape[-1])))
                         del _pa, _sil
-                    # Encode the section's first hop while Qwen 32B (`clip`) is
-                    # already in VRAM so we do not evict the DiT and reload 32B
-                    # immediately after the previs finishes.
-                    if pre_encode_hop is not None and not previs_only and not _sh.get("locked"):
-                        _ht_pre_ref2va[i] = pre_encode_hop()
-                    _offload_text_encoder(clip, model)
                 if _p_steps not in sigma_cache:
                     sigma_cache[_p_steps] = _result(_core_call(
                         BasicScheduler, "the sigma schedule",
@@ -8276,12 +8909,9 @@ class HandTieClips:
                 raise RuntimeError(f"{TAG}: stopped before any hop rendered: " + " | ".join(_fails))
             print(f"[{TAG}] hand-tie: every previs is one take; rendering the hops", flush=True)
 
-        assembled = []
-        for i, block in enumerate(blocks):
-            mm.throw_exception_if_processing_interrupted()
-            _dlg_hop = None
-            _dlg_open = []      # hand_tie: hop-clock windows the lock leaves to the previs
-            _ht_tail_hold, _ht_tail_prior = 0, None   # per hop: never a previous hop's mask
+        _compiled_specs = {}
+
+        def _compile_hop_step(i, block, prev_subjects, cur_prev_imgs=None):
             shot = shots[i] or {}
             hop_length = lengths[i]
             # ht_seam_fix v2 (tail discard): a hop with a next hop renders
@@ -8317,9 +8947,6 @@ class HandTieClips:
             if hop_restart:
                 print(f"[{TAG}] hop {i + 1}: ANCHOR RESTART -- start image is "
                       f"frame 0, the previous hop is not relayed", flush=True)
-            _push_preview(unique_id, f"hop {i + 1}/{n} sampling…", hop=i + 1, total=n,
-                           frac=(write_pos / float(total_frames)) if total_frames else None,
-                          pin_mech=("sand_tie" if windowed else None))
             # The same lint the writer's `validate` runs, on the queue, for a
             # plan nobody generated. A hand-written beat written in the official
             # `<d>` form overruns its hop exactly as a generated one does, and
@@ -8367,10 +8994,80 @@ class HandTieClips:
                             )
                 hop_pictures = [r for r in hop_active if r.get("kind") != "video"]
                 hop_mod_videos = [r for r in hop_active if r.get("kind") == "video"]
-                base_images = {
-                    f"ref_image_{k + 1}": slot_images[r["slot"]]
-                    for k, r in enumerate(hop_pictures)
-                } or None
+                base_images = {}
+                hop_tag_pic_ords = {}
+                hop_tag_vid_ords = {}
+                hop_mod_video_tensors = []
+
+                def _shot_target_yaw(sh_obj):
+                    if not isinstance(sh_obj, dict):
+                        return None
+                    if sh_obj.get("yaw") is not None:
+                        try:
+                            return float(sh_obj["yaw"])
+                        except (TypeError, ValueError):
+                            pass
+                    txt = " ".join(str(x or "") for x in (sh_obj.get("beat"), sh_obj.get("prose")))
+                    return _refmod.infer_shot_yaw(txt)
+
+                def _resolve_refmod_hop_entries(row, hop_idx, target_yaw=None):
+                    entry = refmod_row_entries[row["slot"]]
+                    eff_s = float((row.get("shot_strengths") or {}).get(str(hop_idx + 1), row.get("strength", 1.0)))
+                    sc = entry["step_curve"]
+                    items = entry["items"]
+                    picked_idx = list(range(len(items)))
+                    narrowed = False
+                    if not row.get("members") and len(items) > 2 and target_yaw is not None:
+                        cand_meta = [dict(it["loaded"]) for it in items]
+                        sel = _refmod.select_members_by_yaw(cand_meta, target_yaw=target_yaw, max_views=2)
+                        if sel and len(sel) < len(items):
+                            picked_idx = sel
+                            narrowed = True
+                            print(f"[{TAG}] hop {hop_idx + 1}: @{row['tag']} yaw={target_yaw:g}° -> "
+                                  f"members {picked_idx} of {len(items)}", flush=True)
+                    ck = (row["slot"], round(eff_s, 4), sc, tuple(picked_idx))
+                    if ck in _refmod_hop_cache:
+                        return _refmod_hop_cache[ck]
+                    imgs_out, vids_out = [], []
+                    same_as_row = round(eff_s, 4) == round(float(row.get("strength", 1.0)), 4)
+                    for m_i, item_idx in enumerate(picked_idx):
+                        item = items[item_idx]
+                        blks = _refmod.visual_blocks(item["loaded"], eff_s, step_curve=sc)
+                        if not blks:
+                            continue
+                        px = item["pixels"] if (m_i == 0 and same_as_row and not narrowed) else item["pixels"].clone()
+                        if item["loaded"]["kind"] == "image":
+                            refmod_image_blocks[id(px)] = blks
+                            imgs_out.append(px)
+                        else:
+                            refmod_video_blocks[id(px)] = blks
+                            vids_out.append(px)
+                    res_tup = (imgs_out, vids_out, picked_idx if narrowed else None)
+                    _refmod_hop_cache[ck] = res_tup
+                    return res_tup
+
+                _hop_yaw = _shot_target_yaw(shot)
+                _hop_yaw_picks = {}
+                for r in hop_active:
+                    if r["slot"] in refmod_row_entries:
+                        imgs_e, vids_e, _ypicks = _resolve_refmod_hop_entries(r, i, target_yaw=_hop_yaw)
+                        if _ypicks is not None:
+                            _hop_yaw_picks[r["slot"]] = _ypicks
+                        if imgs_e:
+                            ords_here = []
+                            for px in imgs_e:
+                                base_images[f"ref_image_{len(base_images) + 1}"] = px
+                                ords_here.append(len(base_images))
+                            hop_tag_pic_ords[r["tag"]] = ords_here[0] if len(ords_here) == 1 else ords_here
+                        if vids_e:
+                            for px in vids_e:
+                                hop_mod_video_tensors.append((r, px))
+                    elif r.get("kind") != "video":
+                        base_images[f"ref_image_{len(base_images) + 1}"] = slot_images[r["slot"]]
+                        hop_tag_pic_ords[r["tag"]] = len(base_images)
+                    else:
+                        hop_mod_video_tensors.append((r, slot_videos[r["slot"]]))
+                base_images = base_images or None
             else:
                 base_images = ref_images
                 if not hop_is_start and str(hop_script) == "next":
@@ -8387,6 +9084,10 @@ class HandTieClips:
             else:
                 hop_pictures = []
                 hop_mod_videos = []
+                hop_mod_video_tensors = []
+                hop_tag_pic_ords = {}
+                hop_tag_vid_ords = {}
+                _hop_yaw_picks = {}
             # Guided swap (Alissonerdx BFS `guide_latent_only: true`): the guide
             # clip goes onto MiniMaxH3AddGuide (minimax_keyframes), NOT into
             # MiniMaxH3ReferenceToVideo (minimax_refs). Passing the 243-frame
@@ -8407,13 +9108,11 @@ class HandTieClips:
             # Core also trims the clip to a fraction of a second and the
             # sound not at all. The voice goes beside, as a timbre
             # reference, the same as a still's -- see `hop_ref_audios`.
-            for _vr in hop_mod_videos:
+            for _vr_row, _vr_px in hop_mod_video_tensors:
                 _vn = len(hop_video_seed) + 1
-                hop_video_seed[f"ref_video_{_vn}"] = slot_videos[_vr["slot"]]
-            video_ords = {
-                r["tag"]: len(base_videos or {}) + n + 1
-                for n, r in enumerate(hop_mod_videos)
-            }
+                hop_video_seed[f"ref_video_{_vn}"] = _vr_px
+                hop_tag_vid_ords[_vr_row["tag"]] = _vn
+            video_ords = (dict(hop_tag_vid_ords) if ref_plan_refs else {})
             hop_images = base_images
             hop_videos = hop_video_seed or None
             live_p = live_v = None
@@ -8426,7 +9125,8 @@ class HandTieClips:
             if not hop_is_start and not windowed:
                 hop_images, live_p, hop_videos, live_v = _attach_pin_to_qwen(
                     str(pin_to_qwen), base_images, hop_video_seed,
-                    prev_imgs[-1:], prev_imgs[-overlap_n:],
+                    cur_prev_imgs[-1:] if cur_prev_imgs is not None else None,
+                    cur_prev_imgs[-overlap_n:] if cur_prev_imgs is not None else None,
                 )
                 if live_p == 1:
                     still_shift = 1
@@ -8454,9 +9154,12 @@ class HandTieClips:
             # and the identity lock's ordinals have to agree, and computing the
             # same shift twice is exactly how they drift apart. `p`, not `n` --
             # `n` is the hop count in the enclosing scope.
-            hop_ords = _refs.ordinals(hop_pictures)
+            hop_ords = dict(hop_tag_pic_ords) if ref_plan_refs else _refs.ordinals(hop_pictures)
             if still_shift:
-                hop_ords = {t: p + still_shift for t, p in hop_ords.items()}
+                hop_ords = {
+                    t: ([x + still_shift for x in p] if isinstance(p, (list, tuple)) else p + still_shift)
+                    for t, p in hop_ords.items()
+                }
             if ref_plan_refs:
                 # Plan-wide subjects so @hero_face still resolves when that
                 # photograph is off this hop.
@@ -8514,8 +9217,15 @@ class HandTieClips:
                     # stops being called a person.
                     faces = [r for r in hop_pictures
                              if r["subject"] is not None
-                             and r["retention"] == "fully_preserved"]
-                    id_ords = [hop_ords[r["tag"]] for r in faces]
+                             and r["retention"] == "fully_preserved"
+                             and r["tag"] in hop_ords]
+                    id_ords = []
+                    for r in faces:
+                        _p = hop_ords[r["tag"]]
+                        if isinstance(_p, (list, tuple)):
+                            id_ords.extend(_p)
+                        else:
+                            id_ords.append(_p)
                     # Counted over this hop, not the whole plan. Counting
                     # plan-wide while listing only this hop's ordinals is how a
                     # single scheduled still produced "<Picture 2> are the only
@@ -8584,8 +9294,14 @@ class HandTieClips:
                 # scheduled onto this hop and never named in it reaches the
                 # encoder as the same uncited photograph, authored rather than
                 # assembled. Say so rather than silently rendering it.
-                uncited = [r["tag"] for r in hop_active
-                           if f"<Picture {hop_ords[r['tag']]}>" not in block]
+                def _has_tag_cite(r_tag):
+                    if r_tag not in hop_ords:
+                        return False
+                    _p = hop_ords[r_tag]
+                    if isinstance(_p, (list, tuple)):
+                        return any(f"<Picture {x}>" in block for x in _p)
+                    return f"<Picture {_p}>" in block
+                uncited = [r["tag"] for r in hop_active if r["tag"] in hop_ords and not _has_tag_cite(r["tag"])]
                 if uncited:
                     print(f"[{TAG}] hop {i + 1}: "
                           + ", ".join("@" + t for t in uncited)
@@ -8717,7 +9433,9 @@ class HandTieClips:
                 elif _rr["tag"] in video_ords:
                     _who = f"<Video {video_ords[_rr['tag']]}>"
                 elif _rr["tag"] in hop_ords:
-                    _who = f"<Picture {hop_ords[_rr['tag']]}>"
+                    _op = hop_ords[_rr["tag"]]
+                    _first_p = _op[0] if isinstance(_op, (list, tuple)) else _op
+                    _who = f"<Picture {_first_p}>"
                 else:
                     _who = "The speaker"
                 _bindings.append({"audio": _ord, "subject": _rr.get("subject"),
@@ -8743,181 +9461,47 @@ class HandTieClips:
             if _suf:
                 block = block.rstrip() + " " + _suf
 
-            assembled.append((i + 1, block))
+            return {
+                "block": block, "shot": shot, "hop_length": hop_length,
+                "_xtra": _xtra, "render_length": render_length,
+                "hop_restart": hop_restart, "hop_is_start": hop_is_start,
+                "hop_trims": hop_trims, "_wt_window": _wt_window,
+                "hop_active": hop_active, "hop_subject_prose": hop_subject_prose,
+                "hop_pictures": hop_pictures, "hop_mod_videos": hop_mod_videos,
+                "base_images": base_images, "hop_images": hop_images,
+                "hop_videos": hop_videos, "hop_video_audios": hop_video_audios,
+                "hop_ref_audios": hop_ref_audios, "hop_ords": hop_ords,
+                "video_ords": video_ords, "hop_voice": hop_voice,
+                "_hop_voice_tags": _hop_voice_tags, "_row_slot": _row_slot,
+                "_voice_ord": _voice_ord, "_bindings": _bindings,
+                "_pre": _pre, "_suf": _suf, "prev_subjects": prev_subjects,
+                "_hop_yaw_picks": _hop_yaw_picks,
+            }
 
-            # A dry run has everything it came for the moment the block is
-            # compiled: this is the text the encoder would receive. Stop here,
-            # before the key, the cache and the sampler.
-            if dry:
-                sheet_rows.append({
-                    "hop": i + 1,
-                    "first": None, "last": None,
-                    "beat": (shot.get("beat") or "").strip() or "(continues)",
-                    "directives": dict(shot.get("directives") or {}),
-                    "meta": [f"{hop_length}f ({hop_length / FPS:.1f}s)",
-                             f"{len(block)} chars compiled",
-                             f"{len(hop_active)} ref(s)" if hop_active else None,
-                             # NOT the pin mechanism: which one a hop gets is
-                             # decided at render time by whether a sampler
-                             # latent exists, and a dry run has none. Reporting
-                             # the setting is honest; reporting AddGuide for
-                             # every hop would not be.
-                             f"pin_to_qwen={pin_to_qwen}" if i > 0 else None,
-                             f"tone={shot.get('tone')}" if shot.get("tone") else None],
-                })
-                # The next hop's prompt asks how many pictures precede it, not
-                # what is in them, so a token stand-in compiles identical text
-                # for none of the memory.
-                prev_imgs = torch.zeros((max(overlap_n, 1), 8, 8, 3),
-                                        dtype=torch.float32)
-                pbar.update(1)
-                continue
-
-            _remake_cond_ready = [False]
-
-            def _hop_ref2va():
-                if swap and reference_video is not None:
-                    _sw_aud = (_vid_slots[0][1]
-                               if (_vid_slots and _vid_slots[0][1] is not None and audio_vae is not None)
-                               else None)
-                    _rm_c, _rm_lat = _viggle_remake_conditioning(
-                        clip=clip, vae=ref_vae, audio_vae=ref_audio_vae,
-                        source=reference_video, prompt=block,
-                        hop_images=hop_images, pins=_swap_pins,
-                        width=int(width), height=int(height),
-                        length=render_length, audio=_sw_aud,
-                    )
-                    if _rm_c is not None and _rm_lat is not None:
-                        _remake_cond_ready[0] = True
-                        return _rm_c, _rm_lat
-                # Every argument by NAME, none by position. Passing the first
-                # seven positionally worked here and broke for a user on a
-                # different ComfyUI build: their core orders the parameters
-                # differently, so the seventh positional landed on
-                # `ref_image_size` and the keyword collided with it --
-                # "got multiple values for argument 'ref_image_size'", raised
-                # on hop 1 before anything sampled. Core's signature is not
-                # ours to depend on; its parameter names are the contract.
-                packed = _core_call(
-                    MiniMaxH3ReferenceToVideo, "the reference conditioning",
-                    clip=clip, vae=ref_vae, audio_vae=ref_audio_vae, prompt=block,
-                    width=int(width), height=int(height), length=render_length,
-                    ref_image_size=ref_image_size,
-                    ref_images=hop_images,
-                    ref_videos=hop_videos,
-                    # Paired by ordinal with ref_videos. The pin clip, when
-                    # pin_to_qwen appends one, takes the next number and simply
-                    # has no entry here -- it is the previous hop's picture and
-                    # has no soundtrack of its own.
-                    ref_video_audios=(hop_video_audios or None),
-                    # Row voices are already folded in, at the ordinals the
-                    # citations above were written against.
-                    ref_audios=hop_ref_audios,
-                )
-                c, lat = _result(packed)[0], _result(packed)[1]
-                if refmod_image_blocks or refmod_video_blocks:
-                    # ReferenceToVideo encoded the decode. Put the stored
-                    # latent back in that slot before anything else copies it.
-                    c = _refmod.splice_blocks(
-                        c, hop_images, hop_videos,
-                        refmod_image_blocks, refmod_video_blocks)
-                return c, lat
-
-            def _dlg_encode():
-                # The dialogue draft's conditioning, on the draft canvas. Called
-                # while the text encoder is loaded: encoding it after the offload
-                # reloads the 32B, the cost that turned sound-first off in hand_tie.
-                if dlg is None or dlg["src"] is not None or not _dlg.script_words(block):
-                    return None, None
-                _dp = _core_call(
-                    MiniMaxH3ReferenceToVideo, "the dialogue draft conditioning",
-                    clip=clip, vae=ref_vae, audio_vae=ref_audio_vae, prompt=block,
-                    width=int(dlg["size"][0]), height=int(dlg["size"][1]),
-                    length=render_length, ref_image_size=ref_image_size,
-                    ref_images=hop_images, ref_videos=hop_videos,
-                    ref_video_audios=(hop_video_audios or None),
-                    ref_audios=hop_ref_audios)
-                dc, dl = _result(_dp)[0], _result(_dp)[1]
-                if refmod_image_blocks or refmod_video_blocks:
-                    dc = _refmod.splice_blocks(
-                        dc, hop_images, hop_videos,
-                        refmod_image_blocks, refmod_video_blocks)
-                return dc, dl
-
-            def _hop_and_draft():
-                # hand_tie encodes a section's first hop inside the previs's
-                # text-encoder batch; the draft rides in the same batch.
-                c = _hop_ref2va()
-                _dlg_pre[i] = _dlg_encode()
-                return c
-
-            if ht and ht_pos[i][0] not in ht_windows:
-                _ht_previs(i, pre_encode_hop=_hop_and_draft)
-            if previs_only:
-                pbar.update(1)
-                continue
-            if windowed:
-                # Only the hop's own conditioning: it is one window of the take latent,
-                # sampled after the loop with every other window of its take.
-                _w_seed = (int(shot["seed"]) if shot.get("seed") is not None
-                           else ((int(seed) + i) if seed_per_shot else int(seed)))
-                # A fresh take draws its noise from its first hop's seed, plus a hop's own
-                # seed only where the shot sets one (_wt_sample_seq seeds=). The digest names
-                # that seed, so flipping seed_per_shot re-draws nothing a fresh take would not.
-                _w_first = i == 0 or hop_restart
-                if _w_first:
-                    _wt_take_seed = _w_seed
-                _w_seed_x = (int(shot["seed"]) if (shot.get("seed") is not None and not _w_first)
-                             else None)
-                # What else reaches the window's conditioning (as the per-hop key keys it)
-                _w_extra = {}
-                if hop_voice:
-                    _w_extra["voice_on"] = True
-                if _hop_voice_tags:
-                    _w_extra["voices"] = {t: _store.audio_digest(slot_voices.get(_row_slot[t]))
-                                          for t in _hop_voice_tags}
-                if any(r.get("source") == "refmod" for r in hop_active):
-                    _w_extra["refmods"] = [
-                        {"tag": r["tag"], "strength": round(float(r["strength"]), 4),
-                         "latent": r.get("latent_digest"), "looks": r.get("looks_digest")}
-                        for r in hop_active if r.get("source") == "refmod"]
-                win_hops.append({
-                    "hop": i + 1,
-                    "cond": _cond_cpu(_hop_ref2va()[0], keep_refs=True),
-                    "len": int(render_length),
-                    "restart": bool(i == 0 or hop_restart),
-                    "seed": _w_seed,
-                    "seed_x": _w_seed_x,
-                    "dig": _wt.digest(block,
-                                      _w_seed if _w_first else (
-                                          _w_seed_x if _w_seed_x is not None else _wt_take_seed),
-                                      int(shot.get("steps") or steps),
-                                      int(render_length),
-                                      {k: _store.tensor_digest(t)
-                                       for k, t in sorted((hop_images or {}).items())},
-                                      _w_extra),
-                })
-                pbar.update(1)
-                continue
-
-            # Key this hop. prev_key makes the key chained, so editing shot 1
-            # invalidates every hop after it -- correct, and the reason the UI
-            # must show staleness before queuing or it reads as a bug.
-            hop_key = None
-            cached = None
-            locked_served = False
-            # A restart outranks a forced `pin_mech`: it relays nothing, so
-            # there is no mechanism left to pick. Asking for motion_context on
-            # a restart hop is not a contradiction to raise on, it is a setting
-            # that does not reach this hop.
-            pin_mech_pred = ("hand_tie" if ht
-                             else "none" if hop_restart
-                             else _pin_mech_for(i, overlap_n, prev_sampled,
-                                                mode=str(pin_mech)))
-            pin_mech_used = pin_mech_pred
-            _ab_hop = (bool(antiburn_name) and i > 0 and not hop_restart
-                       and pin_mech_pred == "motion_context")
-            if hop_store is not None:
+        _build_hop_payload = None
+        if hop_store is not None:
+            def _build_hop_payload(i, sp, cur_prev_sampled):
+                block = sp["block"]
+                shot = sp["shot"]
+                hop_length = sp["hop_length"]
+                _xtra = sp["_xtra"]
+                render_length = sp["render_length"]
+                hop_restart = sp["hop_restart"]
+                hop_is_start = sp["hop_is_start"]
+                hop_active = sp["hop_active"]
+                base_images = sp["base_images"]
+                hop_images = sp["hop_images"]
+                _hop_voice_tags = sp["_hop_voice_tags"]
+                _row_slot = sp["_row_slot"]
+                video_ords = sp["video_ords"]
+                hop_voice = sp["hop_voice"]
+                _hop_yaw_picks = sp.get("_hop_yaw_picks") or {}
+                pin_mech_pred = ("hand_tie" if ht
+                                 else "none" if hop_restart
+                                 else _pin_mech_for(i, overlap_n, cur_prev_sampled,
+                                                    mode=str(pin_mech)))
+                _ab_hop = (bool(antiburn_name) and i > 0 and not hop_restart
+                           and pin_mech_pred == "motion_context")
                 # `None`, not prev_key, on a restart: the hop genuinely does
                 # not depend on its predecessor, so chaining it would re-render
                 # every restart whenever anything earlier moved -- and later
@@ -8948,8 +9532,12 @@ class HandTieClips:
                     # looks keeps the key it had before they existed.
                     **({"refmods": [
                             {"tag": r["tag"],
-                             "strength": round(float(r["strength"]), 4),
+                             "strength": round(float((r.get("shot_strengths") or {}).get(str(i + 1), r["strength"])), 4),
+                             **({"step_curve": r["step_curve"]} if r.get("step_curve") and r.get("step_curve") != "full" else {}),
+                             **({"members": r["members"]} if r.get("members") else {}),
+                             **({"yaw_members": _hop_yaw_picks[r["slot"]]} if r["slot"] in _hop_yaw_picks else {}),
                              "latent": r.get("latent_digest"),
+                             **({"audio_latent": r["audio_latent_digest"]} if r.get("audio_latent_digest") else {}),
                              **({"looks": r["looks_digest"]}
                                 if r.get("looks_digest") else {})}
                             for r in hop_active if r.get("source") == "refmod"
@@ -9100,7 +9688,6 @@ class HandTieClips:
                                                       _hear.available() or "unchecked"]
                 # No hop opens on another hop (ht_seam_source removed 2026-10-14).
                 # The seam-fix branches below that read the previous hop stay inert.
-                _seam_prev = False
                 if _sfix:
                     hop_payload["ht_seam_fix"] = [8, bool(_ht.SEAMFIX_END_TIE), _ht.SEAMFIX_ANCHOR_STRENGTH_V2,
                                                   int(_xtra), _ht.SEAMFIX_LINE_START_S,
@@ -9115,11 +9702,410 @@ class HandTieClips:
                         min(int(reference_video.shape[0]), int(render_length)),
                         bool(_vid_slots and _vid_slots[0][1] is not None and audio_vae is not None),
                     ]
+                    if SWAP_VIDEO_FADE:
+                        hop_payload["swap_vfade"] = [float(SWAP_VIDEO_FADE[0]), float(SWAP_VIDEO_FADE[1])]
                 if MC_PIN_ENCODED and pin_mech_pred == "motion_context" and i > 0:
                     hop_payload["mc_pin"] = "encoded_v1"
                 if _ab_hop:
                     hop_payload["antiburn"] = [str(antiburn_name), ANTIBURN_STRENGTH,
                                                ANTIBURN_PLAIN_STEPS, "no_refine"]
+                return hop_payload, pin_mech_pred, _ab_hop
+
+        def _prewarm_specs(specs_list):
+            _prewarm_ref2va_batch(
+                specs_list, ref_vae, ref_audio_vae, clip=clip, model=model,
+                skip_img_ids=refmod_image_blocks,
+                skip_vid_ids=refmod_video_blocks,
+                skip_aud_ids=refmod_audio_blocks,
+            )
+
+        if windowed and not dry and not previs_only and n > 0:
+            _w_cur_ps = set(prev_subjects)
+            _w_specs = []
+            for _wj in range(n):
+                _wsp = _compiled_specs.get(_wj)
+                if _wsp is None:
+                    _wsp = _compile_hop_step(_wj, blocks[_wj], _w_cur_ps, None)
+                    _compiled_specs[_wj] = _wsp
+                _w_cur_ps = _wsp["prev_subjects"]
+                _w_specs.append((
+                    int(width), int(height), int(_wsp["render_length"]), ref_image_size,
+                    _wsp["hop_images"], _wsp["hop_videos"],
+                    _wsp["hop_video_audios"], _wsp["hop_ref_audios"],
+                ))
+            _prewarm_specs(_w_specs)
+
+        assembled = []
+        for i, block in enumerate(blocks):
+            mm.throw_exception_if_processing_interrupted()
+            _dlg_hop = None
+            _dlg_open = []      # hand_tie: hop-clock windows the lock leaves to the previs
+            _ht_tail_hold, _ht_tail_prior = 0, None   # per hop: never a previous hop's mask
+            _seam_prev = False
+            _sp = _compiled_specs.pop(i, None)
+            if _sp is None:
+                _sp = _compile_hop_step(i, block, prev_subjects, prev_imgs)
+            _compiled_specs[i] = _sp
+            block = _sp["block"]
+            shot = _sp["shot"]
+            hop_length = _sp["hop_length"]
+            _xtra = _sp["_xtra"]
+            render_length = _sp["render_length"]
+            hop_restart = _sp["hop_restart"]
+            hop_is_start = _sp["hop_is_start"]
+            hop_trims = _sp["hop_trims"]
+            _wt_window = _sp["_wt_window"]
+            hop_active = _sp["hop_active"]
+            hop_subject_prose = _sp["hop_subject_prose"]
+            hop_pictures = _sp["hop_pictures"]
+            hop_mod_videos = _sp["hop_mod_videos"]
+            base_images = _sp["base_images"]
+            hop_images = _sp["hop_images"]
+            hop_videos = _sp["hop_videos"]
+            hop_video_audios = _sp["hop_video_audios"]
+            hop_ref_audios = _sp["hop_ref_audios"]
+            hop_ords = _sp["hop_ords"]
+            video_ords = _sp["video_ords"]
+            hop_voice = _sp["hop_voice"]
+            _hop_voice_tags = _sp["_hop_voice_tags"]
+            _row_slot = _sp["_row_slot"]
+            _voice_ord = _sp["_voice_ord"]
+            _bindings = _sp["_bindings"]
+            _pre = _sp["_pre"]
+            _suf = _sp["_suf"]
+            prev_subjects = _sp["prev_subjects"]
+            _push_preview(unique_id, f"hop {i + 1}/{n} sampling…", hop=i + 1, total=n,
+                           frac=(write_pos / float(total_frames)) if total_frames else None,
+                          pin_mech=("sand_tie" if windowed else None))
+
+            assembled.append((i + 1, block))
+
+            # A dry run has everything it came for the moment the block is
+            # compiled: this is the text the encoder would receive. Stop here,
+            # before the key, the cache and the sampler.
+            if dry:
+                sheet_rows.append({
+                    "hop": i + 1,
+                    "first": None, "last": None,
+                    "beat": (shot.get("beat") or "").strip() or "(continues)",
+                    "directives": dict(shot.get("directives") or {}),
+                    "meta": [f"{hop_length}f ({hop_length / FPS:.1f}s)",
+                             f"{len(block)} chars compiled",
+                             f"{len(hop_active)} ref(s)" if hop_active else None,
+                             # NOT the pin mechanism: which one a hop gets is
+                             # decided at render time by whether a sampler
+                             # latent exists, and a dry run has none. Reporting
+                             # the setting is honest; reporting AddGuide for
+                             # every hop would not be.
+                             f"pin_to_qwen={pin_to_qwen}" if i > 0 else None,
+                             f"tone={shot.get('tone')}" if shot.get("tone") else None],
+                })
+                # The next hop's prompt asks how many pictures precede it, not
+                # what is in them, so a token stand-in compiles identical text
+                # for none of the memory.
+                prev_imgs = torch.zeros((max(overlap_n, 1), 8, 8, 3),
+                                        dtype=torch.float32)
+                pbar.update(1)
+                continue
+
+            _remake_cond_ready = [False]
+
+            def _run_ref2va(block, render_length, hop_images, hop_videos,
+                            hop_video_audios, hop_ref_audios, _is_main=True):
+                if _is_main and swap and reference_video is not None:
+                    _sw_aud = (_vid_slots[0][1]
+                               if (_vid_slots and _vid_slots[0][1] is not None and audio_vae is not None)
+                               else None)
+                    _rm_c, _rm_lat = _viggle_remake_conditioning(
+                        clip=clip, vae=ref_vae, audio_vae=ref_audio_vae,
+                        source=reference_video, prompt=block,
+                        hop_images=hop_images, pins=_swap_pins,
+                        width=int(width), height=int(height),
+                        length=render_length, audio=_sw_aud,
+                    )
+                    if _rm_c is not None and _rm_lat is not None:
+                        _remake_cond_ready[0] = True
+                        return _rm_c, _rm_lat
+                _vis_flags = [id(t) in refmod_image_blocks for t in (hop_images or {}).values() if t is not None] + [id(t) in refmod_video_blocks for t in (hop_videos or {}).values() if t is not None]
+                _aud_flags = []
+                for _vk, _vf in (hop_videos or {}).items():
+                    if _vf is not None and (hop_video_audios or {}).get("ref_video_audio_" + str(_vk).rsplit("_", 1)[-1]) is not None:
+                        _aud_flags.append(False)
+                for _va in (hop_ref_audios or {}).values():
+                    if _va is not None:
+                        _aud_flags.append(id(_va) in refmod_audio_blocks)
+                _qk = _qwen_cond_key(
+                    MiniMaxH3ReferenceToVideo, clip, ref_vae, ref_audio_vae,
+                    block, width, height, render_length, ref_image_size,
+                    hop_images, hop_videos, hop_video_audios, hop_ref_audios,
+                    _vis_flags, _aud_flags,
+                )
+                _qhit = _QWEN_COND_CACHE.get(_qk) if _qk is not None else None
+                if _qhit is not None:
+                    c = _cond_cpu(_qhit[0], keep_refs=True)
+                    lat = _clone_lat_copy(_qhit[1])
+                    print(f"[{TAG}] ref2va cond cache hit (skipped Qwen3-VL encode)", flush=True)
+                else:
+                    # Every argument by NAME, none by position. Passing the first
+                    # seven positionally worked here and broke for a user on a
+                    # different ComfyUI build: their core orders the parameters
+                    # differently, so the seventh positional landed on
+                    # `ref_image_size` and the keyword collided with it --
+                    # "got multiple values for argument 'ref_image_size'", raised
+                    # on hop 1 before anything sampled. Core's signature is not
+                    # ours to depend on; its parameter names are the contract.
+                    packed = _core_call(
+                        MiniMaxH3ReferenceToVideo, "the reference conditioning",
+                        clip=clip, vae=ref_vae, audio_vae=ref_audio_vae, prompt=block,
+                        width=int(width), height=int(height), length=render_length,
+                        ref_image_size=ref_image_size,
+                        ref_images=hop_images,
+                        ref_videos=hop_videos,
+                        # Paired by ordinal with ref_videos. The pin clip, when
+                        # pin_to_qwen appends one, takes the next number and simply
+                        # has no entry here -- it is the previous hop's picture and
+                        # has no soundtrack of its own.
+                        ref_video_audios=(hop_video_audios or None),
+                        # Row voices are already folded in, at the ordinals the
+                        # citations above were written against.
+                        ref_audios=hop_ref_audios,
+                    )
+                    c, lat = _result(packed)[0], _result(packed)[1]
+                    if _qk is not None:
+                        if len(_QWEN_COND_CACHE) >= _QWEN_COND_CACHE_MAX:
+                            _QWEN_COND_CACHE.pop(next(iter(_QWEN_COND_CACHE)), None)
+                        _QWEN_COND_CACHE[_qk] = (_cond_cpu(c, keep_refs=True), _clone_lat_copy(lat))
+                if refmod_image_blocks or refmod_video_blocks or refmod_audio_blocks:
+                    # ReferenceToVideo encoded the decode. Put the stored
+                    # latent back in that slot before anything else copies it.
+                    c = _refmod.splice_blocks(
+                        c, hop_images, hop_videos,
+                        refmod_image_blocks, refmod_video_blocks,
+                        hop_audios=hop_ref_audios,
+                        audio_ids=refmod_audio_blocks)
+                return c, lat
+
+            def _hop_ref2va():
+                return _run_ref2va(block, render_length, hop_images, hop_videos,
+                                   hop_video_audios, hop_ref_audios, _is_main=True)
+
+            def _run_dlg_encode(block, render_length, hop_images, hop_videos,
+                                hop_video_audios, hop_ref_audios):
+                # The dialogue draft's conditioning, on the draft canvas. Called
+                # while the text encoder is loaded: encoding it after the offload
+                # reloads the 32B, the cost that turned sound-first off in hand_tie.
+                if dlg is None or dlg["src"] is not None or not _dlg.script_words(block):
+                    return None, None
+                _dp = _core_call(
+                    MiniMaxH3ReferenceToVideo, "the dialogue draft conditioning",
+                    clip=clip, vae=ref_vae, audio_vae=ref_audio_vae, prompt=block,
+                    width=int(dlg["size"][0]), height=int(dlg["size"][1]),
+                    length=render_length, ref_image_size=ref_image_size,
+                    ref_images=hop_images, ref_videos=hop_videos,
+                    ref_video_audios=(hop_video_audios or None),
+                    ref_audios=hop_ref_audios)
+                dc, dl = _result(_dp)[0], _result(_dp)[1]
+                if refmod_image_blocks or refmod_video_blocks or refmod_audio_blocks:
+                    dc = _refmod.splice_blocks(
+                        dc, hop_images, hop_videos,
+                        refmod_image_blocks, refmod_video_blocks,
+                        hop_audios=hop_ref_audios,
+                        audio_ids=refmod_audio_blocks)
+                return dc, dl
+
+            def _dlg_encode():
+                return _run_dlg_encode(block, render_length, hop_images, hop_videos,
+                                       hop_video_audios, hop_ref_audios)
+
+            def _batch_preencode_rest(start_j):
+                # Batch-encode upcoming independent hops while Qwen3-VL is hot
+                # in VRAM so we avoid repeated 32B <-> 24GB DiT model swaps.
+                # Under hand_tie, stay inside the current section because the
+                # next section's previs depends on this section's closing hop.
+                if dry or previs_only or swap or windowed:
+                    return
+                if not (ht or (str(pin_to_qwen) == "off" and hop_store is None)):
+                    return
+                if start_j >= n:
+                    return
+                _cur_ps = set(prev_subjects)
+                _encoded_n = 0
+                for _j in range(start_j, n):
+                    if ht:
+                        _jsi = ht_pos[_j][0]
+                        if _jsi != ht_pos[i][0]:
+                            break
+                    _sp_j = _compiled_specs.get(_j)
+                    if _sp_j is None:
+                        _sp_j = _compile_hop_step(_j, blocks[_j], _cur_ps, None)
+                        _compiled_specs[_j] = _sp_j
+                    _cur_ps = _sp_j["prev_subjects"]
+                    _sh_j = shots[_j] or {}
+                    if _sh_j.get("locked") or _j < replay_before or _j in _ht_pre_ref2va:
+                        continue
+                    if ht and _jsi in ht_windows and _build_hop_payload is not None and hop_store is not None:
+                        _hp_j, _, _ = _build_hop_payload(_j, _sp_j, None)
+                        _hk_j = _store.hop_key(None, _hp_j)
+                        if hop_store.has(_hk_j):
+                            continue
+                    _c_j, _lat_j = _run_ref2va(
+                        _sp_j["block"], _sp_j["render_length"],
+                        _sp_j["hop_images"], _sp_j["hop_videos"],
+                        _sp_j["hop_video_audios"], _sp_j["hop_ref_audios"],
+                        _is_main=False,
+                    )
+                    _ht_pre_ref2va[_j] = (_cond_cpu(_c_j, keep_refs=True), _latent_cpu(_lat_j))
+                    if dlg is not None and dlg["src"] is None and _j not in _dlg_pre:
+                        _dc_j, _dl_j = _run_dlg_encode(
+                            _sp_j["block"], _sp_j["render_length"],
+                            _sp_j["hop_images"], _sp_j["hop_videos"],
+                            _sp_j["hop_video_audios"], _sp_j["hop_ref_audios"],
+                        )
+                        _dlg_pre[_j] = (_cond_cpu(_dc_j, keep_refs=True) if _dc_j is not None else None,
+                                        _latent_cpu(_dl_j) if _dl_j is not None else None)
+                    _encoded_n += 1
+                if _encoded_n:
+                    print(f"[{TAG}] batched {_encoded_n} upcoming hop(s) in this Qwen pass "
+                          "(eliminates per-hop TE/DiT reloads)", flush=True)
+
+            def _collect_batch_specs(start_j, init_subjects, *, include_hop=None, include_previs=None):
+                _specs = []
+                if include_previs is not None:
+                    _specs.append(include_previs)
+
+                def _add_hop_specs(_sp_x):
+                    _specs.append((
+                        int(width), int(height), int(_sp_x["render_length"]), ref_image_size,
+                        _sp_x["hop_images"], _sp_x["hop_videos"],
+                        _sp_x["hop_video_audios"], _sp_x["hop_ref_audios"],
+                    ))
+                    if dlg is not None and dlg["src"] is None and _dlg.script_words(_sp_x["block"]):
+                        _specs.append((
+                            int(dlg["size"][0]), int(dlg["size"][1]),
+                            int(_sp_x["render_length"]), ref_image_size,
+                            _sp_x["hop_images"], _sp_x["hop_videos"],
+                            _sp_x["hop_video_audios"], _sp_x["hop_ref_audios"],
+                        ))
+                    if sound_first and ht:
+                        _specs.append((
+                            int(sd_w), int(sd_h), int(_sp_x["render_length"]), ref_image_size,
+                            _sp_x["hop_images"], _sp_x["hop_videos"],
+                            _sp_x["hop_video_audios"], _sp_x["hop_ref_audios"],
+                        ))
+
+                if include_hop is not None:
+                    _add_hop_specs(include_hop)
+                if (not dry and not previs_only and not swap and not windowed
+                        and (ht or (str(pin_to_qwen) == "off" and hop_store is None))
+                        and start_j < n):
+                    _cur_ps = set(init_subjects)
+                    for _j in range(start_j, n):
+                        if ht:
+                            _jsi = ht_pos[_j][0]
+                            if _jsi != ht_pos[i][0]:
+                                break
+                        _sp_j = _compiled_specs.get(_j)
+                        if _sp_j is None:
+                            _sp_j = _compile_hop_step(_j, blocks[_j], _cur_ps, None)
+                            _compiled_specs[_j] = _sp_j
+                        _cur_ps = _sp_j["prev_subjects"]
+                        _sh_j = shots[_j] or {}
+                        if _sh_j.get("locked") or _j < replay_before or _j in _ht_pre_ref2va:
+                            continue
+                        if ht and _jsi in ht_windows and _build_hop_payload is not None and hop_store is not None:
+                            _hp_j, _, _ = _build_hop_payload(_j, _sp_j, None)
+                            _hk_j = _store.hop_key(None, _hp_j)
+                            if hop_store.has(_hk_j):
+                                continue
+                        _add_hop_specs(_sp_j)
+                return _specs
+
+            def _hop_and_draft():
+                # hand_tie encodes a section's first hop inside the previs's
+                # text-encoder batch; the draft rides in the same batch.
+                c = _hop_ref2va()
+                _dlg_pre[i] = _dlg_encode()
+                _batch_preencode_rest(i + 1)
+                return c
+
+            if ht and ht_pos[i][0] not in ht_windows:
+                _ht_prewarm[0] = lambda pv_sp: _prewarm_specs(
+                    _collect_batch_specs(i + 1, prev_subjects, include_hop=_sp, include_previs=pv_sp)
+                )
+                _ht_previs(i, pre_encode_hop=_hop_and_draft)
+            _compiled_specs.pop(i, None)
+            if previs_only:
+                pbar.update(1)
+                continue
+            if windowed:
+                # Only the hop's own conditioning: it is one window of the take latent,
+                # sampled after the loop with every other window of its take.
+                _w_seed = (int(shot["seed"]) if shot.get("seed") is not None
+                           else ((int(seed) + i) if seed_per_shot else int(seed)))
+                # A fresh take draws its noise from its first hop's seed, plus a hop's own
+                # seed only where the shot sets one (_wt_sample_seq seeds=). The digest names
+                # that seed, so flipping seed_per_shot re-draws nothing a fresh take would not.
+                _w_first = i == 0 or hop_restart
+                if _w_first:
+                    _wt_take_seed = _w_seed
+                _w_seed_x = (int(shot["seed"]) if (shot.get("seed") is not None and not _w_first)
+                             else None)
+                # What else reaches the window's conditioning (as the per-hop key keys it)
+                _w_extra = {}
+                if hop_voice:
+                    _w_extra["voice_on"] = True
+                if _hop_voice_tags:
+                    _w_extra["voices"] = {t: _store.audio_digest(slot_voices.get(_row_slot[t]))
+                                          for t in _hop_voice_tags}
+                if any(r.get("source") == "refmod" for r in hop_active):
+                    _w_extra["refmods"] = [
+                        {"tag": r["tag"],
+                         "strength": round(float((r.get("shot_strengths") or {}).get(str(i + 1), r["strength"])), 4),
+                         **({"step_curve": r["step_curve"]} if r.get("step_curve") and r.get("step_curve") != "full" else {}),
+                         **({"members": r["members"]} if r.get("members") else {}),
+                         "latent": r.get("latent_digest"),
+                         **({"audio_latent": r["audio_latent_digest"]} if r.get("audio_latent_digest") else {}),
+                         **({"looks": r["looks_digest"]} if r.get("looks_digest") else {})}
+                        for r in hop_active if r.get("source") == "refmod"]
+                win_hops.append({
+                    "hop": i + 1,
+                    "cond": _cond_cpu(_hop_ref2va()[0], keep_refs=True),
+                    "len": int(render_length),
+                    "restart": bool(i == 0 or hop_restart),
+                    "seed": _w_seed,
+                    "seed_x": _w_seed_x,
+                    "dig": _wt.digest(block,
+                                      _w_seed if _w_first else (
+                                          _w_seed_x if _w_seed_x is not None else _wt_take_seed),
+                                      int(shot.get("steps") or steps),
+                                      int(render_length),
+                                      {k: _store.tensor_digest(t)
+                                       for k, t in sorted((hop_images or {}).items())},
+                                      _w_extra),
+                })
+                pbar.update(1)
+                continue
+
+            # Key this hop. prev_key makes the key chained, so editing shot 1
+            # invalidates every hop after it -- correct, and the reason the UI
+            # must show staleness before queuing or it reads as a bug.
+            hop_key = None
+            cached = None
+            locked_served = False
+            # A restart outranks a forced `pin_mech`: it relays nothing, so
+            # there is no mechanism left to pick. Asking for motion_context on
+            # a restart hop is not a contradiction to raise on, it is a setting
+            # that does not reach this hop.
+            pin_mech_pred = ("hand_tie" if ht
+                             else "none" if hop_restart
+                             else _pin_mech_for(i, overlap_n, prev_sampled,
+                                                mode=str(pin_mech)))
+            pin_mech_used = pin_mech_pred
+            _ab_hop = (bool(antiburn_name) and i > 0 and not hop_restart
+                       and pin_mech_pred == "motion_context")
+            if hop_store is not None:
+                hop_payload, pin_mech_pred, _ab_hop = _build_hop_payload(i, _sp, prev_sampled)
+                pin_mech_used = pin_mech_pred
                 hop_key = _store.hop_key(
                     None if (hop_restart or ht) else prev_key,
                     hop_payload)
@@ -9239,15 +10225,23 @@ class HandTieClips:
                                 ref_image_size=ref_image_size))[0]
                             up_cond = _cond_cpu(_tc, keep_refs=False)
                         else:
+                            _prewarm_specs(_collect_batch_specs(n, prev_subjects, include_hop=_sp))
                             up_cond = _cond_cpu(_hop_ref2va()[0], keep_refs=True)
                         _offload_text_encoder(clip, model)
                     else:
                         up_cond = None
             else:
+                _was_pre_encoded = i in _ht_pre_ref2va
+                if not _was_pre_encoded:
+                    _prewarm_specs(_collect_batch_specs(i + 1, prev_subjects, include_hop=_sp))
                 cond, latent = (_ht_pre_ref2va.pop(i)
                                 if i in _ht_pre_ref2va else _hop_ref2va())
                 _dlg_dc, _dlg_dl = (_dlg_pre.pop(i) if i in _dlg_pre
                                     else _dlg_encode())
+                if not _was_pre_encoded:
+                    _batch_preencode_rest(i + 1)
+                if not (ht and sound_first):
+                    _offload_text_encoder(clip, model)
                 # The conditioning as Ref2VA built it, before any pin or guide
                 # is added to it. `refine_cond=base` pulls the second pass
                 # toward this -- the references and the text, nothing about the
@@ -9468,10 +10462,12 @@ class HandTieClips:
                         ref_audios=hop_ref_audios)
                     _dc, _dl = _result(_dp)[0], _result(_dp)[1]
                     del _dp
-                    if refmod_image_blocks or refmod_video_blocks:
+                    if refmod_image_blocks or refmod_video_blocks or refmod_audio_blocks:
                         _dc = _refmod.splice_blocks(
                             _dc, hop_images, hop_videos,
-                            refmod_image_blocks, refmod_video_blocks)
+                            refmod_image_blocks, refmod_video_blocks,
+                            hop_audios=hop_ref_audios,
+                            audio_ids=refmod_audio_blocks)
                     for _fi, _w in _ties:
                         _dc = _result(_core_call(
                             MiniMaxH3AddGuide, "the sound draft window",
@@ -9608,11 +10604,13 @@ class HandTieClips:
                             f"{TAG}: hop {i + 1}: master_audio_file needs a "
                             "joint AV latent and this hop did not have one.")
                     _alen = int(_parts[1].shape[-1])
+                    _drv32 = locked.get("wav32_driver", locked["wav32"])
                     _z = _encode_locked_slice(
-                        audio_vae, locked["wav32"], _t0, _t1, _alen)
+                        audio_vae, _drv32, _t0, _t1, _alen)
                     latent = _splice_locked_audio(latent, _z)
                     print(f"[{TAG}] hop {i + 1}: audio locked "
                           f"[{_t0:.2f}s-{_t1:.2f}s] of master_audio_file",
+                          (locked.get("driver_note") or "").lstrip("; "),
                           flush=True)
 
                 _offload_text_encoder(clip, model)
@@ -10034,6 +11032,15 @@ class HandTieClips:
                     audio = {"waveform": wav, "sample_rate": sr}
                 this_sampled = (refined_for_pin if refined_for_pin is not None
                                 else _latent_cpu(sampled))
+                _mo_src = _latents.from_dict(sampled)
+                if _mo_src:
+                    _mo = _latents.motion_overload_score(_mo_src[0])
+                    if _mo is not None:
+                        hop_motion_scores.append((i + 1, _mo))
+                        if _mo["overloaded"]:
+                            print(f"[{TAG}] hop {i + 1}: {_mo['note']} "
+                                  "(hint: soften rapid action adjectives or raise shift_video/steps)",
+                                  flush=True)
                 if upsample_on:
                     # `sampled`, not `this_sampled`: under pin_only those
                     # differ, and the upsampler redraws what was delivered.
@@ -10129,27 +11136,25 @@ class HandTieClips:
             # the next hop rather than merely repainting the master.
             if anchor_on and not ht:
                 shot_tone = str(shot.get("tone") or "")
+                _is_chroma = (tone_mode == "chroma")
+                _stats_fn = _tone.chroma_stats if _is_chroma else _tone.anchor_stats
+                _pull_fn = _tone.chroma_pull if _is_chroma else _tone.anchor_pull
                 if i == 0 and not anchor_from_still:
-                    anchor_ref = _tone.anchor_stats(imgs)
+                    anchor_ref = _stats_fn(imgs)
                     if anchor_ref is not None:
-                        print(f"[{TAG}] tone anchor set from hop 1: "
-                              + _tone.anchor_note(anchor_ref), flush=True)
+                        print(f"[{TAG}] " + ("chroma" if _is_chroma else "tone")
+                              + " anchor set from hop 1"
+                              + (": " + _tone.anchor_note(anchor_ref) if not _is_chroma else " (L* preserved)"),
+                              flush=True)
                 elif shot_tone == "rebase":
-                    anchor_ref = _tone.anchor_stats(imgs)
+                    anchor_ref = _stats_fn(imgs)
                     print(f"[{TAG}] hop {i + 1}: tone=rebase, anchor moved to "
                           f"this hop; later hops hold ITS level", flush=True)
                 elif shot_tone == "free":
                     print(f"[{TAG}] hop {i + 1}: tone=free, anchor pull skipped",
                           flush=True)
                 else:
-                    # The ramp exists to keep a JOIN exact -- frame 0 of a hop
-                    # has to equal the previous hop's last frame. Hop 1 and a
-                    # restart hop have no such frame: one opens the chain, the
-                    # other opens on the photograph by construction. Ramping
-                    # them would spend two seconds fading INTO the correction
-                    # at the exact moment the viewer is deciding what the shot
-                    # looks like.
-                    imgs, anchor_note = _tone.anchor_pull(
+                    imgs, anchor_note = _pull_fn(
                         imgs, anchor_ref, strength=float(tone_anchor),
                         ramp=(0 if (i == 0 or hop_restart) else _tone.ANCHOR_RAMP))
                     if anchor_note:
@@ -10438,6 +11443,13 @@ class HandTieClips:
                 # the hop path hands Regen2K conditioning without references
                 for _ue in upsample_hops:
                     _ue["cond"] = _cond_cpu(_ue["cond"], keep_refs=False)
+            for _ue in upsample_hops:
+                if _ue.get("video") is not None:
+                    _mo = _latents.motion_overload_score(_ue["video"])
+                    if _mo is not None:
+                        hop_motion_scores.append((int(_ue.get("hop") or 1), _mo))
+                        if _mo["overloaded"]:
+                            print(f"[{TAG}] hop {int(_ue.get('hop') or 1)}: {_mo['note']}", flush=True)
             hop_keys.extend(_wkeys)
             win_hops = []
         if write_pos != total_frames:
@@ -10653,8 +11665,19 @@ class HandTieClips:
         # seam report reads this instead of asking the user to retype `hops`
         # and `overlap` and then solving for them -- which is both a chore and,
         # since restart hops stopped being trimmed, wrong.
+        seam_health_obj = None
+        if not dry and seam_marks and master_imgs is not None:
+            seam_health_obj = _tone.seam_health_report(master_imgs, seam_marks)
+        motion_overload_obj = None
+        if not dry and hop_motion_scores:
+            _wh, _wm = max(hop_motion_scores, key=lambda x: x[1]["score"])
+            motion_overload_obj = {"hop": int(_wh), **_wm}
         if seam_marks:
             info += chr(10) + "seams: " + ", ".join(str(f) for f in seam_marks)
+        if seam_health_obj is not None:
+            info += chr(10) + "seam health: " + seam_health_obj["note"]
+        if motion_overload_obj is not None:
+            info += chr(10) + f"motion overload: hop {motion_overload_obj['hop']} {motion_overload_obj['note']}"
         if unpaired_joins:
             info += chr(10) + "unpaired joins: " + ", ".join(
                 f"{h - 1}|{h}" for h in unpaired_joins)
@@ -10714,6 +11737,9 @@ class HandTieClips:
                   "drift_ms": round((_a_secs - _v_secs) * 1000.0, 1),
                   "hops": int(n), "frames": int(master_imgs.shape[0]),
                   "ht_previs_warn": _warn_payload,
+                  **({"seam_health": seam_health_obj["note"]} if seam_health_obj else {}),
+                  **({"motion_overload": f"hop {motion_overload_obj['hop']} {motion_overload_obj['note']}"}
+                     if motion_overload_obj else {}),
                   "done": True})
 
         if locked is not None and master_wav is not None:

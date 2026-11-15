@@ -158,7 +158,17 @@
 
 .h3e-root textarea { resize: vertical; line-height: 1.45; }
 
-.h3e-root button { cursor: pointer; white-space: nowrap; background: var(--h3-panel); }
+.h3e-root button {
+    cursor: pointer;
+    white-space: nowrap;
+    background: var(--h3-panel);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    line-height: 1.15;
+    padding: 4px 8px 5px;
+}
 .h3e-root button:hover { border-color: var(--h3-accent); }
 .h3e-root button:active { background: color-mix(in srgb, var(--h3-accent) 22%, var(--h3-panel)); }
 .h3e-root button:disabled { cursor: not-allowed; opacity: .4; }
@@ -355,11 +365,14 @@
     max-height: none;
 }
 
+.h3e-root .h3e-poster,
 .h3e-poster {
     flex: 0 0 auto;
     width: 116px;
     display: flex;
     flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
     gap: 2px;
     padding: 4px;
     background: var(--h3-panel);
@@ -368,6 +381,7 @@
     cursor: pointer;
     text-align: left;
     color: inherit;
+    line-height: 1.3;
     font: inherit;
     user-select: none;
 }
@@ -759,6 +773,8 @@ details.h3e-run-group[open] > .h3e-run-label::before { transform: rotate(90deg);
     grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
 }
 .h3e-run .h3e-run-wide { grid-column: span 2; }
+.h3e-run .h3e-run-half { grid-column: span 3; }
+.h3e-run-fold { font-size: var(--h3-fs-xs); padding: 2px 7px; }
 /* Digits line up column-wise, so a changed seed is visible at a glance. */
 .h3e-run input[type="number"] { font-variant-numeric: tabular-nums; }
 
@@ -805,15 +821,15 @@ details.h3e-run-group[open] > .h3e-run-label::before { transform: rotate(90deg);
  * (below) they matched nothing at all, because a @container query without a
  * containment context is dead code. That is why the rail looked mangled at
  * every node width. */
-@container (max-width: 560px) {
-    /* Drop the description to its own line first: it is the widest track and
-     * the least useful one to read mid-row. */
+@container (max-width: 720px) {
+    /* Drop the description to its own line first: the 7-track row needs ~710px
+     * before tracks compress or overflow past the container edge. */
     .h3e-ref {
         grid-template-columns: auto minmax(88px, 1.2fr) minmax(74px, .9fr) minmax(74px, .9fr) minmax(96px, 1fr) minmax(52px, .45fr) minmax(52px, .45fr) auto;
     }
     .h3e-ref .h3e-desc { grid-column: 2 / -1; }
 }
-@container (max-width: 430px) {
+@container (max-width: 480px) {
     /* Then stack: tag on the top row with the ordinal and the kill, the three
      * selects sharing the next, description below that. */
     .h3e-ref { grid-template-columns: auto 1fr auto; }
@@ -1120,7 +1136,7 @@ details.h3e-run-group[open] > .h3e-run-label::before { transform: rotate(90deg);
     color: var(--h3-muted);
     font-family: ui-monospace, Consolas, monospace;
 }
- *
+/*
  * Empty is dashed, filled is solid, so the border alone says whether a slot
  * holds something -- readable at a glance across nine of them. `contain` and
  * never `cover`: the whole job of this thumbnail is letting you identify the
@@ -1973,7 +1989,9 @@ video.h3e-trim-media {
     flex-wrap: wrap;
 }
 .h3e-writer-row button { flex: 0 0 auto; }
-.h3e-writer-brief { flex: 1 1 auto; min-width: 0; }
+.h3e-writer-row > .h3e-select { flex: 1 1 180px; width: auto; min-width: 140px; }
+.h3e-writer-row > .h3e-writer-row { margin-bottom: 0; }
+.h3e-writer-brief { flex: 1 1 220px; min-width: 140px; }
 .h3e-writer-hops  { flex: 0 0 56px; text-align: center; }
 .h3e-writer-url   { flex: 1 1 auto; min-width: 0; }
 .h3e-writer-model { flex: 1 1 auto; min-width: 0; }
@@ -2068,6 +2086,13 @@ video.h3e-trim-media {
     margin-top: 2px;
     overflow-wrap: anywhere;
 }
+.h3e-draft-warn {
+    font-size: var(--h3-fs-xs);
+    color: var(--h3-warn);
+    line-height: 1.4;
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+}
 
 /* -- RefMod builder panel ---------------------------------------------- */
 /* Two columns: sources on the left, dials and the running estimate on the
@@ -2145,9 +2170,222 @@ video.h3e-trim-media {
     min-width: 0;
 }
 
-.h3e-mod-dials .h3e-grid { grid-template-columns: minmax(0, 1fr); }
+.h3e-mod-dials .h3e-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.h3e-mod-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--h3-gap-sm);
+    margin-top: var(--h3-gap-sm);
+}
+.h3e-mod-actions .h3e-btn { flex: 1 1 auto; }
+
+.h3e-mod-maskbox,
+.h3e-mod-inspector {
+    display: flex;
+    flex-direction: column;
+    gap: var(--h3-gap-sm);
+}
+.h3e-mod-maskimg {
+    display: block;
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    background: var(--h3-sunken);
+    border: 1px solid var(--h3-border-soft);
+    border-radius: var(--h3-radius-sm);
+}
+.h3e-mod-badges { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+.h3e-mod-card {
+    display: flex;
+    gap: var(--h3-gap-sm);
+    align-items: flex-start;
+    min-width: 0;
+}
+.h3e-mod-thumb {
+    width: 68px;
+    height: 68px;
+    flex: 0 0 68px;
+    object-fit: cover;
+    border-radius: var(--h3-radius-sm);
+    border: 1px solid var(--h3-border-soft);
+    background: var(--h3-sunken);
+}
+.h3e-mod-members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.h3e-mod-mchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border: 1px solid var(--h3-border);
+    border-radius: var(--h3-radius-sm);
+    background: var(--h3-sunken);
+    font-size: var(--h3-fs-xs);
+    color: var(--h3-muted);
+}
 
 .h3e-mod-summary { margin-top: 0; }
+
+/* -- RefMod v2 rail slot, strength+curve control & visual browser drawer -- */
+.h3e-refmod-slot {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+.h3e-refmod-slot > .h3e-select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.h3e-refmod-thumb {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    object-fit: cover;
+    border-radius: var(--h3-radius-sm);
+    border: 1px solid var(--h3-border-soft);
+    background: var(--h3-sunken);
+}
+.h3e-refmod-ctrl {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.h3e-refmod-ctrl > .h3e-input,
+.h3e-refmod-ctrl > .h3e-select {
+    width: 100%;
+    min-width: 0;
+}
+.h3e-refmod-drawer {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--h3-gap-sm);
+    padding: 8px;
+    margin-top: 4px;
+    background: var(--h3-sunken);
+    border: 1px solid var(--h3-border);
+    border-radius: var(--h3-radius-sm);
+}
+.h3e-refmod-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--h3-gap-sm);
+}
+.h3e-refmod-filter > .h3e-input { flex: 1 1 160px; min-width: 120px; }
+.h3e-refmod-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    align-items: center;
+}
+.h3e-root .h3e-refmod-chip {
+    padding: 2px 6px;
+    font-size: var(--h3-fs-xs);
+}
+.h3e-root .h3e-refmod-chip.h3e-refmod-chip-on {
+    border-color: var(--h3-accent);
+    background: var(--h3-accent-soft);
+    color: var(--h3-accent);
+}
+.h3e-refmod-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+    gap: var(--h3-gap-sm);
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+.h3e-refmod-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--h3-border-soft);
+    border-radius: var(--h3-radius-sm);
+    background: var(--h3-panel);
+    cursor: pointer;
+    min-width: 0;
+    transition: border-color .12s ease, background-color .12s ease;
+}
+.h3e-refmod-card:hover { border-color: var(--h3-muted); }
+.h3e-refmod-card.h3e-refmod-card-on {
+    border-color: var(--h3-accent);
+    background: var(--h3-accent-wash);
+}
+.h3e-refmod-cardimg {
+    width: 100%;
+    height: 82px;
+    object-fit: cover;
+    border-radius: var(--h3-radius-sm);
+    background: var(--h3-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--h3-fs-xs);
+    color: var(--h3-faint);
+}
+.h3e-refmod-cardmeta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: var(--h3-fs-xs);
+    min-width: 0;
+}
+.h3e-refmod-cardmeta > div:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--h3-text);
+    font-weight: 600;
+}
+.h3e-refmod-pill {
+    padding: 0 4px;
+    border: 1px solid var(--h3-border);
+    border-radius: var(--h3-radius-sm);
+    font-size: var(--h3-fs-xs);
+    color: var(--h3-muted);
+}
+.h3e-refmod-inspect {
+    display: flex;
+    flex-direction: column;
+    gap: var(--h3-gap-sm);
+    border-top: 1px solid var(--h3-border-soft);
+    padding-top: 6px;
+}
+.h3e-refmod-mchips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.h3e-root .h3e-refmod-mchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    font-size: var(--h3-fs-xs);
+    opacity: .6;
+}
+.h3e-root .h3e-refmod-mchip.h3e-refmod-mchip-on {
+    opacity: 1;
+    border-color: var(--h3-accent);
+    background: var(--h3-accent-soft);
+    color: var(--h3-text);
+}
+.h3e-refmod-edit {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--h3-gap-sm);
+}
+.h3e-refmod-edit > .h3e-input { flex: 1 1 180px; min-width: 120px; }
 
 /* A row voice reads as a second reference, not a second name field, so it
    carries the accent the rail uses for anything that reaches the model. */
@@ -2328,3 +2566,28 @@ video.h3e-trim-media {
     border-color: var(--h3-ok);
     color: var(--h3-ok);
 }
+
+/* -- Standard 2-column Storyboard + Prompt Block workbench ---------------- */
+.h3e-standard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: var(--h3-gap);
+    align-items: stretch;
+    flex: 1 1 auto;
+    min-height: 200px;
+}
+
+.h3e-standard-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    min-height: 0;
+}
+
+.h3e-standard-col > textarea.h3e-json {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 180px;
+}
+

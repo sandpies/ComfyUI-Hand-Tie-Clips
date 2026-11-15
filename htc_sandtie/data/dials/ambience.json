@@ -1,0 +1,304 @@
+{
+  "id": "ambience",
+  "label": "Ambience",
+  "per": "project",
+  "note": "Room beds and environmental soundscapes (no semicolons).",
+  "options": [
+    {
+      "id": "intimate_skin_foley",
+      "label": "Intimate bedroom foley (wet skin-on-skin, breath & sofa/bed creaks)",
+      "group": "Beds",
+      "rule": "a continuous, visceral bed of wet skin-on-skin impact sounds, heavy ragged breathing, rhythmic sofa and mattress cushion creaks under physical strain, and quiet night room tone",
+      "world": "a continuous, visceral bed of wet skin-on-skin impact sounds, heavy ragged breathing, rhythmic sofa and mattress cushion creaks under physical strain, and quiet night room tone",
+      "domain": "sofa_lounge"
+    },
+    {
+      "id": "penthouse_night_hum",
+      "label": "Penthouse night (low city hum through glass + warm room tone)",
+      "group": "Beds",
+      "rule": "a low-frequency ambient hum of the city at night filtering through floor-to-ceiling glass beneath close-mic fabric rustles, footsteps on dark wood, and warm indoor room tone",
+      "world": "a low-frequency ambient hum of the city at night filtering through floor-to-ceiling glass beneath close-mic fabric rustles, footsteps on dark wood, and warm indoor room tone",
+      "domain": "bedroom"
+    },
+    {
+      "id": "combat_arena_reverb",
+      "label": "Combat arena (sharp impacts, skidding boots & hall reverb)",
+      "group": "Beds",
+      "rule": "resonant arena acoustics with sharp leather and skin impacts, boots skidding across stone tiles, whipping cloth, and heavy fighter exhales",
+      "world": "resonant arena acoustics with sharp leather and skin impacts, boots skidding across stone tiles, whipping cloth, and heavy fighter exhales",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "silk_sheets_skin_breath",
+      "label": "🔥 Silk Sheets Rustle, Close Breath & Wet Skin Friction",
+      "group": "Beds",
+      "rule": "intimate close-mic bedroom acoustics: the crisp rustle of silk sheets, warm rhythmic breathing, and wet skin-on-skin friction over a quiet room tone",
+      "world": "intimate close-mic bedroom acoustics: the crisp rustle of silk sheets, warm rhythmic breathing, and wet skin-on-skin friction over a quiet room tone",
+      "domain": "bedroom"
+    },
+    {
+      "id": "shower_steam_tile_drip",
+      "label": "🚿 Steamy Rainfall Shower & Tile Water Patter",
+      "group": "Beds",
+      "rule": "steady warm water spraying from an overhead rainfall showerhead, water pattering on slate tile, and close humid bathroom acoustics",
+      "world": "steady warm water spraying from an overhead rainfall showerhead, water pattering on slate tile, and close humid bathroom acoustics",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "leather_couch_creak_rain",
+      "label": "🛋️ Leather Sofa Cushion Creak & Rain on Window Glass",
+      "group": "Beds",
+      "rule": "soft rhythmic creaking of supple leather sofa cushions layered over steady rain tapping against a thick windowpane",
+      "world": "soft rhythmic creaking of supple leather sofa cushions layered over steady rain tapping against a thick windowpane",
+      "domain": "sofa_lounge"
+    },
+    {
+      "id": "latex_squeak_heel_click",
+      "label": "🖤 High-Gloss Latex Friction & Stiletto Heel Clicks",
+      "group": "Beds",
+      "rule": "the tight, glossy squeak and stretch of latex rubbing against skin and crisp stiletto heel clicks on a hard floor",
+      "world": "the tight, glossy squeak and stretch of latex rubbing against skin and crisp stiletto heel clicks on a hard floor",
+      "domain": "bedroom"
+    },
+    {
+      "id": "private_jet_cabin_hum",
+      "label": "✈️ High-Altitude Private Jet Cabin Turbine Hum & Ice Clink",
+      "group": "Transport",
+      "rule": "smooth, insulated high-altitude jet turbine hum, soft leather seat movement, and the gentle clink of ice in a crystal glass",
+      "world": "smooth, insulated high-altitude jet turbine hum, soft leather seat movement, and the gentle clink of ice in a crystal glass",
+      "domain": "general"
+    },
+    {
+      "id": "nightclub_vip_muffled_sub",
+      "label": "🪩 Muffled VIP Booth Sub-Bass Pulse & Champagne Fizz",
+      "group": "Venues",
+      "rule": "deep, muffled 120 BPM sub-bass pulsing through a padded VIP booth wall, soft velvet rustle, and effervescent champagne fizz",
+      "world": "deep, muffled 120 BPM sub-bass pulsing through a padded VIP booth wall, soft velvet rustle, and effervescent champagne fizz",
+      "domain": "general"
+    },
+    {
+      "id": "jacuzzi_bubbles_candle_crackle",
+      "label": "🕯️ Warm Jacuzzi Water Lapping & Candle Wick Crackle",
+      "group": "Indoors",
+      "rule": "warm bathwater lapping softly against marble edges, gentle water movement around skin, and the quiet crackle of candle wicks",
+      "world": "warm bathwater lapping softly against marble edges, gentle water movement around skin, and the quiet crackle of candle wicks",
+      "domain": "wet_tub"
+    },
+    {
+      "id": "yacht_waves_teak_breeze",
+      "label": "🛥️ Superyacht Hull Waves & Warm Ocean Breeze",
+      "group": "Outside",
+      "rule": "gentle ocean swells lapping against a yacht hull, warm coastal breeze, and a low idling marine engine hum",
+      "world": "gentle ocean swells lapping against a yacht hull, warm coastal breeze, and a low idling marine engine hum",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "neon_alley_steam_vent_drip",
+      "label": "🌧️ Cyberpunk Alley Steam Vent Hiss, Neon Buzz & Puddle Drip",
+      "group": "Outside",
+      "rule": "60Hz neon transformer buzz, a slow steam vent hiss, and water dripping steadily onto wet asphalt",
+      "world": "60Hz neon transformer buzz, a slow steam vent hiss, and water dripping steadily onto wet asphalt",
+      "domain": "combat_action"
+    },
+    {
+      "id": "dojo_tatami_footwork_breath",
+      "label": "🥋 Dojo Tatami Mat Footwork, Cloth Snap & Focused Exhale",
+      "group": "Interiors",
+      "rule": "bare feet sliding across woven tatami mats, the crisp snap of heavy cloth, and resonant wooden hall acoustics",
+      "world": "bare feet sliding across woven tatami mats, the crisp snap of heavy cloth, and resonant wooden hall acoustics",
+      "domain": "combat_action"
+    },
+    {
+      "id": "steamy_glass_shower_cascade",
+      "label": "🚿 Luxury Glass Rain-Shower Cascade, Wet Skin Squeak & Echoing Tile",
+      "group": "Interiors",
+      "rule": "steady warm water pouring from a brass rain-showerhead, water splashing against glass and tile, and close wet skin-on-skin contact",
+      "world": "steady warm water pouring from a brass rain-showerhead, water splashing against glass and tile, and close wet skin-on-skin contact",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "leather_leash_chain_clink_heels",
+      "label": "⛓️ Stiletto Heels on Marble, Chrome Chain Leash Clink & Leather Creak",
+      "group": "Interiors",
+      "rule": "sharp stiletto heel clicks on polished marble, the metallic clink of a chrome chain leash, and taut leather creaking",
+      "world": "sharp stiletto heel clicks on polished marble, the metallic clink of a chrome chain leash, and taut leather creaking",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "anime2real_elemental_hum_sparks",
+      "label": "⚡ Anime2Real Elemental Aura Hum, Crackling Lightning & Sword Ring",
+      "group": "Outside",
+      "rule": "deep sub-bass spiritual pressure hum, high-voltage lightning crackles, and the crystalline ring of drawn steel",
+      "world": "deep sub-bass spiritual pressure hum, high-voltage lightning crackles, and the crystalline ring of drawn steel",
+      "domain": "combat_action"
+    },
+    {
+      "id": "superyacht_waves_champagne_breeze",
+      "label": "🛥️ Superyacht Deck Waves, Warm Mediterranean Breeze & Ice Clink",
+      "group": "Outside",
+      "rule": "gentle turquoise waves lapping against a yacht hull, warm coastal breeze, and ice cubes clinking in crystal glasses",
+      "world": "gentle turquoise waves lapping against a yacht hull, warm coastal breeze, and ice cubes clinking in crystal glasses",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "tokyo_love_hotel_rain_hum",
+      "label": "🏨 Tokyo Love Hotel (Soft Rain Outside + Quiet AC Hum & Satin Foley)",
+      "group": "Interiors",
+      "rule": "muffled Tokyo night rain tapping softly against frosted glass over a subtle HVAC hum and crisp close-mic satin, breath, and skin-on-skin foley",
+      "world": "muffled Tokyo night rain tapping softly against frosted glass over a subtle HVAC hum and crisp close-mic satin, breath, and skin-on-skin foley",
+      "domain": "general"
+    },
+    {
+      "id": "backstage_vanity_mirror_room",
+      "label": "💄 Backstage Dressing Room (Vanity Bulb Buzz + Distant Stage Bass)",
+      "group": "Interiors",
+      "rule": "subtle tungsten vanity bulb hum, crisp garment zippers and fabric rustles, heels tapping softly on floor, and muffled low-end stage bass beyond a closed door",
+      "world": "subtle tungsten vanity bulb hum, crisp garment zippers and fabric rustles, heels tapping softly on floor, and muffled low-end stage bass beyond a closed door",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "neon_arcade_parlor",
+      "label": "🕹️ Neon Arcade Parlor (Cabinet Synth Chimes + Neon Transformer Hum)",
+      "group": "Venues",
+      "rule": "quiet electric hum of glowing neon signs layered with distant retro arcade cabinet bleeps, mechanical button clicks, and soft sneaker squeaks on carpet",
+      "world": "quiet electric hum of glowing neon signs layered with distant retro arcade cabinet bleeps, mechanical button clicks, and soft sneaker squeaks on carpet",
+      "domain": "general"
+    },
+    {
+      "id": "gym_locker_bench_echo",
+      "label": "🏋️ Gym Locker Room (Tiled Acoustics, Locker Clink & Heavy Breath)",
+      "group": "Indoors",
+      "rule": "clean tiled locker-room ambience with subtle distant shower mist, soft metallic locker clicks, bench leather creaks, and clear close-mic post-workout breathing",
+      "world": "clean tiled locker-room ambience with subtle distant shower mist, soft metallic locker clicks, bench leather creaks, and clear close-mic post-workout breathing",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "rainy_car_interior_night",
+      "label": "🚗 Rainy Car Cabin at Night (Roof Rain Patter + Muffled City Hush)",
+      "group": "Transport",
+      "rule": "steady night rain pattering rhythmically across the car roof and windshield glass inside a hush-insulated leather cabin with soft seat creaks and breathing",
+      "world": "steady night rain pattering rhythmically across the car roof and windshield glass inside a hush-insulated leather cabin with soft seat creaks and breathing",
+      "domain": "general"
+    },
+    {
+      "id": "rain_thunder_window_glass",
+      "label": "⛈️ Storm Rain & Distant Rolling Thunder on Glass",
+      "group": "Weather",
+      "rule": "steady torrential raindrops drumming crisply against tall glass panes backed by low distant rolling thunder",
+      "field": "weather",
+      "domain": "general"
+    },
+    {
+      "id": "neon_alley_puddle_footsteps",
+      "label": "🌧️ Wet Alley Rain Puddles & Crisp Leather Footsteps",
+      "group": "Outside",
+      "rule": "hissing night rain falling across wet neon asphalt punctuated by crisp splashing footsteps and distant alley vents",
+      "field": "alley",
+      "domain": "combat_action"
+    },
+    {
+      "id": "bathhouse_steam_water_drip",
+      "label": "♨️ Steamy Marble Bathhouse Water Drip & Shower Spray",
+      "group": "Indoors",
+      "rule": "warm echoing marble bathroom tone layered with steady rainfall shower spray and soft resonant water drips",
+      "field": "bath",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "subway_rail_clack_tunnel",
+      "label": "🚇 Subway Train Metallic Track Clack & Tunnel Wind",
+      "group": "Transport",
+      "rule": "rhythmic steel-wheel rail clacking inside a concrete tunnel echoing with rushed air turbulence and faint car hum",
+      "field": "subway",
+      "domain": "combat_action"
+    },
+    {
+      "id": "dojo_wood_creak_wind",
+      "label": "🎋 Traditional Dojo Sliding Screen Breeze & Bare-Foot Wood Creaks",
+      "group": "Interiors",
+      "rule": "quiet wooden dojo silence with faint exterior wind brushing shoji paper and crisp bare-foot pivots across cedar planks",
+      "field": "dojo",
+      "domain": "combat_action"
+    },
+    {
+      "id": "fireplace_ember_pop_silk",
+      "label": "🔥 Hearth Firewood Crackles & Soft Satin Sheet Rustle",
+      "group": "Indoors",
+      "rule": "intimate quiet bedroom tone anchored by gentle hearth wood crackles and soft close-mic satin sheet rustling",
+      "field": "hearth",
+      "domain": "bedroom"
+    },
+    {
+      "id": "casino_chips_jazz_murmur",
+      "label": "🎰 Monte Carlo Casino Chip Clinks & Distant Lounge Jazz",
+      "group": "Venues",
+      "rule": "crisp clay poker-chip clatter, soft velvet cocktail chatter, and faint warm acoustic jazz drifting across a marble hall",
+      "field": "casino",
+      "domain": "general"
+    },
+    {
+      "id": "rooftop_helicopter_wind_hum",
+      "label": "🚁 High-Rise Rooftop Night Wind & Distant City Canyon Hum",
+      "group": "Outside",
+      "rule": "brisk high-altitude wind sweeping past skyscraper ledges above a deep distant nocturnal city traffic wash",
+      "field": "rooftop",
+      "domain": "combat_action"
+    },
+    {
+      "id": "silence",
+      "label": "Pure Silent Hush (Minimal Foley)",
+      "group": "00 · Silence & Pure Foley",
+      "rule": "ultra-quiet intimate acoustic air carrying only faint natural breathing and delicate fabric touch",
+      "domain": "general"
+    },
+    {
+      "id": "room_tone",
+      "label": "Quiet Indoor Room Tone",
+      "group": "Interiors",
+      "rule": "warm quiet indoor room air with gentle HVAC undertone and subtle physical contact foley",
+      "domain": "general"
+    },
+    {
+      "id": "rain_heavy",
+      "label": "Steady Night Rain & Window Patter",
+      "group": "Weather",
+      "rule": "steady rainfall pattering against window glass over muted outdoor city hush",
+      "domain": "general"
+    },
+    {
+      "id": "city_night",
+      "label": "Distant Midnight City Hum",
+      "group": "Outside",
+      "rule": "low distant urban traffic wash, far sirens, and quiet nighttime street air",
+      "domain": "general"
+    },
+    {
+      "id": "cafe",
+      "label": "Warm Cafe Murmur & Clinking Cups",
+      "group": "Interiors",
+      "rule": "soft porcelain cup clinks, gentle espresso machine hiss, and low background cafe chatter",
+      "domain": "general"
+    },
+    {
+      "id": "waves",
+      "label": "Soft Coastal Surf & Breeze",
+      "group": "Nature",
+      "rule": "rhythmic coastal ocean waves brushing smoothly onto shore beneath light warm salt wind",
+      "domain": "general"
+    },
+    {
+      "id": "forest_night",
+      "label": "Nocturnal Wind & Leaves",
+      "group": "Nature",
+      "rule": "cool night breeze rustling cleanly through high leaves and distant crickets",
+      "domain": "general"
+    },
+    {
+      "id": "club",
+      "label": "Muffled Club Sub-Bass Through Walls",
+      "group": "Venues",
+      "rule": "deep muffled dance-floor sub-bass pulsing gently beneath close leather booth rustle",
+      "domain": "general"
+    }
+  ]
+}

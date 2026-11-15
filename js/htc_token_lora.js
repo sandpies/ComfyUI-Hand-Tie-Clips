@@ -5,7 +5,7 @@
 // what is shown: one row per LoRA slot (on/off box, file picker, gear for the
 // eight settings, remove), an "Add LoRA" button that opens slot B, then C, then
 // D, E, ... (kept as JSON in `extra_loras`), and the two global combos at the
-// foot. Slots switched off are listed in `disabled_loras`.
+// the foot (`other_keys`, `add_mode`, `adaln_fix`). Slots switched off are listed in `disabled_loras`.
 import { app } from "../../scripts/app.js";
 
 const NODE = "HTCTokenLoRA";
@@ -66,20 +66,21 @@ export class Panel {
             const cb = file.callback;
             file.callback = (...a) => { cb?.apply(file, a); this.refresh(); };
         }
-        // The real other_keys / add_mode widgets must keep their place: the saved
-        // widgets_values are positional, so moving them shifts every value after
-        // them onto the wrong widget. They stay hidden in place; UI-only stand-ins
-        // (serialize false) sit at the foot and write through.
-        this.footViews = ["other_keys", "add_mode"].map((name) => {
+        // The real other_keys / add_mode / adaln_fix widgets must keep their place:
+        // the saved widgets_values are positional, so moving them shifts every value
+        // after them onto the wrong widget. They stay hidden in place; UI-only
+        // stand-ins (serialize false) sit at the foot and write through.
+        this.footViews = ["other_keys", "add_mode", "adaln_fix"].map((name) => {
             const real = this.byName.get(name);
+            if (!real) return null;
             const view = this.ui("combo", `${name} view`, real.value, (v) => {
                 if (this.linked(real)) { this.refresh(); return; }
                 real.value = v;
                 real.callback?.(v);
             }, { ...real.options });
-            view.label = name === "other_keys" ? "Other keys" : "Add mode";
+            view.label = name === "other_keys" ? "Other keys" : (name === "adaln_fix" ? "AdaLN fix" : "Add mode");
             return { real, view };
-        });
+        }).filter(Boolean);
         this.addBtn = this.ui("button", "Add LoRA", null, () => this.add());
         for (const w of [this.extrasW, this.disabledW]) {
             const cb = w.callback;

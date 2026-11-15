@@ -365,6 +365,29 @@ function writeThread(t) {
         + ".ninfer model beside the binary, in a `models` folder.";
     modelFileField.appendChild(modelFileInput);
     modelFileRow.appendChild(modelFileField);
+    const ctxRow = el("div", "h3e-writer-row h3e-writer-pathrow");
+    const ctxField = el("label", "h3e-writer-pathfield");
+    ctxField.appendChild(el("span", "h3e-writer-pathlab", "context size"));
+    const ctxSel = el("select", "h3e-writer-model");
+    ctxSel.title = "nInfer startup max context & KV reservation (--max-context / --kv-capacity). Lower to 16k-32k on tighter VRAM GPUs so workflow renders have room.";
+    for (const [val, txt] of [
+        [16384, "16k (16384 — tightest VRAM)"],
+        [24576, "24k (24576)"],
+        [32768, "32k (32768 — low VRAM)"],
+        [49152, "48k (49152)"],
+        [65536, "64k (65536 — default)"],
+        [98304, "96k (98304)"],
+        [131072, "128k (131072)"],
+    ]) {
+        const o = el("option", null, txt);
+        o.value = String(val);
+        ctxSel.appendChild(o);
+    }
+    ctxSel.value = "65536";
+    ctxSel.addEventListener("change", () => { saveConn(); });
+    ctxField.appendChild(ctxSel);
+    ctxRow.appendChild(ctxField);
+
     // Both persist on blur, not on input: a half-typed path should not become
     // the saved one, and the same reasoning as the settings SAVE button.
     for (const inp of [exeInput, modelFileInput]) {
@@ -373,6 +396,7 @@ function writeThread(t) {
     }
     cog.appendChild(exeRow);
     cog.appendChild(modelFileRow);
+    cog.appendChild(ctxRow);
 
     /** Is this backend started BY this pack, rather than by its own app? */
     function backendNeedsProgram(name) {
@@ -384,6 +408,7 @@ function writeThread(t) {
         const need = backendNeedsProgram(backend.value);
         exeRow.style.display = need ? "" : "none";
         modelFileRow.style.display = need ? "" : "none";
+        ctxRow.style.display = need ? "" : "none";
     }
 
     const optRow = el("div", "h3e-writer-row");
@@ -475,6 +500,7 @@ function writeThread(t) {
     const BRIEF_PROP = "h3_writer_brief";
     const HOPS_PROP = "h3_writer_hops";
     const DRAFT_PROP = "h3_writer_draft";
+    const CONTINUITY_PROP = "h3_writer_continuity";
 
     const props = () => (node.properties ??= {});
 
@@ -518,18 +544,73 @@ function writeThread(t) {
      * cannot read. Nothing is truncated here: the pane scrolls, and a beat that
      * runs long is a beat worth seeing before it goes on the cards.
      */
+    function renderContinuitySummary(ct, parent, { open = false } = {}) {
+        if (!ct || typeof ct !== "object") return;
+        const txt = (v) => (v == null ? "" : String(v));
+        const wrap = el("details", "h3e-json-wrap");
+        wrap.open = Boolean(open);
+        wrap.appendChild(el("summary", null, "Blocking & Continuity Sheet"));
+        if (ct.set_layout) {
+            const row = el("div", "h3e-cardbox-row");
+            row.appendChild(el("span", "h3e-cardbox-k", "set layout"));
+            row.appendChild(el("span", "h3e-cardbox-v", txt(ct.set_layout)));
+            wrap.appendChild(row);
+        }
+        if (Array.isArray(ct.spots) && ct.spots.length) {
+            wrap.appendChild(el("div", "h3e-cardbox-k", "spots"));
+            for (const s of ct.spots) {
+                wrap.appendChild(el("div", "h3e-draft-meta",
+                    `${txt(s.code)}${s.who ? ` (@${String(s.who).replace(/^@/, "")})` : ""}: ${txt(s.phrase)}`));
+            }
+        }
+        if (Array.isArray(ct.hops) && ct.hops.length) {
+            wrap.appendChild(el("div", "h3e-cardbox-k", "start → end"));
+            for (const h of ct.hops) {
+                wrap.appendChild(el("div", "h3e-draft-meta",
+                    `${txt(h.hop)}. ${txt(h.start)} → ${txt(h.action)} → ${txt(h.end)}`
+                    + (h.end_framing ? ` [${txt(h.end_framing)}]` : "")));
+            }
+        }
+        if (Array.isArray(ct.cuts) && ct.cuts.length) {
+            wrap.appendChild(el("div", "h3e-cardbox-k", "cuts"));
+            for (const k of ct.cuts) {
+                wrap.appendChild(el("div", "h3e-draft-meta",
+                    `${txt(k.at)}: ${txt(k.why)}${k.matches ? ` (matches: ${txt(k.matches)})` : ""}`));
+            }
+        }
+        if (ct.weak_spots) {
+            wrap.appendChild(el("div", "h3e-draft-meta", `weak spots: ${txt(ct.weak_spots)}`));
+        }
+        parent.appendChild(wrap);
+    }
+
     function showDraft(shotJson, refJson, resp) {
-        // `extra` carries what Accept may write beyond the two plan strings.
-        // Today that is the MV offset and the song it was solved against --
-        // acceptDraft is the only thing that reads it.
-        const extra = resp && resp.master_audio_start_s != null
-            ? { master_audio_start_s: resp.master_audio_start_s,
-                song_file: resp.song_file || "" }
-            : null;
+        // `extra` carries what Accept may write beyond the two plan strings
+        // (MV offset/song) plus advisory continuity/warnings for display/Edit.
+        const cont = resp?.continuity || node.properties?.[CONTINUITY_PROP] || null;
+        const warns = Array.isArray(resp?.warnings) ? resp.warnings : [];
+        let extra = null;
+        if (resp && resp.master_audio_start_s != null) {
+            extra = {
+                master_audio_start_s: resp.master_audio_start_s,
+                song_file: resp.song_file || "",
+                ...(cont ? { continuity: cont } : {}),
+                ...(warns.length ? { warnings: warns } : {}),
+            };
+        } else if (cont || warns.length) {
+            extra = {
+                ...(cont ? { continuity: cont } : {}),
+                ...(warns.length ? { warnings: warns } : {}),
+            };
+        }
         pending = { shot: shotJson || "", ref: refJson || "", extra };
         rememberDraft();
         draftList.textContent = "";
         const { shots, refs } = summarise(pending.shot, pending.ref);
+
+        if (cont) {
+            renderContinuitySummary(cont, draftList, { open: false });
+        }
 
         if (!shots.length) {
             draftList.appendChild(el("div", "h3e-note",
@@ -549,6 +630,7 @@ function writeThread(t) {
                                         `${label}${value}`));
                 }
             }
+            if (s.anchor) head.appendChild(el("span", "h3e-draft-chip", s.anchor));
             if (s.locked) head.appendChild(el("span", "h3e-draft-chip", "locked"));
             card.appendChild(head);
 
@@ -571,6 +653,11 @@ function writeThread(t) {
                 .map((r) => "@" + String(r.tag || "").replace(/^@/, ""));
             if (riding.length) {
                 card.appendChild(el("div", "h3e-draft-meta", riding.join("  ")));
+            }
+            const shotPrefix = `shot ${i + 1}:`;
+            const shotWarns = warns.filter((w) => String(w || "").toLowerCase().startsWith(shotPrefix));
+            for (const sw of shotWarns) {
+                card.appendChild(el("div", "h3e-draft-warn", `⚠ ${sw}`));
             }
             draftList.appendChild(card);
         });
@@ -637,9 +724,10 @@ function writeThread(t) {
         return rows;
     }
 
-    function discardDraft() {
+    function discardDraft({ keepContinuity = false } = {}) {
         pending = null;
         rememberDraft();
+        if (!keepContinuity) remember(CONTINUITY_PROP, null);
         draft.style.display = "none";
         draftList.textContent = "";
     }
@@ -663,7 +751,7 @@ function writeThread(t) {
                 return;
             }
         }
-        discardDraft();
+        discardDraft({ keepContinuity: true });
         onWritten?.(shot, ref, ex);
         say("Accepted. On the cards now.", "hint");
     }
@@ -756,6 +844,13 @@ function writeThread(t) {
           const paths = (conn.server_paths || {})[backend.value] || {};
           exeInput.value = paths.exe || "";
           modelFileInput.value = paths.model_file || "";
+          const ctxVal = String(paths.ctx_size || conn.ctx_size || 65536);
+          if (!Array.from(ctxSel.options || ctxSel.children || []).some((o) => o.value === ctxVal)) {
+              const co = el("option", null, `${ctxVal} (custom)`);
+              co.value = ctxVal;
+              ctxSel.appendChild(co);
+          }
+          ctxSel.value = ctxVal;
           // The search found a binary even though none was typed. Say so,
           // because "the field is blank" reads as "nothing is configured" and
           // the next question is always "where do I put it".
@@ -930,10 +1025,12 @@ if (!list.length) {
             ? "Starting the writer… a 27B takes about 30 s to load."
             : "Stopping the writer…", "hint");
         try {
+            const body = { action };
+            if (action === "start" && ctxSel?.value) body.ctx_size = Number(ctxSel.value);
             const r = await fetch(LLM_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action }),
+                body: JSON.stringify(body),
             });
             const j = await r.json();
             serverUp = Boolean(j.running);
@@ -958,8 +1055,10 @@ const patch = { server_url: url.value, keep_warm: unload.checked };
           // a file people read when something goes wrong.
           const here = backend.value;
           if (here && BACKEND_PROGRAMS.includes(here)) {
+              const ctxNum = Number(ctxSel?.value) || 65536;
+              patch.ctx_size = ctxNum;
               patch.servers = {
-                  [here]: { exe: exeInput.value.trim(), model_file: modelFileInput.value.trim() },
+                  [here]: { exe: exeInput.value.trim(), model_file: modelFileInput.value.trim(), ctx_size: ctxNum },
               };
           }
           if (await postConn(patch)) await loadConn(false);
@@ -1040,11 +1139,15 @@ const patch = { server_url: url.value, keep_warm: unload.checked };
                     // has to fill again here: MEDIA owns the soundtrack, and a
                     // second place to choose it is a second place to forget.
                     song_file: String(widgetByName(node, "master_audio_file")?.value || ""),
+                    start_image_file: String(widgetByName(node, "start_image_file")?.value || ""),
                     hops: Number(hops.value) || 3,
                     duration: String(widgetByName(node, "duration")?.value || ""),
                     refs: railRefs(),
                     thread: readThread(),
-                    proposal: node.properties?.[PROPOSAL_PROP] || null,
+                    proposal: node.properties?.[PROPOSAL_PROP]
+                        || (node.properties?.[CONTINUITY_PROP]
+                            ? { continuity: node.properties[CONTINUITY_PROP] }
+                            : null),
                     // Edit reads the plan off the node, so a change never
                     // depends on the panel having re-sent a register the user
                     // has since hand-edited.
@@ -1070,6 +1173,9 @@ const patch = { server_url: url.value, keep_warm: unload.checked };
             } else if (j.diffs) {
                 renderEditCard(j, note);
             } else if (j.shot_plan) {
+                if (j.continuity && typeof j.continuity === "object") {
+                    remember(CONTINUITY_PROP, j.continuity);
+                }
                 showDraft(j.shot_plan || "", j.ref_plan || "", j);
                 addTurn("assistant", note
                     || `Draft of ${j.shot_plan ? "a plan" : ""}. Accept to put it on the cards.`);
@@ -1163,6 +1269,9 @@ const patch = { server_url: url.value, keep_warm: unload.checked };
         const ct = p.continuity;
         if (ct && typeof ct === "object") {
             const txt = (v) => (v == null ? "" : String(v));
+            if (ct.set_layout) {
+                b.appendChild(field("set layout", txt(ct.set_layout)));
+            }
             if (Array.isArray(ct.spots) && ct.spots.length) {
                 b.appendChild(el("div", "h3e-cardbox-k", "where everyone stands"));
                 for (const s of ct.spots) {
@@ -1213,6 +1322,7 @@ const patch = { server_url: url.value, keep_warm: unload.checked };
                   () => {
                       node.properties ??= {};
                       node.properties[PROPOSAL_PROP] = null;
+                      node.properties[CONTINUITY_PROP] = null;
                       draft.style.display = "none";
                       draftList.textContent = "";
                   }));
@@ -1391,7 +1501,7 @@ c.acts.appendChild(button("Accept edit",
                   // is the last thing that happens, and the draft panel's own
                   // Accept is what writes the cards.
                   draft.style.display = "block";
-                  showDraft(j.shot_plan || "", j.ref_plan || "");
+                  showDraft(j.shot_plan || "", j.ref_plan || "", j);
                   say("Edit ready. Review it, then Accept in the panel.",
                       "hint");
               }));
@@ -1439,6 +1549,16 @@ c.acts.appendChild(button("Accept edit",
     return {
         root,
         restore,
+        setBrief(text, { hops: hopVal } = {}) {
+            if (text != null) {
+                brief.value = String(text);
+                remember(BRIEF_PROP, brief.value);
+            }
+            if (hopVal != null && Number.isFinite(Number(hopVal))) {
+                hops.value = String(Math.max(1, Math.min(24, Number(hopVal))));
+                remember(HOPS_PROP, hops.value);
+            }
+        },
         refreshIfLoaded() {
             if (loaded) loadConn(false);
         },

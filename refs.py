@@ -45,7 +45,10 @@ RETENTION = {
 # `file`; that is detected, kept as `legacy_slot`, and reported by check().
 REF_FIELDS = ("tag", "file", "slot", "subject", "retention", "desc", "shots",
               "mp", "source", "strength", "voice", "voice_start", "voice_end",
-              "qwen_mp")
+              "qwen_mp", "step_curve", "members", "shot_strengths")
+STEP_CURVES = ("full", "early_lock", "late_detail", "fade", "mid_peak")
+MAX_REF_STRENGTH = 3.0
+MAX_CORE_IMAGES = 20
 
 # A video RefMod shares the encoder's three video slots with the MEDIA clips
 # and, on a continuation, the pin clip. Image rows share the nine picture slots.
@@ -225,8 +228,49 @@ def _norm_ref(raw, i):
         strength = float(strength)
     except (TypeError, ValueError):
         _fail(f"{where} (@{tag}): strength {strength!r} is not a number")
-    if strength < 0.0 or strength > 1.0:
-        _fail(f"{where} (@{tag}): strength must be between 0 and 1")
+    if strength < 0.0 or strength > MAX_REF_STRENGTH:
+        _fail(f"{where} (@{tag}): strength must be between 0 and {MAX_REF_STRENGTH:g}")
+
+    step_curve = str(raw.get("step_curve") or "full").strip().lower()
+    if step_curve not in STEP_CURVES:
+        _fail(f"{where} (@{tag}): step_curve '{step_curve}' is not valid. "
+              f"Use one of: {', '.join(STEP_CURVES)}")
+
+    raw_members = raw.get("members")
+    members = None
+    if raw_members is not None:
+        if not isinstance(raw_members, (list, tuple)):
+            _fail(f"{where} (@{tag}): 'members' must be a list of 0-based member indices")
+        members = []
+        for mv in raw_members:
+            try:
+                mi = int(mv)
+            except (TypeError, ValueError):
+                _fail(f"{where} (@{tag}): member index {mv!r} is not an integer")
+            if mi < 0:
+                _fail(f"{where} (@{tag}): member index must be 0 or greater")
+            if mi not in members:
+                members.append(mi)
+        if not members:
+            members = None
+
+    raw_ss = raw.get("shot_strengths")
+    shot_strengths = None
+    if raw_ss is not None:
+        if not isinstance(raw_ss, dict):
+            _fail(f"{where} (@{tag}): 'shot_strengths' must be an object mapping shot numbers to strengths")
+        shot_strengths = {}
+        for sk, sv in raw_ss.items():
+            try:
+                snum = str(int(sk))
+                sval = float(sv)
+            except (TypeError, ValueError):
+                _fail(f"{where} (@{tag}): invalid shot_strengths entry {sk!r}: {sv!r}")
+            if sval < 0.0 or sval > MAX_REF_STRENGTH:
+                _fail(f"{where} (@{tag}): shot_strengths[{snum}] must be between 0 and {MAX_REF_STRENGTH:g}")
+            shot_strengths[snum] = sval
+        if not shot_strengths:
+            shot_strengths = None
 
     # Legacy: a plan authored against the ref_image_N sockets. Not an error --
     # failing here would stop the editor opening the very plan the author needs
@@ -318,6 +362,9 @@ def _norm_ref(raw, i):
         "qwen_mp": qwen_mp,
         "source": source,
         "strength": strength,
+        "step_curve": step_curve,
+        "members": members,
+        "shot_strengths": shot_strengths,
         "voice": voice,
         "voice_start": voice_start,
         "voice_end": voice_end,
@@ -450,24 +497,28 @@ def check_kind_caps(refs, media_videos=0):
                 and (r.get("file") or not r.get("voice"))]
     videos = [r for r in refs if _is_video(r)]
 
-    def _worst(rows):
+    def _worst(rows, weight_fn=None):
         always = [r for r in rows if r["shots"] is None]
         by_shot = {}
         for r in rows:
             for h in (r["shots"] or []):
                 by_shot.setdefault(h, []).append(r)
-        worst_shot, worst = None, len(always)
+        wf = weight_fn or (lambda _r: 1)
+        always_w = sum(wf(r) for r in always)
+        worst_shot, worst = None, always_w
         for h in sorted(by_shot):
-            n = len(always) + len(by_shot[h])
+            n = always_w + sum(wf(r) for r in by_shot[h])
             if n > worst:
                 worst_shot, worst = h, n
         return worst_shot, worst
 
-    shot, n = _worst(pictures)
-    if n > MAX_REF_IMAGES:
+    shot, n = _worst(pictures, weight_fn=lambda r: max(1, int(r.get("picture_count") or 1)))
+    has_expanded = any(int(r.get("picture_count") or 1) > 1 for r in pictures)
+    pic_cap = MAX_CORE_IMAGES if has_expanded else MAX_REF_IMAGES
+    if n > pic_cap:
         where = f"shot {shot}" if shot is not None else "every shot"
         _fail(f"{where} would carry {n} pictures; one encode takes at most "
-              f"{MAX_REF_IMAGES}.")
+              f"{pic_cap}.")
     shot, n = _worst(videos)
     if media_videos + n > MAX_REF_VIDEOS:
         where = f"shot {shot}" if shot is not None else "every shot"
@@ -485,7 +536,7 @@ def check_audio_caps(refs, media_voices=0):
     `media_voices` is how many `voice_file` widgets are filled; those ride
     every hop the gate lets them ride, so they count as always-on.
     """
-    rows = [r for r in refs if r.get("voice")]
+    rows = [r for r in refs if r.get("voice") or r.get("audio_latent_digest")]
     always = [r for r in rows if r["shots"] is None]
     by_shot = {}
     for r in rows:
@@ -619,7 +670,10 @@ def resolve_tags(text, tag_map, subject_map=None, where="", declared=None,
         if tag in video_map:
             return f"<Video {video_map[tag]}>"
         if tag in tag_map:
-            return f"<Picture {tag_map[tag]}>"
+            pos = tag_map[tag]
+            if isinstance(pos, (list, tuple)):
+                return ", ".join(f"<Picture {p}>" for p in pos)
+            return f"<Picture {pos}>"
         w = where + ": " if where else ""
         if tag in declared:
             _fail(f"{w}@{tag} is in the reference register but is not on this "
@@ -669,7 +723,10 @@ def subject_prose(active, subjects=None, video_ords=None):
             cites[r["tag"]] = f"<Video {pos}>" if pos is not None else None
         else:
             pos = ords.get(r["tag"])
-            cites[r["tag"]] = f"<Picture {pos}>" if pos is not None else None
+            if isinstance(pos, (list, tuple)):
+                cites[r["tag"]] = ", ".join(f"<Picture {p}>" for p in pos) if pos else None
+            else:
+                cites[r["tag"]] = f"<Picture {pos}>" if pos is not None else None
     by_subject = {}
     for r in active:
         # No ordinal means the reference is not in this hop's payload, so
@@ -731,7 +788,10 @@ def retention_prose(active, ords=None, video_ords=None):
             pic = f"<Video {pos}>" if pos is not None else None
         else:
             pos = ords.get(r["tag"])
-            pic = f"<Picture {pos}>" if pos is not None else None
+            if isinstance(pos, (list, tuple)):
+                pic = ", ".join(f"<Picture {p}>" for p in pos) if pos else None
+            else:
+                pic = f"<Picture {pos}>" if pos is not None else None
         if pic is None:
             continue
         detail = RETENTION[r["retention"]]

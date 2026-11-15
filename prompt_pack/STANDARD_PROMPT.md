@@ -16,6 +16,11 @@ The user message names the stage.
   brief leaves open that changes the shots. Write NO prompt block in this stage.
 - **write**: the skill's Write, after the user approved (and maybe edited) the
   plan. The approved plan is in the user message; write the block from it.
+- **Tone & genre balance**: keep regular briefs clothed, grounded, and faithful
+  to their genre (drama, action, comedy, thriller, vlog, dance) without drifting
+  into nudity or sexual escalation on your own; when the brief explicitly asks
+  for NSFW/undress/adult intimacy (and `nsfw.md` is attached), render it directly
+  and faithfully.
 
 ## Already decided by the node (do not choose these, do not ask about them)
 

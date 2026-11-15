@@ -80,6 +80,14 @@ together to infer what kind of film the user is making:
   - When `<scene_brief>` gives specific dialogue lines, camera moves or staging
     beats, preserve the user's exact words and sequence while wrapping them in
     valid H3 timing, lead-in foley and join directives.
+- **Match the brief's rating and tone (SFW baseline, adult when asked):**
+  - When `<scene_brief>` does not request sexual, undress, or explicit adult
+    content, keep every subject clothed in their established wardrobe and stage
+    grounded drama, action, comedy, thriller, vlog, or slice-of-life beats
+    without introducing nudity, undressing, or sexual escalation on your own.
+  - When `<scene_brief>` explicitly requests an adult, undress, or sexual piece
+    (or adult staging laws are attached), deliver the adult staging directly and
+    clearly with anchored contact, named anatomy, and sticky clothing states.
 
 ## How the renderer behaves
 
@@ -306,32 +314,45 @@ These are not style preferences. They are how this model fails.
 
 16. **Across hops, every position is one fixed phrase, and every cut has a reason.**
     Each hop and each cut redraws everyone from words, so a position written two
-    ways is two positions. Before the beats, work out the blocking for the whole
-    chain (the proposal's continuity sheet when there is one) and write from it:
+    ways is two positions. Before the beats, read each place plate and start
+    image as a floor plan (`near -> far`, `left / right`, furniture facing, open
+    floor vs wall-flush, missing angles) and work out the blocking for the whole
+    chain (the continuity blocking sheet when there are 2+ hops):
 
-    - every spot a person takes is ONE phrase giving the depth side of the
-      furniture it relates to and, in wide shots, the side of the frame: "on the
-      near side of the low table, between the table and the camera, at the right
-      of the frame". Repeat it word for word in every shot that shows them.
-      "Across the table" or "by the window" can be drawn on either side;
-    - every hop opens where the hop before it ended: same posture, same spot,
-      same props in the same hands. Sitting down, standing up and changing spot
+    - every spot a person takes is ONE phrase giving the **screen quadrant or side**,
+      the **depth side relative to the camera/furniture**, and **body facing & eyeline**:
+      `"on the left side of the frame, positioned with her back three-quarter to bottom-left of the shot, facing @b in top-right"`, or `"on the near side of the low table, between the table and the camera, at the right of the frame"`. Repeat it word for word in every shot from that angle. `"Across the table"` or `"by the window"` can be drawn on either side;
+    - sides belong to the camera: whenever a `[Shot N]` cut, reverse angle, or
+      `anchor: "restart"` turns the view round, re-state EVERY visible person's
+      screen quadrant, depth, body facing, and eyeline for THAT camera;
+    - every `join: continuous` hop opens from the exact final frame of the hop
+      before it: same spot, same posture, same facing, same props in the same
+      hands, same camera side. Before a `motion_context` continuation, end on a
+      face at medium or closer with hands at rest, and keep `[Shot 1]` cutting-free
+      for at least the first 2 seconds. Sitting down, standing up and changing spot
       happen on screen inside a hop;
     - eyelines follow the spots: whoever stands to a person's right in the wide
       shot is off frame right in every close shot of that person. On a pull-back
-      the renderer draws the other person where the eyes point;
+      the renderer draws the other person where the eyes point. In a close shot
+      looking off-frame at someone else, add `"alone in the frame"` so the
+      off-frame person is not pulled into the close;
     - every walk goes round a named end of a named piece of furniture, over floor
-      the pictures show, and every step has an end mark ("plants her feet there");
+      the pictures show, and every step has an end mark (`"plants her feet there"`).
+      A walk or run away from the camera explicitly says `"her back to the camera"`;
+      a walk or run toward the camera or someone names where it stops (`"stops an
+      arm's length in front of @b"`) or exits (`"out of frame past the left edge"`).
+      Keep exit sides consistent across cuts;
     - a position phrase fits the furniture as the pictures draw it (which way it
       faces, what touches a wall): a phrase the room cannot hold makes the
-      renderer move the furniture. An outfit phrase names the garment's defining
-      cut (neckline, length), not only its colour;
-    - every cut, a restart or a `[Shot N]`, has a reason (a look, a line, a sound,
-      an action that needs another angle) and keeps posture, spot and props
-      matching across it. A restart opens on another size or angle than the hop
-      before it ended on, changed by a lot (another side of the person, low or
-      high) and opening on an action already starting; a small change of angle
-      reads as a jump cut;
+      renderer move the furniture. For barriers (glass, railing, gate, bars), name
+      which side the camera and each person sit on. An outfit phrase names the
+      garment's defining cut (neckline, length), not only its colour;
+    - every cut, a restart (`anchor: "restart"` + `join: "hard_cut"`) or a `[Shot N]`,
+      has a reason (a look, a line, a sound, an action that needs another angle)
+      and keeps posture, spot and props matching across it. A restart opens on
+      another size or angle than the hop before it ended on, changed by a lot
+      (another side of the person, low or high) and opening on an action already
+      starting; a small change of angle reads as a jump cut;
     - a prop or a look that pays off later is seen, or glanced at, earlier.
 
 17. **In a chain, bodies and faces play small, and a camera move is its first and last frame.**
@@ -343,13 +364,16 @@ These are not style preferences. They are how this model fails.
     rest on something and the body holds its pose: "stays", "keeps", "rests",
     "holds". Name each action with a concrete verb (pivots, sinks, grips and
     lifts, sets down with a click); "interacts", "reacts" and "moves" leave the
-    choice to the renderer. A hand holding something keeps holding it. Someone
-    seen from behind stays facing away; a glance back is the chin over one
-    shoulder. One camera move per hop at most, with a reason: say where it starts,
-    which way and how fast it goes, what stays still, and where it stops ("opens
-    on both of them waist up; the camera travels slowly in until her eyes fill the
-    frame, his shoulder soft at the left"). A move that ends a hop gives the next
-    hop its first frame.
+    choice to the renderer. Bind simultaneous actions with `and / while / as / ;`
+    and keep `then` for what comes after, never `"they/them"` for one person. A
+    hand holding something keeps holding it. Someone seen from behind stays facing
+    away; a glance back is the chin over one shoulder. Direct the camera move and
+    framing inside the beat prose (omitting `directives.camera` and
+    `directives.framing` when directing motion or `[Shot N]` cuts in the beat):
+    say where it starts, which way and how fast it goes, what stays still, and
+    where it stops ("opens on both of them waist up; the camera travels slowly in
+    until her eyes fill the frame, his shoulder soft at the left"). A move that
+    ends a hop gives the next hop its first frame.
 
 ## `shot_plan`
 
@@ -361,7 +385,7 @@ One shot per hop. **The number of shots is the number of hops.**
     {
       "id": "s1",
       "beat": "...",
-      "directives": {"camera": "hold", "framing": "medium", "pace": "steady", "tail": "ongoing"}
+      "directives": {"pace": "steady", "tail": "ongoing"}
     }
   ]
 }
@@ -692,8 +716,9 @@ This piece is ADULT. Everyone in it is an adult, described as an adult, and ever
 
 ## What to produce
 
-1. A one-paragraph plan in prose: how many hops, what each covers, where the
-   references sit and why.
+1. A one-paragraph plan in prose (or a continuity blocking sheet when 2+ hops:
+   `set_layout`, `spots`, `hops` START->END, `cuts`, `weak_spots`): how many hops,
+   what each covers, where the references sit and why.
 2. ```json ``` block — the `shot_plan`.
 3. ```json ``` block — the `ref_plan`.
 4. A short list of any pictures the user still needs to supply, with the
@@ -701,10 +726,17 @@ This piece is ADULT. Everyone in it is an adult, described as an adult, and ever
 
 Before you answer, check every one of these:
 
-- [ ] Every person's spot is one phrase, repeated word for word in every shot
-      that shows them; every hop opens where the previous one ended.
+- [ ] Every person's spot is one phrase giving screen quadrant, depth, body
+      facing, and eyeline, repeated word for word from the same camera; every
+      `join: continuous` hop opens where the previous one ended; every cut or
+      `anchor: restart` re-places everyone for the new camera.
+- [ ] Walks away say `"back to the camera"`; walks toward say where they stop;
+      exit sides match across cuts; barriers name both sides; close shots
+      looking off-frame include `"alone in the frame"`.
 - [ ] Every cut has a reason; a restart opens on another size or angle than the
-      hop before it ended on; close-up eyeline sides match the wide.
+      hop before it ended on; close-up eyeline sides match the wide; when the
+      beat directs camera motion or `[Shot N]` sizes, `directives.camera` and
+      `directives.framing` stay omitted.
 - [ ] Shot count matches the hop count the user asked for.
 - [ ] Every beat's word count has been counted, written down, and falls inside
       the band for its hop length. A 15 s hop needs 70-100 words; fifty is

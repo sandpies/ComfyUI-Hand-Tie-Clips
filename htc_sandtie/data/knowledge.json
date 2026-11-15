@@ -1,0 +1,528 @@
+{
+  "_note": "Clean-room SandTie H3 Cinematography & Prompting Primer combining Official MiniMax H3 specs and LoopForge empirical findings.",
+  "know": {
+    "head": "H3 CINEMA SENSE (write visible physical motion, camera primitives, and sound — zero vague labels):",
+    "camera": [
+      "H3 responds reliably to its 12 motion primitives paired with amplitude and speed: Push In / Pull Out, Zoom In / Zoom Out, Pan Left / Pan Right, Truck Left / Truck Right, Tilt Up / Tilt Down, Pedestal Up / Pedestal Down, Arc Shot, Tracking Shot, Static Shot, Shake Slightly / Shake Strongly, POV, Roll Clockwise / Roll Counterclockwise.",
+      "Open-End Range Law: a Push In / Super Dolly In MUST open wide so the camera has room to travel inward; a Pull Out / Aerial Pullback MUST open tight on face or prop so the reveal expands outward.",
+      "Tripod Pan vs Lateral Truck vs Orbit: for Pan Left/Right keep the tripod planted stationary and level; for Orbit keep the subject's feet planted facing one direction while the camera arcs and walls rotate behind in 3D parallax.",
+      "Background Plate Dampening: when a standalone set plate <Picture N> is wired, boost camera movement phrasing with 'with large amplitude' so the move keeps full travel.",
+      "Zero Rig Hardware Naming: describe chest-locked or low floor views visually without naming visible metal chest rigs or mechanical tracks so hardware stays out of frame."
+    ],
+    "picture": [
+      "Lighting defines mood physically: directional warm key + shadow side for drama, rear rim for hair halo, soft overcast for beauty, wet neon reflections for midnight streets.",
+      "Sound & Dialogue Discipline: place spoken lines inside <d>[delivery] ...</d> with straight ASCII quotes; keep overall_soundscape strictly free of dialogue/voices and semicolons ';' (use commas or periods so H3 never truncates audio)."
+    ],
+    "write": "Describe every shot concretely: framing size, subject position/wardrobe, action physics, camera primitive + amplitude + speed, light source, and exact foley."
+  },
+  "terms": [
+    [
+      "(?:3/4|three[- ]?quarter)\\s+top[- ]?down(?:\\s+(?:shot|view|angle))?",
+      "cinema:three_quarter_top_down"
+    ],
+    [
+      "god'?s[- ]eye (?:view|shot)|(?<!3/4 )(?<!three-quarter )(?<!three quarter )top[- ]down (?:shot|view)|overhead shot",
+      "cinema:top_down"
+    ],
+    [
+      "superhero landing|3[- ]point landing|three[- ]point landing",
+      "combat:combat_superhero_3point_landing"
+    ],
+    [
+      "kamehameha|ki[- ]?blast|hadouken|energy beam blast",
+      "combat:combat_anime_ki_beam_kamehameha"
+    ],
+    [
+      "john wick|gun[- ]?fu|center[- ]axis relock",
+      "combat:combat_john_wick_car_spin"
+    ],
+    [
+      "iaido|katana quick[- ]?draw",
+      "combat:combat_iaido_quickdraw_slash"
+    ],
+    [
+      "lightsaber (?:duel|clash|lock)",
+      "combat:combat_lightsaber_spark_lock"
+    ],
+    [
+      "matrix (?:dodge|lean)|bullet[- ]?time dodge",
+      "combat:combat_bullet_time_matrix_lean"
+    ],
+    [
+      "walk(?:s|ing)? away from (?:an )?explosion|cool guys? don'?t look at explosions",
+      "combat:combat_explosion_cool_walkaway"
+    ],
+    [
+      "mating press",
+      "explicit:mating_press_ankles_ears"
+    ],
+    [
+      "amazon position",
+      "explicit:amazon_position_female_top"
+    ],
+    [
+      "glory[- ]?hole",
+      "explicit:gloryhole_wall_oral"
+    ],
+    [
+      "scissoring|tribadism",
+      "explicit:lesbian_scissoring_tribadism"
+    ],
+    [
+      "squirt(?:s|ing)? orgasm|female ejaculation",
+      "explicit:solo_female_squirt_climax"
+    ],
+    [
+      "180[- ]degree line|plate[- ]side camera",
+      "camera:copilot_plate_side_180_lock"
+    ],
+    [
+      "cut on action",
+      "camera:copilot_cut_on_action_3quarter"
+    ],
+    [
+      "strobe approach|flash approach",
+      "camera:beat_flash_step_closer_macro"
+    ],
+    [
+      "helios (?:lens|bokeh)|swirl(?:y|ing) bokeh",
+      "cinema:vintage_helios_swirl_bokeh"
+    ],
+    [
+      "candle-?light|candle-?lit",
+      "cinema:candlelight_flicker_boudoir"
+    ],
+    [
+      "vanity mirror (?:light|bulbs)",
+      "cinema:bathroom_vanity_mirror_bulbs"
+    ],
+    [
+      "domain expansion",
+      "combat:combat_anime_domain_expansion_hand_seal"
+    ],
+    [
+      "sandevistan|time[- ]dilation blitz",
+      "combat:combat_cyber_sandevistan_time_freeze_slash"
+    ],
+    [
+      "chiburi|katana sheathe",
+      "combat:combat_katana_blood_flick_sheathe_click"
+    ],
+    [
+      "headscissor|hurricanrana",
+      "combat:combat_thigh_headscissor_hurricanrana"
+    ],
+    [
+      "ankles (?:crossed |locked )?behind (?:his )?neck",
+      "explicit:missionary_ankles_locked_behind_neck"
+    ],
+    [
+      "internal creampie|creampie drip",
+      "explicit:climax_internal_creampie_drip_closeup"
+    ],
+    [
+      "water breathing|water dragon (?:slash|katana|sword)",
+      "combat:combat_anime2real_water_breathing_dragon"
+    ],
+    [
+      "sun breathing|hinokami|flame breathing|flame wheel",
+      "combat:combat_anime2real_hinokami_sun_fire_wheel"
+    ],
+    [
+      "thunder breathing|thunderclap and flash|godspeed slash",
+      "combat:combat_anime2real_thunder_clap_flash_godspeed"
+    ],
+    [
+      "hollow purple",
+      "combat:combat_anime2real_hollow_purple_convergence"
+    ],
+    [
+      "black flash",
+      "combat:combat_anime2real_black_flash_spatial_lightning"
+    ],
+    [
+      "rasengan|wind sphere",
+      "combat:combat_anime2real_rasengan_wind_sphere_slam"
+    ],
+    [
+      "susanoo|spectral samurai",
+      "combat:combat_anime2real_susanoo_spectral_ribcage_avatar"
+    ],
+    [
+      "anime2real|anime[- ]to[- ]real",
+      "style:anime2real_live_action_vfx"
+    ],
+    [
+      "whip[- ]?pan match|reaction whip",
+      "camera:whip_pan_reaction_match"
+    ],
+    [
+      "split[- ]?diopter",
+      "camera:split_diopter_foreground_background_lock"
+    ],
+    [
+      "rack focus|focus pull",
+      "camera:focus_pull_foreground_prop_to_face"
+    ],
+    [
+      "dutch (?:tilt|angle)|canted angle",
+      "camera:low_angle_dutch_power_walk"
+    ],
+    [
+      "katana duel|blade clash|sword clash",
+      "combat:combat_s1_s2_mirror_blade_duel"
+    ],
+    [
+      "wing chun|pak[- ]?sao|trapping",
+      "combat:combat_s1_s2_wing_chun_trapping_exchange"
+    ],
+    [
+      "tag[- ]?team combo|flying knee",
+      "combat:combat_s1_s2_tag_team_combo_finisher"
+    ],
+    [
+      "gun disarm|wrist[- ]?twist disarm",
+      "combat:combat_s1_s2_gun_disarm_wrist_lock_reversal"
+    ],
+    [
+      "wall[- ]?run kick|tornado kick",
+      "combat:combat_env_hallway_wall_run_kick"
+    ],
+    [
+      "table slide|slide across the table",
+      "combat:combat_env_table_slide_gun_sweep"
+    ],
+    [
+      "shirahadori|sword catch",
+      "combat:combat_s1_s2_sword_vs_barehand_catch"
+    ],
+    [
+      "domain shrine|infinite void",
+      "combat:combat_anime2real_domain_void_shrine_cut"
+    ],
+    [
+      "shibari|rope harness",
+      "explicit:bdsm_shibari_chest_harness_wall_tie"
+    ],
+    [
+      "spreader bar|ankle cuff",
+      "explicit:bdsm_spreader_bar_ankle_cuff_missionary"
+    ],
+    [
+      "paddle spank|leather paddle",
+      "explicit:bdsm_leather_paddle_spank_red_glutes"
+    ],
+    [
+      "lesbian 69|sixty[- ]?nine",
+      "explicit:lesbian_sixty_nine_side_mutual_lick"
+    ],
+    [
+      "pillow grind|prone pillow",
+      "explicit:solo_prone_pillow_grinding_hump"
+    ],
+    [
+      "anamorphic flare|2\\.39:1",
+      "cinema:anamorphic_239_blue_streak"
+    ],
+    [
+      "bullet[- ]?time rain|suspended raindrops",
+      "fx:vfx_rain_drop_bullet_time_freeze"
+    ],
+    [
+      "wuxia|wire[- ]?fu",
+      "style:wuxia_wirefu_cinema"
+    ],
+    [
+      "key handoff|prop handoff|tracking[- ]to[- ]prop",
+      "camera:key_handoff"
+    ],
+    [
+      "pullback rise|pull back and rise|crane pullback",
+      "camera:pullback_rise"
+    ],
+    [
+      "detail to wide|macro to wide",
+      "camera:detail_to_wide"
+    ],
+    [
+      "foreground wipe",
+      "camera:foreground_wipe"
+    ],
+    [
+      "rear[- ]quarter follow|45[- ]degree follow",
+      "camera:rear_quarter_follow"
+    ],
+    [
+      "dutch[- ]angle tracking|canted tracking",
+      "camera:dutch_tracking"
+    ],
+    [
+      "mirror reveal|mirror pan[- ]past",
+      "camera:mirror_reveal"
+    ],
+    [
+      "risograph|riso print",
+      "style:style_risograph"
+    ],
+    [
+      "franco[- ]belgian|ligne claire|clear[- ]line comic",
+      "style:style_franco_belgian"
+    ],
+    [
+      "datamosh",
+      "style:style_datamosh"
+    ],
+    [
+      "arri alexa",
+      "cinema:cam_arri_alexa_lf"
+    ],
+    [
+      "sony venice",
+      "cinema:cam_sony_venice2"
+    ],
+    [
+      "panavision dxl",
+      "cinema:cam_panavision_dxl2"
+    ],
+    [
+      "velvia 50",
+      "colour:fujifilm_velvia_50"
+    ],
+    [
+      "\\bpush(?:es|ing)?\\s+in\\b|\\bdolly[- ]?in\\b",
+      "camera:push_in"
+    ],
+    [
+      "\\bpull(?:s|ing)?\\s+(?:out|back)\\b|\\bdolly[- ]?out\\b",
+      "camera:pull_out"
+    ],
+    [
+      "\\bsuper\\s+dolly\\s+in\\b",
+      "camera:super_dolly_in"
+    ],
+    [
+      "\\bcrash\\s+zoom\\s+in\\b|\\bsnap\\s+zoom\\s+in\\b",
+      "camera:crash_zoom_in"
+    ],
+    [
+      "\\bcrash\\s+zoom\\s+out\\b|\\bsnap\\s+zoom\\s+out\\b",
+      "camera:crash_zoom_out"
+    ],
+    [
+      "\\byo-?yo\\s+zoom\\b",
+      "camera:yoyo_zoom"
+    ],
+    [
+      "\\bwhip[- ]?pan\\b|\\bswish[- ]?pan\\b",
+      "camera:whip_pan"
+    ],
+    [
+      "\\bpan(?:s|ning)?\\s+left\\b",
+      "camera:pan_left"
+    ],
+    [
+      "\\bpan(?:s|ning)?\\s+right\\b",
+      "camera:pan_right"
+    ],
+    [
+      "\\btruck(?:s|ing)?\\s+left\\b",
+      "camera:truck_left"
+    ],
+    [
+      "\\btruck(?:s|ing)?\\s+right\\b",
+      "camera:truck_right"
+    ],
+    [
+      "\\btilt(?:s|ing)?\\s+up\\b",
+      "camera:tilt_up"
+    ],
+    [
+      "\\btilt(?:s|ing)?\\s+down\\b",
+      "camera:tilt_down"
+    ],
+    [
+      "\\bpedestal\\s+up\\b",
+      "camera:pedestal_up"
+    ],
+    [
+      "\\bpedestal\\s+down\\b",
+      "camera:pedestal_down"
+    ],
+    [
+      "\\bcrane\\s+up\\b|\\bjib\\s+up\\b",
+      "camera:crane_up"
+    ],
+    [
+      "\\bcrane\\s+down\\b|\\bjib\\s+down\\b",
+      "camera:crane_down"
+    ],
+    [
+      "\\b360[- ]?degree\\s+(?:orbit|arc)\\b|\\bfull\\s+orbit\\b",
+      "camera:orbit_360"
+    ],
+    [
+      "\\bsteadicam\\b|\\bgimbal\\s+follow\\b",
+      "camera:steadicam_follow"
+    ],
+    [
+      "\\bhandheld\\b|\\bshaky\\s+cam\\b",
+      "camera:handheld"
+    ],
+    [
+      "\\bsnorricam\\b|\\bchest[- ]?mount(?:ed)?\\b",
+      "camera:snorricam"
+    ],
+    [
+      "\\bover[- ]the[- ]shoulder\\b|\\bots\\b",
+      "camera:ots_talk"
+    ],
+    [
+      "\\bshot[-/ ]reverse\\b",
+      "camera:shot_reverse"
+    ],
+    [
+      "\\bdutch\\s+(?:angle|tilt|roll)\\b|\\bcanted\\b",
+      "camera:dutch_roll"
+    ],
+    [
+      "\\bbarrel\\s+roll\\b|\\b360[- ]?roll\\b",
+      "camera:barrel_roll"
+    ],
+    [
+      "\\baerial\\s+pullback\\b",
+      "camera:aerial_pullback"
+    ],
+    [
+      "\\bfpv\\s+drone\\b",
+      "camera:fpv_drone"
+    ],
+    [
+      "\\bwalk\\s+past\\s+camera\\b",
+      "camera:walk_past_camera"
+    ],
+    [
+      "\\boverhead\\s+swing\\b",
+      "camera:overhead_swing"
+    ],
+    [
+      "\\bchiaroscuro\\b",
+      "cinema:chiaroscuro"
+    ],
+    [
+      "\\brembrandt\\s+lighting\\b",
+      "cinema:rembrandt"
+    ],
+    [
+      "\\bbutterfly\\s+(?:key|lighting)\\b",
+      "cinema:butterfly"
+    ],
+    [
+      "\\brim\\s+(?:light|lit|backlight)\\b",
+      "cinema:rim"
+    ],
+    [
+      "\\bsilhouette\\b",
+      "cinema:silhouette"
+    ],
+    [
+      "\\bsoft\\s+natural\\s+window\\s+(?:light|daylight|lighting)\\b",
+      "cinema:soft_natural_window"
+    ],
+    [
+      "\\bsoft\\s+natural\\s+(?:light|daylight|lighting)\\b|\\bnatural\\s+soft\\s+(?:light|daylight|lighting)\\b",
+      "cinema:soft_natural_light"
+    ],
+    [
+      "\\bgolden\\s+hour\\b",
+      "cinema:golden_hour"
+    ],
+    [
+      "\\bblue\\s+hour\\b|\\btwilight\\b",
+      "cinema:blue_hour"
+    ],
+    [
+      "\\bvenetian\\s+blinds?\\b",
+      "cinema:blinds"
+    ],
+    [
+      "\\bvolumetric\\s+(?:rays?|beams?|light)\\b|\\bgod\\s+rays?\\b",
+      "cinema:volumetric"
+    ],
+    [
+      "\\blow[- ]?key\\b",
+      "cinema:low_key"
+    ],
+    [
+      "\\bhigh[- ]?key\\b",
+      "cinema:high_key"
+    ],
+    [
+      "\\banamorphic\\b",
+      "cinema:anamorphic"
+    ],
+    [
+      "\\bshallow\\s+(?:dof|depth\\s+of\\s+field|focus)\\b",
+      "cinema:shallow"
+    ],
+    [
+      "\\brack\\s+focus\\b|\\bfocus\\s+pull\\b",
+      "cinema:rack"
+    ],
+    [
+      "\\bsplit\\s+diopter\\b",
+      "cinema:split_diopter"
+    ],
+    [
+      "\\bworm'?s[- ]eye\\b",
+      "cinema:worms_eye"
+    ],
+    [
+      "\\bbird'?s[- ]eye\\b",
+      "cinema:birds_eye"
+    ],
+    [
+      "\\bhalation\\b",
+      "cinema:halation"
+    ],
+    [
+      "\\bfisheye\\b",
+      "cinema:fisheye"
+    ],
+    [
+      "\\btilt[- ]?shift\\b",
+      "cinema:tilt_shift"
+    ],
+    [
+      "\\bslow[- ]?motion\\b|\\bhigh[- ]?frame[- ]?rate\\b",
+      "fx:slow_motion"
+    ],
+    [
+      "\\bbullet[- ]?time\\b",
+      "fx:bullet_time"
+    ],
+    [
+      "\\bdouble\\s+exposure\\b",
+      "fx:double_exposure"
+    ],
+    [
+      "\\bfilm\\s+noir\\b",
+      "style:film_noir"
+    ],
+    [
+      "\\bneo[- ]?noir\\b",
+      "style:neo_noir"
+    ],
+    [
+      "\\bwuxia\\b",
+      "style:wuxia"
+    ],
+    [
+      "\\bteal\\s+(?:and|&)\\s+orange\\b",
+      "colour:teal_orange"
+    ],
+    [
+      "\\bbleach[- ]?bypass\\b",
+      "colour:bleach"
+    ]
+  ]
+}

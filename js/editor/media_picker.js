@@ -291,6 +291,7 @@ export function createPicker({ kind = "image", get, set, onChange, title } = {})
                         + `already in the folder as ${got[0].name}; using that one.`);
                 }
                 set(got[0].name);
+                paintList(_files || []);
                 onChange?.();
             }
         } catch (err) {
@@ -307,8 +308,11 @@ export function createPicker({ kind = "image", get, set, onChange, title } = {})
         input.click();
     });
     input.addEventListener("change", () => {
-        take(input.files);
+        // Freeze live FileList BEFORE clearing input.value (clearing mutates
+        // live FileList objects synchronously in some Chromium builds).
+        const picked = Array.from(input.files || []);
         input.value = "";            // so re-picking the same file still fires
+        if (picked.length) take(picked);
     });
     thumb.addEventListener("dragover", (e) => {
         // Only light up for an actual file drag. Without this check, dragging a

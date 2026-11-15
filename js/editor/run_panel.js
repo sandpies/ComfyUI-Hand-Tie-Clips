@@ -119,7 +119,7 @@ const GROUPS = [
                     // suppressed in the other modes -- suppression only stops
                     // the panel drawing a dial, and an undrawn dial reappears
                     // as a raw native widget, which is worse than an inert one.
-                    "tone_compensate", "tone_anchor",
+                    "tone_compensate", "tone_anchor", "tone_anchor_ref",
                     "last_frame_guide"]],
     // The second sampler pass. Its own group rather than folded into
     // `sampling`, because these do not describe how a hop is rendered -- they
@@ -158,7 +158,7 @@ const GROUPS = [
                   "upsample_redraw", "upsample_steps", "regen2k_seed", "regen2k_cond"]],
     // Wrap every hop's finished prompt: LoRA trigger words first, a trailing
     // camera/body clause last, outside everything the chain adds.
-    ["prompt wrap", ["prompt_prefix", "prompt_suffix"]],
+    ["prompt wrap", ["prompt_prefix", "prompt_suffix", "establish"]],
     ["cache",["cache_hops", "cache_budget_gb", "cache_location"]],
     // Added 2026-08-30. 0.4.0 shipped these five on the Python side and never
     // touched js/, so all five fell through to native dials -- the documented
@@ -194,7 +194,15 @@ const GROUPS = [
  * A seed is up to 19 digits and a truncated one cannot be read back to
  * reproduce a render, which is the only reason to look at it.
  */
-const WIDE = new Set(["seed"]);
+const WIDE = new Set([
+    "seed",
+    "boost_lora_1",
+    "boost_lora_2",
+    "boost_lora_3",
+    "boost_lora_4",
+    "upsample_redraw",
+]);
+const HALF = new Set(["prompt_prefix", "prompt_suffix"]);
 
 /**
  * The dial whose OFF value makes a whole group a no-op (A5).
@@ -306,6 +314,8 @@ const REFINE_V2_HIDDEN = new Set([
     "pin_noise",
     "tone_compensate",
     "tone_anchor",
+    "tone_anchor_ref",
+    "establish",
     //Retired 10-25 (the upsample runs the original recipe, no LoRA): owned so
     // the raw widgets stay hidden, never drawn.
     "upsample_lora",
@@ -626,6 +636,36 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
     const owned = [];
     const readers = [];
     const openByTitle = new Map();
+    const CORE_GROUPS = new Set(["output", "sampling", "join & pin"]);
+
+    const collapseOptBtn = el("button", "h3e-btn h3e-run-fold", "collapse optional");
+    collapseOptBtn.type = "button";
+    collapseOptBtn.title = "Collapse optional drawers (refine, 2nd pass, upsample, prompt wrap, cache, preview, soundtrack) that are off or unused";
+    collapseOptBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        for (const g of body.querySelectorAll("details.h3e-run-group")) {
+            const title = g.dataset.groupTitle || "";
+            const keepOpen = CORE_GROUPS.has(title) || (!g.classList.contains("h3e-run-off") && Boolean(GROUP_MASTER[title]));
+            g.open = keepOpen;
+            if (title) openByTitle.set(title, keepOpen);
+        }
+    });
+
+    const expandAllBtn = el("button", "h3e-btn h3e-run-fold", "expand all");
+    expandAllBtn.type = "button";
+    expandAllBtn.title = "Expand all Run drawer groups";
+    expandAllBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        for (const g of body.querySelectorAll("details.h3e-run-group")) {
+            const title = g.dataset.groupTitle || "";
+            g.open = true;
+            if (title) openByTitle.set(title, true);
+        }
+    });
+    sum.insertBefore(expandAllBtn, back);
+    sum.insertBefore(collapseOptBtn, expandAllBtn);
     let builtFor = null;   // the suppression set the current DOM was built for
 
     function suppressedSet() {
@@ -668,6 +708,7 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
                 : false;
 
             const group = el("details", "h3e-run-group");
+            group.dataset.groupTitle = title;
             group.open = openByTitle.has(title) ? openByTitle.get(title) : !isOff;
             group.addEventListener("toggle", () => {
                 openByTitle.set(title, group.open);
@@ -745,8 +786,10 @@ export function createRunPanel(node, { onChange, suppressed, hopCount, onBack } 
                 selfRead = f.read;
                 if (!peerReaders.has(name)) peerReaders.set(name, []);
                 peerReaders.get(name).push(f.read);
-                const l = el("label",
-                    WIDE.has(name) ? "h3e-field h3e-run-wide" : "h3e-field");
+                const spanCls = WIDE.has(name)
+                    ? "h3e-field h3e-run-wide"
+                    : (HALF.has(name) ? "h3e-field h3e-run-half" : "h3e-field");
+                const l = el("label", spanCls);
                 l.appendChild(el("span", null, labelFor(w, title)));
                 l.appendChild(f.input);
                 // The tooltip is the widget's own, straight from INPUT_TYPES.

@@ -737,12 +737,11 @@ def redraw(model, video, n, src_size, upscale_model, megapixels, denoise, lora,
         model = nodes.LoraLoaderModelOnly().load_lora_model_only(
             model, eff_lora, eff_strength)[0]
         lora_tag = f"{eff_lora} @ {eff_strength:g}"
-    # As upsample_chain: port dense LoRA AdaLN patches (pruned DiTs).
-    fix = getattr(nodes, "NODE_CLASS_MAPPINGS", {}).get("H3AdaLNLoRAFix")
-    if fix is not None and hasattr(model, "patches"):
+    # As upsample_chain: port dense LoRA AdaLN patches (pruned DiTs) via built-in MIT htc_adaln.
+    if hasattr(model, "patches"):
         try:
-            res = fix.execute(model=model, mode="port")
-            model = (res.args if hasattr(res, "args") else tuple(res))[0]
+            from . import htc_adaln as _adaln
+            model, _rep = _adaln.fix_model(model, mode="port")
         except Exception:
             pass
 

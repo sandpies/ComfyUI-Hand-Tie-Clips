@@ -1,0 +1,888 @@
+{
+  "id": "place",
+  "label": "Place",
+  "per": "project",
+  "note": "Verified 3D scene plates, arenas, and atmospheric sets.",
+  "options": [
+    {
+      "id": "plate_luxury_rooftop_infinity_pool",
+      "label": "🌃 Penthouse Rooftop Infinity Pool at Night (Skyline Bokeh & Steam)",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "rule": "an illuminated glass-edge rooftop infinity pool terrace overlooking a glittering midnight city skyline, warm underwater cyan light rippling over wet stone deck and sleek dark loungers",
+      "character": "rooftop infinity pool terrace at night",
+      "life": "pool water ripples and catches underwater glow; warm mist drifts off the surface",
+      "sound": "gentle pool water lapping softly against stone over distant high-rise night breeze",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "plate_rain_car_backseat_city_lights",
+      "label": "🚗 Rainy Night Sedan Backseat (Neon City Streaks & Fogged Windows)",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "rule": "the plush dark-leather backseat cabin of a parked luxury sedan at night with softly fogged side windows streaked by rain and glowing neon city bokeh outside",
+      "character": "rainy night luxury sedan backseat",
+      "life": "raindrops slide down the glass; distant colored city bokeh drifts softly outside",
+      "sound": "steady rain pattering softly on the car roof and cushioned leather seat creaks",
+      "domain": "car_cabin"
+    },
+    {
+      "id": "penthouse_living_sofa_table",
+      "label": "Luxury penthouse living room, grey sofa & glass table at night · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Luxury penthouse living room, grey sofa & glass table at night",
+      "rule": "a sophisticated penthouse living room at night featuring dark wood flooring, a plush grey sofa, a glass coffee table holding a crystal tumbler, a warm brass desk lamp illuminating a wooden console, and floor-to-ceiling windows revealing a glittering cityscape bathed in intimate cool blue and warm amber tones",
+      "sound": "low-frequency ambient hum of the city at night through thick floor-to-ceiling glass, soft plush sofa cushion creaks, quiet indoor room tone",
+      "life": "glittering city skyline lights shimmer beyond the floor-to-ceiling windows; warm amber light from the brass desk lamp glints across the glass coffee table and crystal tumbler",
+      "domain": "office_desk"
+    },
+    {
+      "id": "luxury_hotel_balcony_night",
+      "label": "High-rise hotel balcony & glass railing over neon city · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "High-rise hotel balcony & glass railing over neon city",
+      "rule": "a high-floor luxury hotel terrace at night with a waist-high tempered glass balcony railing overlooking a sea of glowing neon skyscrapers below, warm recessed balcony soffit lighting, a plush outdoor lounge daybed, and sheer white suite curtains billowing behind",
+      "sound": "warm high-altitude night breeze, distant city traffic wash far below, soft curtain fabric flutter",
+      "life": "sheer white suite curtains billow gently in the night breeze; neon skyscraper lights twinkle and reflect across the tempered glass railing",
+      "domain": "bedroom"
+    },
+    {
+      "id": "japanese_onsen_cedar_steam",
+      "label": "Private hinoki cedar hot-spring bath (onsen) at night · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Private hinoki cedar hot-spring bath (onsen) at night",
+      "rule": "an intimate private Japanese ryokan hot-spring bath crafted from fragrant warm hinoki cypress wood, steaming mineral water lapping against the smooth wooden rim, warm paper andon lanterns glowing softly, and wet dark river stones",
+      "sound": "gentle hot-spring water lapping against cedar wood, soft trickle of a bamboo water spout, tranquil night crickets outside",
+      "life": "clouds of warm white steam rise and curl from the hot water surface; golden lantern light ripples across the water and wet cedar rim",
+      "domain": "wet_tub"
+    },
+    {
+      "id": "executive_corner_office_night",
+      "label": "Executive mahogany desk & glass skyline office after hours · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Executive mahogany desk & glass skyline office after hours",
+      "rule": "a sleek corner executive office after hours with a wide polished dark mahogany desk in the foreground, a black leather executive chair, a green-shaded brass banker's lamp casting a warm pool of light, and floor-to-ceiling glass walls overlooking midnight skyscraper towers",
+      "sound": "hushed after-hours office air-conditioning hum, smooth leather chair creak, muffled midnight city ambience",
+      "life": "distant office tower lights glow across the night skyline; warm brass lamp light reflects off the polished mahogany desktop",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "cyberpunk_neon_bedroom_pod",
+      "label": "Cyberpunk megacity apartment window-bed in rain · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Cyberpunk megacity apartment window-bed in rain",
+      "rule": "a high-rise cyberpunk apartment alcove bed set flush against a giant rain-streaked panoramic window, glowing magenta and cyan holographic kanji sky-ads outside casting two-tone neon light across dark satin sheets, and recessed LED wall strips",
+      "sound": "steady rain pattering against the panoramic window glass, low futuristic city drone hum, soft satin sheet rustle",
+      "life": "raindrops race down the panoramic glass; magenta and cyan hologram light shifts across the bedsheets; a flying aerodyne streaks past in the distance",
+      "domain": "bedroom"
+    },
+    {
+      "id": "penthouse_silk_bedroom",
+      "label": "Luxury penthouse bedroom, night skyline · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Luxury penthouse bedroom, night skyline",
+      "rule": "a plush king-size bed dressed in rumpled black silk sheets and velvet pillows, floor-to-ceiling glass windows overlooking a glittering midnight city skyline, warm amber wall sconces, a crystal champagne glass on the nightstand",
+      "sound": "soft silk sheet rustles, muffled midnight city hum through thick glass, quiet air conditioning breath, a soft mattress creak",
+      "life": "distant city tower lights twinkle beyond the glass; warm amber sconce light glints across the black silk folds; sheer window drapes sway gently in the air current",
+      "domain": "bedroom"
+    },
+    {
+      "id": "bdsm_red_dungeon_cross",
+      "label": "Red-lit BDSM dungeon & St. Andrew's cross · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Red-lit BDSM dungeon & St. Andrew's cross",
+      "rule": "a dark brick-and-leather dungeon chamber lit by deep crimson spotlights, a padded black leather St. Andrew's cross with steel wrist cuffs, iron rings and hanging steel chains on the wall, racks of leather crops and paddles, flickering red pillar candles",
+      "sound": "clinking steel chains, leather creaking under tension, candle wax dripping, a low resonant room hum",
+      "life": "hanging steel chains sway and clink softly; crimson candle flames flicker and throw dancing shadows across the brick wall; red spotlight haze drifts through the air",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "neon_strip_club_pole",
+      "label": "Neon strip club stage & brass pole · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Neon strip club stage & brass pole",
+      "rule": "a glossy black mirror stage with a gleaming vertical brass dance pole at center, hot-pink and cyan neon strip lights along the stage rim, plush red velvet VIP couches in the dim background, scattered dollar bills on the glossy floor, swirling club haze",
+      "sound": "deep muffled sub-bass thrum, heels clicking on glossy stage glass, clinking ice in VIP glasses, low club murmur",
+      "life": "magenta and cyan laser beams sweep through the club haze; reflections shimmer across the black mirror stage floor; a dollar bill flutters near the stage edge",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "steamy_glass_shower",
+      "label": "Steamy frameless glass walk-in shower · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Steamy frameless glass walk-in shower",
+      "rule": "a luxury walk-in shower enclosed by clear frameless glass panes beaded with water droplets, an overhead brass rainfall showerhead pouring streams of warm water, wet dark slate wall tiles, warm recessed amber ceiling lights, drifting white steam",
+      "sound": "steady warm shower water pattering on slate tile and skin, echoing bathroom acoustics, gentle steam hiss",
+      "life": "streams of warm water pour from the rainfall head; condensation droplets race down the glass pane; wisps of white steam curl upward into the amber light",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "rooftop_jacuzzi_night",
+      "label": "Rooftop jacuzzi hot tub at night · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Rooftop jacuzzi hot tub at night",
+      "rule": "a bubbling rooftop jacuzzi illuminated from underwater by glowing turquoise and warm gold LEDs, swirling white foam and rising steam, wet wooden deck rim with two champagne flutes, glowing city skyscraper bokeh in the night sky behind",
+      "sound": "rhythmic jacuzzi water jets bubbling and lapping, warm night breeze, faint distant city traffic",
+      "life": "underwater turquoise light ripples across wet skin; hot steam rises into the night air; water bubbles churn and lap against the tiled rim",
+      "domain": "wet_tub"
+    },
+    {
+      "id": "candlelit_massage_table",
+      "label": "Candlelit massage parlor & oiled table · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Candlelit massage parlor & oiled table",
+      "rule": "a padded black leather massage table glistening with warm oil in the center of a dim sanctuary, dozens of glowing amber pillar candles arranged on wooden shelves, clear glass bottles of golden massage oil, carved bamboo screens casting slatted shadows",
+      "sound": "soft crackling candle wicks, slick oil bottle clink, tranquil room hush, gentle fabric and leather creak",
+      "life": "dozens of candle flames flicker in unison, casting warm golden highlights across the oiled leather table; a wisp of aromatic incense smoke curls upward",
+      "domain": "bedroom"
+    },
+    {
+      "id": "glamour_vanity_ringlight",
+      "label": "Glamour vanity mirror & ring-light studio · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Glamour vanity mirror & ring-light studio",
+      "rule": "a plush creator bedroom studio with a glowing circular LED ring light on a stand, a Hollywood bulb vanity mirror reflecting the room, a tufted pink velvet stool, glass perfume bottles, magenta and violet RGB LED strips glowing along the ceiling moulding",
+      "sound": "quiet bedroom studio room tone, a soft velvet stool creak, faint electronic hum of the ring light",
+      "life": "the circular ring light casts crisp halo catchlights; the vanity mirror doubles the action in glass; RGB wall strips pulse softly between magenta and violet",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "casting_couch_studio",
+      "label": "Private casting studio & black leather sofa · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Private casting studio & black leather sofa",
+      "rule": "a sleek modern studio room centered on a deep tufted black leather sofa, warm vertical wood-slat paneling behind it, two bright studio softbox lights on chrome stands at the edges, a polished hardwood floor",
+      "sound": "soft leather cushion creaks and squeaks as weight shifts, quiet studio room tone, a softbox ballast hum",
+      "life": "studio softboxes throw crisp, flattering specular highlights across the black leather cushions; dust motes drift slowly through the key light beam",
+      "domain": "sofa_lounge"
+    },
+    {
+      "id": "steamy_gym_locker_room",
+      "label": "Steamy post-workout gym locker room · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Steamy post-workout gym locker room",
+      "rule": "rows of matte steel gym lockers and a polished wooden changing bench in the foreground, an open tiled shower doorway behind venting clouds of warm white steam, white cotton towels draped over a bench, warm overhead strip lighting",
+      "sound": "distant shower water running on tile, a metal locker door latch clicking, echoing tiled room acoustics",
+      "life": "warm steam billows out from the tiled shower doorway; water droplets glisten on the wooden bench; overhead lights glint off the steel locker vents",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "motel_neon_mirror_ceiling",
+      "label": "Late-night motel room, neon blinds & mirror · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Late-night motel room, neon blinds & mirror",
+      "rule": "a moody late-night motel bed with rumpled white sheets and a tufted headboard, slatted Venetian window blinds slicing hot-pink and electric-blue roadside neon light across the mattress, a large framed mirror mounted above the headboard reflecting the bed",
+      "sound": "rain pattering on the motel window, buzzing roadside neon transformer, rhythmic bedframe creak, distant highway car pass",
+      "life": "pink and cyan neon bars flicker across the sheets through the slatted blinds; rain streaks slide down the window glass; the headboard mirror reflects every movement",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "private_jet_suite_bed",
+      "label": "Private jet bedroom suite at altitude · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Private jet bedroom suite at altitude",
+      "rule": "an ultra-luxury Gulfstream cabin suite with a wide cream-leather divan bed and cashmere throws, signature oval cabin windows showing moonlit cloud tops outside, glossy burl-wood side tables with chilled champagne flutes, warm recessed gold ceiling strips",
+      "sound": "a smooth, hushed high-altitude jet turbine hum, soft leather and cashmere rustle, crystal glass clink",
+      "life": "moonlit clouds stream past the oval cabin windows; champagne bubbles rise in the crystal flutes; the cabin sways imperceptibly at cruise",
+      "domain": "bedroom"
+    },
+    {
+      "id": "superyacht_sundeck_sunset",
+      "label": "Superyacht sundeck daybed, golden hour · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Superyacht sundeck daybed, golden hour",
+      "rule": "a wide white leather sunbed with plush pillows on the teak aft deck of a superyacht, chrome deck railings, sparkling turquoise ocean wake trailing behind under a blazing golden-hour sunset sky, sheer white linen canopy curtains",
+      "sound": "gentle ocean waves lapping the hull, warm sea breeze fluttering linen curtains, low yacht engine purr",
+      "life": "sheer white canopy curtains billow in the warm ocean breeze; golden sunset light dances in shimmering ripples across the water; the horizon sways gently",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "velvet_vip_champagne_booth",
+      "label": "Nightclub velvet VIP bottle-service booth · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Nightclub velvet VIP bottle-service booth",
+      "rule": "a secluded curved crimson-velvet VIP booth in a dark luxury nightclub, a low black marble table with glowing ice buckets and golden champagne bottles, purple and gold club spotlights cutting through atmospheric haze",
+      "sound": "warm muffled nightclub bass pulse, fizzing champagne, velvet cushion rustle, distant crowd energy",
+      "life": "purple and gold spotlight beams pivot slowly through the club haze; ice bucket LEDs glow from beneath the bottles; reflections glint on the marble table",
+      "domain": "general"
+    },
+    {
+      "id": "gloryhole_neon_booth",
+      "label": "Neon private booth & partition cutout · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Neon private booth & partition cutout",
+      "rule": "an intimate private arcade booth with a glossy black partition wall featuring a smooth circular waist-high cutout rimmed in chrome, glowing red and magenta neon tube lights on the wall, a leather bench, glossy dark floor tiles",
+      "sound": "a low neon tube buzz, enclosed booth acoustics, leather creak, close-up breathing",
+      "life": "the red and magenta neon tubes cast a warm, glossy sheen across the partition wall and skin; faint light flickers through the circular cutout",
+      "domain": "gloryhole"
+    },
+    {
+      "id": "victorian_four_poster_fire",
+      "label": "Gothic four-poster bed & roaring fireplace · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Gothic four-poster bed & roaring fireplace",
+      "rule": "a carved dark-mahogany four-poster bed draped in sheer crimson silk curtains and plush fur throws, a grand stone fireplace beside the bed with roaring orange flames, gothic candelabra on a stone mantel",
+      "sound": "crackling fireplace logs and popping embers, rustling silk bed drapes, warm room resonance",
+      "life": "roaring fireplace flames cast dancing orange and gold light across the bed and skin; sheer crimson drapes stir gently in the warm draft; embers rise up the chimney",
+      "domain": "bedroom"
+    },
+    {
+      "id": "executive_corner_office_midnight",
+      "label": "Executive corner office desk at midnight · Intimate & Boudoir",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Executive corner office desk at midnight",
+      "rule": "a spacious top-floor executive office at night with a polished dark walnut desk in the foreground, a high-backed black leather chair, a warm brass desk lamp, and wrap-around glass walls showing rain-streaked skyscraper lights fifty floors up",
+      "sound": "rain tapping against high-rise glass, quiet midnight office hush, leather chair creak, papers sliding off wood",
+      "life": "rain droplets streak down the panoramic glass against glowing city towers; the brass desk lamp throws warm amber pools across the polished wood desk",
+      "domain": "office_desk"
+    },
+    {
+      "id": "octagon_mma_fight_cage",
+      "label": "Underground Octagon MMA fight cage · Combat & Action Arenas",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Underground Octagon MMA fight cage",
+      "rule": "an eight-sided black chain-link MMA fight cage with padded corner posts and a scuffed canvas mat, harsh overhead stadium floodlight banks pouring through smoky arena haze, silhouettes of a roaring crowd pressed against the chain-link mesh",
+      "sound": "chain-link fence rattling, bare feet or boots thudding on taut canvas, crowd roar, floodlight buzz",
+      "life": "the chain-link mesh vibrates; camera flashes pop in the dark crowd behind the fence; chalk dust and sweat mist hang in the overhead floodlight beams",
+      "domain": "combat_action"
+    },
+    {
+      "id": "tokyo_neon_rain_rooftop",
+      "label": "Rain-slicked Tokyo cyberpunk rooftop · Combat & Action Arenas",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Rain-slicked Tokyo cyberpunk rooftop",
+      "rule": "a wet concrete skyscraper rooftop in a pouring midnight rainstorm, mirror-like puddles reflecting towering pink and cyan Japanese neon billboards and holographic signs, industrial exhaust vents billowing white steam, a chain-link parapet edge",
+      "sound": "heavy rain hammering concrete and splashing in puddles, roaring vent steam, distant thunder and cyberpunk siren",
+      "life": "curtains of silver rain splash across the neon-lit puddles; giant holographic signs flicker in the background; white steam billows across the wet floor",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "shattered_marble_lobby",
+      "label": "Shattered marble skyscraper lobby (John Wick) · Combat & Action Arenas",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Shattered marble skyscraper lobby",
+      "rule": "a grand modern skyscraper lobby with bullet-chipped black marble pillars, a wet terrazzo floor littered with glittering shattered glass and gleaming brass shell casings, drifting blue-grey gunsmoke, sparking overhead crystal chandeliers",
+      "sound": "crunching glass underfoot, brass shells clattering on marble, sparking electrical wires, echoing hall acoustics",
+      "life": "sparks shower intermittently from a damaged chandelier; clouds of gunsmoke drift between the marble columns; emergency amber strobes pulse across the wet floor",
+      "domain": "combat_action"
+    },
+    {
+      "id": "traditional_martial_dojo",
+      "label": "Traditional wooden martial arts dojo · Combat & Action Arenas",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Traditional wooden martial arts dojo",
+      "rule": "a classic Japanese martial arts dojo with polished dark cedar floorboards and woven tatami mats, translucent shoji paper sliding screens glowing with diagonal shafts of warm golden sunlight, wooden wall racks holding katanas and bo-staffs, hanging calligraphy scrolls",
+      "sound": "bare feet sliding and stomping on resonant cedar boards, wooden weapon clacks, wind rustling bamboo outside the screens",
+      "life": "golden dust motes swirl through the diagonal sunbeams; shoji screen shadows shift softly; a hanging calligraphy scroll sways in the draft",
+      "domain": "combat_action"
+    },
+    {
+      "id": "crimson_villain_throne_lair",
+      "label": "Crimson supervillain throne room & lair · Combat & Action Arenas",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Crimson supervillain throne room & lair",
+      "rule": "a monumental obsidian-stone supervillain lair illuminated by glowing crimson energy conduits recessed into towering pillars, wide black stone steps leading up to an imposing jagged throne, swirling red-lit dry-ice floor fog",
+      "sound": "a deep sub-bass reactor thrum, crackling energy conduits, echoing footsteps on obsidian stone",
+      "life": "crimson energy pulses rhythmically up the wall conduits; thick floor fog swirls around the throne steps; red embers drift upward through the shadows",
+      "domain": "combat_action"
+    },
+    {
+      "id": "laser_heist_vault_corridor",
+      "label": "High-security bank vault & laser grid · Combat & Action Arenas",
+      "group": "00 · Combat & Action Arenas",
+      "character": "High-security bank vault & laser grid",
+      "rule": "a gleaming steel-and-granite high-security bank vault corridor leading to a massive circular chrome vault door with locking gears, the air criss-crossed by dozens of razor-sharp glowing red security laser beams in atmospheric haze",
+      "sound": "a tense electronic laser hum, ticking security sensors, echoing marble floor, heavy steel mechanism clunk",
+      "life": "crimson laser beams slice and shift across the corridor haze; red warning beacons rotate slowly near the ceiling; reflections gleam on the chrome vault door",
+      "domain": "combat_action"
+    },
+    {
+      "id": "burning_ancient_battlefield",
+      "label": "Burning temple courtyard & falling embers · Combat & Action Arenas",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Burning temple courtyard & falling embers",
+      "rule": "a stone temple courtyard at night ringed by blazing timber pillars and shattered stone statues, roaring orange flames licking upward into a smoke-filled sky, a whirlwind of glowing orange embers and ash raining across the cracked flagstones",
+      "sound": "roaring fire, cracking burning timber, wind howling through stone ruins, clashing steel echoes",
+      "life": "sheets of orange flame whip in the wind; thousands of glowing embers and ash flakes spiral through the air; dramatic firelight shadows dance across the stone floor",
+      "domain": "combat_action"
+    },
+    {
+      "id": "abandoned_steel_foundry_sparks",
+      "label": "Molten steel foundry catwalk & sparks · Combat & Action Arenas",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Molten steel foundry catwalk & sparks",
+      "rule": "a grated iron catwalk suspended inside a cavernous industrial steel foundry, giant crucibles pouring glowing orange molten metal in the background, hanging iron chains and hooks, intense teal-and-orange contrast lighting",
+      "sound": "industrial furnace roar, clanking iron grating, hissing steam vents, showers of sparks sizzling",
+      "life": "showers of incandescent orange sparks rain down from overhead crucibles; vents blast plumes of white steam; hanging chains swing slowly in the heat updraft",
+      "domain": "combat_action"
+    },
+    {
+      "id": "neon_john_wick_bathhouse",
+      "label": "Neon-lit tiled bathhouse & rain glass · Combat & Action Arenas",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Neon-lit tiled bathhouse & rain glass",
+      "rule": "a subterranean luxury bathhouse with dark mosaic-tiled pillars and ankle-deep reflective water pools, illuminated by vivid electric-blue and crimson-red neon light bars, glass block partitions, rising warm steam",
+      "sound": "splashing footsteps in shallow water, echoing tile acoustics, cascading water wall, low bass pulse",
+      "life": "blue and red neon reflections ripple across the water pools and tiled pillars; steam drifts across the glass partitions; water cascades down a lit stone wall",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "roman_gladiator_colosseum",
+      "label": "Sun-baked Gladiator Colosseum arena · Combat & Action Arenas",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Sun-baked Gladiator Colosseum arena",
+      "rule": "the sandy floor of a monumental stone Colosseum arena under blazing golden afternoon sunbeams, iron portcullis gates in the arched stone walls, clouds of golden sand dust hanging in the air, tiered stone seating packed with cheering crowds",
+      "sound": "thunderous stadium crowd roar, boots skidding in dry sand, clanking iron gates, brass horns",
+      "life": "clouds of sunlit golden dust swirl across the arena floor; banners flap from the upper stone tiers; the crowd waves in the stands",
+      "domain": "combat_action"
+    },
+    {
+      "id": "volcanic_lava_crater_bridge",
+      "label": "Volcanic obsidian bridge over molten lava · Combat & Action Arenas",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Volcanic obsidian bridge over molten lava",
+      "rule": "a narrow, jagged black obsidian rock bridge spanning a churning chasm of glowing orange-white molten lava, glowing magma cracks spiderwebbing the rock floor, intense fiery under-lighting, rising thermal heat haze and fire sparks",
+      "sound": "deep volcanic rumble, churning molten magma, cracking rock, roaring updraft wind",
+      "life": "rivers of glowing lava churn and bubble below, throwing geysers of orange sparks into the air; thermal heat haze ripples the background; embers spiral upward",
+      "domain": "combat_action"
+    },
+    {
+      "id": "boxing_ring_spotlight_haze",
+      "label": "Vintage boxing ring under smoky spotlight · Combat & Action Arenas",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Vintage boxing ring under smoky spotlight",
+      "rule": "a classic canvas boxing ring enclosed by red and white ropes, bathed in a single dramatic overhead cone of bright white spotlight cutting through thick blue cigar smoke, vintage camera flashbulbs popping in the shadowed ringside crowd",
+      "sound": "taut ring ropes twanging, canvas floor thud, ringside bell clang, flashbulb pops, crowd swell",
+      "life": "white flashbulbs pop intermittently in the dark ringside seats; thick smoke swirls inside the overhead spotlight beam; the ring ropes flex and vibrate",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_luxury_kitchen_island_night",
+      "label": "🏛️ 3D Plate: Modern Marble Kitchen Island at Night (Near Island -> Back Stove -> Rain Window)",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Modern marble kitchen island at night",
+      "rule": "a sleek luxury kitchen at night mapped near-to-far: a wide white Calacatta marble island counter in the near foreground with open hardwood floor in front and around its right end, warm amber pendant globes hanging above the counter, a brushed-steel range stove against the far wall, and a rain-streaked window on the left",
+      "sound": "soft rain tapping on kitchen glass, low refrigerator hum, subtle clink of crystal on marble",
+      "life": "raindrops slide down the left windowpane; warm amber pendant light glints across the polished marble island; a faint wisp of steam rises from a cup on the counter",
+      "domain": "general"
+    },
+    {
+      "id": "plate_penthouse_master_bed_mirror",
+      "label": "🏛️ 3D Plate: Penthouse King Bed + Floor-Length Standing Mirror Left + City Window Right",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Penthouse master bedroom with standing mirror and city window",
+      "rule": "a spacious penthouse master bedroom at night mapped in 3D: a low king bed with charcoal silk sheets centered against the upholstered headboard wall with wide open hardwood floor in front, a tall brass-framed floor-length standing mirror angled on the left reflecting the bed, and floor-to-ceiling glass windows along the right wall overlooking a glowing city skyline",
+      "sound": "hushed high-rise room tone, soft silk sheet rustle, distant muted city hum through thick glass",
+      "life": "city skyline lights twinkle beyond the right windows; the floor-length mirror on the left catches warm bedside lamp reflections; sheer curtains drift slightly",
+      "domain": "bedroom"
+    },
+    {
+      "id": "plate_glass_walkin_rainfall_shower",
+      "label": "🏛️ 3D Plate: Steamy Frameless Glass Walk-In Rainfall Shower & Dark Slate Tile",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Steamy frameless glass walk-in rainfall shower",
+      "rule": "a luxury spa walk-in shower with a clear frameless glass partition in the near foreground, dark charcoal slate wall tiles in the background, a recessed warm LED niche glowing amber on the right, and a wide brass overhead rainfall showerhead pouring glistening water",
+      "sound": "steady warm rainfall shower spray pattering on slate tile, close steamy acoustic resonance, water trickling down glass",
+      "life": "warm water streams down the clear glass partition in glistening rivulets; soft wisps of steam curl upward through the amber niche light",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "plate_private_jet_leather_cabin",
+      "label": "🏛️ 3D Plate: Gulfstream Private Jet Cream Leather Club Seats & Mahogany Table at Night",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Private jet cream leather cabin at night",
+      "rule": "a plush private jet cabin at night: wide cream-stitched leather reclining club chairs facing a polished mahogany fold-out table along the center aisle, oval cabin windows on the left and right walls showing dark night clouds and moonlight, and warm recessed ceiling wash lighting",
+      "sound": "deep, smooth high-altitude jet turbine hum, soft leather cushion creak, ice clinking in a crystal tumbler",
+      "life": "moonlit cloud tops drift past the oval windows; warm cabin wash light glints off the mahogany table and crystal glass",
+      "domain": "general"
+    },
+    {
+      "id": "plate_backseat_luxury_limo_neon",
+      "label": "🏛️ 3D Plate: Stretch Limousine / Maybach Quilted Leather Backseat (City Neon Streaking Past)",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Luxury limousine quilted leather backseat at night",
+      "rule": "a spacious luxury limousine or Maybach rear cabin at night: deep black diamond-quilted leather bench seating across the back, a tinted privacy partition and illuminated champagne bar console on the left, and wide side windows where wet downtown neon lights streak past",
+      "sound": "insulated V12 engine purr, wet tire hiss on night asphalt, muffled bass pulse",
+      "life": "bands of cyan, amber, and magenta street neon sweep rhythmically across the leather seats and skin through the side windows",
+      "domain": "car_cabin"
+    },
+    {
+      "id": "plate_red_velvet_vip_club_booth",
+      "label": "🏛️ 3D Plate: Nightclub VIP Curved Red Velvet Booth, Low Glass Table & Champagne Bucket",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Nightclub VIP curved red velvet booth",
+      "rule": "an exclusive VIP nightclub booth: a curved deep-crimson tufted velvet banquette sofa wrapping around a low black-glass table holding a silver champagne ice bucket, warm ruby sconces on the back wall, and a sheer beaded curtain on the left separating the booth from the hazy neon club floor",
+      "sound": "muffled sub-bass pulse from the main club floor, ice settling in the silver bucket, velvet cushion rustle",
+      "life": "slow magenta and gold club beams sweep beyond the beaded curtain; condensation glistens on the silver champagne bucket",
+      "domain": "sofa_lounge"
+    },
+    {
+      "id": "plate_fitting_room_three_way_mirrors",
+      "label": "🏛️ 3D Plate: Boutique VIP Fitting Room with Three-Way Angled Mirrors & Velvet Curtain",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Boutique VIP fitting room with three-way mirrors",
+      "rule": "a high-end couture fitting room: three-way hinged floor-to-ceiling mirrors along the back and left walls reflecting multiple angles at once, a plush blush-velvet bench on the right, a heavy crimson velvet privacy curtain draped at the entrance, and warm vertical LED mirror strips",
+      "sound": "hushed carpeted boutique acoustics, soft rustle of silk garments, quiet velvet curtain sway",
+      "life": "the three-way mirrors catch simultaneous front, side, and rear reflections under flattering warm LED strips",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "plate_executive_boardroom_glass_table",
+      "label": "🏛️ 3D Plate: High-Floor Glass Boardroom Table Overlooking Night Skyline",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "High-floor executive boardroom at night",
+      "rule": "a 60th-floor executive boardroom after hours: a long polished dark-glass conference table running through the center with open floor along its near side, black leather executive chairs, and a full wall of floor-to-ceiling windows behind it framing a glittering metropolitan night skyline",
+      "sound": "quiet high-rise HVAC whisper, leather chair swivel, distant city helicopter hum",
+      "life": "city lights and aviation beacons blink across the skyline behind the glass; reflections shimmer on the dark glass table",
+      "domain": "office_desk"
+    },
+    {
+      "id": "plate_sunlit_french_balcony_sheers",
+      "label": "🏛️ 3D Plate: Parisian Morning Bedroom with Open French Doors & Billowing White Sheers",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Sunlit Parisian bedroom with open French balcony doors",
+      "rule": "an airy Parisian apartment bedroom in warm morning sunlight: herringbone oak parquet floor in the foreground, an unmade linen bed on the left, and tall open French balcony doors at the back with wrought-iron railings and sheer white curtains billowing inward in the breeze",
+      "sound": "gentle morning breeze, soft fabric flutter of sheer curtains, distant Parisian street birds",
+      "life": "billowing white sheer curtains breathe inward and outward in the sunlit breeze, casting moving golden-white light across the floor and bed",
+      "domain": "bedroom"
+    },
+    {
+      "id": "plate_candlelit_marble_sunken_tub",
+      "label": "🏛️ 3D Plate: Candlelit Black Marble Sunken Jacuzzi Bath & Rose Petals",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Candlelit black marble sunken bath",
+      "rule": "an opulent black-and-gold veined marble bathroom at night: a wide sunken soaking tub filled with steaming water and floating crimson rose petals in the foreground, wide marble steps leading in, and dozens of flickering pillar candles arranged along the surrounding ledges",
+      "sound": "gentle water lapping against marble, soft candle wax crackle, warm humid room tone",
+      "life": "candle flames flicker and reflect in golden ripples across the steaming bathwater and wet skin; rose petals drift slowly on the surface",
+      "domain": "wet_tub"
+    },
+    {
+      "id": "plate_neon_gaming_streamer_bedroom",
+      "label": "🏛️ 3D Plate: RGB Streamer Bedroom (Pink/Cyan LED Wall, Gaming Chair & Bed Behind)",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "RGB neon streamer bedroom",
+      "rule": "a cozy modern streamer bedroom bathed in pink and cyan RGB lighting: a sleek ergonomic gaming chair and glowing dual-monitor desk on the right, hexagonal nanoleaf LED wall panels glowing magenta and electric blue behind, and a plush bed with dark sheets on the left",
+      "sound": "quiet PC cooling fan hum, soft mechanical keyboard click, low lo-fi bass hum",
+      "life": "hexagonal LED wall panels pulse softly between magenta and cyan; monitor light glints across the desk and bed",
+      "domain": "office_desk"
+    },
+    {
+      "id": "plate_yacht_aft_sunpad_sunset",
+      "label": "🏛️ 3D Plate: Superyacht Aft Deck Teak Sunpad Over Golden-Hour Ocean Wake",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Superyacht aft deck teak sunpad at sunset",
+      "rule": "the aft deck of a luxury superyacht at golden hour: a wide white leather lounge sunpad on polished teak decking in the foreground, chrome deck railings, and the open turquoise sea stretching behind under a blazing orange-and-gold sunset sky",
+      "sound": "gentle ocean waves lapping against the hull, warm sea breeze, low yacht engine purr",
+      "life": "golden sunset light sparkles across the rolling ocean wake behind the railing; sea breeze stirs loose hair and linen",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "plate_library_mahogany_ladder_fireplace",
+      "label": "🏛️ 3D Plate: Gothic Mahogany Library with Rolling Ladder, Leather Chesterfield & Fireplace",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Mahogany library with fireplace and leather sofa",
+      "rule": "a grand private library at night: a deep oxblood leather Chesterfield sofa and Persian rug in the near foreground, floor-to-ceiling mahogany bookshelves with a brass rolling ladder along the back wall, and a crackling stone fireplace on the right casting warm amber light",
+      "sound": "crackling hearth fire, soft pop of burning wood, quiet clock tick, leather cushion creak",
+      "life": "warm orange firelight dances across the leather Chesterfield and gilded book spines; embers float up the chimney",
+      "domain": "sofa_lounge"
+    },
+    {
+      "id": "plate_mirror_dance_rehearsal_studio",
+      "label": "🏛️ 3D Plate: Full-Wall Mirror Dance Studio with Brass Barre & Warm Wood Floor",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Full-wall mirror dance rehearsal studio",
+      "rule": "a spacious dance rehearsal studio: wide sprung honey-oak flooring in the foreground, a continuous wall-to-wall mirror and brass ballet barre along the back wall reflecting the entire room, and warm diffused overhead track lighting",
+      "sound": "clean studio room acoustics, light shoe or bare-foot friction on polished wood, low warm bass",
+      "life": "the full-wall mirror behind reflects the performer's back and movements in crystal-clear symmetry under warm studio lights",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "plate_rainy_tokyo_hotel_window_seat",
+      "label": "🏛️ 3D Plate: Wide Padded Window Ledge Seat Against Rain-Streaked Tokyo Neon Glass",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "High-rise Tokyo hotel padded window ledge at night",
+      "rule": "a wide cushioned window-ledge bench built directly against a massive rain-streaked floor-to-ceiling window in a high-rise Tokyo hotel suite at night, with glowing cyan, pink, and amber kanji neon towers shining through the wet glass behind",
+      "sound": "steady rain pattering against the window glass, muted high-altitude city hum, soft fabric friction",
+      "life": "raindrops race down the glass pane catching vibrant pink and cyan Tokyo neon bokeh behind the subjects",
+      "domain": "general"
+    },
+    {
+      "id": "plate_underground_parking_muscle_car",
+      "label": "🏛️ 3D Plate: Wet Concrete Underground Garage with Idling Muscle Car Headlights",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Underground concrete garage with idling muscle car",
+      "rule": "a gritty underground concrete parking garage: wet oil-slicked concrete floor in the foreground, heavy square concrete support pillars on the left and right, and a matte-black muscle car idling in the center background with its twin headlights cutting through exhaust haze",
+      "sound": "deep V8 engine idle echoing off concrete pillars, water dripping into a puddle, fluorescent tube hum",
+      "life": "exhaust vapor curls through the bright twin headlight beams; water ripples in a puddle on the concrete floor",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_rooftop_infinity_pool_skyline",
+      "label": "🏛️ 3D Plate: Night Rooftop Infinity Pool Edge Overlooking Glowing Downtown Towers",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Night rooftop infinity pool overlooking city skyline",
+      "rule": "a luxury rooftop infinity pool at night: wet stone coping and glowing turquoise underwater pool lights in the near foreground, the infinity water edge dropping off in the middle ground, and a panoramic wall of illuminated downtown skyscrapers rising against the night sky",
+      "sound": "gentle lapping of warm pool water over the infinity edge, soft night breeze, distant city hum",
+      "life": "turquoise underwater caustics ripple across the stone coping and skin; steam wisps rise off the warm water into the night air",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "plate_chiaroscuro_smoke_stage_corridor",
+      "label": "🏛️ 3D Plate: Pitch-Dark Smoke-Filled Industrial Corridor with Overhead Strobe Bars",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Dark smoke-filled industrial corridor with overhead strobe bars",
+      "rule": "a long, pitch-dark industrial concrete corridor filled with low-lying theatrical smoke, wet reflective floor underfoot, and a line of harsh white-and-amber overhead strobe bars cutting sharp chiaroscuro light cones down through the haze",
+      "sound": "deep sub-bass drone, electrical transformer hum, echoing footsteps on wet concrete",
+      "life": "thick ground smoke swirls around ankles and boots; overhead light bars flash and carve stark chiaroscuro shadows through the haze",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_demon_slayer_wisteria_moon_bridge",
+      "label": "🏛️ 3D Plate (Anime2Real): Moonlit Japanese Wooden Bridge & Glowing Purple Wisteria Trees",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Moonlit Japanese wooden bridge under glowing purple wisteria",
+      "rule": "a photorealistic feudal Japanese wooden bridge at night: wet dark timber planks in the near foreground, red lacquered wooden railings on the left and right, a shallow stream below, and cascades of glowing bioluminescent purple wisteria blossoms hanging overhead under a giant silver full moon",
+      "sound": "babbling stream water under the bridge, night wind rustling wisteria blossoms, distant temple bell",
+      "life": "glowing purple wisteria petals drift down through the silver moonlight and land on the wet wooden planks; water ripples beneath the bridge",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_infinity_castle_floating_tatami",
+      "label": "🏛️ 3D Plate (Anime2Real): Infinite Escher Labyrinth of Floating Shoji Screens & Warm Lanterns",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Infinite labyrinth of floating wooden walkways and shoji screens",
+      "rule": "a colossal, photorealistic multi-directional Japanese wooden fortress interior: a wide tatami-and-hinoki-wood platform in the foreground, warm amber paper lanterns, and an endless vertical cavern of upside-down and sideways shoji corridors, staircases, and balconies stretching into the deep background",
+      "sound": "echoing biwa lute pluck, sliding wooden doors in the distance, deep cavernous resonance",
+      "life": "distant shoji corridors shift and slide in the background; warm amber lantern light glows through translucent paper screens",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_shibuya_rain_crosswalk_crater",
+      "label": "🏛️ 3D Plate (Anime2Real): Rain-Slicked Shibuya Neon Crosswalk at Midnight",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Rain-slicked Shibuya neon crosswalk at midnight",
+      "rule": "a wide, rain-drenched Tokyo Shibuya asphalt intersection at night: mirror-wet black pavement with white zebra-crossing stripes in the foreground, towering LED video billboards and neon signs surrounding the plaza, and swirling street steam",
+      "sound": "heavy rain hitting wet asphalt, 60Hz neon hum, distant city siren echo",
+      "life": "giant LED billboards cast shifting cyan, crimson, and gold reflections across the rain puddles underfoot",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_glass_elevator_skyline_shaft",
+      "label": "🏛️ 3D Plate: Panoramic Glass Elevator Ascending a Neon Skyscraper Shaft",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Panoramic glass elevator ascending a neon skyscraper",
+      "rule": "the interior of a sleek glass-walled high-rise elevator at night: brushed steel floor and illuminated floor-button console in the near foreground, stainless-steel handrails, and three walls of clear glass showing glowing skyscraper lights streaming downward outside as the elevator ascends",
+      "sound": "smooth high-speed elevator cable whirr, soft floor-chime ding, muffled city wind outside the glass",
+      "life": "exterior neon building lights and steel shaft girders streak rapidly downward past the glass walls, sending moving light bands across the cab",
+      "domain": "general"
+    },
+    {
+      "id": "plate_luxury_massage_oil_spa_table",
+      "label": "🏛️ 3D Plate: Candlelit Luxury Spa Suite with Padded Massage Table & Warm Wood",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Candlelit luxury spa suite with padded massage table",
+      "rule": "an intimate luxury spa room at night: a wide cream-leather padded massage table centered in the foreground with folded white towels, a teakwood side tray holding glass bottles of warm golden body oil and flickering tealight candles on the left, and warm slatted cedar walls behind",
+      "sound": "soft bamboo water trickle, quiet candle crackle, warm hushed spa acoustics",
+      "life": "tealight candle flames flicker and glint off the glass oil bottles; a faint wisp of aromatic steam rises from a warm towel",
+      "domain": "bedroom"
+    },
+    {
+      "id": "plate_velvet_home_cinema_recliners",
+      "label": "🏛️ 3D Plate: Private Velvet Home Theater with Wide Leather Loveseat & Projector Glow",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Private velvet home theater with leather loveseat",
+      "rule": "a plush private home cinema room: a wide, deep-cushioned black leather double recliner loveseat in the foreground, acoustic crimson velvet wall panels with dim amber aisle sconces on the sides, and a silver projector beam cutting through the air overhead",
+      "sound": "low projector fan whisper, deep muffled cinema bass, soft leather recliner creak",
+      "life": "the overhead projector beam casts shifting, cinematic blue-and-gold light across the leather loveseat and faces",
+      "domain": "sofa_lounge"
+    },
+    {
+      "id": "plate_tokyo_love_hotel_mirror_ceiling_suite",
+      "label": "🏛️ 3D Plate: Tokyo Neon Love-Hotel Suite with Circular Velvet Bed & Overhead Mirror Ceiling",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Tokyo neon love-hotel suite with circular bed and mirror ceiling",
+      "rule": "a glamorous Tokyo love-hotel suite at night: a plush circular crimson-velvet bed in the foreground, a full-size ceiling mirror directly overhead reflecting the entire bed, and frosted shoji-glass panels glowing with magenta and cyan neon in the background",
+      "sound": "soft city rain against the glass, low muffled synth-wave bass from the room speakers, rustle of satin sheets",
+      "life": "magenta and cyan neon strips shift slowly behind the frosted glass panels; the overhead ceiling mirror reflects every movement on the circular bed",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "plate_executive_boardroom_under_mahogany_table",
+      "label": "🏛️ 3D Plate: High-Rise Executive Boardroom with Long Mahogany Table, Leather Chair & Night Skyline",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "High-rise executive boardroom with mahogany table and leather chair",
+      "rule": "a 60th-floor corporate boardroom after hours: a gleaming dark mahogany conference table and tall black leather executive chair in the foreground, crystal whiskey decanters on a sideboard in the midground, and floor-to-ceiling windows overlooking a glittering night skyscraper skyline in the far background",
+      "sound": "hushed high-rise air conditioning hum, distant muffled city traffic far below, soft creak of leather",
+      "life": "distant red aircraft warning beacons blink across the night skyline; city headlights crawl along the avenue below",
+      "domain": "office_desk"
+    },
+    {
+      "id": "plate_glass_walled_rain_shower_penthouse",
+      "label": "🏛️ 3D Plate: Frameless Clear-Glass Rain Shower Overlooking Night City Skyline",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Frameless glass rain shower overlooking night skyline",
+      "rule": "a luxury penthouse bathroom at night: a crystal-clear frameless glass shower wall beaded with water droplets in the immediate foreground, a wide brass ceiling rain-showerhead pouring warm water over dark slate tiles in the midground, and a panoramic night city window behind",
+      "sound": "steady warm rain-shower cascade, water splashing on slate tile, soft steam hiss",
+      "life": "streams of warm water pour continuously from the brass rain-showerhead; wisps of white steam curl up along the glass wall",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "plate_superyacht_aft_sunpad_mediterranean",
+      "label": "🏛️ 3D Plate: Superyacht Teak Aft-Deck Sunpad with Champagne Bucket & Turquoise Sea",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Superyacht aft-deck sunpad over turquoise Mediterranean sea",
+      "rule": "the aft deck of a 200-foot luxury superyacht: a wide cream-leather sunpad mattress with a silver champagne ice bucket in the foreground, polished teak decking and glass windscreens in the midground, and sparkling turquoise Mediterranean water and coastal cliffs in the far background",
+      "sound": "gentle lap of waves against the yacht hull, warm sea breeze, ice clinking in the silver bucket",
+      "life": "sunlight glints and dances across the turquoise wake behind the yacht; a white linen canopy flutters softly in the breeze",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "plate_red_velvet_harem_throne_chamber",
+      "label": "🏛️ 3D Plate: Opulent Palace Harem Chamber with Tiered Silk Daybeds, Gold Pillars & Incense",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Opulent palace harem chamber with silk daybeds and gold pillars",
+      "rule": "an opulent royal harem chamber: wide tiered crimson-and-gold silk cushions and Persian carpets in the foreground, carved marble columns and brass incense burners in the midground, and arched lattice windows opening onto a moonlit courtyard fountain in the far background",
+      "sound": "soft courtyard fountain trickle, faint crackle of brass oil lamps, rustle of silk draperies",
+      "life": "fragrant wisps of silver incense smoke curl lazily upward; sheer crimson silk curtains sway in the night breeze",
+      "domain": "bedroom"
+    },
+    {
+      "id": "plate_private_gym_mirror_weight_bench",
+      "label": "🏛️ 3D Plate: Private Luxury Fitness Studio with Padded Weight Bench & Full-Wall Mirrors",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Private luxury gym with weight bench and full-wall mirrors",
+      "rule": "a sleek private fitness studio: a black leather adjustable weight bench and rubberized flooring in the foreground, a chrome dumbbell rack in the midground, and floor-to-ceiling backlit mirrors spanning the rear wall",
+      "sound": "low studio ventilation hum, soft rubber floor squeak, rhythmic breathing",
+      "life": "warm LED backlighting glows along the edges of the full-wall mirror",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "plate_anime2real_infinity_castle_floating_tatami",
+      "label": "⚔️ 3D Plate: Anime2Real Infinity Castle — Endless Escher-Style Floating Wooden Corridors & Shoji Lanterns",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Anime2Real Infinity Castle with floating wooden corridors and lanterns",
+      "rule": "a photorealistic live-action Demon Slayer Infinity Castle arena: a polished dark-wood platform and sliding paper shoji screens in the foreground, Escher-like inverted wooden staircases and floating tatami balconies in the midground, and a bottomless golden-lantern-lit abyss of shifting wooden towers in the far background",
+      "sound": "deep resonant biwa string pluck, creaking ancient timber, echoing cavern ambience",
+      "life": "distant wooden corridors shift and slide vertically in the background abyss; warm amber paper lanterns sway gently",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_anime2real_soul_society_cherry_blossom_courtyard",
+      "label": "⚔️ 3D Plate: Anime2Real Feudal Stone Courtyard with Giant Cherry-Blossom Trees & White Temple Walls",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Feudal stone courtyard with giant cherry-blossom trees",
+      "rule": "a grand feudal Japanese temple courtyard: cracked flagstone paving strewn with pink petals in the foreground, ancient gnarled cherry-blossom trees in full bloom in the midground, and towering white-plaster fortress walls with curved tile roofs in the far background",
+      "sound": "wind rustling through cherry-blossom branches, distant temple bell resonance, footsteps on stone",
+      "life": "pink cherry-blossom petals drift continuously across the courtyard on the breeze",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_swaying_night_subway_car_neon_tunnel",
+      "label": "⚔️ 3D Plate: Swaying Night Subway Train Car with Chrome Poles & Flashing Tunnel Lights",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Swaying night subway train car with chrome poles and flashing windows",
+      "rule": "the interior of a speeding underground subway train car at night: brushed-chrome vertical hand poles and hanging commuter straps in the foreground, stainless-steel bench seats along both walls in the midground, and dark tunnel windows flashing with amber and cyan station lights in the background",
+      "sound": "rhythmic steel wheel clatter on tracks, electric motor whine, creak of swaying car body",
+      "life": "hanging commuter straps sway with the train's momentum; amber tunnel lights streak rapidly past the windows",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_abandoned_neon_arcade_cabinets",
+      "label": "🕹️ 3D Plate: Shattered Midnight Retro Arcade (CRT Neon Glow & Glass)",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Midnight retro arcade aisle with glowing CRT screens and shattered glass",
+      "rule": "an atmospheric midnight retro video-game arcade lined along left and right aisles with glowing neon-pink and cyan CRT cabinet marquees, cracked checkered linoleum floor, and dangling ceiling cables",
+      "life": "flickering arcade monitor scanlines pulsing colorful glow; subtle haze drifting beneath buzzing neon marquee tubes",
+      "sound": "distant buzzing CRT transformers, electric neon hum, and muffled rain tapping the glass storefront",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_rainy_chinatown_lantern_alley",
+      "label": "🏮 3D Plate: Rainy Chinatown Red-Lantern Narrow Alley & Steam Vents",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Rain-slicked Chinatown alleyway under rows of swaying scarlet paper lanterns",
+      "rule": "a wet narrow cobblestone Chinatown alleyway strung overhead with swaying rows of glowing scarlet paper lanterns, steaming iron kitchen vents, wet vertical neon Chinese signage, and glowing rain puddles",
+      "life": "rain sheets pouring through crimson lantern glow; steam billowing steadily out of wall exhaust grates",
+      "sound": "heavy rain pattering onto umbrellas and puddles, distant street clatter, and low vent rumble",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_luxury_casino_baccarat_pit",
+      "label": "🎰 3D Plate: High-Roller Monte Carlo Casino Floor (Chandeliers & Green Felt)",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Opulent Monte Carlo high-roller casino floor with crystal chandeliers and green felt tables",
+      "rule": "an opulent dimly lit Monte Carlo high-stakes casino floor with emerald-green baize gaming tables, stacked clay chips, gleaming mahogany roulette wheels, velvet cordon ropes, and towering crystal chandeliers",
+      "life": "warm golden chandelier prisms glinting softly; distant blurred guests in eveningwear turning",
+      "sound": "crisp porcelain poker-chip clinks, hushed velvet lounge murmur, and distant roulette wheel whirr",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_highspeed_bullet_train_aisle",
+      "label": "🚄 3D Plate: Speeding Shinkansen Bullet Train Cabin (Streaking City Lights)",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Speeding night bullet train aisle with wide streaking neon windows",
+      "rule": "the sleek brightly lit center aisle of a high-speed night Shinkansen passenger car lined with plush reclining seats and wide panoramic windows showing city lights blurring outside at 300 km/h",
+      "life": "electric city streaks flashing past window panes; gentle train suspension sway in hanging luggage straps",
+      "sound": "steady rhythmic high-speed rail whoosh, subtle cabin rattle, and cool air vents",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_snowy_bamboo_forest_moonlight",
+      "label": "🎋 3D Plate: Snow-Dusted Moonlit Bamboo Forest Clearing",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Moonlit snow-dusted bamboo forest clearing with drifting snow",
+      "rule": "a serene snow-dusted ancient bamboo grove at midnight washed in crisp silver-blue moonlight slicing diagonally through tall swaying green stalks and pale stone lantern posts",
+      "life": "fine snowflakes drifting quietly through moonlight rays; tall bamboo stalks swaying gently overhead",
+      "sound": "crisp wintry night breeze rustling hollow bamboo trunks and soft snow crunch beneath boots",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_rooftop_helipad_thunderstorm",
+      "label": "⛈️ 3D Plate: Skyscraper Rooftop Helipad in Driving Rain & City Grid",
+      "group": "00 · Combat & Action Arenas",
+      "character": "Rain-lashed skyscraper rooftop helipad glowing with yellow landing lights",
+      "rule": "an exposed concrete skyscraper rooftop helipad marked with painted yellow landing rings and amber perimeter lights high above a dizzying illuminated city canyon during a raging night storm",
+      "life": "horizontal rain whipping past floodlights; amber helipad perimeter lights pulsing steadily",
+      "sound": "roaring high-altitude wind howling past steel antennas and heavy rain pelting concrete",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_satin_four_poster_fireplace_cabin",
+      "label": "🔥 3D Plate: Snowy Alpine Chalet Bedroom (Crackling Fireplace & Satin Canopy)",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Snowy alpine luxury timber chalet suite with crackling stone fireplace and satin canopy bed",
+      "rule": "a cozy, opulent alpine timber chalet suite featuring a roaring stone fireplace casting dancing amber glow across an unmade king bed draped in sheer ivory canopy curtains beside frosted floor-to-ceiling snow windows",
+      "life": "warm golden fire flames licking pine logs; slow snowflakes falling softly past dark exterior glass",
+      "sound": "gentle crackling firewood pops, soft muffled winter wind outside glass, and warm silk rustle",
+      "domain": "bedroom"
+    },
+    {
+      "id": "plate_backstage_velvet_dressing_mirror",
+      "label": "💄 3D Plate: VIP Backstage Dressing Room (Warm Bulb Vanity & Velvet Curtains)",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Backstage star dressing suite with glowing bulb vanity mirror and crimson velvet drapes",
+      "rule": "an intimate star backstage dressing suite anchored by a wide Hollywood vanity mirror ringed in warm tungsten makeup bulbs, draped in deep crimson velvet curtains with crystal champagne flutes and silk robes nearby",
+      "life": "warm tungsten vanity bulbs shimmering gently; distant bass pulse drifting softly behind velvet drapes",
+      "sound": "faint muffled bass thump beyond heavy velvet curtains and warm quiet room tone",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "plate_rainy_penthouse_hot_tub_terrace",
+      "label": "♨️ 3D Plate: Steaming Cedar Penthouse Terrace Hot Tub Over Rainy Skyline",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Private cedar hot tub terrace steaming beneath night rain and city lights",
+      "rule": "a private covered cedar hot tub terrace high above a rain-slicked neon city skyline, with warm swirling steam rising cleanly off glowing turquoise water jets beneath soft amber deck sconces",
+      "life": "swirling hot tub steam plumes lifting steadily; warm water ripples sparkling under amber lights",
+      "sound": "gentle bubbling spa water jets, soft steady rain patter on glass awning, and distant city hum",
+      "domain": "wet_tub"
+    },
+    {
+      "id": "plate_vintage_convertible_coastal_overlook",
+      "label": "🚘 3D Plate: Vintage Leather Convertible Parked on Golden Ocean Cliff",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Classic tan-leather open-top convertible parked overlooking a glowing sunset ocean cliff",
+      "rule": "the wide tan-leather interior and open bench of a polished classic convertible parked along a Pacific cliffside turnout bathed in warm amber sunset rays over glittering turquoise waves below",
+      "life": "gentle ocean breeze lifting stray hair; warm sunset gold glinting across polished chrome trim",
+      "sound": "distant ocean surf crashing softly below cliffs, warm evening wind, and soft leather creaks",
+      "domain": "car_cabin"
+    },
+    {
+      "id": "plate_neon_cyberpunk_capsule_hotel_pod",
+      "label": "🛸 3D Plate: Tokyo Neon Cyberpunk Capsule Pod (Ribbed LED Glow & Rain Window)",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Sleek glowing cyberpunk sleeping pod lined with magenta and amber LED light strips",
+      "rule": "an intimate futuristic Tokyo sleeping pod curved in matte charcoal panels lined with diffused warm amber and soft violet LED strips beside a rain-beaded circular porthole overlooking neon towers",
+      "life": "soft LED glow humming evenly; cool raindrops sliding steadily down the curved porthole glass",
+      "sound": "soft futuristic air-circulation purr and gentle rain droplets tapping curved acrylic glass",
+      "domain": "bedroom"
+    },
+    {
+      "id": "plate_marble_hammam_steam_bathhouse",
+      "label": "🛁 3D Plate: Candlelit Heated Marble Hammam Steam Bathhouse",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "Heated carved marble hammam steam chamber with brass sconces and warm vapor",
+      "rule": "a quiet luxury carved travertine and warm marble hammam steam chamber lit by flickering recessed brass candle lanterns pouring honey-gold light across wet stone benches and drifting aromatic vapor",
+      "life": "dense silky steam curling gently around warm stone arches; water trickling softly into a marble basin",
+      "sound": "soothing water droplets echoing off warm wet marble walls and hushed steam hiss",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "penthouse_living_open",
+      "label": "Modern Penthouse Living Room · City Dusk",
+      "group": "Contemporary",
+      "character": "modern penthouse living room",
+      "domain": "sofa_lounge",
+      "rule": "a sleek high-rise living room with low cream sectional sofa, warm brass floor lamp, and floor-to-ceiling dusk skyline glass",
+      "sound": "distant muted city hum and soft upholstery rustle",
+      "life": "city bokeh glows softly beyond the glass"
+    },
+    {
+      "id": "cafe_rain_window",
+      "label": "Quiet Rainy Corner Cafe · Window Table",
+      "group": "Contemporary",
+      "character": "cozy rainy corner cafe",
+      "domain": "general",
+      "rule": "a warm wood-paneled cafe window booth with steaming porcelain mugs, hanging Edison bulbs, and rain streaking outside",
+      "sound": "soft rain tapping glass and quiet espresso steam hiss",
+      "life": "raindrops slide down the window while warm reflections shimmer"
+    },
+    {
+      "id": "neon_night_street",
+      "label": "Rain-Slicked Neon City Street · Night",
+      "group": "Urban",
+      "character": "rain-slicked neon city street",
+      "domain": "combat_action",
+      "rule": "a wet asphalt urban crosswalk glowing with magenta and cyan storefront reflections and rising steam vents",
+      "sound": "distant midnight traffic wash and crisp footsteps on wet pavement",
+      "life": "steam drifts lazily across colored puddle reflections"
+    },
+    {
+      "id": "sunlit_loft_studio",
+      "label": "Sunlit Artist Loft · Tall Industrial Windows",
+      "group": "Contemporary",
+      "character": "sunlit brick artist loft",
+      "domain": "bedroom",
+      "rule": "a spacious warm brick loft with tall grid windows, sheer curtains swaying in warm sunbeams, wooden floorboards, and low linen daybed",
+      "sound": "quiet morning breeze rustling linen curtains and soft wooden floor creaks",
+      "life": "curtains sway lazily through bright dust-filled light shafts"
+    },
+    {
+      "id": "minimal_cyclorama_set",
+      "label": "Seamless Dark Fashion Stage · Sculpted Rim",
+      "group": "Performance",
+      "character": "dark sculpted fashion stage",
+      "domain": "general",
+      "rule": "a clean matte obsidian performance stage with smooth reflective floor catching soft rim light halos and drifting floor mist",
+      "sound": "clean acoustic studio hush with crisp heel clicks",
+      "life": "thin translucent floor haze curls softly around moving feet"
+    },
+    {
+      "id": "luxury_hotel_suite_day",
+      "label": "Sun-Drenched Luxury Hotel Suite · Sheers",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "sunlit luxury hotel suite",
+      "domain": "bedroom",
+      "rule": "a bright airy five-star suite with billowing white sheer drapes, plush king bed piled with crisp pillows, and warm oak walls",
+      "sound": "soft linen rustle and gentle ocean/city breeze outside",
+      "life": "sheer white drapes ripple gently in warm morning light"
+    },
+    {
+      "id": "ancient_bamboo_courtyard",
+      "label": "Misted Stone Courtyard · Swaying Bamboo",
+      "group": "Historical & Adventure",
+      "character": "misted stone temple courtyard",
+      "domain": "combat_action",
+      "rule": "a serene weathered-stone courtyard bordered by tall emerald bamboo swaying in cool mountain mist and warm paper lanterns",
+      "sound": "rustling bamboo leaves, distant wind chime, and crisp stone footsteps",
+      "life": "bamboo shadows sway across stone pavers while mist curls low"
+    },
+    {
+      "id": "starship_observation_deck",
+      "label": "Orbital Observation Deck · Starfield Glass",
+      "group": "Sci-Fi",
+      "character": "sleek orbital observation deck",
+      "domain": "combat_action",
+      "rule": "a brushed-titanium sci-fi observation bay with curved panoramic glass looking out over glowing nebula light and warm console panels",
+      "sound": "deep gentle starship reactor hum and soft ambient console chimes",
+      "life": "nebula glow shifts softly across brushed metal decks"
+    }
+  ]
+}

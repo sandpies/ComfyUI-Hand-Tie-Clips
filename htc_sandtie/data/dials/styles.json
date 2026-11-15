@@ -1,0 +1,610 @@
+{
+  "id": "style",
+  "label": "Style",
+  "per": "project",
+  "note": "Visual mediums, cinema looks, and H3-verified artistic styles.",
+  "options": [
+    {
+      "id": "h3_astro_cinema",
+      "label": "🎬 Astro Cinema — Motivated Practical Light, 35mm Halation & Film Grain",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "photoreal 35mm cinema photography: a single named dominant practical light source casting natural falloff and gentle highlight rolloff, secondary fill lifting the shadows, tactile skin pore and fabric response, subtle warm halation around bright highlights, and fine organic 35mm film grain.",
+      "domain": "general"
+    },
+    {
+      "id": "glamour_boudoir_8k",
+      "label": "🔥 Glamour Boudoir — Specular Skin Micro-Texture, Dewy Highlights & 85mm Bokeh",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "ultra-detailed live-action glamour photography: warm honey key lighting with a soft silver reflector fill, dewy specular highlights along collarbones, chest and hips, natural skin pore micro-texture, and shallow 85mm f/1.4 portrait depth of field with creamy background bokeh.",
+      "domain": "general"
+    },
+    {
+      "id": "korean_drama_glow",
+      "label": "✨ K-Drama / K-Idol Cinema — Porcelain Diffusion Bloom, Rim Backlight & Pastel Bokeh",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "polished Korean cinema and idol music-video look: luminous porcelain skin tones under a soft Pro-Mist diffusion filter, crisp hair rim backlight, delicate catchlights in the eyes, and dreamy pastel city bokeh.",
+      "domain": "general"
+    },
+    {
+      "id": "h3_sakuga_2d",
+      "label": "🎬 Anime 2D Sakuga — On-Twos Cel Cadence, Smear Arcs & Impact Frames",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "hand-drawn 2D animation with crisp cel-shaded characters over a painted gouache background: hard two-tone cel shadow, a clean rim-light wedge along the jaw, alternating snappy bursts of fluid animation on twos with held poses, speed lines and arm smears on fast arcs, and a high-contrast black-and-white impact frame on the peak hit.",
+      "domain": "general"
+    },
+    {
+      "id": "h3_pixar_q3d",
+      "label": "🎬 Official Look — Pixar / Octane Stylized 3D Short (Warm SSS & Squash-Stretch)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "stylized 3D animated short rendered in C4D and Octane: appealing rounded proportions, warm subsurface-scattering skin, sculpted hair clumps with fine flyaways, clear silhouettes, and expressive squash-and-stretch acting with anticipation, overshoot and follow-through.",
+      "domain": "general"
+    },
+    {
+      "id": "h3_product_ad",
+      "label": "🎬 Official Look — Minimalist Apple-Style Product Film (Macro & Rim Light)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "minimalist luxury product film: clean negative space, razor-sharp macro rim lighting tracing brushed metal and glass edges, one crisp mechanical action per beat, and sleek specular material reflections.",
+      "domain": "general"
+    },
+    {
+      "id": "h3_papercraft",
+      "label": "🎬 Official Look — Handmade Papercraft Stop-Motion Diorama (4–7 Depth Planes)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "handmade papercraft stop-motion miniature diorama: layered cardboard and textured paper with visible thickness, fibers, folds, cut edges and physical drop shadows arranged across five distinct depth planes, moving in stepped hand-moved increments with pull-tabs and hinged paper joints.",
+      "domain": "general"
+    },
+    {
+      "id": "h3_collage",
+      "label": "🎬 Official Look — Editorial Halftone Paper Collage (Cut-Outs & Keylines)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "editorial halftone paper collage: flat bold colour field, black-and-white photographic cut-outs with warm cream keylines, selective cardstock accents, refined torn paper edges and soft paper shadows assembling piece by piece.",
+      "domain": "general"
+    },
+    {
+      "id": "h3_handdrawn_fusion",
+      "label": "🎬 Official Look — Live-Action + Glowing Hand-Drawn Chalk/Crayon Fusion",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "live-action footage fused with rough glowing hand-drawn animation: a real room where a vibrant chalk, crayon and pastel drawn entity with frame-by-frame redraw jitter physically contacts real hands and morphs across surfaces.",
+      "domain": "general"
+    },
+    {
+      "id": "h3_mv_typography",
+      "label": "🎬 Official Look — Music Video Spatial 3D Lyric Typography & Beat Cuts",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "high-energy music video with spatial 3D typography: bold dimensional letters stand inside the foreground, midground and background planes of the room (partially occluded by shoulders and hands), cutting hard on the snare and bass beat.",
+      "domain": "general"
+    },
+    {
+      "id": "imax_70mm_epic",
+      "label": "🎥 IMAX 70mm Theatrical — Ultra-Crisp Deep-Focus Vista & Natural Grain",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "large-format IMAX 70mm theatrical film: ultra-high resolving clarity from foreground to horizon, deep natural dynamic range, rich shadow density, subtle horizontal lens flares, and fine photochemical grain.",
+      "domain": "general"
+    },
+    {
+      "id": "grindhouse_35mm",
+      "label": "🎞️ 70s Grindhouse Exploitation — Scratched 35mm Print, Halation & Warm Grain",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "1970s grindhouse 35mm exploitation print: heavy warm film grain, glowing red halation around highlights, occasional celluloid scratches and splice marks, punchy saturated reds and yellows, and raw crash-zoom energy.",
+      "domain": "general"
+    },
+    {
+      "id": "editorial_vogue_flash_cinema",
+      "label": "📸 Editorial High-Fashion 35mm Flash Cinema (Crisp Skin & Satin Speculars)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "shot on crisp 35mm editorial fashion film with direct soft-diffused flash highlights, lush natural skin micro-texture, glossy speculars, rich shadow density, and refined fine film grain",
+      "domain": "general"
+    },
+    {
+      "id": "h3_mv_performance",
+      "label": "🎵 Official H3 Look: Music Video (MV) High-Contrast Performance",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "high-contrast music-video cinematography: bold motivated key lighting, glossy specular skin highlights, atmospheric haze catching rim backlights, and punchy on-beat camera energy.",
+      "domain": "general"
+    },
+    {
+      "id": "h3_promo_luxury",
+      "label": "💎 Official H3 Look: Luxury Fashion & Perfume Promo",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "ultra-sleek luxury fashion and perfume commercial photography: rich velvet shadows, liquid-gold specular highlights on dewy skin, shallow 85mm anamorphic depth of field, and hypnotic slow-motion elegance.",
+      "domain": "general"
+    },
+    {
+      "id": "h3_game_intro_cg",
+      "label": "🎮 Official H3 Look: AAA Game Intro Cinematic (Unreal Engine 5)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "AAA game intro cinematic rendered with photorealistic subsurface skin scattering, ray-traced wet reflections, volumetric particle embers, and heroic dynamic camera staging.",
+      "domain": "general"
+    },
+    {
+      "id": "chiaroscuro_noir_cinema",
+      "label": "🖤 Playtime Chiaroscuro Cinema (Deep Velvet Blacks + Sculpted Key Light)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "dramatic chiaroscuro cinema photography: sculpted single-source key lighting emerging from deep, velvety pitch-black shadows with crisp micro-texture on skin, eyes, and fabric.",
+      "domain": "general"
+    },
+    {
+      "id": "gravure_soft_sunlight_film",
+      "label": "🌸 Japanese Gravure Photobook (Medium-Format Film, Airy Sunlight & Dewy Skin)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "medium-format Japanese gravure photobook aesthetic: airy natural window sunlight, pastel highlight rolloff, luminous dewy skin tones, and intimate shallow depth of field.",
+      "domain": "general"
+    },
+    {
+      "id": "wong_kar_wai_step_neon",
+      "label": "🏮 Wong Kar-Wai Neon Melancholy ( Lush Emerald/Amber + Step-Printed Motion Blur)",
+      "group": "Film looks",
+      "rule": "Wong Kar-Wai arthouse cinema look: saturated emerald greens, tungsten golds, and crimson neon reflections with dreamy step-printed motion trails and cigarette smoke.",
+      "domain": "general"
+    },
+    {
+      "id": "denis_villeneuve_brutalist",
+      "label": "🏜️ Villeneuve Brutalist IMAX (70mm Scale, Atmospheric Dust & Monolithic Light)",
+      "group": "Film looks",
+      "rule": "70mm IMAX brutalist cinema look: monumental architectural scale, diffused golden-ochre or steel-blue atmospheric haze, and razor-sharp foreground subjects.",
+      "domain": "general"
+    },
+    {
+      "id": "manhwa_webtoon_glamour",
+      "label": "✨ Korean Webtoon / Manhwa Deluxe (Glossy Painterly Shading & Luminous Eyes)",
+      "group": "Anime",
+      "rule": "deluxe full-color Korean webtoon and manhwa art style: sleek linework, glossy airbrushed skin and lip highlights, jewel-like iris reflections, and dramatic rim lighting.",
+      "domain": "general"
+    },
+    {
+      "id": "2_5d_semi_real_cg",
+      "label": "💎 2.5D Semi-Realistic Final Fantasy / Stellar Blade CG",
+      "group": "Animation",
+      "rule": "2.5D hyper-detailed CG character rendering: stylized doll-like facial perfection combined with photorealistic skin pores, physics-driven hair strands, and ray-traced latex and metal shaders.",
+      "domain": "general"
+    },
+    {
+      "id": "ring_light_influencer_4k",
+      "label": "📱 4K 60fps Ring-Light Creator / Cosplay Cam (Circular Eye Catchlights)",
+      "group": "Camera looks",
+      "rule": "crisp 4K 60fps mirrorless creator camera footage with a bright circular ring-light reflection in both pupils, tack-sharp skin and makeup detail, and clean bedroom depth of field.",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "cctv_security_timestamp",
+      "label": "📹 High-Angle Corner CCTV / Security Feed",
+      "group": "Camera looks",
+      "rule": "high-angle corner security camera footage: wide-angle ceiling view with slight digital compression, cool fluorescent color cast, and deep room focus.",
+      "domain": "general"
+    },
+    {
+      "id": "cyberpunk_edgerunners_neon",
+      "label": "⚡ Trigger Hyper-Neon Anime (Chromatic Halation + Electric Outlines)",
+      "group": "Anime",
+      "rule": "hyper-kinetic neon cyberpunk anime style: electric cyan and magenta color contrast, bold variable-width ink lines, chromatic aberration on highlights, and dynamic foreshortening.",
+      "domain": "general"
+    },
+    {
+      "id": "anime2real_live_action_vfx",
+      "label": "🌊 Anime2Real Mixed-Reality (Photoreal Live-Action + Ufotable Elemental Anime VFX)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "viral Anime-to-Real-Life (Anime2Real) mixed-reality cinematography: the actors, skin pores, hair, and environment are 100% live-action photorealistic cinema, while weapon swings, auras, and elemental powers manifest as hyper-detailed, physically-lit ufotable-style elemental VFX (water dragons, solar fire arcs, plasma lightning, and glowing ink slashes) that cast real interactive colored light and reflections across the live-action set.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "semireal_cosplay_cg_slop",
+      "label": "✨ Viral AI Semi-Realism (2.5D Porcelain Cosplay + Hyper-Real Elemental Glow)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "viral AI semi-realism cosplay aesthetic: flawless luminous porcelain skin with subsurface scattering, jewel-like anime eyes, silky physics-driven hair strands, and high-contrast volumetric elemental glow against a gritty photorealistic background.",
+      "domain": "general"
+    },
+    {
+      "id": "ufotable_hybrid_2d3d_cinema",
+      "label": "⚔️ Ufotable Unlimited-Budget Anime Cinema (Dynamic 3D Camera + Hand-Drawn Elemental Arcs)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "unlimited-budget ufotable theatrical anime cinematography: razor-sharp cel-shaded characters with dynamic cloth and hair physics, sweeping 3D camera choreography, volumetric particle lighting, and hand-animated elemental slashes.",
+      "domain": "general"
+    },
+    {
+      "id": "japanese_4k_gravure_idol_cinema",
+      "label": "📸 4K Japanese Gravure Idol Cinema (85mm f/1.2 Creamy Bokeh, Dewy Skin & Soft Daylight)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "ultra-clean 4K Japanese gravure idol cinematography: filmed on a full-frame cinema sensor with an 85mm f/1.2 prime lens, rendering luminous dewy porcelain skin, catchlights in the eyes, silky hair strands, and creamy pastel background bokeh.",
+      "domain": "general"
+    },
+    {
+      "id": "arcane_painted_3d_expressionism",
+      "label": "🎨 Fortiche / Arcane Hand-Painted 3D Expressionism (Brushstroke Textures & Rim Light)",
+      "group": "Animation",
+      "rule": "stylized hand-painted 3D animation in the style of Arcane: visible oil-paint brushstroke textures on skin and architecture, dramatic chiaroscuro rim lighting, and intense micro-expressive eyes.",
+      "domain": "general"
+    },
+    {
+      "id": "90s_vhs_camcorder_home_tape",
+      "label": "📼 1990s Hi8 / VHS Camcorder Bedroom Tape (Analog Scanlines, Chroma Bleed & Autofocus Hunt)",
+      "group": "Camera looks",
+      "rule": "authentic 1990s Hi8 analog camcorder footage: soft composite video resolution, warm VHS chroma bleed, subtle horizontal scanlines, and an on-camera camcorder lamp illuminating the subject.",
+      "domain": "bedroom"
+    },
+    {
+      "id": "wuxia_wirefu_cinema",
+      "label": "🎋 90s Hong Kong Wuxia Wire-Fu Silk & Rain Cinema",
+      "group": "Film looks",
+      "rule": "Shot like a 1990s Hong Kong wuxia masterwork with sweeping billowing silk robes, moonlit volumetric mist, crisp practical sparks, and painterly 35mm film grain.",
+      "domain": "general"
+    },
+    {
+      "id": "john_wick_neon_gunfu",
+      "label": "🔫 John Wick Saturated Neon Anamorphic Gun-Fu Cinema",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "Shot like a sleek neo-noir action blockbuster on 2.39:1 anamorphic glass with rich jewel-tone neon practicals, wet reflective marble/asphalt, and razor-crisp close-quarters choreography.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "makoto_shinkai_luminous_sky",
+      "label": "🌅 Makoto Shinkai Luminous Cloudscape & Sunburst Anime",
+      "group": "Anime",
+      "rule": "High-budget theatrical anime style with radiant painted cumulonimbus skies, delicate golden lens-flare halation across eyelashes, detailed architectural backgrounds, and expressive hair physics.",
+      "domain": "general"
+    },
+    {
+      "id": "trigger_studio_hyper_sakuga",
+      "label": "⚡ Studio Trigger Hyper-Dynamic Perspective & Neon Ink Sakuga",
+      "group": "Anime",
+      "rule": "Explosive modern hyper-sakuga anime style with bold angled cross-hatching shadows, skewed dynamic fisheye action foreshortening, vivid neon slash smears, and stylized star-sparkle flashes.",
+      "domain": "general"
+    },
+    {
+      "id": "erotic_thriller_90s_35mm",
+      "label": "🎭 90s Erotic Thriller Neo-Noir 35mm Blinds & Smoke",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "Shot like a sleek 1990s theatrical erotic thriller on soft 35mm Kodak stock with crisp venetian-blind shadow stripes across warm skin, drifting ambient haze, and slow sculptural camera glides.",
+      "domain": "general"
+    },
+    {
+      "id": "euro_luxury_perfume_commercial",
+      "label": "🥂 European Luxury Monolith Fashion & Fragrance Commercial",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "Ultra-luxury European fashion film look on large-format medium-format optics with sculptural marble shadows, crisp golden skin highlights, flowing slow-motion fabrics, and effortless poise.",
+      "domain": "general"
+    },
+    {
+      "id": "style_franco_belgian",
+      "label": "📘 Franco-Belgian Clear-Line Comic (Tintin Crisp Outlines & Flat Fills)",
+      "group": "Drawn",
+      "rule": "European ligne-claire drawn comic medium with uniform crisp ink outlines, highly legible simplified architecture, bright natural flat-color fills, even soft lighting, and subtle paper grain.",
+      "domain": "general"
+    },
+    {
+      "id": "style_risograph",
+      "label": "🖨️ Risograph Spot-Ink Print (Pink/Cobalt/Yellow Overprints & Misregistration)",
+      "group": "Drawn",
+      "rule": "Risograph spot-ink printing on absorbent uncoated paper: simplified bold silhouettes built from fluorescent pink, cobalt blue, and warm yellow translucent overprints, variable coarse halftone dots, and visible slight layer misregistration.",
+      "domain": "general"
+    },
+    {
+      "id": "style_screen_print",
+      "label": "🎨 Opaque Screen-Print Poster (Dense 3-Ink Silhouettes & Dry Edges)",
+      "group": "Drawn",
+      "rule": "Screen-printed ink pressed onto heavy poster paper: broad hard-edged silhouettes rendered in three opaque spot inks with dense solid coverage and organic squeegee-dry edges.",
+      "domain": "general"
+    },
+    {
+      "id": "style_etching",
+      "label": "🖋️ Copperplate Etching / Engraved Cross-Hatching (Intaglio Paper)",
+      "group": "Drawn",
+      "rule": "Achromatic black-and-white copperplate etching on pressed paper: finely engraved ink contours with dense parallel and crossed hatching lines sculpting every highlight and shadow.",
+      "domain": "general"
+    },
+    {
+      "id": "style_monochrome_novel",
+      "label": "🖤 Sin-City Monochrome Graphic Novel (Deep Black Masses + Single Accent)",
+      "group": "Drawn",
+      "rule": "High-contrast brush-ink graphic novel style: stark pure black shadows and crisp paper-white negative space with hard split lighting, sparse dry-brush texture, and a single vivid crimson color accent.",
+      "domain": "general"
+    },
+    {
+      "id": "style_editorial_collage",
+      "label": "📰 Vintage Newspaper Editorial Collage (Torn Newsprint & Cutouts)",
+      "group": "Wacky",
+      "rule": "Tactile vintage newspaper editorial collage assembled from cut photographic silhouettes, torn newsprint deckle edges, aged sepia paper grain, and muted monochrome ink layers.",
+      "domain": "general"
+    },
+    {
+      "id": "style_constructivist",
+      "label": "🔺 Constructivist Photomontage Poster (Diagonal Red, Black & Cream)",
+      "group": "Wacky",
+      "rule": "Constructivist printed photomontage poster combining sharp cutout photographic figures with dynamic diagonal red, black, and warm cream geometric fields and coarse print grain.",
+      "domain": "general"
+    },
+    {
+      "id": "style_motion_comic",
+      "label": "📖 Layered Motion Comic (Held Illustrated Poses + Parallax Depth Planes)",
+      "group": "Animation",
+      "rule": "Layered digital motion-comic medium combining cleanly outlined illustrated characters in rhythmic stepped held poses across sliding flat background depth planes with selective comic screentones.",
+      "domain": "general"
+    },
+    {
+      "id": "style_gongbi",
+      "label": "🎎 Chinese Gongbi Silk Painting (Mineral Pigments & Fine Brush Ink)",
+      "group": "Drawn",
+      "rule": "Meticulous traditional Chinese gongbi painting on warm silk: delicate fine-brush ink outlines filled with translucent mineral blues, malachite greens, and cinnabar reds.",
+      "domain": "general"
+    },
+    {
+      "id": "style_ink_wash",
+      "label": "🖌️ Traditional Ink Wash on Xuan Paper (Calligraphic Brush & Negative Space)",
+      "group": "Drawn",
+      "rule": "Expressive traditional ink-wash animation on absorbent xuan rice paper with fluid calligraphic brushstrokes, soft wet-bleed gradients, generous negative space, and a single vermilion seal accent.",
+      "domain": "general"
+    },
+    {
+      "id": "style_fauvist",
+      "label": "🎨 Fauvist Bold Gouache & Oil (Rough Saturated Complementary Brushwork)",
+      "group": "Drawn",
+      "rule": "Vibrant Fauvist gouache-and-oil painting in motion: broad rough expressive brushstrokes and flattened bold complementary colors pulsing across every surface.",
+      "domain": "general"
+    },
+    {
+      "id": "style_expressionist",
+      "label": "🌩️ German Expressionist Angular Oil (Coarse Strokes & Slanted Shadows)",
+      "group": "Drawn",
+      "rule": "Tense Expressionist oil-painted cinema: coarse angular brushstrokes, elongated dramatic shadow wedges, deep chiaroscuro contrasts, and charged palette-knife texture.",
+      "domain": "general"
+    },
+    {
+      "id": "style_cubist",
+      "label": "🔷 Analytic Cubist Painted Planes (Overlapping Geometric Facets)",
+      "group": "Drawn",
+      "rule": "Analytic Cubist oil painting in fluid motion, reconstructing subjects and architecture out of crisp overlapping painted geometric planes, ochre-slate facets, and fragmented edges.",
+      "domain": "general"
+    },
+    {
+      "id": "style_art_nouveau",
+      "label": "🌿 Ornate Art Nouveau Lithograph (Whiplash Curves & Botanical Gold)",
+      "group": "Drawn",
+      "rule": "Ornate Art Nouveau lithographic poster brought to life with flowing whiplash ink contours, muted sage and burnished gold tones, luminous skin shading, and botanical decorative motifs.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "style_datamosh",
+      "label": "📺 Datamosh Compression Melt (Dragging Motion-Vector Pixel Trails)",
+      "group": "Wacky",
+      "rule": "Pronounced digital datamosh compression-melt aesthetic with large rectangular motion-vector pixel trails dragging across silhouettes and vivid cyan-magenta codec smear.",
+      "domain": "general"
+    },
+    {
+      "id": "style_liquid_metal",
+      "label": "🪞 Liquid Chrome / Mercury World (Mirror Specular Surfaces)",
+      "group": "Wacky",
+      "rule": "Sleek liquid chrome and polished mercury aesthetic where figures and surroundings gleam as fluid silver mirror surfaces reflecting crisp high-contrast highlights.",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "style_holographic_glass",
+      "label": "💎 Translucent Holographic Glass World (Iridescent Cyan/Pink Refraction)",
+      "group": "Wacky",
+      "rule": "Luminous translucent holographic glass medium with crisp iridescent cyan, pink, and violet caustic refractions glowing through every silhouette.",
+      "domain": "general"
+    },
+    {
+      "id": "style_paper_shadow_box",
+      "label": "🏮 Backlit Paper Shadow Box Diorama (Pierced Cardstock & Warm Glow)",
+      "group": "Animation",
+      "rule": "Intricate backlit paper shadow-box miniature built from stacked pierced cardstock planes bathed in warm golden transmitted light and soft cool silhouette shadows.",
+      "domain": "general"
+    },
+    {
+      "id": "live_action",
+      "label": "Natural Photoreal Live-Action Cinema",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "rule": "authentic photorealistic live-action 35mm cinema with natural skin pores, honest physical motion, and organic lighting",
+      "domain": "general"
+    },
+    {
+      "id": "film_noir",
+      "label": "Classic Monochrome Film Noir",
+      "group": "Film looks",
+      "rule": "achromatic black-and-white 1940s noir cinema with crisp silver-halide contrast, venetian-blind stripes, and deep ink shadows",
+      "domain": "general"
+    },
+    {
+      "id": "neo_noir",
+      "label": "Modern Color Neo-Noir",
+      "group": "Film looks",
+      "rule": "modern rain-slicked color noir with deep sapphire shadows, glowing neon practicals, and sculptural rim highlights",
+      "domain": "general"
+    },
+    {
+      "id": "cyberpunk",
+      "label": "High-Contrast Cyberpunk Future",
+      "group": "Film looks",
+      "rule": "gritty high-tech urban cinema bathed in rain, holographic signage, neon pink/cyan highlights, and chrome textures",
+      "domain": "general"
+    },
+    {
+      "id": "wuxia",
+      "label": "Classic Hong Kong Wuxia Silk & Mist",
+      "group": "Film looks",
+      "rule": "sweeping martial-arts cinema with flowing silk robes, misted bamboo haze, and graceful wire-work momentum",
+      "domain": "general"
+    },
+    {
+      "id": "anime",
+      "label": "Crisp 2D Theatrical Anime",
+      "group": "Anime",
+      "rule": "clean hand-drawn 2D theatrical anime animation with expressive cel shading, crisp ink linework, and dynamic smear frames",
+      "domain": "general"
+    },
+    {
+      "id": "ghibli",
+      "label": "Soft Hand-Painted Storybook Anime",
+      "group": "Anime",
+      "rule": "warm painterly anime aesthetic with lush gouache backgrounds, soft sunlit color fills, and gentle fluid character motion",
+      "domain": "general"
+    },
+    {
+      "id": "claymation",
+      "label": "Tactile Stop-Motion Claymation",
+      "group": "Animation",
+      "rule": "charming handcrafted clay stop-motion look with subtle thumbprint surface texture, miniature lighting, and stepped frame cadence",
+      "domain": "general"
+    },
+    {
+      "id": "vhs",
+      "label": "90s Analog VHS Camcorder",
+      "group": "Camera looks",
+      "rule": "nostalgic 1990s VHS tape footage with soft analog resolution, warm chroma bleed, subtle horizontal scan texture, and authentic home-tape warmth",
+      "domain": "general"
+    },
+    {
+      "id": "documentary",
+      "label": "Observational Handheld Verite",
+      "group": "Camera looks",
+      "rule": "grounded natural-light verite cinema following spontaneous real-world movement and candid human expressions",
+      "domain": "general"
+    },
+    {
+      "id": "music_video",
+      "label": "Polished Gloss Music Video",
+      "group": "Camera looks",
+      "rule": "high-energy contemporary music-video polish with bold contrast, crisp rim backlights, and kinetic camera choreography",
+      "domain": "general"
+    },
+    {
+      "id": "film_70s",
+      "label": "1970s 35mm Celluloid Film",
+      "group": "Film looks",
+      "rule": "warm vintage 1970s Kodak film stock with rich earth tones, soft halation blooms, and organic shadow grain",
+      "domain": "general"
+    },
+    {
+      "id": "wes_anderson",
+      "label": "Centered Symmetrical Pastel Tableau",
+      "group": "Film looks",
+      "rule": "meticulously centered symmetrical framing with warm whimsical pastel palette, storybook props, and crisp planar staging",
+      "domain": "general"
+    },
+    {
+      "id": "viral_2000s_paparazzi_flash",
+      "label": "📸 Viral Look — 2000s Paparazzi Direct Flash & Sidewalk Glare",
+      "group": "00 · Viral & Experimental Looks",
+      "rule": "raw early-2000s compact digital paparazzi flash look: punchy direct on-camera strobe casting hard crisp wall shadows, cool greenish ambient tint, glistening skin speculars, and candid sidewalk energy",
+      "domain": "general"
+    },
+    {
+      "id": "viral_broken_mirror_shards",
+      "label": "🪞 Viral Look — Broken Mirror Shards (Fractured Multi-Angle Faces)",
+      "group": "00 · Viral & Experimental Looks",
+      "rule": "fractured cracked-silver mirror composition splitting the subject's reflection across sharp angled mirror shards, each shard catching a subtly offset gaze or moment in crisp silver-edged glass",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "viral_ink_riot_calligraphy",
+      "label": "🖌️ Viral Look — Ink Riot (Liquid Calligraphy Blooming Around Subject)",
+      "group": "00 · Viral & Experimental Looks",
+      "rule": "photoreal live-action subject framed inside erupting liquid sumi ink and bright pigment brush splatters swirling weightlessly through the air around their silhouette",
+      "domain": "general"
+    },
+    {
+      "id": "viral_monet_muse_impressionist",
+      "label": "🎨 Viral Look — Monet Muse (Broken-Color Impressionist Garden Light)",
+      "group": "00 · Viral & Experimental Looks",
+      "rule": "painterly impressionist cinema look blending dappled garden sunlight, broken pastel oil brushstrokes, shimmering water reflections, and soft luminous sunlit edges",
+      "domain": "general"
+    },
+    {
+      "id": "viral_pearl_earring_dutch_master",
+      "label": "🖼️ Viral Look — Dutch Master Studio (North Window Chiaroscuro & Pearl Catchlight)",
+      "group": "00 · Viral & Experimental Looks",
+      "rule": "17th-century Dutch Master portrait aesthetic lit from one soft side window against a deep umber background with luminous oil-painted skin sheen and one crisp specular earring catchlight",
+      "domain": "general"
+    },
+    {
+      "id": "viral_ultraviolet_blacklight",
+      "label": "💜 Viral Look — Ultraviolet Black-Light (Fluorescent Whites & UV Neon Skin)",
+      "group": "00 · Viral & Experimental Looks",
+      "rule": "true ultraviolet black-light illumination making bright whites, teeth, neon trims, and reactive paint glow vividly against deep indigo-violet shadows",
+      "domain": "general"
+    },
+    {
+      "id": "viral_action_figure_blister",
+      "label": "🧸 Viral Look — Collectible Action-Figure Toy Diorama (Glossy Molded Joints)",
+      "group": "00 · Viral & Experimental Looks",
+      "rule": "miniature collectible vinyl action-figure aesthetic: crisp articulated plastic joints, satin painted outfit textures, miniature diorama base, and bright tabletop studio rim lighting",
+      "domain": "general"
+    },
+    {
+      "id": "viral_flash_comic_halftone",
+      "label": "💥 Viral Look — Flash-Strobe Comic Ink & Pop Halftone",
+      "group": "00 · Viral & Experimental Looks",
+      "rule": "punchy bold graphic comic ink outlines fused with hard white strobe impact bursts, vibrant CMYK halftone dot shading, and dynamic speed streaks",
+      "domain": "general"
+    },
+    {
+      "id": "viral_marble_living_statue",
+      "label": "🏛️ Viral Look — Veined Carrara Marble Living Sculpture",
+      "group": "00 · Viral & Experimental Looks",
+      "rule": "classical carved white Carrara marble texture with subtle blue-grey mineral veining and cool museum gallery light animating seamlessly as a breathing sculpture",
+      "domain": "general"
+    },
+    {
+      "id": "viral_origami_folded_world",
+      "label": "🦢 Viral Look — Crisp Origami Paper-Crease Sculpture World",
+      "group": "00 · Viral & Experimental Looks",
+      "rule": "geometric folded origami paper aesthetic built from crisp triangular creases, matte colored cardstock planes, and physical paper shadows moving in rhythmic unfolds",
+      "domain": "general"
+    },
+    {
+      "id": "viral_lost_in_book_portal",
+      "label": "📖 Viral Look — Open-Book Page Portal (Weather & Ink Rising Off Paper)",
+      "group": "00 · Viral & Experimental Looks",
+      "rule": "tactile close foreground of an open hardcover book whose textured paper pages open like a dimensional threshold with mist, light, and miniature scene motion rising out of the gutter",
+      "domain": "general"
+    },
+    {
+      "id": "viral_orbital_vacuum_halo",
+      "label": "🛰️ Viral Look — Orbital Space Vacuum (Sharp Sun Limb & Planet Curve Below)",
+      "group": "00 · Viral & Experimental Looks",
+      "rule": "weightless orbital space vista suspending the subject above a razor-sharp sunlit planetary horizon against pitch-black starlit space with crisp unfiltered solar rim light",
+      "domain": "general"
+    },
+    {
+      "id": "genre_giallo_primary_thriller",
+      "label": "🔪 Genre Look — 70s Italian Giallo (Primary Gels, Black Leather & Zoom Dread)",
+      "group": "00 · Classic Genre Cinema",
+      "rule": "1970s Italian giallo thriller cinematography bathed in saturated cobalt, scarlet, and emerald window gels over glossy fashion interiors with slow tense optical zooms",
+      "domain": "general"
+    },
+    {
+      "id": "genre_french_new_wave_16mm",
+      "label": "🎞️ Genre Look — French New Wave (Handheld Street 16mm & Spontaneous Jump Cuts)",
+      "group": "00 · Classic Genre Cinema",
+      "rule": "lively French New Wave location cinema shot in crisp 16mm street daylight along sidewalk cafes with spontaneous handheld glances to lens and punchy rhythmic jump cuts",
+      "domain": "general"
+    },
+    {
+      "id": "genre_german_expressionism",
+      "label": "🕯️ Genre Look — German Expressionism (Slanted Corridors & Jagged Shadows)",
+      "group": "00 · Classic Genre Cinema",
+      "rule": "stylized German Expressionist cinema with steep forced-perspective staircases, tilted geometry, and razor-sharp painted diagonal shadows slicing across stone walls",
+      "domain": "general"
+    },
+    {
+      "id": "genre_spaghetti_western_235",
+      "label": "🤠 Genre Look — Spaghetti Western 2.35 (Dusty Ochre & Extreme Eye-Zoom Standoff)",
+      "group": "00 · Classic Genre Cinema",
+      "rule": "classic 2.35 widescreen spaghetti western look in sun-bleached ochre dust and harsh desert sunlight, alternating wide plaza sweeps with razor-tight telephoto eye close-ups",
+      "domain": "general"
+    },
+    {
+      "id": "genre_cosmic_horror_dread",
+      "label": "👁️ Genre Look — Cosmic Dread (Monumental Scale, Under-Light & Uncanny Geometry)",
+      "group": "00 · Classic Genre Cinema",
+      "rule": "unnerving cosmic-dread cinematography contrasting tiny human silhouettes against towering impossible architecture, eerie upward under-lighting, and deep misty horizon depth",
+      "domain": "general"
+    },
+    {
+      "id": "genre_cinema_verite_raw",
+      "label": "📹 Genre Look — Raw Cinéma Vérité (Available Room Light & Live Find-Zoom)",
+      "group": "00 · Classic Genre Cinema",
+      "rule": "authentic unvarnished cinéma vérité realism shot strictly under mixed practical room bulbs with spontaneous reactive handheld zooms catching honest unguarded gestures",
+      "domain": "general"
+    }
+  ]
+}

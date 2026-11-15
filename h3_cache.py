@@ -157,8 +157,8 @@ class H3CacheState:
         if not signatures:
             stride = max(1, hidden_states.shape[0] // 100)
             sampled = hidden_states[::stride, :max_dim]
-            return sampled.detach().abs().mean(dim=-1).float().cpu()
-        return torch.cat(signatures).float().cpu()
+            return sampled.detach().abs().mean(dim=-1).float()
+        return torch.cat(signatures).float()
 
     @staticmethod
     def _timestep_value(timestep: Any) -> float | None:
@@ -182,22 +182,32 @@ class H3CacheState:
 
         target_device = torch.device("cpu") if self.device == "cpu" else residual.device
         residual = residual.detach()
+        want_pin = target_device.type == "cpu" and residual.device.type == "cuda"
         try:
             buf = self._residual_buffer
             # In-place overwrite of a stable buffer -- never free+realloc on
             # every RUN step (PlagueKind v1.5.2). Realloc only on first store
-            # or shape/dtype/device change after a layout reset.
+            # or shape/dtype/device change after a layout reset. Use pinned
+            # host memory when offloading CUDA residuals to CPU so D2H/H2D
+            # transfers run at full DMA speed without staging copies.
             if (
                 buf is None
                 or buf.shape != residual.shape
                 or buf.dtype != residual.dtype
                 or buf.device != target_device
+                or (want_pin and not buf.is_pinned())
             ):
-                self._residual_buffer = torch.empty(
-                    residual.shape, dtype=residual.dtype, device=target_device
-                )
+                try:
+                    self._residual_buffer = torch.empty(
+                        residual.shape, dtype=residual.dtype, device=target_device,
+                        pin_memory=want_pin,
+                    )
+                except Exception:
+                    self._residual_buffer = torch.empty(
+                        residual.shape, dtype=residual.dtype, device=target_device
+                    )
                 buf = self._residual_buffer
-            buf.copy_(residual, non_blocking=(target_device.type == "cuda"))
+            buf.copy_(residual, non_blocking=(target_device.type == "cuda" or buf.is_pinned()))
             self._cache_valid = True
         except torch.OutOfMemoryError:
             if self.device == "cuda":
@@ -219,6 +229,10 @@ class H3CacheState:
 
     def __call__(self, args: dict[str, Any], extra_options: dict[str, Any]) -> dict[str, Any]:
         original_block = extra_options["original_block"]
+        # Under ComfyUI #17425 context windows, multiple temporal windows share one
+        # outer timestep and shape. Never reuse or overwrite residuals across windows.
+        if (args.get("transformer_options") or {}).get("context_window") is not None:
+            return original_block(args)
         hidden_states = args["img"]
         cache_ranges = tuple(tuple(pair) for pair in args.get("cache_ranges", ()))
         current_layout = (
@@ -248,12 +262,18 @@ class H3CacheState:
         in_cache_range = self.start_percent <= progress <= self.end_percent
         skip_reason = "initial step"
 
+        current_signature = None
         if self.cached_residual is not None and self.previous_feature_signature is not None:
             current_signature = self._feature_signature(hidden_states, cache_ranges)
-            current_float = current_signature.float()
-            previous_float = self.previous_feature_signature.float()
-            difference = (current_float - previous_float).abs().mean().item()
-            denominator = previous_float.abs().mean().item() + 1e-6
+            prev_sig = self.previous_feature_signature
+            if prev_sig.device != current_signature.device:
+                prev_sig = prev_sig.to(current_signature.device)
+            diff_val, denom_val = torch.stack([
+                (current_signature - prev_sig).abs().mean(),
+                prev_sig.abs().mean(),
+            ]).tolist()
+            difference = float(diff_val)
+            denominator = float(denom_val) + 1e-6
             self.accumulated_relative_l1 += difference / denominator
 
             below_threshold = self.accumulated_relative_l1 < self.reuse_threshold
@@ -290,7 +310,11 @@ class H3CacheState:
         self.run_count += 1
         self.consecutive_skips = 0
         self._cache_valid = False
-        self.previous_feature_signature = self._feature_signature(hidden_states, cache_ranges)
+        self.previous_feature_signature = (
+            current_signature
+            if current_signature is not None
+            else self._feature_signature(hidden_states, cache_ranges)
+        )
         start_hidden_states = hidden_states.clone()
         result = original_block(args)
         output = result["img"]
@@ -343,6 +367,7 @@ def run_h3_blocks(
         comfy.model_prefetch.prefetch_queue_pop(
             prefetch_queue, hidden_states.device, block, malloc_scope="block"
         )
+        transformer_options["block_index"] = index
         if ("double_block", index) in blocks_replace:
 
             def block_wrapper(block_args: dict[str, Any]) -> dict[str, torch.Tensor]:
@@ -353,6 +378,7 @@ def run_h3_blocks(
                         block_args["mod_segments"],
                         block_args["rope_freqs"],
                         transformer_options=block_args["transformer_options"],
+                        attention=block_args.get("attention"),
                     )
                 }
 
@@ -416,6 +442,7 @@ def h3_cache_forward(
             keyframes=payload.get("keyframes"),
             refs=payload.get("refs"),
         )
+    transformer_options["minimax_h3_layout"] = layout
 
     shift_v = float(
         transformer_options.get("minimax_h3_sigma_shift_video", self.sigma_shift_video)
@@ -595,6 +622,12 @@ def h3_cache_forward(
         for start, end, kind in layout.segments
         if kind == "audio"
     )
+    _pdd_grid = getattr(minimax_model, "pdd_grid", None)
+    if callable(_pdd_grid):
+        _n_pdd = getattr(self.final_layer, "pdd_steps", 1)
+        _fl_arg = (_pdd_grid(_n_pdd, shift_v), _pdd_grid(_n_pdd, shift_a))
+    else:
+        _fl_arg = (shift_v, shift_a)
     video_result, audio_result = self.final_layer(
         hidden_states,
         timestep_embedding,
@@ -602,7 +635,7 @@ def h3_cache_forward(
         audio_seg,
         sigma_v,
         transformer_options.get("sample_sigmas"),
-        (shift_v, shift_a),
+        _fl_arg,
     )
     video_out = minimax_model.unpatchify_video(
         video_result,

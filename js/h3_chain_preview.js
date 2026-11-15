@@ -248,6 +248,8 @@ function mountPanel(node) {
                 bits.push(["A/V drift", `${data.drift_ms > 0 ? "+" : ""}${data.drift_ms} ms`]);
             }
             if (data?.width && data?.height) bits.push(["size", `${data.width}x${data.height}`]);
+            if (data?.seam_health) bits.push(["seams", String(data.seam_health)]);
+            if (data?.motion_overload) bits.push(["motion", String(data.motion_overload)]);
             if (bits.length) {
                 meta.textContent = "";
                 for (const [k, v] of bits) {

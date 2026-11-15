@@ -397,6 +397,38 @@ def split_reply(raw):
     return shot_txt, ref_txt
 
 
+def extract_continuity(raw):
+    """Extract optional `continuity` blocking sheet dict from a JSON/fenced reply."""
+    obj = _parse_obj(raw)
+    if isinstance(obj, dict) and isinstance(obj.get("continuity"), dict):
+        return obj.get("continuity")
+    return None
+
+
+def _merge_images(images, start_image=None):
+    """Append start_image (if supplied as data_url str or dict) with clear Frame-0 caption."""
+    imgs = [dict(im) for im in (images or []) if isinstance(im, dict) and im.get("data_url")]
+    if isinstance(start_image, str) and start_image.strip():
+        imgs.append({
+            "caption": (
+                "The start image (Frame 0 of Hop 1 and every anchor='restart' "
+                "hop; no @tag). Read every subject's exact screen quadrant, "
+                "depth, body facing, and props directly from it."
+            ),
+            "data_url": start_image.strip(),
+        })
+    elif isinstance(start_image, dict) and start_image.get("data_url"):
+        imgs.append({
+            "caption": start_image.get("caption") or (
+                "The start image (Frame 0 of Hop 1 and every anchor='restart' "
+                "hop; no @tag). Read every subject's exact screen quadrant, "
+                "depth, body facing, and props directly from it."
+            ),
+            "data_url": start_image["data_url"],
+        })
+    return imgs
+
+
 # -- validation ------------------------------------------------------------
 
 def validate(shot_text, ref_text, *, hops=None, known_files=None, pinned=None,
@@ -683,6 +715,12 @@ def validate(shot_text, ref_text, *, hops=None, known_files=None, pinned=None,
             warnings.extend(fn(*args) or [])
         except Exception:
             pass
+    try:
+        warnings.extend(
+            _plan.check_spatial_continuity(shots, ref_plan, pin_mech=pin_mech) or []
+        )
+    except Exception:
+        pass
     try:
         # `wired`, not an empty set. Passing set() makes check() report every
         # ref as unreadable -- four false "this ref is inactive" warnings on a
@@ -1029,6 +1067,8 @@ def _format_rail_rows(pinned):
             bit += f"  retention={p['retention']}"
         if p.get("source") == "refmod":
             bit += "  source=refmod"
+            if p.get("step_curve") and p.get("step_curve") != "full":
+                bit += f"  step_curve={p['step_curve']}"
         voice = p.get("voice") or p.get("inherited_voice")
         if voice:
             bit += f"  voice={voice}"
@@ -1047,27 +1087,38 @@ def _format_rail_rows(pinned):
 CONTINUITY_RULES = "\n".join([
     "Before any beat exists, work out the blocking for the whole chain, the way "
     "a director and a script supervisor would, and put it in `continuity`:",
-    "- `spots`: every place a person stands or sits, each as ONE phrase giving "
-    "the depth side of the furniture it relates to (near side, far side, behind) "
-    "and, for wide shots, the side of the frame. The beats repeat it word for word. "
-    "Each phrase fits the furniture as the pictures draw it (which way it faces, "
-    "what touches a wall); a phrase the room cannot hold makes the renderer move "
-    "the furniture. Outfit phrases name the garment's defining cut (neckline, length).",
-    "- `hops`: one row per hop: `start` (posture, spot, what each holds), `action` "
-    "(what happens on screen), `end`, `end_framing`. Each start is the previous "
-    "end; sitting, standing and changing spot happen on screen inside a hop.",
-    "- `cuts`: every restart and every cut inside a hop: `at`, `why` (a look, a "
-    "line, a sound, an action that needs another angle) and `matches` (posture, "
-    "spot, props, eyeline side). A restart opens on another size or angle than "
-    "the hop before it ended on, changed by a lot (another side of the person, low "
-    "or high), and on an action already starting; a small change reads as a jump.",
-    "- Eyelines follow the spots: whoever stands to a person's right in the wide "
-    "shot is off frame right in that person's close shots. Every walk goes round "
-    "a named end of a named piece, over floor the pictures show (nothing goes "
-    "behind furniture pushed against a wall). A prop or look that pays off "
-    "later is seen earlier.",
-    "- `weak_spots`: any angle the pictures leave out, and the background you will "
-    "name for it every time.",
+    "- `set_layout`: read every place still (and start image, if attached) as a "
+    "floor plan in screen terms: near->far depth order, left/right landmarks, "
+    "which way furniture faces, open floor vs wall-flush, and missing angles.",
+    "- `spots`: every place a person stands or sits, each as ONE fixed phrase "
+    "giving (1) screen quadrant/side and depth side relative to the camera or "
+    "furniture (e.g. 'on the bottom-left foreground of the counter, her back "
+    "three-quarter to bottom-left of shot, facing @b in top-right' or 'on the "
+    "near side of the low table, between the table and the camera, at frame right'), "
+    "(2) body facing, and (3) eyeline target. Repeat it word for word from that "
+    "camera. Never use vague phrases like 'across the table' or 'by the window'. "
+    "Outfit phrases name the garment's defining cut (neckline, length).",
+    "- `hops`: one row per hop: `hop`, `start` (spot, screen side, facing, "
+    "posture, props held), `action` (what moves on screen), `end` (exact final "
+    "spots, facing, posture, props), `end_framing`. Every `join: continuous` "
+    "hop opens from the previous hop's exact `end`. Before a `motion_context` "
+    "continuation, end on a face at medium or closer with hands at rest, and "
+    "avoid `[Shot 2]` cuts in its first 2 seconds.",
+    "- `cuts`: every `anchor: 'restart'` (paired with `join: 'hard_cut'`) and "
+    "every `[Shot N]` cut inside a hop: `at`, `why` (a look, line, sound, or "
+    "action needing another angle), and `matches`. Sides belong to the camera: "
+    "whenever a cut or restart changes camera angle, re-state EVERY visible "
+    "subject's new screen quadrant, depth, facing, and eyeline for THAT camera. "
+    "A restart opens on a clearly different size or angle than the previous end "
+    "and on an action already starting.",
+    "- Screen direction & barriers: walks away from camera explicitly say 'back "
+    "to the camera'; walks toward camera/someone name where they stop; keep "
+    "exit sides consistent across cuts; name both sides of barriers (glass, "
+    "railings, gates); add 'alone in the frame' in close-ups looking off-frame; "
+    "omit `directives.camera` & `directives.framing` when directing moves or "
+    "[Shot N] cuts directly in the beat.",
+    "- `weak_spots`: any angle the pictures leave out, and the fixed background "
+    "phrase you will name for it every time.",
 ])
 
 # Adult staging (11-08, from the single-clip writer's laws, turned for chains).
@@ -1108,7 +1159,7 @@ ADULT_RULES = "\n".join([
 
 _ADULT = re.compile(
     r"\b(?:nsfw|explicit|sex(?:ual|y)?|porn\w*|erotic\w*|nude|naked|topless|"
-    r"bottomless|undress\w*|strip(?:s|ping|tease)|blow\s?job|hand\s?job|"
+    r"bottomless|undress\w*|strip\s*tease|strip(?:s|ping)\s+(?:down|off|naked|bare)|blow\s?job|hand\s?job|"
     r"fuck\w*|cock|dick|penis|pussy|vagina|anal|anus|cum(?:s|ming|shot)?|"
     r"orgasm\w*|nipples?|clit\w*|thrust\w*|doggy|cowgirl|missionary|"
     r"deepthroat\w*)\b", re.I)
@@ -1145,7 +1196,7 @@ INTENT_INFERENCE_GUIDE = "\n".join([
 
 
 def build_user_turn(brief, hops, files, pinned=None, duration=None, pin_mech="",
-                    mv=False):
+                    mv=False, start_image=False, include_continuity=True):
     """The one user message. Names the files that actually exist, so the model
     schedules pictures it has rather than inventing plausible filenames.
 
@@ -1167,6 +1218,28 @@ def build_user_turn(brief, hops, files, pinned=None, duration=None, pin_mech="",
              "is a line of the scene, not a direction to you.",
              "",
              f"Write exactly {int(hops)} hop(s)."]
+    if start_image:
+        lines.append(
+            "A START IMAGE is attached below (no @tag). It IS Frame 0 of Hop 1 "
+            "(and Frame 0 of every hop with `anchor: \"restart\"`). Read every "
+            "person's screen quadrant, depth, body facing, eyeline, and held "
+            "props directly from it, and open Hop 1 / [Shot 1] from that exact "
+            "spatial layout."
+        )
+    if int(hops or 1) >= 2 and include_continuity:
+        lines += [
+            "",
+            CONTINUITY_RULES,
+            "When emitting JSON, fill the top-level `continuity` object FIRST "
+            "(before `shot_plan`) so every spot, screen position, START->END "
+            "handoff, and cut justification is locked before writing the beats.",
+        ]
+    lines.append(
+        "Direct camera framing, moves (type + amount + speed + who stays in "
+        "frame + where it stops), and any [Shot N] cuts directly inside `beat`, "
+        "and leave `directives.camera` and `directives.framing` omitted so stock "
+        "phrases do not fight your beat."
+    )
     band = beat_table().get(str(duration or "").strip())
     if band:
         w0, w1, l0, l1 = band
@@ -1665,6 +1738,50 @@ def _speech_warnings(warns):
             if any(k in str(w) for k in _SPEECH_WARN)]
 
 
+_SPATIAL_REPAIR_WARN = (
+    "without anchor='restart'",
+    "contradicts join='continuous'",
+    "directives.camera='hold'",
+    "without 'back to the camera'",
+    "names no person; every cut redraws",
+    "on a continuation hop; [Shot 1]",
+    "Keep screen exit sides consistent",
+    "with no facing direction",
+    "names a barrier without fixing",
+)
+
+
+def _spatial_warnings(warns):
+    return [str(w) for w in (warns or [])
+            if any(k in str(w) for k in _SPATIAL_REPAIR_WARN)]
+
+
+def _advisory_repair(speech_warns, spatial_warns, pin_mech="", mv=False):
+    if speech_warns and not spatial_warns:
+        return _speech_repair(speech_warns, pin_mech, mv=mv)
+    parts = []
+    if speech_warns:
+        parts.append(_speech_repair(speech_warns, pin_mech, mv=mv))
+    if spatial_warns:
+        spatial_block = (
+            "The beats/directives below have spatial, directional, or cut-join issues:\n\n"
+            + "\n".join(f"- {w}" for w in spatial_warns)
+            + "\n\nFix ONLY the shots named above: state each visible subject's "
+              "screen quadrant, depth, body facing, and eyeline for that camera; "
+              "add 'back to the camera' on walks away; pair real scene/angle cuts "
+              "with `anchor: \"restart\"` and `join: \"hard_cut\"`; keep `join: \"continuous\"` "
+              "from the previous hop's exact end pose; and omit `directives.camera` / "
+              "`directives.framing` when the beat directs camera motion or `[Shot N]` cuts."
+        )
+        if not parts:
+            spatial_block = (
+                "That plan is accepted -- keep every @tag, file, and ref_plan intact.\n\n"
+                + spatial_block
+            )
+        parts.append(spatial_block)
+    return "\n\n".join(parts)
+
+
 def _speech_repair(warns, pin_mech="", mv=False):
     if mv:
         return (
@@ -1788,16 +1905,20 @@ def build_thread(system, thread, *, proposal=None, shot_text=None,
         bind = ""
         if isinstance(proposal, dict) and isinstance(proposal.get("continuity"), dict):
             bind = (" Its `continuity` sheet is the blocking: use each spot "
-                    "phrase word for word in every shot that shows that person, "
-                    "open each hop on the previous hop's end, keep eyeline sides "
-                    "as the spots give them, and cut where its cuts say, for "
+                    "phrase word for word in every shot from that camera, "
+                    "open each `join: continuous` hop on the previous hop's "
+                    "exact `end` state (spots, screen quadrant, facing, posture, "
+                    "props), keep eyeline sides as the spots give them, re-side "
+                    "everyone on cuts/restarts, and cut where its cuts say, for "
                     "their reasons. A change to the blocking goes into your "
                     "reply as a change to the sheet.")
+        prop_txt = (json.dumps(proposal, indent=2, ensure_ascii=False)
+                    if isinstance(proposal, dict) else str(proposal))
         out.append({"role": "user", "content":
                     "This proposal is ACCEPTED. Write the beats to it. Where "
                     "the beats must differ from it, the beats win and you say "
                     "so in your reply." + bind
-                    + fence(str(proposal), "accepted_proposal")})
+                    + fence(prop_txt, "accepted_proposal")})
     if shot_text:
         out.append({"role": "user", "content":
                     "This is the plan as it stands. It is the one you are "
@@ -1863,7 +1984,7 @@ def _normalise_proposal_obj(obj):
 
 async def write_propose(brief, *, complete_fn, hops=3, files=None, pinned=None,
                         images=None, duration=None, thread=None, attempts=2,
-                        pin_mech="", on_step=None, mv=False):
+                        pin_mech="", on_step=None, mv=False, start_image=None):
     """Stage 1: the film, in words, before any beat exists.
 
     No repair loop. A proposal is not the plan, so `validate()` does not apply
@@ -1919,6 +2040,13 @@ async def write_propose(brief, *, complete_fn, hops=3, files=None, pinned=None,
     elif files:
         lines += ["", "These reference files are on disk:"]
         lines.append(fence("\n".join(f"- {f}" for f in files), "files"))
+    if start_image:
+        lines += [
+            "",
+            "A START IMAGE is attached below (no @tag). It IS Frame 0 of Hop 1 "
+            "(and every anchor='restart' hop). Read its exact screen layout, "
+            "subjects' positions, facing, and camera angle into your continuity.",
+        ]
 
     sch = {"type": "object",
            "properties": {
@@ -1954,8 +2082,9 @@ async def write_propose(brief, *, complete_fn, hops=3, files=None, pinned=None,
         '  "refs": [{"tag": "tag_name", "read_as": "how this picture is used"}],\n'
         f'  "shots": {{"count": {int(hops or 3)}, "arithmetic": "{int(hops or 3)} hops of {duration or "8 s"}: what each hop covers"}},\n'
         f'  "sections": [{{"from": 1, "to": {int(hops or 3)}, "why": "how the hops group"}}],\n'
-        + ('  "continuity": {"spots": [{"code": "A-SEAT", "who": "tag", "phrase": '
-           '"seated in the middle of the sofa, behind the low table"}], '
+        + ('  "continuity": {"set_layout": "near->far depth, left/right, furniture facing", '
+           '"spots": [{"code": "A-LEFT", "who": "tag", "phrase": '
+           '"on bottom-left foreground of the counter, her back three-quarter to bottom-left of shot, facing @b in top-right"}], '
            '"hops": [{"hop": 1, "start": "...", "action": "...", "end": "...", '
            '"end_framing": "close on @tag"}], '
            '"cuts": [{"at": "2->3", "why": "...", "matches": "..."}], '
@@ -1963,8 +2092,9 @@ async def write_propose(brief, *, complete_fn, hops=3, files=None, pinned=None,
         + '  "note": "One sentence on pacing or joins."\n'
         '}',
     ]
+    all_images = _merge_images(images, start_image)
     messages = build_thread(system_prompt(), thread, instruction="\n".join(lines),
-                            images=images)
+                            images=all_images)
     last = []
     for attempt in range(1, int(attempts) + 1):
         if on_step:
@@ -2019,7 +2149,8 @@ def _word_diff(before, after, limit=24):
 async def write_edit(message, shot_text, ref_text, *, complete_fn, hops=None,
                      files=None, pinned=None, duration=None, thread=None,
                      attempts=MAX_ATTEMPTS, use_schema=True, on_step=None,
-                     pin_mech="", mv=False):
+                     pin_mech="", mv=False, proposal=None, images=None,
+                     start_image=None):
     """Stage 3: change named shots, leave every other byte alone.
 
     The model is asked for ONLY the shots it is changing, as `edits`, and this
@@ -2055,15 +2186,42 @@ async def write_edit(message, shot_text, ref_text, *, complete_fn, hops=None,
     known = {str(s.get("id") or f"s{i + 1}"): i
              for i, s in enumerate(shots) if isinstance(s, dict)}
 
-    listing = "\n".join(
-        f"- {sid} (hop {i + 1}): "
-        + re.sub(r"\s+", " ", str(shots[i].get("beat") or "")).strip()[:160]
-        for sid, i in sorted(known.items(), key=lambda kv: kv[1]))
+    listing_rows = []
+    for sid, i in sorted(known.items(), key=lambda kv: kv[1]):
+        sh = shots[i] or {}
+        meta = []
+        if sh.get("anchor"):
+            meta.append(f"anchor={sh['anchor']}")
+        dirs = sh.get("directives") or {}
+        for ax in ("join", "camera", "framing", "tail"):
+            if dirs.get(ax):
+                meta.append(f"{ax}={dirs[ax]}")
+        if isinstance(sh.get("refs"), list):
+            meta.append("refs=[" + ", ".join(sh["refs"]) + "]")
+        tag_str = (" [" + ", ".join(meta) + "]") if meta else ""
+        full_beat = re.sub(r"\s+", " ", str(sh.get("beat") or "")).strip()
+        listing_rows.append(f"- {sid} (hop {i + 1}{tag_str}): {full_beat}")
+    listing = "\n".join(listing_rows)
+
+    handoff_note = (
+        "\n\nSPATIAL & JOIN CONTINUITY FOR EDITS (CRITICAL):\n"
+        "- Look at the full hop before and after every shot you edit in `<shot_index>` and `<current_shot_plan>`.\n"
+        "- Any edited hop with `join: continuous` (or `match_cut` without `anchor: restart`) MUST open from the EXACT ending state of the previous hop (same screen quadrant/side, depth, body facing, posture, props held, and camera side) before moving.\n"
+        "- Any edited hop that opens a new setup or angle should use `anchor: \"restart\"` + `join: \"hard_cut\"` (or `[Shot N]` cuts inside the hop) and re-state EVERY visible person's screen side/quadrant, depth, facing, and eyeline for that camera.\n"
+        "- Ensure the ending of your edited hop cleanly hands off into the opening of the next hop (spots, facing, held props, and a readable face before any continuation)."
+    )
+    start_note = (
+        "\n- A START IMAGE is attached (Frame 0 of Hop 1 and every anchor='restart' hop)."
+        if start_image else ""
+    )
+
     instruction = (
         "Change the shots this message names, and nothing else.\n\n"
         + fence(str(message or "").strip() or "Nothing was asked for.", "edit_request")
-        + "\n\nThe plan as it stands:\n"
+        + "\n\nThe plan as it stands (full beats & directives for handoff context):\n"
         + fence(listing, "shot_index")
+        + handoff_note
+        + start_note
         + "\n\nReturn ONLY the shots you changed, as a single JSON object with "
           "key `edits`: a list of objects with `shot_id` exactly as it appears "
           "above and ONLY the fields you change on it (`beat`, `directives`, "
@@ -2090,8 +2248,11 @@ async def write_edit(message, shot_text, ref_text, *, complete_fn, hops=None,
                           "note": {"type": "string"}},
            "required": ["edits"]}
 
-    messages = build_thread(system_prompt(), thread, shot_text=shot_text,
-                            ref_text=ref_text, instruction=instruction)
+    all_images = _merge_images(images, start_image)
+    messages = build_thread(system_prompt(), thread, proposal=proposal,
+                            shot_text=shot_text, ref_text=ref_text,
+                            instruction=instruction,
+                            images=all_images or None)
     last_errors = []
     for attempt in range(1, int(attempts) + 1):
         if on_step:
@@ -2294,7 +2455,7 @@ async def write_plan(brief, hops, *, complete_fn, files=None,
                      pinned=None, images=None, duration=None,
                      attempts=MAX_ATTEMPTS, use_schema=True, on_step=None,
                      thread=None, proposal=None, pin_mech="", skeleton=None,
-                     mv=False):
+                     mv=False, start_image=None):
     """Generate a plan and repair it until the node would accept it.
 
     `complete_fn(messages, schema=...)` is injected rather than imported so the
@@ -2329,8 +2490,13 @@ async def write_plan(brief, hops, *, complete_fn, files=None,
     # through the route -- the previous check_mv_wire called write_plan()
     # directly, which is precisely how that gap survived a green suite.
     mv = bool(mv or sk)
-    text = build_user_turn(brief, hops, files, pinned=pinned, duration=duration,
-                           pin_mech=pin_mech, mv=mv)
+    has_prop_sheet = isinstance(proposal, dict) and isinstance(proposal.get("continuity"), dict)
+    text = build_user_turn(
+        brief, hops, files, pinned=pinned, duration=duration,
+        pin_mech=pin_mech, mv=mv,
+        start_image=bool(start_image),
+        include_continuity=not has_prop_sheet,
+    )
     if sk:
         text = ("This film is laid out already. The following is fixed and your "
                 "beats must match it shot for shot:\n\n"
@@ -2340,15 +2506,17 @@ async def write_plan(brief, hops, *, complete_fn, files=None,
                   "remove or reorder lines. The lengths are the solver's and are "
                   "overwritten on the way in, so do not argue with them.\n\n"
                 + text)
+    all_images = _merge_images(images, start_image)
     # A thread or an accepted proposal turns this from a one-shot into a
-    # conversation; with neither it is the same two messages it has always
-    # been, byte for byte, so a plain Write plan is unchanged.
+    # conversation; with neither it is two messages (system + one user turn).
+    # Since 4.0 that user turn also carries the camera-in-the-beat line and, at
+    # 2+ hops, CONTINUITY_RULES (build_user_turn), so it is not 3.5.1's text.
     if thread or proposal:
         messages = build_thread(system_prompt(), thread, proposal=proposal,
-                                instruction=text, images=images)
+                                instruction=text, images=all_images)
     else:
         messages = [{"role": "system", "content": system_prompt()},
-                    {"role": "user", "content": attach_images(text, images)}]
+                    {"role": "user", "content": attach_images(text, all_images)}]
     sch = schema() if use_schema else None
     # The schema in force for the NEXT call. A prose repair swaps in a grammar
     # that cannot spell the empty answer; everything else uses the shipped one.
@@ -2356,8 +2524,9 @@ async def write_plan(brief, hops, *, complete_fn, files=None,
 
     last_errors, warnings = [], []
     shot_text = ref_text = ""
+    continuity_obj = proposal.get("continuity") if has_prop_sheet else None
     # A plan that already validated, held while one extra attempt goes on the
-    # speech lint. Never traded for a worse answer than the one it replaces.
+    # advisory repair lint. Never traded for a worse answer than the one it replaces.
     accepted = None
     speech_spent = False
 
@@ -2367,6 +2536,9 @@ async def write_plan(brief, hops, *, complete_fn, files=None,
                      "errors": last_errors})
         reply = await complete_fn(messages, schema=turn_sch)
         new_shots, new_refs = split_reply(reply)
+        parsed_cont = extract_continuity(reply)
+        if parsed_cont:
+            continuity_obj = parsed_cont
         # A model that looked at the stills names the rows for what it saw.
         # Map those back onto the rail by filename before anything else reads
         # them, so the merge stays keyed on rail tags and the repair turn is
@@ -2421,44 +2593,52 @@ async def write_plan(brief, hops, *, complete_fn, files=None,
                     pinned=pinned, duration=duration, pin_mech=pin_mech)
         if not last_errors:
             speech = _speech_warnings(warnings)
-            if accepted is None or len(speech) < len(accepted[3]):
-                accepted = (shot_text, ref_text, warnings, speech)
+            spatial = _spatial_warnings(warnings)
+            adv_count = len(speech) + len(spatial)
+            if accepted is None or adv_count < len(accepted[3]) + len(accepted[4]):
+                accepted = (shot_text, ref_text, warnings, speech, spatial, continuity_obj)
             # One round, never a loop. The lint is advisory by design, and
             # spending the whole budget on it would trade a plan the node
-            # accepts for an argument about beat length.
-            if accepted[3] and not speech_spent and attempt < int(attempts):
+            # accepts for an argument about beat length or style.
+            if (accepted[3] or accepted[4]) and not speech_spent and attempt < int(attempts):
                 speech_spent = True
-                print(f"[{TAG}] plan accepted with {len(accepted[3])} "
-                      f"speech lint(s); spending attempt "
+                print(f"[{TAG}] plan accepted with {len(accepted[3])} speech and "
+                      f"{len(accepted[4])} spatial lint(s); spending attempt "
                       f"{attempt + 1}/{attempts} rewriting the beats",
                       flush=True)
                 messages.append({"role": "assistant", "content": reply})
                 messages.append({"role": "user",
                                  "content": validator_turn(
-                                     _speech_repair(accepted[3], pin_mech,
-                                                    mv=mv))})
+                                     _advisory_repair(accepted[3], accepted[4],
+                                                      pin_mech, mv=mv))})
                 turn_sch = sch
                 continue
-            return {"ok": True, "mv_skeleton": sk,
-                    "master_audio_start_s": (skeleton or {}).get("master_audio_start_s"),
-                    "song_file": (skeleton or {}).get("song_file"),
-                    "shot_plan": accepted[0],
-                    "ref_plan": accepted[1], "attempts": attempt,
-                    "errors": [], "warnings": accepted[2]}
+            out = {"ok": True, "mv_skeleton": sk,
+                   "master_audio_start_s": (skeleton or {}).get("master_audio_start_s"),
+                   "song_file": (skeleton or {}).get("song_file"),
+                   "shot_plan": accepted[0],
+                   "ref_plan": accepted[1], "attempts": attempt,
+                   "errors": [], "warnings": accepted[2]}
+            if accepted[5]:
+                out["continuity"] = accepted[5]
+            return out
 
         if accepted is not None:
-            # The speech round answered with something the node would reject.
+            # The repair round answered with something the node would reject.
             # The plan we already hold is good; keep it rather than spend the
             # rest of the budget arguing about a warning.
-            print(f"[{TAG}] speech repair came back rejected: "
+            print(f"[{TAG}] beat repair came back rejected: "
                   + "; ".join(last_errors[:2])
                   + " -- keeping the accepted plan", flush=True)
-            return {"ok": True, "mv_skeleton": sk,
-                    "master_audio_start_s": (skeleton or {}).get("master_audio_start_s"),
-                    "song_file": (skeleton or {}).get("song_file"),
-                    "shot_plan": accepted[0],
-                    "ref_plan": accepted[1], "attempts": attempt,
-                    "errors": [], "warnings": accepted[2]}
+            out = {"ok": True, "mv_skeleton": sk,
+                   "master_audio_start_s": (skeleton or {}).get("master_audio_start_s"),
+                   "song_file": (skeleton or {}).get("song_file"),
+                   "shot_plan": accepted[0],
+                   "ref_plan": accepted[1], "attempts": attempt,
+                   "errors": [], "warnings": accepted[2]}
+            if accepted[5]:
+                out["continuity"] = accepted[5]
+            return out
 
         print(f"[{TAG}] plan attempt {attempt}/{attempts} rejected: "
               + "; ".join(last_errors[:3]), flush=True)
@@ -3879,7 +4059,8 @@ _ASK_SYSTEM = (
 
 async def write_ask(brief, *, complete_fn, thread=None, proposal=None,
                     shot_text=None, ref_text=None, images=None,
-                    duration="", pin_mech="", max_chars=1800, mv=False):
+                    duration="", pin_mech="", max_chars=1800, mv=False,
+                    start_image=None):
     """Stage 0: talk. No schema, no validate, no repair loop.
 
     Returns {ok, text, warnings}. `text` is prose and is shown as a chat turn
@@ -3924,7 +4105,7 @@ async def write_ask(brief, *, complete_fn, thread=None, proposal=None,
     messages = build_thread(
         _ASK_SYSTEM, thread, proposal=proposal, shot_text=shot_text,
         ref_text=ref_text, instruction="\n".join(framing) + "\n\n" + question,
-        images=images)
+        images=_merge_images(images, start_image))
 
     reply = await complete_fn(messages, schema=None)
     text = str(reply or "").strip()

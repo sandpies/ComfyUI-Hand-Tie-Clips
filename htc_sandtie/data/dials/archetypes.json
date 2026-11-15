@@ -1,0 +1,288 @@
+{
+  "id": "character",
+  "label": "Cast Type",
+  "per": "project",
+  "note": "Original ethnicity, build & styling archetypes (no copyrighted characters).",
+  "options": [
+    {
+      "id": "arch_east_asian_idol",
+      "label": "✨ East Asian Glamour Idol (Porcelain Skin, Almond Eyes, Silky Dark Hair)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "an East Asian woman in her early twenties with fair porcelain skin, soft East Asian facial features, dark almond eyes, glossy rose lips, long silky waist-length jet-black hair with soft bangs, and an hourglass figure",
+      "domain": "general"
+    },
+    {
+      "id": "arch_east_asian_cosplay_red",
+      "label": "✨ East Asian Cosplay Bombshell (Porcelain Skin, Almond Eyes, Vibrant Red Hair)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "an East Asian woman in her early twenties with fair porcelain skin, delicate East Asian facial bone structure, dark almond eyes, and vibrant crimson-red hair with bangs, slender waist and full curves",
+      "domain": "general"
+    },
+    {
+      "id": "arch_japanese_gravure",
+      "label": "✨ Japanese Gravure Model (Dewy Fair Skin, Soft Features, Heavy Curves)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Japanese woman in her early twenties with dewy fair skin, soft Japanese facial features, large dark brown almond eyes, shoulder-length dark brown hair, a slender waist, and heavy natural curves",
+      "domain": "general"
+    },
+    {
+      "id": "arch_korean_actress",
+      "label": "✨ Korean K-Drama Lead (Glass Skin, Sculpted Cheekbones, Wavy Espresso Hair)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Korean woman in her mid-twenties with luminous glass skin, sculpted East Asian cheekbones, dark upturned almond eyes, and long wavy espresso-brown hair",
+      "domain": "general"
+    },
+    {
+      "id": "arch_east_asian_male_lead",
+      "label": "✨ East Asian Male Lead (Sharp Jawline, Swept-Back Black Hair, Athletic Build)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a tall East Asian man in his late twenties with fair skin, sharp angular East Asian facial bone structure, dark almond eyes, short black hair swept back in a neat side part, clean-shaven jaw, and a lean muscular build",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "arch_latina_bombshell",
+      "label": "✨ Latina Glamour Bombshell (Sun-Kissed Bronze Skin, Honey Eyes, Voluminous Curls)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Latina woman in her mid-twenties with warm sun-kissed bronze skin, high cheekbones, expressive honey-brown eyes, full glossy lips, long dark-brown cascading curls, and voluptuous hourglass curves",
+      "domain": "general"
+    },
+    {
+      "id": "arch_ebony_goddess",
+      "label": "✨ Ebony Goddess (Rich Espresso Skin, High Cheekbones, Braids / Silk Press)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Black woman in her mid-twenties with radiant deep espresso skin, sculpted high cheekbones, warm dark eyes, full glossy lips, waist-length goddess braids, and a toned hourglass build",
+      "domain": "general"
+    },
+    {
+      "id": "arch_nordic_valkyrie",
+      "label": "✨ Nordic Blonde Bombshell (Ice-Blue Eyes, Platinum Hair, Athletic Curves)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Scandinavian woman in her mid-twenties with fair golden-ivory skin, striking ice-blue eyes, high cheekbones, long platinum-blonde waves, and a tall athletic curvy build",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "arch_south_asian_siren",
+      "label": "✨ South Asian Beauty (Golden Olive Skin, Kohl-Rimmed Dark Eyes, Thick Raven Hair)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a South Asian woman in her mid-twenties with warm golden-olive skin, large kohl-rimmed dark brown eyes, full lips, and thick waist-length raven hair",
+      "domain": "general"
+    },
+    {
+      "id": "arch_goth_vampire_domme",
+      "label": "✨ Gothic Domme Siren (Pale Porcelain Skin, Jet-Black Hair, Crimson Lips)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a striking gothic woman in her mid-twenties with pale porcelain skin, smoky winged eyeliner, deep crimson lipstick, long straight jet-black hair with blunt bangs, and a commanding hourglass figure",
+      "domain": "general"
+    },
+    {
+      "id": "arch_chinese_xianxia_empress",
+      "label": "✨ Chinese Xianxia / Hanfu Beauty (Porcelain Skin, Phoenix Eyes, Hairpins)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Chinese woman in her early twenties with luminous porcelain skin, refined East Asian facial bone structure, upturned phoenix eyes, vermilion lips, and waist-length jet-black hair pinned with golden hairpins",
+      "domain": "general"
+    },
+    {
+      "id": "arch_french_riviera_siren",
+      "label": "✨ French Riviera Siren (Sun-Kissed Ivory Skin, Hazel Eyes, Tousled Brunette Waves)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a French woman in her mid-twenties with warm sun-kissed ivory skin, high cheekbones, sultry hazel-green eyes, full natural lips, tousled chestnut-brown waves, and a lithe curvy figure",
+      "domain": "general"
+    },
+    {
+      "id": "arch_slavic_ice_supermodel",
+      "label": "✨ Slavic High-Fashion Supermodel (Sculpted Cheekbones, Emerald Eyes, Ash-Blonde Hair)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "an Eastern European woman in her mid-twenties with fair porcelain skin, razor-sharp high cheekbones, piercing emerald-green eyes, sleek waist-length ash-blonde hair, and long-legged supermodel proportions",
+      "domain": "general"
+    },
+    {
+      "id": "arch_brazilian_fitness_glamour",
+      "label": "✨ Brazilian Fitness Glamour Model (Golden Tan, Toned Abs & Heavy Glutes)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Brazilian woman in her mid-twenties with a radiant golden-bronze tan, warm amber-brown eyes, long sun-streaked honey-brown waves, a defined athletic midriff, and prominent rounded glutes and thighs",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "arch_gyaru_blonde_tan_idol",
+      "label": "✨ Japanese Gyaru Bombshell (Caramel Tan Skin, Honey-Blonde Twin-Tails, Glossy Lips)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Japanese woman in her early twenties with warm caramel-tanned skin, soft Japanese facial features, large doe eyes with dramatic lashes, glossy pink lips, long honey-blonde twin-tails, and a voluptuous figure",
+      "domain": "general"
+    },
+    {
+      "id": "arch_mediterranean_italian_diva",
+      "label": "✨ Italian Mediterranean Diva (Warm Olive Skin, Dark Sultry Eyes, Espresso Curls)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "an Italian woman in her late twenties with warm Mediterranean olive skin, expressive dark brown eyes, full sculpted lips, voluminous espresso-black curls, and lush hourglass curves",
+      "domain": "general"
+    },
+    {
+      "id": "arch_rugged_western_male_lead",
+      "label": "✨ Rugged Male Lead (Chiseled Jaw, Stubble, Broad Muscular Frame — S2 Partner)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a tall Caucasian man in his early thirties with a chiseled jawline, light five-o'clock shadow stubble, intense steel-grey eyes, tousled dark-brown hair, broad shoulders, and a muscular athletic physique",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "arch_ebony_athletic_male_lead",
+      "label": "✨ Athletic Black Male Lead (Deep Mahogany Skin, Fade Haircut, Muscular Build — S2 Partner)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a tall Black man in his late twenties with rich mahogany skin, a sharp clean-cut fade and trimmed beard, warm dark eyes, broad muscular shoulders, and a sculpted six-pack physique",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "arch_persian_royal_siren",
+      "label": "✨ Persian / Middle Eastern Glamour Siren (Warm Olive Skin, Amber-Green Eyes, Thick Raven Waves)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Persian woman in her mid-twenties with warm honey-olive skin, striking almond-shaped amber-green eyes with thick lashes, sculpted brows, full glossy lips, waist-length raven-black waves, and voluptuous hourglass curves",
+      "domain": "general"
+    },
+    {
+      "id": "arch_filipina_island_bombshell",
+      "label": "✨ Filipina Island Bombshell (Sun-Kissed Caramel Skin, Warm Doe Eyes, Silky Espresso Hair)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Filipina woman in her early twenties with glowing sun-kissed caramel skin, soft Southeast Asian facial features, warm dark-brown doe eyes, a bright smile, long silky espresso hair, and a petite curvy figure",
+      "domain": "general"
+    },
+    {
+      "id": "arch_thai_luxury_idol",
+      "label": "✨ Thai Glamour Idol (Luminous Honey Skin, Cat-Eye Liner, Sleek High Ponytail)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Thai woman in her early twenties with luminous golden-honey skin, delicate Southeast Asian bone structure, upturned cat-eye liner, full rose-tinted lips, a sleek waist-length jet-black high ponytail, and a toned hourglass waist",
+      "domain": "general"
+    },
+    {
+      "id": "arch_celtic_redhead_siren",
+      "label": "✨ Irish / Celtic Redhead Bombshell (Porcelain Freckled Skin, Emerald Eyes, Copper Curls)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "an Irish woman in her mid-twenties with creamy porcelain skin dusted with light freckles across the nose and shoulders, vivid emerald-green eyes, cascading fiery copper-red waves, and a lush hourglass figure",
+      "domain": "general"
+    },
+    {
+      "id": "arch_colombian_curvy_fitness",
+      "label": "✨ Colombian Hourglass Glamour Model (Bronze Skin, Platinum-Honey Balayage, Heavy Curves)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Colombian woman in her mid-twenties with warm bronze skin, dark sultry eyes, full glossy lips, long honey-blonde balayage waves, a tiny wasp waist, and prominent rounded glutes and full breasts",
+      "domain": "general"
+    },
+    {
+      "id": "arch_russian_ballet_ice_queen",
+      "label": "✨ Russian Ice-Blonde Prima Siren (Porcelain Skin, Sapphire Eyes, Sleek Platinum Bun)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a Russian woman in her mid-twenties with snow-fair porcelain skin, high aristocratic cheekbones, piercing sapphire-blue eyes, platinum-white hair pulled into a sleek crown or cascading waves, and long dancer legs",
+      "domain": "general"
+    },
+    {
+      "id": "arch_afro_latina_caribbean_queen",
+      "label": "✨ Afro-Latina Caribbean Bombshell (Golden-Brown Skin, Hazel Eyes, Voluminous Ringlets)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "an Afro-Latina woman in her mid-twenties with radiant golden-brown skin, glowing hazel-amber eyes, full glossy lips, a halo of voluminous dark-brown spiral curls, and athletic hourglass curves",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "arch_milf_executive_boss",
+      "label": "✨ Glamour Executive / MILF Bombshell (Sculpted Cheekbones, Blowout Waves, Commanding Curves)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a glamorous woman in her mid-thirties with luminous skin, sharp high cheekbones, sultry smoky eyes, full red lips, voluminous salon-blown chestnut waves, and a statuesque busty hourglass figure",
+      "domain": "general"
+    },
+    {
+      "id": "arch_cyber_pink_egirl_cosplayer",
+      "label": "✨ Pastel-Pink Alt / E-Girl Cosplay Idol (Porcelain Skin, Winged Liner, Twin-Tails)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a young woman in her early twenties with fair porcelain skin, rosy blush across the nose and cheeks, sharp winged eyeliner, glossy cherry lips, long pastel-pink twin-tails, and a petite curvy build",
+      "domain": "general"
+    },
+    {
+      "id": "arch_silver_hair_elf_sorceress",
+      "label": "✨ High-Fantasy Silver-Haired Elf Sorceress (Luminous Skin, Violet Eyes, Pointed Ears)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "an ethereal elven woman with luminous porcelain skin, long tapered elf ears, glowing amethyst-violet eyes, waist-length liquid-silver hair, and a slender busty hourglass figure",
+      "domain": "general"
+    },
+    {
+      "id": "arch_dark_elf_drow_empress",
+      "label": "✨ Dark-Fantasy Obsidian Elf / Drow Empress (Dusky Violet-Charcoal Skin, Glowing Silver Hair)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a dark-elf empress with smooth dusky obsidian-violet skin, pointed elven ears, glowing ruby-red eyes, long snow-white hair, and a voluptuous athletic build",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "arch_succubus_crimson_demon_queen",
+      "label": "✨ Horned Succubus Demon Queen (Porcelain Skin, Golden Slit Eyes, Curved Black Horns)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a seductive succubus queen with pale porcelain skin, curved matte-black horns rising from long raven-black hair, glowing golden eyes, crimson lips, and a lush hourglass physique",
+      "domain": "general"
+    },
+    {
+      "id": "arch_kpop_male_idol_s2",
+      "label": "✨ Korean K-Pop Male Idol Lead (Glass Skin, Silver-Black Wolf Cut, Lean Athletic Build — S2–S9)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a handsome Korean man in his early twenties with smooth fair skin, sharp jawline, dark almond eyes, textured jet-black hair with soft bangs, and a lean toned swimmer's build",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "arch_yakuza_tattooed_boss_male_s2",
+      "label": "✨ Yakuza / Triad Tattooed Male Boss (Slicked Hair, Irezumi Dragon Sleeves, Muscular Build — S2–S9)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a commanding East Asian man in his early thirties with sharp cheekbones, slicked-back black hair, intense dark eyes, and intricate traditional irezumi dragon tattoos across his muscular shoulders, chest, and arms",
+      "domain": "general"
+    },
+    {
+      "id": "arch_latino_athletic_male_lead_s2",
+      "label": "✨ Latino Male Lead (Bronze Skin, Trimmed Beard, Dark Curls & Sculpted Abs — S2–S9)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a tall Latino man in his late twenties with warm bronze skin, a neatly trimmed beard along a sharp jawline, warm brown eyes, short dark wavy hair, and a broad-shouldered muscular build",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "arch_silver_fox_ceo_male_s2",
+      "label": "✨ Silver-Fox Billionaire CEO Male Partner (Salt-and-Pepper Hair, Piercing Eyes, Fit Build — S2–S9)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a distinguished man in his early forties with silver-streaked dark hair, a manicured salt-and-pepper beard, piercing blue-grey eyes, and a powerful broad-chested athletic build",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "arch_nordic_viking_warrior_male_s2",
+      "label": "✨ Nordic Viking / Warrior Male Lead (Braided Blonde Mane, Beard, Towering Muscular Frame — S2–S9)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a towering Scandinavian man in his early thirties with ice-blue eyes, shoulder-length golden-blonde hair with side braids, a thick groomed beard, and a massive, heavily muscled physique",
+      "domain": "general"
+    },
+    {
+      "id": "arch_anime2real_white_haired_sorcerer_male",
+      "label": "✨ Anime2Real White-Haired Sorcerer Male Lead (Spiky Silver-White Hair, Glowing Cyan Eyes — S2–S9)",
+      "group": "00 · Glamour, Ethnic & Cosplay Archetypes",
+      "rule": "a tall live-action young man with snow-white spiky hair, luminous crystalline cyan-blue eyes with white lashes, sharp facial bone structure, and a lean muscular fighter's build",
+      "domain": "combat_action"
+    },
+    {
+      "id": "arch_tactical_agent_male",
+      "label": "Sharp Tactical Lead (Stubble, Tailored Coat)",
+      "group": "00 · Cinema & Action Leads",
+      "rule": "a poised athletic man in his early thirties with chiseled jawline, short dark swept hair, light stubble, and sharp observant eyes",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "arch_noir_detective_lead",
+      "label": "Weathered Noir Detective (Salt-and-Pepper, Sharp Gaze)",
+      "group": "00 · Cinema & Action Leads",
+      "rule": "a rugged man in his early forties with silver-streaked dark hair, deep-set steady eyes, and crisp angular cheekbones",
+      "domain": "general"
+    },
+    {
+      "id": "arch_cyber_courier_fem",
+      "label": "Edgy Street Tech Courier (Undercut, Freckles)",
+      "group": "00 · Cinema & Action Leads",
+      "rule": "a lithe young woman in her twenties with dark cropped asymmetric bob, subtle nose-bridge freckles, and fierce alert eyes",
+      "domain": "general"
+    },
+    {
+      "id": "arch_glam_european_model",
+      "label": "Classic Editorial Runway Model (High Cheekbones, Auburn)",
+      "group": "00 · Cinema & Action Leads",
+      "rule": "a tall graceful European woman in her mid-twenties with luminous fair skin, sculpted cheekbones, copper-auburn waves, and emerald eyes",
+      "domain": "general"
+    }
+  ]
+}

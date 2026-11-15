@@ -1739,15 +1739,21 @@ def vocal_stem(audio, sr, *, status=_log, allow_download=False, chunk_s=30.0,
     over = int(overlap_s * msr)
     out = torch.zeros((1, n), dtype=x.dtype)
     weight = torch.zeros(n, dtype=x.dtype)
+    n_chunks = max(1, (n + max(1, chunk) - 1) // max(1, chunk))
+    status("vocal stem 0/%d (%.0fs on %s)" % (n_chunks, n / float(msr), dev))
     try:
         with no_grad():
             start = 0
+            ci = 0
             while start < n:
+                ci += 1
                 end = min(n, start + chunk)
                 a = max(0, start - over)
                 seg = x[:, :, a:end]
                 if seg.shape[-1] < int(1.0 * msr):
                     break
+                status("vocal stem %d/%d (%.0fs/%.0fs on %s)"
+                       % (ci, n_chunks, end / float(msr), n / float(msr), dev))
                 mean, std = seg.mean(), seg.std() + 1e-8
                 y = model(((seg - mean) / std).to(dev))[0, vi].cpu() * std + mean
                 k = end - a
@@ -1819,6 +1825,7 @@ def transcribe(mono, sr, *, status=_log, allow_download=False,
         except Exception:  # noqa: BLE001
             pass
     asr, why = None, None
+    status("whisper load (%s on %s)" % (model_name, dev))
     try:
         import torch  # noqa: PLC0415
         from transformers import (  # noqa: PLC0415
@@ -1831,6 +1838,9 @@ def transcribe(mono, sr, *, status=_log, allow_download=False,
         model = WhisperForConditionalGeneration.from_pretrained(
             model_name, local_files_only=not allow_download)
         model.eval()
+        # No generation caps here (pre-flight 11-16): max_new_tokens=96 per 30 s
+        # truncated fast verses, and no_repeat_ngram_size=4 mangled choruses that
+        # repeat inside a window. Lyrics are repetitive by nature.
         asr = AutomaticSpeechRecognitionPipeline(
             model=model, tokenizer=proc.tokenizer,
             feature_extractor=proc.feature_extractor,
@@ -1892,12 +1902,17 @@ def transcribe(mono, sr, *, status=_log, allow_download=False,
     # older transformers and raises AttributeError on this one.
     audio = np.ascontiguousarray(np.asarray(mono, dtype=np.float32).reshape(-1))
     rate = int(sr)
+    dur_s = float(audio.shape[0]) / float(max(1, rate))
+    # The pipeline's own 30 s chunking (with its stride overlap) is the proven
+    # 3.5.1 path: hard 30 s cuts lose or split words that straddle a boundary.
+    status("whisper lyrics (%.0fs on %s)" % (dur_s, dev))
     try:
         with no_grad():
             out = asr({"raw": audio, "sampling_rate": rate},
                       chunk_length_s=30, batch_size=4,
                       return_timestamps="word",
                       generate_kwargs={"task": "transcribe"})
+        raw_chunks = out.get("chunks") or []
     except Exception as e:  # noqa: BLE001
         try:
             del asr
@@ -1914,7 +1929,7 @@ def transcribe(mono, sr, *, status=_log, allow_download=False,
     # exhausted the user's memory held a separator and an ASR at once because
     # nothing was freed on the failure paths
     free_device(dev)
-    words = _words_from_chunks(out.get("chunks") or [])
+    words = _words_from_chunks(raw_chunks)
     # Word timestamps come back in SECONDS, not samples. Scaling them by 1/rate
     # shrank every line by a factor of the sample rate -- a 4 s line reported as
     # 0.25 ms -- and the section pass reads those to decide what is sung.

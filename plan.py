@@ -546,6 +546,230 @@ def check_over_delivery(shots):
     return warnings
 
 
+_SPATIAL_QUOTE_STRIP = re.compile(r"<d>.*?</d>|(?:^|(?<=[\s,]))'[^'\n]{2,}'", re.S | re.I)
+_SPATIAL_CAM_BEAT = re.compile(
+    r"\bthe camera\s+(?:\w+ly\s+)?(?:pushes|pulls|draws|arcs|orbits|tracks|pans|"
+    r"tilts|pedestals|cranes|rises|drops|circles|zooms|dollies|backs away|retreats|moves)\b",
+    re.I,
+)
+_SPATIAL_AWAY = re.compile(
+    r"\b(?:runs?|running|walks?|walking|sprints?|hurr(?:y|ies)|strides?|dash(?:es)?)\b"
+    r"[^.;]{0,60}\baway from (?:the )?(?:camera|lens)\b",
+    re.I,
+)
+_SPATIAL_BACK = re.compile(
+    r"\b(?:back|backs)\s+(?:is\s+|are\s+|turned\s+)?to\s+(?:the\s+)?(?:camera|lens)\b"
+    r"|\bseen from behind\b|\bfacing away\b",
+    re.I,
+)
+_SPATIAL_TOWARD = re.compile(
+    r"\b(?:runs?|running|walks?|walking|rushes?|sprints?|charges?|dashes?|hurr(?:y|ies)|strides?)\b"
+    r"[^.;]{0,70}\btoward(?:s)?\s+(?:the\s+(?:camera|lens)|@\w+)",
+    re.I,
+)
+_SPATIAL_STOP = re.compile(
+    r"\b(?:stops?|halts?|comes to a stop|plants?\b|arrives?\b|reaches?\b|steps? up to|"
+    r"past the (?:lens|camera)|out of (?:the )?frame|keeps? walking|keeps? running|"
+    r"camera (?:\w+ly )?(?:backs|tracks back(?:ward)?|pulls back|retreats))\b",
+    re.I,
+)
+_SPATIAL_CAM_PLACE = re.compile(
+    r"\bcamera\b[^.;]{0,40}\b(?:fixed|mounted|placed|set|sits?|rests?)\b[^.;]{0,30}\b(?:on|at|in)\b",
+    re.I,
+)
+_SPATIAL_CAM_DIR = re.compile(r"\b(?:facing|faces|looking|looks|pointed|pointing|aimed|turned)\b", re.I)
+_SPATIAL_BARRIER = re.compile(
+    r"\b(?:bars|gate|gates|glass (?:wall|pane|door|partition)s?|railings?|fence|grille|cage)\b",
+    re.I,
+)
+_SPATIAL_BARRIER_SIDE = re.compile(
+    r"\b(?:side|stay(?:s|ing)? fixed|behind|in front|outside|inside)\b",
+    re.I,
+)
+_SPATIAL_PRONOUN = re.compile(r"\b(?:they|them|themselves)\b", re.I)
+_SPATIAL_PLURAL_CAST = re.compile(
+    r"\b(?:two|three|four|five|couple|pair|duo|crowd|people|men|women|friends|both|group|team)\b",
+    re.I,
+)
+_SPATIAL_INSERT_HINT = re.compile(
+    r"\b(?:hands?|fingers?|letter|phone|card|screen|door|key|glass|cup|blade|gun|knife|bag|insert|close shot of)\b",
+    re.I,
+)
+_SPATIAL_PERSON_HINT = re.compile(
+    r"\b(?:man|woman|boy|girl|person|cook|guard|her|him|she|he|subject)\b",
+    re.I,
+)
+
+
+def check_spatial_continuity(shots, ref_plan=None, pin_mech=""):
+    """Warn (never raise) on spatial, directional, framing, or cut-join hazards
+    learned from `director-copilot` renders."""
+    warnings = []
+    if not shots:
+        return warnings
+    refs = (ref_plan or {}).get("refs") or []
+    people_tags = [r["tag"] for r in refs if r.get("subject") is not None]
+    subj_nums = {r.get("subject") for r in refs if r.get("subject") is not None}
+
+    def _tags_in(seg):
+        found = []
+        for t in people_tags:
+            for mt in re.finditer(r"@" + re.escape(t) + r"(?![A-Za-z0-9_])", seg, re.I):
+                found.append((mt.start(), t))
+        return sorted(found)
+
+    for i, s in enumerate(shots):
+        s = s or {}
+        d = s.get("directives") or {}
+        beat = str(s.get("beat") or "").strip()
+        if not beat:
+            continue
+        narr = _SPATIAL_QUOTE_STRIP.sub(" ", beat)
+        anchor = str(s.get("anchor") or "").strip().lower()
+        join = str(d.get("join") or "").strip().lower()
+
+        if i > 0:
+            if join == "hard_cut" and anchor != "restart":
+                warnings.append(
+                    f"shot {i + 1}: join=hard_cut without anchor='restart' still hands the previous hop's "
+                    f"last frame to frame 0 before cutting. Set anchor='restart' for a clean cut to a new "
+                    f"setup, or use join='continuous'/'match_cut'."
+                )
+            elif anchor == "restart" and join == "continuous":
+                warnings.append(
+                    f"shot {i + 1}: anchor='restart' opens fresh from its own refs and contradicts "
+                    f"join='continuous'. Set join='hard_cut' or 'match_cut'."
+                )
+
+        if d.get("camera") == "hold" and (re.search(r"\[Shot\s+2\]", beat, re.I) or _SPATIAL_CAM_BEAT.search(narr)):
+            warnings.append(
+                f"shot {i + 1}: directives.camera='hold' emits 'The camera holds its position throughout', "
+                f"fighting the camera move or [Shot N] cut in the beat. Omit directives.camera and "
+                f"directives.framing so the beat directs the camera."
+            )
+
+        segs = re.split(r"\[Shot\s+\d+\]", beat, flags=re.I)
+        has_subshots = len(segs) > 2
+        if has_subshots and i > 0 and anchor != "restart" and join != "hard_cut":
+            m2 = re.search(r"\[Shot\s+2\]\s*At\s+(\d{1,2}):(\d\d(?:\.\d+)?)", beat, re.I)
+            if m2 and (int(m2.group(1)) * 60 + float(m2.group(2))) < 2.0:
+                warnings.append(
+                    f"shot {i + 1}: [Shot 2] cuts at {int(m2.group(1)):02d}:{float(m2.group(2)):06.3f} "
+                    f"on a continuation hop; [Shot 1] continues the pinned frame and should hold at least "
+                    f"2.0s before cutting."
+                )
+
+        exits = {}
+        iter_segs = segs[1:] if has_subshots else [beat]
+        for k, seg in enumerate(iter_segs, 1):
+            where = f"[Shot {k}]" if has_subshots else "the beat"
+            seg_narr = _SPATIAL_QUOTE_STRIP.sub(" ", seg)
+
+            if has_subshots and people_tags:
+                if not _tags_in(seg) and not _SPATIAL_PERSON_HINT.search(seg_narr) and not _SPATIAL_INSERT_HINT.search(seg_narr):
+                    warnings.append(
+                        f"shot {i + 1}: [Shot {k}] names no person; every cut redraws the frame, so "
+                        f"re-place everyone visible in screen terms (left/right, near/far, facing, action)."
+                    )
+            if _SPATIAL_AWAY.search(seg_narr) and not _SPATIAL_BACK.search(seg_narr):
+                warnings.append(
+                    f"shot {i + 1}: {where} walks/runs away from the camera without 'back to the camera', "
+                    f"which can render them walking backwards facing the lens."
+                )
+            if _SPATIAL_TOWARD.search(seg_narr) and not _SPATIAL_STOP.search(seg_narr):
+                warnings.append(
+                    f"shot {i + 1}: {where} walks/runs toward the camera or a person with no end mark; "
+                    f"state where they stop or exit past the lens."
+                )
+            if _SPATIAL_CAM_PLACE.search(seg_narr) and not _SPATIAL_CAM_DIR.search(seg_narr):
+                warnings.append(
+                    f"shot {i + 1}: {where} places the camera on/at something with no facing direction; "
+                    f"state where it sits, which way it faces, and who fills the frame."
+                )
+            if _SPATIAL_BARRIER.search(seg_narr) and not _SPATIAL_BARRIER_SIDE.search(seg_narr):
+                warnings.append(
+                    f"shot {i + 1}: {where} names a barrier without fixing which side the camera and each "
+                    f"person sit on; name their sides and keep the barrier fixed."
+                )
+            if (re.search(r"\bfrom beside @\w+", seg_narr, re.I)
+                    and not re.search(r"\balone in (?:the )?frame\b|\bnobody else\b", seg_narr, re.I)):
+                warnings.append(
+                    f"shot {i + 1}: {where} places the camera 'from beside @tag' without 'alone in the frame', "
+                    f"which can pull that person into the frame."
+                )
+            elif (re.search(r"\b(?:medium close|close)(?:-up| shot| view)\b", seg_narr, re.I)
+                    and re.search(r"@\w+[^.;]{0,40}?\boff (?:the )?frame", seg_narr, re.I)
+                    and not re.search(r"\balone in (?:the )?frame\b|\bnobody else\b", seg_narr, re.I)):
+                warnings.append(
+                    f"shot {i + 1}: {where} is a close shot naming an off-frame @tag without 'alone in the frame', "
+                    f"which can pull that person into the close-up."
+                )
+            oa = re.search(
+                r"(@\w+)[^.;@]{0,30}?\b(run\w*|walk\w*|rac\w*|sprint\w*|flee\w*|climb\w*|driv\w*)\b"
+                r"[^.;@]{0,60}?\boff (?:the )?frame",
+                seg_narr, re.I,
+            )
+            if oa:
+                warnings.append(
+                    f"shot {i + 1}: {where} gives off-frame {oa.group(1)} an action ('{oa.group(2)}'); "
+                    f"name off-frame people only as eyeline targets or sounds."
+                )
+            for em_ in re.finditer(r"\bout of (?:the )?frame to the (left|right)\b", seg_narr, re.I):
+                before = re.findall(r"@\w+", seg_narr[:em_.start()])
+                if before:
+                    exits[before[-1].lower()] = (em_.group(1).lower(), k)
+            for tm in re.finditer(r"(@\w+)[^.;@]{0,40}?\boff (?:the )?frame to the (left|right)\b", seg_narr, re.I):
+                was = exits.get(tm.group(1).lower())
+                if was and was[1] < k and was[0] != tm.group(2).lower():
+                    warnings.append(
+                        f"shot {i + 1}: {tm.group(1)} exited to the {was[0]} in [Shot {was[1]}] but is placed "
+                        f"off-frame to the {tm.group(2).lower()} in {where}. Keep screen exit sides consistent."
+                    )
+
+        if len(subj_nums) == 1 and _SPATIAL_PRONOUN.search(narr) and not _SPATIAL_PLURAL_CAST.search(narr):
+            warnings.append(
+                f"shot {i + 1}: 'they/them' in a one-person scene can render two people from one reference; "
+                f"use the @tag or he/she."
+            )
+
+    if str(pin_mech or "") in ("sand_tie", "windowed"):
+        try:
+            from . import take as _take
+            _arc = re.compile(r"\bfirst\b[^.]*\bthen\b", re.I)
+            _slope = re.compile(r"\b(?:stairs?|staircase|stairway|steps up|escalator|slope|ramp|hillside|uphill|downhill)\b", re.I)
+            _rise = re.compile(r"\b(?:toward|towards|away from)\s+(?:the\s+)?(?:camera|lens)\b|\bcamera\s+(?:above|below)\b", re.I)
+            _q = re.compile(r"<d>.*?</d>|(?:^|(?<=[\s,]))'[A-Z][^']{2,}'", re.S)
+            for grp in _take.takes(shots):
+                lead0 = None
+                for j, h in enumerate(grp):
+                    pb = _take.parse_beat(str((shots[h] or {}).get("beat") or ""))
+                    if pb is None:
+                        warnings.append(f"shot {h + 1}: sand_tie take hop has no `At mm:ss-mm:ss,` timeline.")
+                        continue
+                    lead, events = pb
+                    if j == 0:
+                        lead0 = lead
+                    elif lead and lead0 is not None and lead != lead0:
+                        warnings.append(
+                            f"shot {h + 1}: sand_tie opening differs from shot {grp[0] + 1}; keep the take's opening sentence identical or set anchor='restart'."
+                        )
+                    if j < len(grp) - 1 and events and _q.search(events[-1][2]):
+                        warnings.append(
+                            f"shot {h + 1}: sand_tie hop ends on a timed sentence with speech; end on a line-free action so the next window does not repeat the line."
+                        )
+                    for _t0, _t1, body in events:
+                        if len(grp) > 1 and len(_q.findall(body)) >= 2:
+                            warnings.append(f"shot {h + 1}: sand_tie timed sentence packs multiple spoken lines; give each line its own timed sentence.")
+                        if _arc.search(body):
+                            warnings.append(f"shot {h + 1}: sand_tie timed sentence puts a 'first ... then' arc in one sentence; split it across timed sentences.")
+                        if _slope.search(body) and not _rise.search(body):
+                            warnings.append(f"shot {h + 1}: sand_tie stairs/slope has no direction relative to the camera (e.g. 'rises toward the camera').")
+        except Exception:
+            pass
+
+    return warnings
+
+
 def compile_blocks(shots, establish=None, ref_plan=None):
     """Compile a plan into one body string per hop, ready for the chain loop."""
     for w in check_coherence(shots):
@@ -553,6 +777,8 @@ def compile_blocks(shots, establish=None, ref_plan=None):
     for w in check_place_handoff(shots, ref_plan):
         print(f"[{TAG}] note: {w}", flush=True)
     for w in check_over_delivery(shots):
+        print(f"[{TAG}] note: {w}", flush=True)
+    for w in check_spatial_continuity(shots, ref_plan):
         print(f"[{TAG}] note: {w}", flush=True)
     return [_d.compile_shot(s, i, establish) for i, s in enumerate(mark_new_places(shots, ref_plan))]
 

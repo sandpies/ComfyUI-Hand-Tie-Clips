@@ -1,7 +1,7 @@
 # Third-party notices
 
-Hand Tie Clips is MIT (see `LICENSE`). Two files in it carry other people's
-work, and this document exists so that is impossible to miss.
+Hand Tie Clips is MIT (see `LICENSE`). This document tracks third-party code,
+adapted MIT modules, and credited ideas so provenance is impossible to miss.
 
 ## `h3_cache.py` — MiniMax-H3 block-stack residual cache
 
@@ -41,6 +41,11 @@ three is decorative; do not remove any of them.
   and replace the same `("dit", "block_loop", 0)` slot. Two caches on one wire
   corrupt each other without raising, so this copy reads all three owner keys
   and refuses rather than stacking.
+- `block_index`, `transformer_options["minimax_h3_layout"]`, and
+  `attention=block_args.get("attention")` forwarding in `h3_cache_forward` /
+  `run_h3_blocks` were synced with Core `MiniMaxH3Model` so chunked sparse
+  attention (`BlockSparseAttention` / `HTCSparseAttention`) composes with
+  `HTCH3Cache`.
 - Log tags, the owner key and the node's own schema are this pack's.
 
 ### The part nobody could relicense
@@ -152,3 +157,22 @@ split switches, prompted the upsampler's `chunking` / `tiling` switches. HTC's
 version is its own design and code: time is cut before space, Regen2K's
 68-frame floor is kept, and chunking stays automatic for clips too long for
 one pass. Nothing from that repository is included.
+
+## `htc_adaln.py` — MiniMax-H3 AdaLN LoRA porting (`HTCAdaLNFix` & built-in callers)
+
+**Original author: [PlagueKind](https://github.com/PlagueKind) ([`ComfyUI-H3-AdaLN-LoRA-Fix`](https://github.com/PlagueKind/ComfyUI-PlagueKind-Nodes), MIT, Copyright (c) 2026 PlagueKind).**
+
+`htc_adaln.py` ports PlagueKind's MIT AdaLN basis-projection math (`silu_temb_grid`,
+least-squares `solve_basis`, `port_delta`, `port_factors_reverse`) and ModelPatcher
+rewriting (`fix_model`) directly into Hand Tie Clips so `HTCTokenLoRA`,
+`HandTieClips` (`realism_boost`), `HTCTiledUpsampler`, `HTCVideoUpsampler`,
+MV Studio's Image Forge, and the standalone `HTCAdaLNFix` node all port dense
+and curve-form H3 AdaLN LoRAs automatically with zero external custom-node
+dependency.
+
+## `sparse_attn.py` — Clean-room MIT sparse & low-VRAM attention (`HTCSparseAttention`)
+
+Written fresh under MIT directly on stock `comfy_kitchen` (`ck.sol_attn`,
+`ck.sol_attn_chunked`) and ComfyUI Core (`MiniMaxH3Model`, `AttentionTensorContainer`,
+`comfy.ops.linear_input_act`). No AGPL or GPL code from external custom-node
+packs (`ComfyUI-UtilsCollection`, `ComfyUI-KJNodes`) is copied.

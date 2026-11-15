@@ -12,6 +12,7 @@ import { createVideoSwap } from "./editor/video_swap.js";
 import { createStandardWriter } from "./editor/standard_writer.js";
 import { createMediaStrip, MEDIA_WIDGETS } from "./editor/media_strip.js";
 import { createTimeline } from "./editor/timeline.js";
+import { mountR2 } from "./r2/r2_ui.js";
 
 const VERSION = "v3.4.0";
 /* Both ids. The pack registers the pre-rename id as a deprecated subclass so
@@ -30,9 +31,9 @@ const NODE_TYPES = new Set(["HandTieClips", "H3RefChain"]);
 // so raising the default would silently have raised the floor with it.
 // 1452x1320 since 2026-10-18: the size at which every RUN section shows with no
 // scrolling, taken from the user's own working graph.
-const NODE_WIDTH = 1452;
-const NODE_HEIGHT = 1320;
-const NODE_MIN_WIDTH = 560;
+const NODE_WIDTH = 1820;
+const NODE_HEIGHT = 1140;
+const NODE_MIN_WIDTH = 1180;
 // Mirrors MODE_PROP in editor/plan_editor.js -- the writer forces Shots mode
 // after a plan lands, and the property is the only part of that it should touch.
 const EDITOR_MODE_PROP = "h3_editor_mode";
@@ -44,7 +45,7 @@ const ACTIVE_TAB_PROP = "h3_active_tab";
 const surface = { showingRun: false };
 // One pane plus the tab strip plus RUN's summary bar. Was 460, when this had to
 // hold four stacked sections before the first scroll.
-const EDITOR_MIN_H = 360;
+const EDITOR_MIN_H = 470;
 const STYLE_ID = "h3rc-style";
 
 /* Widgets the editor owns. In Simple mode the plan is hidden instead.
@@ -104,6 +105,12 @@ function ensureStyles() {
 
 function mountEditor(node) {
     if (node._h3Editor) return;
+    /* Round-2 Control Room. The old editor stays below untouched as a fallback
+     * for the one case that matters: a frontend without addDOMWidget. */
+    if (!globalThis.__H3_LEGACY_MOUNT) {
+        const r2 = mountR2(node);
+        if (r2) return;
+    }
     if (typeof node.addDOMWidget !== "function") {
         console.warn("[HandTieClips] no addDOMWidget on this frontend; editor not mounted");
         return;
@@ -135,6 +142,15 @@ function mountEditor(node) {
         return parsed || { refs: [], subjects: {} };
     };
     let refPlan = readRefPlan();
+    let refPlanRaw = String(refWidget.value ?? "");
+    const syncRefPlan = () => {
+        const curRaw = String(refWidget.value ?? "");
+        if (curRaw !== refPlanRaw) {
+            refPlanRaw = curRaw;
+            refPlan = readRefPlan();
+        }
+        return refPlan;
+    };
 
     // How many hops this run will actually do. The shot plan is authoritative
     // when present -- run() ignores `chains` the moment one is loaded -- so both
@@ -157,11 +173,12 @@ function mountEditor(node) {
     };
 
     const rail = createRefRail(node, {
-        getPlan: () => refPlan,
+        getPlan: () => syncRefPlan(),
         setPlan: (p) => {
             refPlan = p;
             refBad = false;
             refWidget.value = refPlanToJson(p);
+            refPlanRaw = String(refWidget.value ?? "");
             try { refWidget.callback?.(refWidget.value, node.graph?.canvas, node); } catch (_) {}
         },
         getRaw: () => refWidget.value,
@@ -251,6 +268,7 @@ function mountEditor(node) {
             editor.render();
             syncRailHops();
             timeline?.render();
+            node._h3Editor?.standard?.render?.();
             syncBadges();
             node.graph?.setDirtyCanvas?.(true, true);
         },
@@ -754,7 +772,7 @@ app.registerExtension({
             // whatever size its author dragged it to; onConfigure does not do
             // this, and resizing somebody's graph on load would be worse than
             // the wrong default ever was.
-            this.setSize([NODE_WIDTH, NODE_HEIGHT]);
+            this.setSize(this._h3R2 ? [NODE_WIDTH, NODE_HEIGHT] : [1452, 1320]);
             return r;
         };
 

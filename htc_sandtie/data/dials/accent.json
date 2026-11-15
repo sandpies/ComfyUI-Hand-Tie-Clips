@@ -1,0 +1,228 @@
+{
+  "id": "accent",
+  "label": "Accent",
+  "per": "project",
+  "note": "Regional accents and native languages inside <d>[...]</d>.",
+  "options": [
+    {
+      "id": "japanese_native_anime",
+      "label": "🇯🇵 Native Japanese (Anime / Seiyuu Expressive)",
+      "group": "Asia & Africa",
+      "accent": "native Japanese",
+      "words": "crisp mora-timed Japanese pronunciation, expressive pitch-accent intonation, anime seiyuu emotional clarity",
+      "small": "ねぇ, ちょっと待って, すごい, いい感じ",
+      "lang": "Japanese",
+      "domain": "general"
+    },
+    {
+      "id": "korean_native_seoul",
+      "label": "🇰🇷 Native Korean (Seoul K-Drama Intonation)",
+      "group": "Asia & Africa",
+      "accent": "native Seoul Korean",
+      "words": "smooth Seoul standard intonation, expressive sentence-final endings, soft breathy consonants",
+      "small": "잠깐만, 진짜로, 이리 와, 좋아",
+      "lang": "Korean",
+      "domain": "general"
+    },
+    {
+      "id": "mandarin_native_beijing",
+      "label": "🇨🇳 Native Mandarin Chinese (Standard Putonghua)",
+      "group": "Asia & Africa",
+      "accent": "native Mandarin Chinese",
+      "words": "clear four-tone contour, soft retroflex initials, melodic sentence-final particles",
+      "small": "等等, 过来点, 真好听, 看着我",
+      "lang": "Mandarin",
+      "domain": "general"
+    },
+    {
+      "id": "spanish_native_latam",
+      "label": "🇲🇽CO Native Latin American Spanish (Warm & Passionate)",
+      "group": "Americas",
+      "accent": "native Latin American Spanish",
+      "words": "warm syllable-timed cadence, rolled r, passionate open vowels, affectionate diminutives",
+      "small": "mi amor, acércate, qué rico, más cerca",
+      "lang": "Spanish",
+      "domain": "general"
+    },
+    {
+      "id": "french_native_parisian",
+      "label": "🇫🇷 Native Parisian French (Sultry & Breathless)",
+      "group": "Europe",
+      "accent": "native Parisian French",
+      "words": "soft uvular r, nasal vowels, fluid liaison, breathy phrase-final stress",
+      "small": "mon chéri, viens ici, encore, tout doucement",
+      "lang": "French",
+      "domain": "general"
+    },
+    {
+      "id": "russian_native_moscow",
+      "label": "🇷🇺 Native Russian (Velvet & Commanding)",
+      "group": "Europe",
+      "accent": "native Russian",
+      "words": "rich palatalized consonants, dark l, rolled r, deep resonant vowel stress",
+      "small": "слушай, иди сюда, смотри на меня, давай",
+      "lang": "Russian",
+      "domain": "general"
+    },
+    {
+      "id": "portuguese_native_brazil",
+      "label": "🇧🇷 Native Brazilian Portuguese (Rio / São Paulo Musical)",
+      "group": "Americas",
+      "accent": "native Brazilian Portuguese",
+      "words": "musical nasal diphthongs, palatalized t and d, warm rhythmic cadence",
+      "small": "meu amor, vem cá, nossa, mais perto",
+      "lang": "Portuguese",
+      "domain": "general"
+    },
+    {
+      "id": "italian_native_roma",
+      "label": "🇮🇹 Native Italian (Expressive & Melodic)",
+      "group": "Europe",
+      "accent": "native Italian",
+      "words": "geminate double consonants, open musical vowels, rolling r, expressive rising-falling contour",
+      "small": "amore mio, vieni qui, guarda, ancora",
+      "lang": "Italian",
+      "domain": "general"
+    },
+    {
+      "id": "persian_farsi_tehran",
+      "label": "🇮🇷 Persian / Farsi Accent (Melodic, Poetic & Warm)",
+      "group": "Asia & Africa",
+      "accent": "Persian",
+      "words": "soft uvular consonants, musical syllable-timed cadence, warm fronted vowels",
+      "small": "azizam, joonam, bia inja",
+      "lang": "English",
+      "domain": "general"
+    },
+    {
+      "id": "filipino_taglish_manila",
+      "label": "🇵🇭 Filipino / Manila Taglish (Warm, Musical & Expressive)",
+      "group": "Asia & Africa",
+      "accent": "Filipino",
+      "words": "bright open vowels, gentle unaspirated stops, warm melodic lilt",
+      "small": "mahal, sige na, grabe",
+      "lang": "English",
+      "domain": "general"
+    },
+    {
+      "id": "thai_bangkok_silky",
+      "label": "🇹🇭 Thai / Bangkok Accent (Soft, Tonal & Silky)",
+      "group": "Asia & Africa",
+      "accent": "Thai",
+      "words": "soft tonal inflection, elongated final vowels, gentle liquid consonants",
+      "small": "kha, na kha, teerak",
+      "lang": "English",
+      "domain": "general"
+    },
+    {
+      "id": "greek_mediterranean_athens",
+      "label": "🇬🇷 Greek Mediterranean Accent (Crisp, Passionate & Rhythmic)",
+      "group": "Europe",
+      "accent": "Greek",
+      "words": "crisp dental sibilants, open five-vowel clarity, passionate rhythmic stress",
+      "small": "agapi mou, ela, pame",
+      "lang": "English",
+      "domain": "general"
+    },
+    {
+      "id": "general_american",
+      "label": "General American English",
+      "group": "North America",
+      "lang": "English",
+      "accent": "neutral American",
+      "words": "clear General American vowels",
+      "small": "yeah, right, hey",
+      "domain": "general"
+    },
+    {
+      "id": "rp_british",
+      "label": "Crisp British RP",
+      "group": "British Isles",
+      "lang": "English",
+      "accent": "Received Pronunciation British",
+      "words": "crisp British consonants and poised vowels",
+      "small": "darling, splendid, really",
+      "domain": "general"
+    },
+    {
+      "id": "scottish",
+      "label": "Warm Scottish Burr",
+      "group": "British Isles",
+      "lang": "English",
+      "accent": "Scottish",
+      "words": "rolled R sounds and melodic Scottish cadence",
+      "small": "aye, listen here, wee",
+      "domain": "general"
+    },
+    {
+      "id": "irish",
+      "label": "Lyrical Irish Lilt",
+      "group": "British Isles",
+      "lang": "English",
+      "accent": "Irish",
+      "words": "musical rising Irish cadence",
+      "small": "grand, come on now, lovely",
+      "domain": "general"
+    },
+    {
+      "id": "french",
+      "label": "Velvet Parisian French Accent",
+      "group": "Europe",
+      "lang": "English",
+      "accent": "Parisian French",
+      "words": "soft breathy French vowels and gentle uvular R",
+      "small": "mon Dieu, alors, s'il te plait",
+      "domain": "general"
+    },
+    {
+      "id": "italian",
+      "label": "Warm Expressive Italian Accent",
+      "group": "Europe",
+      "lang": "English",
+      "accent": "Italian",
+      "words": "singing melodic Italian rhythm with expressive vowel openings",
+      "small": "allora, perfetto, bellissima",
+      "domain": "general"
+    },
+    {
+      "id": "russian",
+      "label": "Low Slavic / Russian Accent",
+      "group": "Europe",
+      "lang": "English",
+      "accent": "Russian",
+      "words": "crisp dark consonants and measured Slavic cadence",
+      "small": "da, listen closely, good",
+      "domain": "general"
+    },
+    {
+      "id": "japanese",
+      "label": "Japanese-Inflected English",
+      "group": "Asia & Africa",
+      "lang": "English",
+      "accent": "Japanese",
+      "words": "soft syllable-timed cadence with gentle Japanese inflection",
+      "small": "ne, chotto, hontou",
+      "domain": "general"
+    },
+    {
+      "id": "korean",
+      "label": "Korean-Inflected English",
+      "group": "Asia & Africa",
+      "lang": "English",
+      "accent": "Korean",
+      "words": "smooth Seoul cadence with soft melodic endings",
+      "small": "jinjja, aigoo, yah",
+      "domain": "general"
+    },
+    {
+      "id": "australian",
+      "label": "Relaxed Australian Drawl",
+      "group": "Oceania",
+      "lang": "English",
+      "accent": "Australian",
+      "words": "warm sun-drenched Australian inflection with relaxed rising terminals",
+      "small": "mate, no worries, reckon",
+      "domain": "general"
+    }
+  ]
+}

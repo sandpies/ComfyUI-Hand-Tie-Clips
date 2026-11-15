@@ -1,0 +1,708 @@
+{
+  "id": "fx",
+  "label": "FX",
+  "per": "project",
+  "note": "Optical, elemental, and blockbuster VFX overlays.",
+  "options": [
+    {
+      "id": "vfx_gasoline_fireball",
+      "label": "Hollywood gasoline fireball & spark explosion",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a Hollywood gasoline fireball explosion: a massive, rolling orange-and-gold napalm fireball detonates in the background, throwing a roaring shower of bright sparks into the air and bathing the subject's shoulders and hair in intense fiery rim light.",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "vfx_shockwave_air_ring",
+      "label": "360° compressed-air shockwave ring",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a compressed-air shockwave ring: a visible, translucent spherical ripple of refracted air and radial floor dust expands explosively outward from the subject, whipping hair, fabric and loose debris backward.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "vfx_muzzle_brass_storm",
+      "label": "Muzzle-flash strobe & spinning brass shells",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a gun-fu muzzle-flash and brass-casing storm: strobing orange star-shaped muzzle flashes illuminate the darkened room in sharp bursts while dozens of gleaming golden brass shell casings spin and clatter through the air in slow motion.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_bullet_time_ripples",
+      "label": "Matrix bullet-time air-ripple trails",
+      "group": "Action & Blockbuster VFX",
+      "rule": "bullet-time air-ripple trails: spinning copper bullets slice through the air in ultra-slow motion, leaving concentric silver corkscrew shockwave rings suspended across the foreground.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_plate_glass_explosion",
+      "label": "Backlit plate-glass shatter explosion",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a backlit plate-glass shatter explosion: a wall of glass bursts outward into thousands of glittering, diamond-like shards that spin and catch the backlight in slow motion around the subject.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_sword_spark_shower",
+      "label": "White-hot steel impact spark shower",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a white-hot steel impact spark shower: blinding cascades of incandescent orange and white metal sparks erupt and rain down across the foreground as if blades or bullets are clashing against steel.",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "vfx_anime_aura_rocks",
+      "label": "Super-Saiyan energy aura & levitating rocks",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a surging plasma energy aura with levitating stones: a roaring, translucent shroud of golden-cyan energy flames upward around the subject's body while cracked floor pebbles and dust lift weightlessly into the air.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_plasma_beam_blast",
+      "label": "Crackling blue plasma energy beam",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a crackling plasma energy beam: a blinding sphere of blue-white energy condenses between the subject's hands and fires forward as a roaring cylindrical beam wrapped in spiraling lightning arcs.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_crater_ground_crack",
+      "label": "Spiderweb concrete ground-crater fracture",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a spiderweb ground-crater fracture: the stone or concrete floor beneath the subject cracks open in a jagged radial spiderweb pattern, venting glowing orange fissures and a rising ring of dust.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_sweat_impact_spray",
+      "label": "High-speed backlit sweat & mist spray",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a high-shutter-speed backlit impact mist: a dramatic halo of glistening sweat droplets and fine water mist blasts outward from the subject's hair and skin in crisp 1000-fps slow motion.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_crimson_smoke_flare",
+      "label": "Tactical crimson smoke-grenade plume",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a tactical crimson smoke-grenade plume: thick, velvety clouds of vivid red smoke hiss and billow across the floor and around the subject, pierced by sharp shafts of backlight.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_dimensional_portal",
+      "label": "Spinning fiery dimensional portal ring",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a spinning fiery portal ring: a circular tear in space ringed with whirling orange sling-ring sparks opens directly behind the subject, revealing a glowing alien vista beyond.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_nano_armor_form",
+      "label": "Nanotech glowing armor materialization",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a nanotech armor materialization: thousands of glowing hexagonal metallic nano-plates flow rapidly across the subject's skin and lock together with blue energy seams.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_symbiote_liquid_tendrils",
+      "label": "Living glossy black liquid-suit tendrils",
+      "group": "Action & Blockbuster VFX",
+      "rule": "living glossy black liquid tendrils: viscous, mirror-gloss black symbiote tendrils surge up the subject's arms and torso, webbing together into a sleek living skin.",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "vfx_sonic_boom_cone",
+      "label": "Supersonic vapor-cone shockwave",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a supersonic Prandtl-Glauert vapor cone: a conical white cloud of condensed air pressure blooms around the subject as they accelerate, followed by a radial camera-shake ripple.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_lens_condensation_breath",
+      "label": "💨 Warm Breath Fogging Up the Camera Lens Glass",
+      "group": "Optical",
+      "rule": "close-up breath condensation on the camera lens: as the subject exhales close to the camera, a soft translucent patch of warm moisture fogs the lower glass of the lens and slowly clears.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_water_droplets_on_lens",
+      "label": "💧 Glistening Water Droplets Beading on the Camera Lens",
+      "group": "Optical",
+      "rule": "glistening water droplets hits the camera lens glass: a few clear droplets of water bead and slide down the front element of the lens, refracting the warm lights behind.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_floating_rose_petals_slow",
+      "label": "🌹 Slow-Motion Drifting Crimson Rose Petals Through Frame",
+      "group": "Elements",
+      "rule": "velvety crimson rose petals drift and spiral slowly through the foreground and background air in shallow focus, brushing past bare skin.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_golden_champagne_spray",
+      "label": "🍾 Popping Champagne Foam & Sparkling Golden Mist Spray",
+      "group": "Elements",
+      "rule": "a sparkling champagne spray eruption: fizzing golden champagne arcs through the air in slow motion, catching the light in thousands of glistening droplets.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_sweat_beads_shimmer_macro",
+      "label": "✨ Glistening Sweat Beads & Dewy Skin Specular Shimmer",
+      "group": "Optical",
+      "rule": "high-specular dewy skin and glistening sweat beads: fine droplets of moisture catch the key light across the collarbone, chest, and shoulders, rolling slowly down the skin with every movement.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_falling_cherry_blossoms",
+      "label": "🌸 Swirling Pink Sakura Cherry Blossom Petals in Breeze",
+      "group": "Elements",
+      "rule": "delicate pink sakura cherry blossom petals swirl across the frame on a warm breeze, with soft out-of-focus petals passing right in front of the lens.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_floating_gold_dust_bokeh",
+      "label": "✨ Shimmering Gold Dust Motes & Warm Starburst Bokeh",
+      "group": "Optical",
+      "rule": "shimmering gold dust motes suspended in sunbeams: tiny specks of golden light drift through the air and bloom into warm circular bokeh orbs.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_prism_rainbow_edge_refraction",
+      "label": "🌈 Crystal Prism Rainbow Edge Refraction & Dreamy Bloom",
+      "group": "Optical",
+      "rule": "optical crystal prism refraction: the outer edges of the frame split into soft rainbow spectral flares and dreamy double-image reflections while the center subject stays sharp.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_VHS_tracking_crt_scanlines",
+      "label": "📼 90s Camcorder CRT Scanlines & Tracking Glitch Bar",
+      "group": "Digital",
+      "rule": "analog VHS camcorder overlay: subtle horizontal CRT scanlines, warm magnetic tape chroma bleed, and a brief rolling tracking bar across the bottom edge.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_paparazzi_flashbulb_barrage",
+      "label": "📸 Red-Carpet Paparazzi Camera Flashbulb Barrage",
+      "group": "Optical",
+      "rule": "a barrage of rapid white paparazzi camera flashes: crisp bursts of high-key white flash light pop from multiple angles around the subject, casting shifting hard shadows and dazzling specular highlights.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_shadow_tentacles_floor",
+      "label": "🖤 Coiling Living Shadow Tendrils Rising from Floor",
+      "group": "Elements",
+      "rule": "living shadow tendrils: sleek, smoky-black ribbons of living shadow rise from the floor and coil sinuously around the ankles, thighs, and wrists.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_heartbeat_zoom_vignette_pulse",
+      "label": "💓 Hypnotic Heartbeat Micro-Pulse & Warm Vignette",
+      "group": "Optical",
+      "rule": "a rhythmic heartbeat optical pulse: on each slow thump, the edges of the frame bloom with a subtle warm vignette and shallow focus breathing locked to the subject's eyes.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_anime2real_water_dragon_slash",
+      "label": "🌊 Anime2Real: Demon Slayer Water Breathing Dragon & Ukiyo-e Wave Foam on Blade",
+      "group": "Action & Blockbuster VFX",
+      "rule": "photorealistic Water Breathing sword VFX: every swing of the weapon trails a churning vortex of crystal-clear ocean water and white ukiyo-e wave crests that coils into a roaring translucent water dragon splashing real water droplets across the room.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_hinokami_sun_flames",
+      "label": "🔥 Anime2Real: Hinokami Sun Breathing Liquid Solar Fire & Ember Trails",
+      "group": "Action & Blockbuster VFX",
+      "rule": "photorealistic Sun Breathing fire VFX: blazing arcs of white-hot liquid solar flames and swirling orange embers trail from the weapon and hands, casting intense interactive firelight across real skin and walls.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_thunder_breathing_arcs",
+      "label": "⚡ Anime2Real: Thunder Breathing Golden-Cyan Plasma Lightning & Floor Cracks",
+      "group": "Action & Blockbuster VFX",
+      "rule": "photorealistic Thunder Breathing lightning VFX: jagged bolts of blinding golden-and-cyan plasma electricity crackle around the subject's legs and weapon, spiderwebbing across the floor and leaving glowing ionized trails.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_black_flash_crimson",
+      "label": "🖤 Anime2Real: Cursed Black Flash (Pitch-Black Ink Core + Jagged Crimson Lightning)",
+      "group": "Action & Blockbuster VFX",
+      "rule": "photorealistic Cursed Black Flash VFX: dense pitch-black spatial distortion energy rimmed with jagged crimson-red lightning crackles around the subject's fists and erupts in a radial black-and-red shockwave on impact.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_2d_cel_slash_ribbons",
+      "label": "🎨 Mixed-Reality Slop: 2D Cel-Shaded Neon Paint Slashes & Manga Impact Frames in Real Life",
+      "group": "Action & Blockbuster VFX",
+      "rule": "mixed-reality 2D-on-3D anime slash VFX: vibrant 2D hand-drawn cel-shaded neon paint ribbons, comic speed-lines, and floating manga impact glyphs erupt in 3D space around the photorealistic live-action performer.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_moon_crescent_blades",
+      "label": "🌙 Anime2Real: Moon Breathing Glowing Purple-Gold Crescent Blade Storm",
+      "group": "Action & Blockbuster VFX",
+      "rule": "photorealistic Moon Breathing VFX: dozens of glowing violet-and-gold miniature crescent moon blades orbit the weapon and fan out in a razor-sharp luminescent storm across the room.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_shadow_monarch_smoke",
+      "label": "🖤 Anime2Real: Solo Leveling Shadow Monarch Black-and-Cyan Liquid Shadow Aura",
+      "group": "Action & Blockbuster VFX",
+      "rule": "photorealistic Shadow Monarch aura VFX: billowing pitch-black shadow smoke rimmed with glowing electric-cyan flames rises from the floor and wraps around the subject's body and glowing blue eyes.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_hollow_purple_singularity",
+      "label": "🟣 Anime2Real: Red + Blue Orbs Colliding into Hollow Purple Singularity Sphere",
+      "group": "Action & Blockbuster VFX",
+      "rule": "photorealistic Hollow Purple VFX: a crimson gravity orb and a cobalt-blue vacuum sphere fuse in front of the subject's hands into a blinding violet singularity that warps light and levitates debris.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_sakura_petal_bladestorm",
+      "label": "🌸 Anime2Real: Bankai Senbonzakura — Ten Thousand Glowing Razor Sakura Petals",
+      "group": "Action & Blockbuster VFX",
+      "rule": "photorealistic Bankai petal-storm VFX: a high-velocity vortex of thousands of glowing metallic-pink cherry blossom petals swirls through the air, casting soft pink rim light across the subject.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_conqueror_haki_lightning",
+      "label": "👑 Anime2Real: Conqueror's Haki Thick Crimson-and-Black Lightning Pressure Dome",
+      "group": "Action & Blockbuster VFX",
+      "rule": "photorealistic Conqueror's Haki VFX: thick, jagged bolts of crimson-and-black lightning and spherical air-pressure shockwaves radiate outward from the subject, cracking the floor and walls.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_sun_god_cloud_scarf",
+      "label": "☁️ Anime2Real: Awakening Luminescent White Hair & Floating Steam-Cloud Scarf",
+      "group": "Action & Blockbuster VFX",
+      "rule": "photorealistic Sun-God Awakening VFX: a ribbon of glowing, weightless white cumulus steam-clouds floats in a halo loop around the subject's shoulders while their hair glows pure luminescent white.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_amaterasu_black_fire",
+      "label": "👁️ Anime2Real: Inextinguishable Pitch-Black Flames with Violet Heat-Haze",
+      "group": "Action & Blockbuster VFX",
+      "rule": "photorealistic Amaterasu black-fire VFX: dense, roaring pitch-black flames rimmed with eerie violet heat-shimmer burn across surfaces and weapons.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_spiderverse_halftone_pop",
+      "label": "💥 Mixed-Reality Slop: Spider-Verse Ben-Day Halftone Dots & Chromatic Split Frames",
+      "group": "Action & Blockbuster VFX",
+      "rule": "mixed-reality comic-book pop-art VFX: vibrant Ben-Day halftone dot bursts, RGB chromatic split outlines, and floating 3D comic impact lettering erupt around the live-action subject.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_arcade_hitstop_ko_hud",
+      "label": "🕹️ Mixed-Reality Slop: Arcade Hit-Sparks, Combo Counter & Floating 'K.O.!' Hologram",
+      "group": "Action & Blockbuster VFX",
+      "rule": "mixed-reality fighting-game HUD VFX: neon pixel hit-sparks, a floating holographic combo counter, and a glowing 'K.O.!' banner erupt in 3D space on impact.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_warm_body_oil_pour_stream",
+      "label": "🍯 Glistening Stream of Warm Golden Body Oil Pouring Over Skin",
+      "group": "Elements",
+      "rule": "a continuous glistening ribbon of warm golden body oil pours from above onto bare skin, spreading into a mirror-bright, wet specular sheen.",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "vfx_steamy_mirror_handprint_wipe",
+      "label": "🖐️ Steamed-Up Glass / Mirror Wiped Clear by a Sliding Palm",
+      "group": "Optical",
+      "rule": "thick white bathroom steam coats the foreground glass or mirror until a bare palm presses and wipes across it, leaving a crystal-clear wet streak.",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "vfx_neon_kanji_hologram_rain",
+      "label": "🏮 Floating 3D Neon Kanji Holograms Reflecting in Wet Floor Puddles",
+      "group": "Digital",
+      "rule": "translucent 3D magenta-and-cyan neon kanji holograms float in the air around the subject and reflect sharply in the wet puddles underfoot.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_anime2real_senbonzakura_petal_vortex",
+      "label": "🌸 Anime2Real Senbonzakura — Glowing Pink Cherry-Blossom Blade-Petal Hurricane",
+      "group": "Action & Blockbuster VFX",
+      "rule": "millions of razor-sharp, bioluminescent pink cherry-blossom blade petals swirl in a high-velocity vortex around the subject, casting soft magenta rim light across skin and slicing through foreground obstacles.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_sandevistan_afterimage_ribbon",
+      "label": "🌈 Anime2Real Sandevistan — Neon Prismatic Afterimage Clone Trail on Every Move",
+      "group": "Action & Blockbuster VFX",
+      "rule": "every rapid movement leaves a glowing neon cyan-and-emerald chromatic afterimage trail of 6 to 8 translucent body silhouettes suspended along the path of motion.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_hinokami_sun_dragon_spiral",
+      "label": "☀️ Anime2Real Sun-Breathing — Coiling Solar-Fire Dragon & Golden Ember Halo",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a roaring, photorealistic 3D dragon of white-hot solar crimson-and-gold fire coils around the subject's weapon and torso, shedding drifting golden embers that illuminate the room.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_shadow_monarch_violet_smoke",
+      "label": "🟣 Anime2Real Shadow Monarch — Pitch-Black Liquid Shadow & Violet Lightning Aura",
+      "group": "Action & Blockbuster VFX",
+      "rule": "billowing black-and-violet shadow smoke rises from the floor around the subject's boots while electric purple lightning arcs crackle across their shoulders and glowing eyes.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_anime2real_dragons_breath_magnesium_sparks",
+      "label": "🔥 Dragon's Breath Incendiary — Blinding Cone of White-Hot Magnesium Sparks",
+      "group": "Action & Blockbuster VFX",
+      "rule": "a roaring 15-foot cone of white-hot orange magnesium sparks and incandescent embers erupts across the frame, bouncing off walls and floor in slow motion.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_warm_golden_body_oil_glaze",
+      "label": "✨ Glamour Body Oil — Mirror-Gloss Golden Specular Skin Sheen & Rolling Droplets",
+      "group": "Optical",
+      "rule": "a rich, mirror-gloss coat of warm golden body oil gleams across bare skin, catching razor-sharp specular highlights and slow-rolling oil droplets on every curve.",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "vfx_champagne_spray_slowmo_pearls",
+      "label": "🥂 Champagne Spray — Effervescent Golden Foam & Suspended Liquid Pearls",
+      "group": "Elements",
+      "rule": "a pressurized spray of sparkling golden champagne arcs through the air in slow motion, coating bare skin and glittering in thousands of suspended effervescent droplets.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_onsen_steam_condensation_beads",
+      "label": "♨️ Hot-Spring Onsen Steam — Rising Thermal Mist & Dewy Skin Condensation",
+      "group": "Elements",
+      "rule": "thick curls of warm white thermal steam rise from the water surface while glistening beads of condensation roll down flushed skin.",
+      "domain": "wet_tub"
+    },
+    {
+      "id": "vfx_manga_3d_kanji_impact_burst",
+      "label": "💥 Mixed-Reality Manga Kanji — Metallic 3D Japanese Sound-Effect Characters Floating on Impact",
+      "group": "Collage",
+      "rule": "bold, stylized 3D metallic-and-ink Japanese manga sound-effect characters ('ゴゴゴ' / 'ドォン') erupt in mid-air beside the subject on every heavy beat or strike.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_crimson_rose_petal_snowfall",
+      "label": "🌹 Velvet Rose-Petal Storm — Swirling Deep-Crimson Rose Petals Drifting Past Lens",
+      "group": "Elements",
+      "rule": "hundreds of velvety deep-crimson rose petals drift and swirl through the air in foreground bokeh and settle across the bedsheets and bare skin.",
+      "domain": "bedroom"
+    },
+    {
+      "id": "vfx_kinetic_shockwave_dust_ring",
+      "label": "💨 Kinetic Shockwave — Expanding Ground Dust Ring & Debris Burst",
+      "group": "Action & Blockbuster VFX",
+      "rule": "At impact, a flat circular pressure wave explodes radially outward across the ground kicking up dust, leaves, and coat hems in a sharp shockwave.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_rain_drop_bullet_time_freeze",
+      "label": "🌧️ Bullet-Time Suspended Raindrops & Hair Strand Micro-Drift",
+      "group": "Action & Blockbuster VFX",
+      "rule": "As speed ramps abruptly into bullet-time, hundreds of illuminated raindrops freeze suspended in mid-air catching neon rim glints while the camera glides past.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_sakura_wind_blade_tornado",
+      "label": "🌸 Pink Sakura Wind-Shear Vortex Swirling Around Strikes",
+      "group": "Action & Blockbuster VFX",
+      "rule": "Every spin kick or blade swing stirs hundreds of sunlit pink cherry blossom petals into a rising aerodynamic spiral around both combatants.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "vfx_crimson_lightning_black_sparks",
+      "label": "⚡ Crimson & Pitch-Black Lightning Arcs Crackling on Impact",
+      "group": "Action & Blockbuster VFX",
+      "rule": "Razor-jagged scarlet-and-black lightning tendrils crackle wildly outward from knuckle and blade collisions, flashing stark crimson highlights across faces.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_golden_ember_armor_aura",
+      "label": "✨ Rising Golden Ember Ash & Warm Hero Energy Aura",
+      "group": "Elements",
+      "rule": "Luminous warm golden embers lift steadily upward from the floor around the subject's boots and billowing jacket hems like weightless sparks.",
+      "domain": "general"
+    },
+    {
+      "id": "vfx_glass_shard_slowmo_glitter",
+      "label": "💎 Slow-Motion Shattering Safety Glass Diamond Glitter",
+      "group": "Action & Blockbuster VFX",
+      "rule": "Thousands of glistening faceted safety-glass cubes hang spinning slowly in golden backlight like suspended diamonds.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_silk_ribbon_floating_swirl",
+      "label": "🎀 Weightless Floating Crimson Silk Ribbons Drifting Across Frame",
+      "group": "Elements",
+      "rule": "Long luminous sheer silk ribbons drift gracefully through foreground and midground air currents curling softly past shoulders.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_neon_laser_grid_sweep",
+      "label": "🚨 Sweeping Crimson Security Laser Beams Slicing Haze",
+      "group": "Optical",
+      "rule": "Razor-thin glowing crimson security laser beams slice diagonally through misty vault air, casting tiny bright red pinpoint dots where beams graze skin or fabric.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_steam_mirror_condensation_clear",
+      "label": "🫧 Steamy Mirror Fog Clearing Across Palm Swipe Reveal",
+      "group": "Optical",
+      "rule": "Warm white bath steam coats the mirror borders while a clean hand swipe across the glass opens a crystal-clear reflection frame right on cue.",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "fx_oil_water_micro_droplets_macro",
+      "label": "💧 Mirror-Gloss Water & Body Oil Bead Specular Catchlights",
+      "group": "Optical",
+      "rule": "Hundreds of crisp round clear water and glistening oil droplets cling across curved shoulders, collarbones, and thighs catching warm pinpoint specular sparks.",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "fx_anamorphic_bokeh_heart_bloom",
+      "label": "✨ Soft Halation Bloom & Lush Stretched City Light Bokeh",
+      "group": "Optical",
+      "rule": "Warm dreamy 35mm optical halation blooms gently around lamps and city lights, melting distant streetlamps into large creamy oval bokeh orbs.",
+      "domain": "general"
+    },
+    {
+      "id": "fx_heat_distortion_mirage",
+      "label": "🔥 Radiant Thermal Air-Warp Distortion Behind Heat / Blast",
+      "group": "Optical",
+      "rule": "Wavy optical refraction warps the air visibly around glowing hot metal, roaring flame trails, or overcharged energy weapons.",
+      "domain": "general"
+    },
+    {
+      "id": "slow_motion",
+      "label": "Fluid High-Speed Slow Motion",
+      "group": "Optical",
+      "rule": "smooth high-frame-rate slow motion letting water droplets, hair, and sparks hang crisply in mid-air",
+      "domain": "general"
+    },
+    {
+      "id": "bullet_time",
+      "label": "Suspended Freeze & Arc",
+      "group": "Optical",
+      "rule": "mid-air physical climax suspended nearly frozen while the camera sweeps smoothly around floating debris",
+      "domain": "general"
+    },
+    {
+      "id": "prism",
+      "label": "Crystal Prism Rainbow Edge Split",
+      "group": "Optical",
+      "rule": "delicate prismatic spectral rainbow light flares refracting softly along highlight edges",
+      "domain": "general"
+    },
+    {
+      "id": "double_exposure",
+      "label": "Poetic Double Exposure Blend",
+      "group": "Collage",
+      "rule": "ghostly layered double exposure blending silhouette movement smoothly with city lights or foliage",
+      "domain": "general"
+    },
+    {
+      "id": "glitch",
+      "label": "RGB Digital Glitch Pulse",
+      "group": "Digital",
+      "rule": "intermittent crisp RGB scanline shifts and digital block displacement on impact beats",
+      "domain": "general"
+    },
+    {
+      "id": "fire_power",
+      "label": "Blazing Flame Aura & Sparks",
+      "group": "Elements",
+      "rule": "licking crimson-gold flames swirling cleanly around hands or weapons casting bright orange specular bounce",
+      "domain": "general"
+    },
+    {
+      "id": "lightning_power",
+      "label": "Crackling Electric Arcs",
+      "group": "Elements",
+      "rule": "sharp cobalt-violet lightning tendrils snapping across skin, steel, and shadowed walls",
+      "domain": "general"
+    },
+    {
+      "id": "water_power",
+      "label": "Pressurized Swirling Water Ribbons",
+      "group": "Elements",
+      "rule": "crystalline arcs of translucent swirling water erupting around movement with backlit spray droplets",
+      "domain": "general"
+    },
+    {
+      "id": "cherry_blossom_blizzard",
+      "label": "Swirling Sakura Petal Storm",
+      "group": "Elements",
+      "rule": "hundreds of crisp pink cherry-blossom petals drifting and swirling cleanly through wind and backlight",
+      "domain": "general"
+    },
+    {
+      "id": "dry_ice_floor_plume",
+      "label": "Low Rolling Stage Mist",
+      "group": "Elements",
+      "rule": "dense velvety white low-lying mist pooling smoothly around ankles and furniture legs",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "cinemagraph",
+      "label": "Living Still-Motion Isolate",
+      "group": "Optical",
+      "rule": "poised near-still subject framing while hair tips, steam, or curtain edges ripple softly",
+      "domain": "general"
+    },
+    {
+      "id": "datamosh",
+      "label": "Kinetic Pixel-Melt Transition",
+      "group": "Digital",
+      "rule": "fluid motion-vector smear carrying movement smoothly from one silhouette into the next",
+      "domain": "general"
+    },
+    {
+      "id": "diorama",
+      "label": "Crisp Miniature Scale Polish",
+      "group": "Optical",
+      "rule": "tactile shallow-plane lighting lending handcrafted miniature crispness to room details",
+      "domain": "general"
+    },
+    {
+      "id": "echo",
+      "label": "Translucent Motion Ghost Trails",
+      "group": "Optical",
+      "rule": "luminous rhythmic afterimage trails echoing rapid limb and hand sweeps",
+      "domain": "general"
+    },
+    {
+      "id": "feedback",
+      "label": "Infinite Optical Mirror Loop",
+      "group": "Optical",
+      "rule": "cascading luminous frame echoes receding cleanly into depth",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "hud",
+      "label": "Crisp Glass Visor Telemetry Overlay",
+      "group": "Digital",
+      "rule": "clean translucent holographic reticle and readout bars hovering gently around helmet or lens corners",
+      "domain": "general"
+    },
+    {
+      "id": "infrared",
+      "label": "Pale Botanical Infrared Glow",
+      "group": "Optical",
+      "rule": "surreal aerochrome-style luminous white-pink highlights contrasting deep ink skies",
+      "domain": "general"
+    },
+    {
+      "id": "kaleidoscope",
+      "label": "Symmetrical Prism Mirror Facets",
+      "group": "Optical",
+      "rule": "faceted crystalline prism reflections multiplying warm light highlights cleanly along frame borders",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "night_vision",
+      "label": "Emerald Tactical Low-Light Grain",
+      "group": "Digital",
+      "rule": "crisp emerald-phosphor low-light surveillance sheen with glowing eyeshine and subtle tube grain",
+      "domain": "general"
+    },
+    {
+      "id": "pixel_dissolve",
+      "label": "Shifting Mosaic Particle Scatter",
+      "group": "Digital",
+      "rule": "crisp geometric pixel blocks dissolving smoothly along motion edges into floating embers",
+      "domain": "general"
+    },
+    {
+      "id": "projection",
+      "label": "Mapped Light & Shadow Patterns",
+      "group": "Optical",
+      "rule": "vibrant cinematic film or floral patterns projected cleanly across bare shoulders and walls",
+      "domain": "general"
+    },
+    {
+      "id": "scan",
+      "label": "Luminous Volumetric Laser Sweep",
+      "group": "Digital",
+      "rule": "thin glowing horizontal laser scanline sweeping cleanly top-to-bottom across silhouettes",
+      "domain": "general"
+    },
+    {
+      "id": "slit_scan",
+      "label": "Fluid Slit-Scan Time Ribbon",
+      "group": "Optical",
+      "rule": "hypnotic flowing horizontal light ribbons stretching behind rhythmic movement",
+      "domain": "general"
+    },
+    {
+      "id": "thermal",
+      "label": "False-Color Heat Signature Map",
+      "group": "Digital",
+      "rule": "vivid indigo-to-amber-white thermal heat gradient tracing warm skin against cool air",
+      "domain": "general"
+    },
+    {
+      "id": "wigglegram",
+      "label": "3D Stereoscopic Flash Snap",
+      "group": "Optical",
+      "rule": "crisp 35mm flash pop with playful subtle parallax depth shift",
+      "domain": "general"
+    },
+    {
+      "id": "xray",
+      "label": "Translucent Cyan Structural Radiograph",
+      "group": "Digital",
+      "rule": "clean glowing blue-white translucent medical-art overlay gliding smoothly across silhouette edges",
+      "domain": "general"
+    },
+    {
+      "id": "zoetrope",
+      "label": "Stroboscopic Cyclical Cadence",
+      "group": "Optical",
+      "rule": "crisp stroboscopic flash accents carving rhythmic pose phases cleanly across dark studio air",
+      "domain": "general"
+    },
+    {
+      "id": "fx_altered_state_afterimage",
+      "label": "🌀 Altered-State Hue Afterimage & Motion Smear Trail",
+      "group": "Optical",
+      "rule": "dreamlike perceptual smear leaving soft translucent color afterimages trailing gracefully behind turning heads and moving hands",
+      "domain": "general"
+    },
+    {
+      "id": "fx_forced_perspective_scale",
+      "label": "📏 Forced-Perspective Scale Play (Foreground Giant / Background Tiny)",
+      "group": "Optical",
+      "rule": "clever in-camera forced-perspective depth staging placing a near-lens hand or prop at towering scale beside a distant full figure aligned on the same tabletop plane",
+      "domain": "general"
+    },
+    {
+      "id": "fx_object_portal_wormhole",
+      "label": "🚪 Prop / Mirror Wormhole Portal Transition",
+      "group": "Optical",
+      "rule": "seamless spatial portal effect where an ordinary mirror, cabinet door, or bag opens cleanly directly into a contrasting distant location",
+      "domain": "general"
+    },
+    {
+      "id": "fx_photogrammetry_mesh_orbit",
+      "label": "🧊 Photogrammetry Scanned-Mesh Orbit Texture",
+      "group": "Digital",
+      "rule": "tactile 3D photogrammetry scan aesthetic revealing faceted polygon surface micro-glints and crisp captured texture facets as the camera orbits smoothly",
+      "domain": "general"
+    },
+    {
+      "id": "fx_aspect_ratio_expand",
+      "label": "↔️ Dynamic Frame Aspect Expansion (Boxed Matte -> Full Widescreen)",
+      "group": "Optical",
+      "rule": "smoothly widening letterbox side mattes opening from tight claustrophobic framing into full panoramic horizontal space as the beat crescendos",
+      "domain": "general"
+    },
+    {
+      "id": "fx_selfie_twin_mirror_split",
+      "label": "🪞 Arm's-Length Selfie Twin Double-Take",
+      "group": "Digital",
+      "rule": "playful arm's-length wide-angle front-camera framing placing identical twin personas side by side reacting together in crisp candid phone clarity",
+      "domain": "general"
+    },
+    {
+      "id": "fx_sticker_peel_layer",
+      "label": "🏷️ Die-Cut Sticker Peel World Reveal",
+      "group": "Digital",
+      "rule": "glossy die-cut vinyl sticker edge curling smoothly off the frame corner with crisp adhesive sheen to reveal an active live scene underneath",
+      "domain": "general"
+    }
+  ]
+}

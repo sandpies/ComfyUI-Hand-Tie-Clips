@@ -8,6 +8,98 @@
     "ref_plan"
   ],
   "properties": {
+    "continuity": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Pre-beat spatial blocking sheet (fill FIRST on 2+ hops so every spot, screen quadrant, body facing, eyeline, START->END handoff, and cut reason is settled before writing `shot_plan`).",
+      "properties": {
+        "set_layout": {
+          "type": "string",
+          "description": "Floor plan of each place still / start frame in screen terms: near->far depth order, left/right landmarks, furniture facing, open floor vs wall-flush, and missing angles."
+        },
+        "spots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "who",
+              "phrase"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "who": {
+                "type": "string"
+              },
+              "phrase": {
+                "type": "string",
+                "description": "Fixed screen-space spot phrase: frame side/quadrant + depth + body facing + eyeline target (e.g. 'on bottom-left foreground, her back three-quarter to bottom-left of shot, facing @b in top-right')."
+              }
+            }
+          }
+        },
+        "hops": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "hop",
+              "start",
+              "action",
+              "end"
+            ],
+            "properties": {
+              "hop": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "start": {
+                "type": "string"
+              },
+              "action": {
+                "type": "string"
+              },
+              "end": {
+                "type": "string"
+              },
+              "end_framing": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "cuts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "at",
+              "why",
+              "matches"
+            ],
+            "properties": {
+              "at": {
+                "type": "string"
+              },
+              "why": {
+                "type": "string"
+              },
+              "matches": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "weak_spots": {
+          "type": "string"
+        }
+      }
+    },
     "shot_plan": {
       "type": "object",
       "required": [
@@ -31,7 +123,7 @@
               },
               "beat": {
                 "type": "string",
-                "description": "What happens THIS hop. Shot 1 is the whole opening; every later shot is only the new beat."
+                "description": "What happens THIS hop. Shot 1 is the whole opening (explicit screen placement: quadrant, depth, facing, eyeline). Every later continuous hop opens from the exact end pose, spot, facing and camera side of the previous hop. Every cut or [Shot N] re-places all visible subjects in screen coordinates."
               },
               "directives": {
                 "type": "object",
@@ -88,7 +180,7 @@
                     "default": "ongoing"
                   }
                 },
-                "description": "Compiled in the order join, camera, framing, pace, tail. `join` is ignored on shot 1."
+                "description": "Compiled in the order join, camera, framing, pace, tail. `join` is ignored on shot 1. Leave `camera` and `framing` omitted when directing camera moves, shot sizes, or [Shot N] cuts directly in the beat prose."
               },
               "prose": {
                 "type": "string",
@@ -207,8 +299,36 @@
               "strength": {
                 "type": "number",
                 "minimum": 0,
-                "maximum": 1,
-                "description": "RefMod only. 1 keeps the stored latent. Lower mixes it toward a blur of itself. Omit for 1."
+                "maximum": 3.0,
+                "description": "RefMod only. 1 keeps the stored latent. 0..1 mixes toward blur; >1 (up to 3) stacks copies + blur residual for stronger lock. Omit for 1."
+              },
+              "step_curve": {
+                "type": "string",
+                "enum": [
+                  "full",
+                  "early_lock",
+                  "late_detail",
+                  "fade",
+                  "mid_peak"
+                ],
+                "description": "RefMod only. Denoising-step schedule: full (default), early_lock (strong steps 0-40%, gentle late), late_detail, fade, or mid_peak. Omit for full."
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "description": "RefMod v5 bundle only. Optional 0-based visual member indices to activate on this row without rebuilding."
+              },
+              "shot_strengths": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 3.0
+                },
+                "description": "RefMod only. Optional per-hop strength overrides keyed by 1-based shot number."
               },
               "slot": {
                 "type": "integer",
@@ -342,6 +462,7 @@
     "A state change belongs at the END of the previous shot. Every hop opens holding the frames it was handed.",
     "Shot 1 establishes everything. Later shots carry ONLY the new beat -- never re-describe the face, the clothes or the room.",
     "Write @tags into the action line. Describing a reference in the register does not make the model use it.",
-    "Set `tail` to settle or hold on the FINAL shot, or the model is told action is still underway at the last frame and invents something to satisfy it."
+    "Set `tail` to settle or hold on the FINAL shot, or the model is told action is still underway at the last frame and invents something to satisfy it.",
+    "Every visible person has a fixed screen-space spot (frame quadrant, depth side, body facing, eyeline). Each continuous hop starts from the previous hop's exact END state; every cut or restart re-places everyone for the new camera."
   ]
 }

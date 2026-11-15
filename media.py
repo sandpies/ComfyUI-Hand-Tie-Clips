@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import math
 import os
+import threading
 
 TAG = "HandTieClips"
 
@@ -217,17 +218,21 @@ def listing(kinds=None):
     if not os.path.isdir(d):
         return []
     rows = []
-    for name in os.listdir(d):
-        kind = kind_of(name)
-        if kind is None or (kinds and kind not in kinds):
-            continue
-        path = os.path.join(d, name)
-        if not os.path.isfile(path):
-            continue
-        try:
-            rows.append((os.path.getmtime(path), name, kind))
-        except OSError:
-            continue
+    try:
+        with os.scandir(d) as it:
+            for entry in it:
+                name = entry.name
+                kind = kind_of(name)
+                if kind is None or (kinds and kind not in kinds):
+                    continue
+                try:
+                    if not entry.is_file():
+                        continue
+                    rows.append((entry.stat().st_mtime, name, kind))
+                except OSError:
+                    continue
+    except OSError:
+        return []
     rows.sort(reverse=True)
     return [{"name": n, "kind": k} for _m, n, k in rows]
 
@@ -331,6 +336,13 @@ def _mp_cap_size(w, h, cap_mp, multiple=32):
     return (max(m, int(w * scale) // m * m), max(m, int(h * scale) // m * m))
 
 
+_IMG_CACHE: dict = {}
+_IMG_CACHE_BYTES = 0
+_IMG_CACHE_MAX_BYTES = 256 * 1024 * 1024
+_IMG_CACHE_MAX_ITEMS = 16
+_IMG_CACHE_LOCK = threading.Lock()
+
+
 def load_image(name, cap_mp=0.0):
     """One still as an IMAGE tensor `[1,H,W,3]`, or None.
 
@@ -345,6 +357,17 @@ def load_image(name, cap_mp=0.0):
     path = resolve(name, kinds={"image"})
     if path is None:
         return None
+    cap_val = round(float(cap_mp or 0.0), 4)
+    cache_key = None
+    try:
+        st = os.stat(path)
+        cache_key = (os.path.normcase(os.path.normpath(path)), int(st.st_mtime_ns), int(st.st_size), cap_val)
+        with _IMG_CACHE_LOCK:
+            hit = _IMG_CACHE.get(cache_key)
+            if hit is not None:
+                return hit.clone()
+    except OSError:
+        cache_key = None
     try:
         from PIL import Image, ImageOps  # noqa: PLC0415
         with Image.open(path) as im:
@@ -356,7 +379,21 @@ def load_image(name, cap_mp=0.0):
                 print(f"[{TAG}] {name}: {im.width}x{im.height} -> {tw}x{th} "
                       f"({float(cap_mp):.2f} MP cap)", flush=True)
                 im = im.resize((tw, th), Image.Resampling.LANCZOS)
-            return _to_tensor(im)
+            t = _to_tensor(im)
+        if cache_key is not None:
+            nbytes = int(t.numel() * t.element_size())
+            if nbytes <= 64 * 1024 * 1024:
+                global _IMG_CACHE_BYTES
+                with _IMG_CACHE_LOCK:
+                    while (_IMG_CACHE_BYTES + nbytes > _IMG_CACHE_MAX_BYTES
+                           or len(_IMG_CACHE) >= _IMG_CACHE_MAX_ITEMS) and _IMG_CACHE:
+                        old_k = next(iter(_IMG_CACHE))
+                        old_v = _IMG_CACHE.pop(old_k)
+                        _IMG_CACHE_BYTES = max(0, _IMG_CACHE_BYTES - int(old_v.numel() * old_v.element_size()))
+                    _IMG_CACHE[cache_key] = t
+                    _IMG_CACHE_BYTES += nbytes
+                return t.clone()
+        return t
     except Exception as exc:
         print(f"[{TAG}] could not read reference {name!r}: {exc!r}", flush=True)
         return None

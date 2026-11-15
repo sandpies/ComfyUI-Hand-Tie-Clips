@@ -25,12 +25,25 @@ import { createTrimBar } from "./trim_bar.js";
 
 const ESTIMATE_URL = "/h3_ref_chain/refmod_estimate";
 const PLAN_URL = "/h3_ref_chain/refmod_plan";
+const FILES_URL = "/h3_ref_chain/files?folder=refmods";
+const INSPECT_URL = "/h3_ref_chain/refmod_inspect";
+const UPDATE_URL = "/h3_ref_chain/refmod_update";
+const THUMB_URL = "/h3_ref_chain/refmod_thumb";
+const PREVIEW_MASK_URL = "/h3_ref_chain/refmod_preview_mask";
 
 /** Dials the panel draws, so the mount hides exactly these. */
-const DIALS = ["name", "max_tokens", "subfolder", "save", "build", "description",
-    "subject_mask", "background_retention"];
+const DIALS = [
+    "name", "subfolder", "layout", "role", "default_step_curve",
+    "subject_mask", "background_mode", "background_retention",
+    "fit_mode", "crop_margin", "max_tokens", "description", "save", "build",
+];
 
 export const BUILDER_WIDGETS = ["mod_plan"].concat(DIALS);
+
+function cleanDesc(text) {
+    const s = String(text ?? "").trim();
+    return (s === "0" || s === "none" || s === "None" || s === "null") ? "" : s;
+}
 
 function parseModPlan(text) {
     const raw = String(text || "").trim();
@@ -306,25 +319,91 @@ export function createModBuilder(node, { onChange } = {}) {
 
     const right = el("div", "h3e-mod-right");
     const dialSec = el("div", "h3e-section h3e-mod-dials");
-    dialSec.appendChild(el("span", "h3e-title", "BUILD"));
+    const dialHead = el("div", "h3e-mod-head");
+    dialHead.appendChild(el("span", "h3e-title", "BUILD & INSPECT"));
+    const storedSelect = el("select", "h3e-select");
+    storedSelect.title = "Pick an existing RefMod in models/refmods/ to inspect, load sources, or edit header metadata.";
+    storedSelect.appendChild(el("option", null, "— existing RefMod —")).value = "";
+    storedSelect.addEventListener("change", () => {
+        const chosen = storedSelect.value;
+        if (!chosen) return;
+        const slash = chosen.lastIndexOf("/");
+        const nameW = widgetByName(node, "name");
+        const subW = widgetByName(node, "subfolder");
+        if (slash >= 0) {
+            if (subW) { subW.value = chosen.slice(0, slash); subW.callback?.(subW.value, node.graph?.canvas, node); }
+            if (nameW) { nameW.value = chosen.slice(slash + 1); nameW.callback?.(nameW.value, node.graph?.canvas, node); }
+        } else {
+            if (subW) { subW.value = ""; subW.callback?.("", node.graph?.canvas, node); }
+            if (nameW) { nameW.value = chosen; nameW.callback?.(nameW.value, node.graph?.canvas, node); }
+        }
+        renderDials();
+        loadStoredPlan({ keepSourcesIfEmpty: true });
+    });
+    dialHead.appendChild(storedSelect);
+    dialSec.appendChild(dialHead);
+
     const dialGrid = el("div", "h3e-grid");
     dialSec.appendChild(dialGrid);
+
+    const actionBar = el("div", "h3e-mod-actions");
+    dialSec.appendChild(actionBar);
     right.appendChild(dialSec);
+
+    function fullModName() {
+        const nm = String(widgetByName(node, "name")?.value || "").trim();
+        const sub = String(widgetByName(node, "subfolder")?.value || "")
+            .trim().replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+        if (!nm) return "";
+        return sub ? `${sub}/${nm}` : nm;
+    }
+
+    function currentLayout() {
+        return String(widgetByName(node, "layout")?.value || "separate_pictures");
+    }
+
+    let modFiles = [];
+    async function refreshStoredList() {
+        try {
+            const r = await fetch(FILES_URL);
+            const j = await r.json();
+            if (!Array.isArray(j.files)) return;
+            modFiles = j.files;
+            const cur = fullModName();
+            storedSelect.textContent = "";
+            storedSelect.appendChild(el("option", null, "— existing RefMod —")).value = "";
+            for (const f of modFiles) {
+                const badge = f.format ? ` [${f.format}${f.members_count > 1 ? ` · ${f.members_count}m` : ""}]` : "";
+                const o = el("option", null, `${f.name}${badge}`);
+                o.value = f.name;
+                storedSelect.appendChild(o);
+            }
+            if (cur && modFiles.some((f) => f.name === cur)) {
+                storedSelect.value = cur;
+            }
+        } catch (_) { /* server offline during headless mount */ }
+    }
 
     const owned = [];
     const readers = [];
 
     function renderDials() {
         dialGrid.textContent = "";
+        actionBar.textContent = "";
         owned.length = 0;
         readers.length = 0;
         const rejected = [];
         for (const name of DIALS) {
             const w = widgetByName(node, name);
             if (!w) continue;
+            if (name === "description") {
+                const cleaned = cleanDesc(w.value);
+                if (cleaned !== String(w.value ?? "").trim()) w.value = cleaned;
+            }
             const f = fieldFor(node, w, () => {
                 paintSummary();
                 onChange?.();
+                if (name === "layout") estimate();
             });
             if (!f) {
                 rejected.push(`${name}:${widgetType(w) || "?"}`);
@@ -342,25 +421,200 @@ export function createModBuilder(node, { onChange } = {}) {
         if (rejected.length) {
             console.warn("[HandTieClips] RefMod dials left native:", rejected.join(", "));
         }
-        // Reload the sources a saved mod was built from. The header carries
-        // the mod_plan it was written with, so adding a fourth still to a
-        // mod built last month does not mean finding the graph that built
-        // it. Header read only -- no tensor, no VAE.
-        const load = button("load sources",
-            "Read back the stills and clip this name was last built from, "
-            + "and put them in the panel. Replaces what is here now.",
-            () => loadStoredPlan());
-        load.classList.add("h3e-run-wide");
-        dialGrid.appendChild(load);
+        actionBar.appendChild(button("load sources",
+            "Read back the stills, clip, voice, and header metadata stored in this RefMod.",
+            () => loadStoredPlan()));
+        actionBar.appendChild(button("preview mask",
+            "Run subject mask isolation on the first still so you can inspect the cutout before building.",
+            () => previewFirstMask()));
+        actionBar.appendChild(button("save header only",
+            "Update description, role, default step curve, and voice metadata inside the existing .safetensors file without re-encoding.",
+            () => saveHeaderOnly()));
     }
 
-    /* -- summary ---------------------------------------------------------- */
+    /* -- summary + mask preview + stored mod inspector -------------------- */
 
     const summary = el("div", "h3e-note h3e-mod-summary");
     right.appendChild(summary);
 
-    async function loadStoredPlan() {
-        const name = String(widgetByName(node, "name")?.value || "").trim();
+    const maskPreviewBox = el("div", "h3e-section h3e-mod-maskbox");
+    maskPreviewBox.hidden = true;
+    const maskHead = el("div", "h3e-mod-head");
+    const maskTitle = el("span", "h3e-title", "MASK PREVIEW");
+    maskHead.appendChild(maskTitle);
+    maskHead.appendChild(button("×", "Hide mask preview", () => {
+        maskPreviewBox.hidden = true;
+    }, "h3e-btn h3e-x"));
+    const maskImg = el("img", "h3e-mod-maskimg");
+    maskImg.alt = "Subject mask preview";
+    const maskNote = el("div", "h3e-note h3e-note-hint");
+    maskPreviewBox.append(maskHead, maskImg, maskNote);
+    right.appendChild(maskPreviewBox);
+
+    const modInspector = el("div", "h3e-section h3e-mod-inspector");
+    modInspector.hidden = true;
+    right.appendChild(modInspector);
+
+    let maskObjUrl = "";
+    let lastInspected = null;
+
+    function renderInspector(info) {
+        lastInspected = info || null;
+        modInspector.textContent = "";
+        if (!info) {
+            modInspector.hidden = true;
+            return;
+        }
+        modInspector.hidden = false;
+        const head = el("div", "h3e-mod-head");
+        head.appendChild(el("span", "h3e-title", `STORED: ${info.name}`));
+        const badges = el("div", "h3e-mod-badges");
+        badges.appendChild(el("span", "h3e-count", `${info.format || "v4"} · ${info.role || "generic"} · ${info.tokens || 0} tok`));
+        head.appendChild(badges);
+        modInspector.appendChild(head);
+
+        const card = el("div", "h3e-mod-card");
+        if (info.has_looks) {
+            const thumb = el("img", "h3e-mod-thumb");
+            thumb.src = `${THUMB_URL}?name=${encodeURIComponent(info.name)}&member=0&w=160&t=${Date.now()}`;
+            thumb.alt = info.name;
+            thumb.addEventListener("error", () => { thumb.style.display = "none"; });
+            card.appendChild(thumb);
+        }
+        const details = el("div", "h3e-mod-members");
+        const metaLine = [
+            `curve: ${info.default_step_curve || "full"}`,
+            info.has_audio_latent ? "audio latent embedded" : (info.voice?.file ? `voice: ${info.voice.file}` : "no voice"),
+            info.description ? `"${info.description}"` : "(empty description)",
+        ].join(" · ");
+        details.appendChild(el("div", "h3e-note h3e-note-hint", metaLine));
+
+        const members = Array.isArray(info.members) ? info.members : [];
+        if (members.length > 0) {
+            const rowWrap = el("div", "h3e-mod-members");
+            for (const m of members) {
+                const chip = el("div", "h3e-mod-mchip");
+                const shapeStr = m.kind === "audio"
+                    ? `${m.tokens || 0} tok`
+                    : `${(m.shape?.[2] || 0) * 16}×${(m.shape?.[1] || 0) * 16} (${m.tokens || 0} tok)`;
+                chip.appendChild(el("span", null, `#${m.index + 1} ${m.kind} ${shapeStr}`));
+                if (members.length > 1 && info.kind === "bundle") {
+                    chip.appendChild(button("×", "Remove this member from the v5 bundle (header+tensor rewrite, no re-encode)", async () => {
+                        try {
+                            const r = await fetch(UPDATE_URL, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    name: info.name,
+                                    action: "remove_member",
+                                    member_idx: m.index,
+                                }),
+                            });
+                            const j = await r.json();
+                            if (!r.ok || !j.ok) {
+                                setSummary("error", j.error || "member removal failed");
+                                return;
+                            }
+                            renderInspector(j.inspect);
+                            refreshStoredList();
+                            if (typeof window !== "undefined") {
+                                window.dispatchEvent?.(new CustomEvent("htc:refmods-changed"));
+                            }
+                            setSummary("hint", `Removed member #${m.index + 1} from ${info.name}.`);
+                        } catch (err) {
+                            setSummary("error", String(err));
+                        }
+                    }, "h3e-btn h3e-x"));
+                }
+                rowWrap.appendChild(chip);
+            }
+            details.appendChild(rowWrap);
+        }
+        card.appendChild(details);
+        modInspector.appendChild(card);
+    }
+
+    async function previewFirstMask() {
+        const firstStill = plan.stills.find((s) => Boolean(s));
+        if (!firstStill) {
+            setSummary("error", "Add a still first to preview subject masking.");
+            return;
+        }
+        const subjMaskRaw = String(widgetByName(node, "subject_mask")?.value || "off");
+        const useBackend = subjMaskRaw === "off" ? "auto_rembg" : subjMaskRaw;
+        const ret = Number(widgetByName(node, "background_retention")?.value || 0);
+        const bgMode = String(widgetByName(node, "background_mode")?.value || "blur_bg");
+        const margin = Number(widgetByName(node, "crop_margin")?.value || 0);
+        maskPreviewBox.hidden = false;
+        maskNote.textContent = `Generating ${useBackend} (${bgMode}) preview for ${firstStill}...`;
+        try {
+            const res = await fetch(PREVIEW_MASK_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    image: firstStill,
+                    subject_mask: useBackend,
+                    background_retention: ret,
+                    background_mode: bgMode,
+                    crop_margin: margin,
+                }),
+            });
+            if (!res.ok) {
+                const errJson = await res.json().catch(() => ({}));
+                maskNote.textContent = errJson.error || `Mask preview failed (HTTP ${res.status})`;
+                return;
+            }
+            const blob = await res.blob();
+            if (maskObjUrl) URL.revokeObjectURL(maskObjUrl);
+            maskObjUrl = URL.createObjectURL(blob);
+            maskImg.src = maskObjUrl;
+            maskNote.textContent = subjMaskRaw === "off"
+                ? `Previewed ${useBackend} (${bgMode}). Note: subject_mask dial is currently 'off' — set it to ${useBackend} to apply when building.`
+                : `Previewing ${useBackend} · ${bgMode} · retention ${ret.toFixed(2)}` + (margin > 0 ? ` · crop ${margin.toFixed(2)}x` : "");
+        } catch (err) {
+            maskNote.textContent = `Mask preview failed: ${err}`;
+        }
+    }
+
+    async function saveHeaderOnly() {
+        const name = fullModName();
+        if (!name) { setSummary("error", "Name a mod first."); return; }
+        const desc = cleanDesc(widgetByName(node, "description")?.value || "");
+        const role = String(widgetByName(node, "role")?.value || "identity");
+        const sc = String(widgetByName(node, "default_step_curve")?.value || "full");
+        try {
+            const res = await fetch(UPDATE_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name,
+                    action: "meta",
+                    description: desc,
+                    role,
+                    default_step_curve: sc,
+                    voice: plan.voice || "",
+                    voice_start: plan.voiceStart || 0,
+                    voice_end: plan.voiceEnd || 0,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.ok) {
+                setSummary("error", data.error || "header update failed");
+                return;
+            }
+            renderInspector(data.inspect);
+            refreshStoredList();
+            if (typeof window !== "undefined") {
+                window.dispatchEvent?.(new CustomEvent("htc:refmods-changed"));
+            }
+            setSummary("hint", `Saved header metadata for ${name} (no VAE re-encode).`);
+        } catch (err) {
+            setSummary("error", `Header save failed: ${err}`);
+        }
+    }
+
+    async function loadStoredPlan({ keepSourcesIfEmpty = false } = {}) {
+        const name = fullModName();
         if (!name) { setSummary("error", "Name a mod first."); return; }
         try {
             const res = await fetch(PLAN_URL, {
@@ -372,17 +626,29 @@ export function createModBuilder(node, { onChange } = {}) {
             if (!data.ok) { setSummary("error", data.error || "read failed"); return; }
             const stored = data.plan || {};
             const stills = Array.isArray(stored.stills) ? stored.stills : [];
-            // The caption comes back with the sources, so a rebuild does not
-            // quietly write the file out with an empty description.
+            const inspect = data.inspect || null;
+            renderInspector(inspect);
+
             const cap = widgetByName(node, "description");
-            if (cap && data.description && !String(cap.value || "").trim()) {
-                cap.value = data.description;
-                renderDials();
+            const descText = cleanDesc(data.description || inspect?.description || "");
+            if (cap && descText && !cleanDesc(cap.value)) {
+                cap.value = descText;
+                cap.callback?.(cap.value, node.graph?.canvas, node);
             }
+            if (inspect?.role) {
+                const rw = widgetByName(node, "role");
+                if (rw) { rw.value = inspect.role; rw.callback?.(rw.value, node.graph?.canvas, node); }
+            }
+            if (inspect?.default_step_curve) {
+                const sw = widgetByName(node, "default_step_curve");
+                if (sw) { sw.value = inspect.default_step_curve; sw.callback?.(sw.value, node.graph?.canvas, node); }
+            }
+            renderDials();
+
             if (!stills.length && !stored.clip && !stored.voice) {
-                // Not an error. A mod built through the sockets, or before
-                // the header carried this, has nothing to give back.
-                setSummary("hint", `${name} carries no source list.`);
+                if (!keepSourcesIfEmpty) {
+                    setSummary("hint", `${name} carries no source list.`);
+                }
                 return;
             }
             plan.stills = stills.slice();
@@ -417,6 +683,7 @@ export function createModBuilder(node, { onChange } = {}) {
                 stills: plan.stills.filter(Boolean),
                 clip: plan.clip,
                 voice: plan.voice || "",
+                layout: currentLayout(),
             }),
         })
             .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
@@ -466,11 +733,16 @@ export function createModBuilder(node, { onChange } = {}) {
         if (est?.clip_frames) bits.push(`${est.clip_frames}f clip`);
         else if (plan.clip) bits.push("clip");
         let line = bits.join(" + ");
+        const lay = est?.layout || currentLayout();
         if (est?.canvas) {
-            line += ` → ${est.canvas[0]}×${est.canvas[1]} canvas, `
-                + `${est.per_frame_tokens} tokens a frame`;
-            if (modeValue() === "encode" && nStills && !plan.clip) {
-                line += `, ${est.still_tokens} total`;
+            if (lay === "separate_pictures" && nStills > 0 && !plan.clip) {
+                line += ` → v5 native-aspect bundle (${est.still_tokens} tokens total)`;
+            } else {
+                line += ` → ${est.canvas[0]}×${est.canvas[1]} canvas, `
+                    + `${est.per_frame_tokens} tokens a frame`;
+                if (nStills && !plan.clip) {
+                    line += `, ${est.still_tokens} total`;
+                }
             }
         }
         if (plan.voice) {
@@ -492,7 +764,19 @@ export function createModBuilder(node, { onChange } = {}) {
     root.appendChild(right);
 
     const stopFiles = onFilesChanged(
-        () => { renderStills(); renderClip(); renderVoice(); });
+        () => { renderStills(); renderClip(); renderVoice(); refreshStoredList(); });
+    const onRefmodsEvt = () => {
+        refreshStoredList();
+        if (lastInspected?.name) {
+            fetch(`${INSPECT_URL}?name=${encodeURIComponent(lastInspected.name)}`)
+                .then((r) => (r.ok ? r.json() : null))
+                .then((j) => { if (j?.ok) renderInspector(j); })
+                .catch(() => {});
+        }
+    };
+    if (typeof window !== "undefined") {
+        window.addEventListener?.("htc:refmods-changed", onRefmodsEvt);
+    }
 
     function refresh() {
         plan = readPlan();
@@ -500,6 +784,7 @@ export function createModBuilder(node, { onChange } = {}) {
         renderClip();
         renderVoice();
         renderDials();
+        refreshStoredList();
         estimate();
     }
 
@@ -510,6 +795,17 @@ export function createModBuilder(node, { onChange } = {}) {
         refresh,
         /** Widget names the panel drew, so the mount hides exactly those. */
         ownedNames: () => ["mod_plan"].concat(owned),
-        dispose: () => { stopFiles?.(); clipBar?.destroy?.(); voiceBar.destroy(); },
+        dispose: () => {
+            stopFiles?.();
+            if (typeof window !== "undefined") {
+                window.removeEventListener?.("htc:refmods-changed", onRefmodsEvt);
+            }
+            if (maskObjUrl) {
+                URL.revokeObjectURL(maskObjUrl);
+                maskObjUrl = "";
+            }
+            clipBar?.destroy?.();
+            voiceBar.destroy();
+        },
     };
 }

@@ -143,3 +143,48 @@ def match_band(t, target_ratio, sigma=2.0, clamp=(0.5, 2.0)):
         k *= r / got_r
     k = min(max(k, clamp[0]), clamp[1])
     return lo + hi * k, k
+
+
+def motion_overload_score(video_latent, warn_ratio=2.4):
+    """Lightweight temporal jitter / overload metric over an H3 video latent.
+
+    Accepts a `[B,C,T,H,W]` tensor, `NestedTensor`, or `{"samples": ...}` dict.
+    Measures peak-to-median frame-step velocity (`spike_ratio`) and second-order
+    acceleration relative to spatial variance (`accel_index`). -> dict or None.
+    """
+    v = None
+    if isinstance(video_latent, dict):
+        ps = from_dict(video_latent)
+        v = ps[0] if ps else None
+    elif isinstance(video_latent, torch.Tensor):
+        v = video_latent
+    else:
+        ps = parts(video_latent)
+        v = ps[0] if ps else None
+    if v is None or not isinstance(v, torch.Tensor) or v.ndim != 5 or int(v.shape[2]) < 4:
+        return None
+    vf = v.detach().float()
+    dv = vf[:, :, 1:] - vf[:, :, :-1]
+    step_rms = dv.pow(2).mean(dim=(0, 1, 3, 4)).sqrt()
+    med = float(step_rms.median())
+    peak_val, peak_idx = step_rms.max(dim=0)
+    spike_ratio = float(peak_val) / max(med, 1e-6)
+    ddv = dv[:, :, 1:] - dv[:, :, :-1]
+    base_sd = float(vf.std())
+    accel_index = float(ddv.pow(2).mean().sqrt()) / max(base_sd, 1e-6)
+    score = min(1.0, max(0.0, 0.45 * max(0.0, spike_ratio - 1.0) / 2.0 + 0.55 * max(0.0, accel_index - 0.35) / 0.85))
+    overloaded = bool(spike_ratio >= float(warn_ratio) or accel_index >= 0.85)
+    status = "overload" if overloaded else ("elevated" if score >= 0.45 else "smooth")
+    note = (
+        f"motion {status} (score {score:.2f}, spike {spike_ratio:.2f}x at step {int(peak_idx) + 1}, "
+        f"accel {accel_index:.2f})"
+    )
+    return {
+        "score": round(score, 3),
+        "spike_ratio": round(spike_ratio, 2),
+        "accel_index": round(accel_index, 3),
+        "peak_step": int(peak_idx) + 1,
+        "overloaded": overloaded,
+        "status": status,
+        "note": note,
+    }

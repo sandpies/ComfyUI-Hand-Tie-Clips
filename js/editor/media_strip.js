@@ -273,6 +273,29 @@ export function createMediaStrip(node, { onChange, chainSeconds } = {}) {
             onChange,
             title: tip,
         });
+        if (name === "master_audio_file") {
+            const dlgAudio = widgetByName(node, "dialogue_audio_file");
+            if (dlgAudio) {
+                const vocRow = el("label", "h3e-row");
+                vocRow.style.fontSize = "11px";
+                vocRow.style.gap = "5px";
+                vocRow.style.marginTop = "4px";
+                vocRow.title = "When master_audio_file is set and dialogue_lock is off: extract the isolated vocal stem (Demucs) to drive lip-sync while keeping the unmodified full mix in the delivered MP4.";
+                const vocChk = document.createElement("input");
+                vocChk.type = "checkbox";
+                vocChk.checked = String(dlgAudio.value || "").trim().toLowerCase() === "auto:vocals";
+                vocChk.addEventListener("change", () => {
+                    commit(node, dlgAudio, vocChk.checked ? "auto:vocals" : "");
+                    syncCount();
+                    onChange?.();
+                });
+                vocRow.append(vocChk, el("span", null, "Vocals-only lip-sync driver (keep full mix in MP4)"));
+                body.appendChild(vocRow);
+                trimRows.push(() => {
+                    vocChk.checked = String(dlgAudio.value || "").trim().toLowerCase() === "auto:vocals";
+                });
+            }
+        }
         cell.title = tip;
         body.appendChild(pick.root);
         grid.appendChild(cell);

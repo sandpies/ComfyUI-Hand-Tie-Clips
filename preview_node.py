@@ -44,15 +44,17 @@ class HTCChainPreview:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "images": ("IMAGE", {"tooltip": "The chain's images. Passed through unchanged."}),
+                "images": ("IMAGE", {
+                    "tooltip": "Generated video frames from HandTieClips. Passed through untouched for live preview and end-of-run diagnostics.",
+                }),
             },
             "optional": {
                 "audio": ("AUDIO", {
-                    "tooltip": "The chain's audio. Wire it to see the audio and video lengths compared.",
+                    "tooltip": "Generated soundtrack from HandTieClips. Wire it to measure A/V sync drift against the video frames.",
                 }),
                 "info": ("STRING", {
                     "forceInput": True,
-                    "tooltip": "The chain's info output, shown in the details.",
+                    "tooltip": "The info string from HandTieClips. Feeds seam health, motion overload, and hop diagnostics into the preview card.",
                 }),
             },
             "hidden": {"unique_id": "UNIQUE_ID"},
@@ -111,7 +113,14 @@ class HTCChainPreview:
                 print(f"[{TAG}] {frames}f / {video_s:.2f}s video, "
                       f"{audio_s:.2f}s audio, drift {drift_ms:+.0f} ms", flush=True)
         if info:
-            payload["info"] = str(info)
+            info_s = str(info)
+            payload["info"] = info_s
+            for ln in info_s.splitlines():
+                low = ln.strip().lower()
+                if low.startswith("seam health:"):
+                    payload["seam_health"] = ln.split(":", 1)[1].strip()
+                elif low.startswith("motion overload:"):
+                    payload["motion_overload"] = ln.split(":", 1)[1].strip()
 
         _send(payload)
         return (images, audio)

@@ -38,7 +38,7 @@ from __future__ import annotations
 import torch
 
 TAG = "HTCTone"
-MODES = ["off", "frame_shift", "gain_bias", "lut", "anchor"]
+MODES = ["off", "frame_shift", "gain_bias", "lut", "anchor", "chroma"]
 
 # --- anchor mode ------------------------------------------------------------
 # The other three modes are seam-LOCAL: they measure the denoiser's tone bias on
@@ -443,6 +443,198 @@ def anchor_pull(target, ref_stats, strength=ANCHOR_STRENGTH,
     return out, note
 
 
+def chroma_stats(imgs, sample=ANCHOR_STAT_FRAMES):
+    """CIE Lab chroma moments `[mean_a, mean_b, std_a, std_b]` (chunked, flat RAM)."""
+    if imgs is None or int(imgs.shape[0]) == 0:
+        return None
+    x = imgs
+    n = int(x.shape[0])
+    k = int(sample or 0)
+    if 0 < k < n:
+        x = x[torch.linspace(0, n - 1, k).round().long().unique()]
+    n, h, w = int(x.shape[0]), int(x.shape[1]), int(x.shape[2])
+    step = _lab_chunk(n, h, w)
+    tot_ab = torch.zeros(2, dtype=torch.float64)
+    sq_ab = torch.zeros(2, dtype=torch.float64)
+    count = 0
+    for s in range(0, n, step):
+        lab = _srgb_to_lab(x[s:s + step].float())
+        ab = lab[..., 1:3].reshape(-1, 2).double()
+        tot_ab += ab.sum(dim=0).cpu()
+        sq_ab += (ab * ab).sum(dim=0).cpu()
+        count += int(ab.shape[0])
+    if count == 0:
+        return None
+    mean_ab = tot_ab / count
+    var_ab = (sq_ab / count - mean_ab * mean_ab).clamp_min(0.0)
+    std_ab = var_ab.sqrt()
+    return torch.tensor(
+        [float(mean_ab[0]), float(mean_ab[1]), float(std_ab[0]), float(std_ab[1])],
+        dtype=torch.float32,
+    )
+
+
+def chroma_pull(target, ref_stats, strength=0.85, max_shift=ANCHOR_MAX_SHIFT,
+                ramp=ANCHOR_RAMP, max_gain=0.18, in_place=False):
+    """Match CIE Lab chroma (`a*`, `b*` mean & spread) toward `ref_stats` while
+    leaving `L*` brightness completely untouched (fixes global tone_lock face darkening).
+    """
+    if target is None or ref_stats is None:
+        return target, ""
+    strength = float(strength)
+    if strength <= 0.0:
+        return target, ""
+    n = int(target.shape[0])
+    if n == 0:
+        return target, ""
+    cur = chroma_stats(target)
+    if cur is None:
+        return target, ""
+    ref = ref_stats.reshape(-1).float().cpu()
+
+    cap = abs(float(max_shift)) * 120.0
+    want_ab = ((ref[:2] - cur[:2]) * strength).clamp(-cap, cap)
+    gcap = abs(float(max_gain))
+    gains = [1.0, 1.0]
+    for ci in range(2):
+        c_sd, r_sd = float(cur[2 + ci]), float(ref[2 + ci])
+        if c_sd > 0.5 and r_sd > 0.5:
+            g = 1.0 + (r_sd / c_sd - 1.0) * strength
+            gains[ci] = min(1.0 + gcap, max(1.0 - gcap, g))
+
+    if float(want_ab.abs().max()) < 0.08 and max(abs(g - 1.0) for g in gains) < 1e-3:
+        return target, ""
+
+    w = torch.ones(n, dtype=torch.float32)
+    r = 0 if int(ramp) <= 0 else max(2, min(int(ramp), n))
+    if n > 1 and r:
+        w[:r] = torch.linspace(0.0, 1.0, r, dtype=torch.float32)
+
+    h, wd = int(target.shape[1]), int(target.shape[2])
+    step = _lab_chunk(n, h, wd)
+    out = target if in_place else torch.empty_like(target)
+    ab0 = cur[:2]
+    g_vec = torch.tensor([1.0, gains[0], gains[1]], dtype=torch.float32)
+    b_vec = torch.tensor([
+        0.0,
+        float(ab0[0]) * (1.0 - gains[0]) + float(want_ab[0]),
+        float(ab0[1]) * (1.0 - gains[1]) + float(want_ab[1]),
+    ], dtype=torch.float32)
+    for s in range(0, n, step):
+        src = target[s:s + step].float()
+        g_ = g_vec.to(device=src.device)
+        b_ = b_vec.to(device=src.device)
+        rgb = _lab_to_srgb(_srgb_to_lab(src) * g_ + b_)
+        if s >= r:
+            out[s:s + step] = rgb.to(target.dtype)
+            continue
+        wt = w[s:s + step].to(device=src.device).view(-1, 1, 1, 1)
+        out[s:s + step] = (src * (1.0 - wt) + rgb * wt).to(target.dtype)
+
+    note = (f"chroma a*{float(want_ab[0]):+.2f} b*{float(want_ab[1]):+.2f} "
+            f"spread x{gains[0]:.3f}/{gains[1]:.3f} (L* untouched, ramp {r}f)")
+    return out, note
+
+
+def chroma_stabilize_take(imgs, *, ref_start=0, ref_frames=192, window=192,
+                          strength=0.85, max_shift=ANCHOR_MAX_SHIFT,
+                          ramp=ANCHOR_RAMP, in_place=True):
+    """Streamed per-window Lab chroma stabilization for long `sand_tie` takes
+    (works safely over disk-backed mmap views without allocating a full-film Lab copy).
+    """
+    if imgs is None or int(imgs.shape[0]) <= int(ref_frames):
+        return imgs, ""
+    n = int(imgs.shape[0])
+    r0 = max(0, min(int(ref_start), n - 1))
+    r1 = min(n, max(r0 + 8, int(ref_frames)))
+    ref = chroma_stats(imgs[r0:r1], sample=min(32, r1 - r0))
+    if ref is None:
+        return imgs, ""
+    win = max(48, int(window))
+    applied = 0
+    for s in range(r1, n, win):
+        e = min(n, s + win)
+        _, w_note = chroma_pull(
+            imgs[s:e], ref, strength=strength, max_shift=max_shift,
+            ramp=(ramp if s == r1 else 0), in_place=in_place,
+        )
+        if w_note:
+            applied += 1
+    if not applied:
+        return imgs, ""
+    return imgs, f"chroma stabilized {applied} tail window(s) toward opening {r1 - r0}f (L* preserved)"
+
+
+def seam_health_report(frames, seam_marks, radius=2):
+    """Streamed CIE Lab + MAD seam continuity health check across `seam_marks`.
+
+    Reads only tiny `[m-radius:m+radius]` slices around each seam index so RAM
+    stays flat even over disk-backed mmap films. -> dict or None.
+    """
+    if frames is None or not seam_marks:
+        return None
+    n = int(frames.shape[0])
+    r = max(2, int(radius))
+    entries = []
+    for raw_m in seam_marks:
+        m = int(raw_m)
+        if m < r or m + r > n:
+            continue
+        sl = frames[m - r:m + r].float()
+        # Downsample spatially if large so Lab conversion takes <2ms per seam
+        h, w = int(sl.shape[1]), int(sl.shape[2])
+        if max(h, w) > 256:
+            scale = 256.0 / float(max(h, w))
+            nh, nw = max(32, int(round(h * scale))), max(32, int(round(w * scale)))
+            sl = torch.nn.functional.interpolate(
+                sl.movedim(-1, 1), size=(nh, nw), mode="bilinear", align_corners=False
+            ).movedim(1, -1)
+        lab = _srgb_to_lab(sl.clamp(0.0, 1.0))
+        means = lab.mean(dim=(1, 2))  # [2*r, 3]
+        dl = float((means[r, 0] - means[r - 1, 0]).abs())
+        dc = float(((means[r, 1] - means[r - 1, 1]).pow(2) + (means[r, 2] - means[r - 1, 2]).pow(2)).sqrt())
+        seam_mad = float((sl[r] - sl[r - 1]).abs().mean())
+        base_mad = max(
+            1e-4,
+            0.5 * (
+                float((sl[r - 1] - sl[r - 2]).abs().mean())
+                + float((sl[r + 1] - sl[r]).abs().mean())
+            ),
+        )
+        mad_ratio = seam_mad / base_mad
+        entries.append({
+            "frame": m,
+            "luma_delta": round(dl, 2),
+            "chroma_delta": round(dc, 2),
+            "mad_ratio": round(mad_ratio, 2),
+        })
+    if not entries:
+        return None
+    worst = max(entries, key=lambda e: (e["mad_ratio"], e["luma_delta"] + e["chroma_delta"]))
+    max_dl = max(e["luma_delta"] for e in entries)
+    max_dc = max(e["chroma_delta"] for e in entries)
+    max_mr = max(e["mad_ratio"] for e in entries)
+    if max_dl >= 6.0 or max_dc >= 5.0 or max_mr >= 2.2:
+        status = "seam_jump"
+    elif max_dl >= 3.0 or max_dc >= 2.5 or max_mr >= 1.55:
+        status = "noticeable"
+    else:
+        status = "clean"
+    note = (
+        f"{status} (max dL* {max_dl:.1f}, dC* {max_dc:.1f}, MAD {max_mr:.2f}x "
+        f"across {len(entries)} seam(s); peak f{worst['frame']})"
+    )
+    return {
+        "seams": entries,
+        "max_luma_delta": round(max_dl, 2),
+        "max_chroma_delta": round(max_dc, 2),
+        "max_mad_ratio": round(max_mr, 2),
+        "worst_frame": int(worst["frame"]),
+        "status": status,
+        "note": note,
+    }
+
+
 def compensate(source, target, mode, overlap=DEFAULT_OVERLAP, lut_bins=64):
     """Correct `target`'s tone to match `source`. -> (images, note).
 
@@ -485,6 +677,10 @@ def compensate(source, target, mode, overlap=DEFAULT_OVERLAP, lut_bins=64):
         out[n:] = out[n:] - drift[-1]
         d = drift[-1].reshape(-1)
         note = ("frame_shift " + " ".join(f"{c}{v:+.4f}" for c, v in zip("rgb", d.tolist())))
+    elif mode == "chroma":
+        ref = chroma_stats(fit_src, sample=0)
+        out, note = chroma_pull(tgt, ref, strength=1.0, max_shift=0.10, ramp=0)
+        return out.to(target.dtype), (note or "chroma (already matched)")
     elif mode == "gain_bias":
         gain, bias = _fit_affine(fit_src, fit_tgt)
         out = gain * tgt + bias
@@ -527,8 +723,9 @@ class HTCToneCompensate:
                 "target": ("IMAGE", {"tooltip": "The clip to correct."}),
                 "mode": (MODES, {
                     "default": "frame_shift",
-                    "tooltip": ("How to correct. frame_shift shifts each frame; gain_bias and lut match the "
-                                "overall tone; anchor works like frame_shift on this node."),
+                    "tooltip": ("How to correct tone drift: frame_shift smooths brightness/RGB per frame; "
+                                "chroma locks Lab color balance/saturation while leaving brightness untouched; "
+                                "gain_bias & lut match contrast curve; anchor locks chain-wide."),
                 }),
                 "overlap": ("INT", {
                     "default": DEFAULT_OVERLAP, "min": 1, "max": 4096,

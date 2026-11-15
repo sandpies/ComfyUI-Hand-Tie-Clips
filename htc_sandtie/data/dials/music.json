@@ -1,0 +1,297 @@
+{
+  "id": "music",
+  "label": "Music",
+  "per": "project",
+  "note": "Non-diegetic studio score directions.",
+  "options": [
+    {
+      "id": "sensual_sax_lofi_78",
+      "label": "78 BPM · Late-Night Lo-Fi Rhodes & Breathless Sub-Bass",
+      "group": "Sensual & R&B",
+      "rule": "Intimate 78 BPM late-night lo-fi R&B score with warm electric Rhodes chords, deep velvety sub-bass swells, and a soft brushed rimshot pulse",
+      "world": "Intimate 78 BPM late-night lo-fi R&B score with warm electric Rhodes chords, deep velvety sub-bass swells, and a soft brushed rimshot pulse",
+      "domain": "general"
+    },
+    {
+      "id": "dark_synth_bass_90",
+      "label": "90 BPM · Dark Cyberpunk Mid-Tempo Bass Pulse",
+      "group": "Club, Dance & Pop",
+      "rule": "Hypnotic 90 BPM dark mid-tempo electronic score with a gritty analog sawtooth bass pulse, atmospheric synth pads, and a heavy industrial kick",
+      "world": "Hypnotic 90 BPM dark mid-tempo electronic score with a gritty analog sawtooth bass pulse, atmospheric synth pads, and a heavy industrial kick",
+      "domain": "general"
+    },
+    {
+      "id": "tech_product_100",
+      "label": "100 BPM · Apple-Style Minimalist Tech Pluck & Sub Cutoff",
+      "group": "Cinematic & Acoustic",
+      "rule": "Clean 100 BPM minimalist tech instrumental with warm block chords, crisp plucked synth notes, deep sub-bass, and wooden percussion",
+      "world": "Clean 100 BPM minimalist tech instrumental with warm block chords, crisp plucked synth notes, deep sub-bass, and wooden percussion",
+      "domain": "general"
+    },
+    {
+      "id": "sakuga_anime_rock_165",
+      "label": "165 BPM · High-Octane Anime Action Guitar & Double-Kick",
+      "group": "Cinematic & Acoustic",
+      "rule": "Explosive 165 BPM anime action rock score with driving distorted electric guitar riffs, rapid double-kick drums, and soaring orchestral strings",
+      "world": "Explosive 165 BPM anime action rock score with driving distorted electric guitar riffs, rapid double-kick drums, and soaring orchestral strings",
+      "domain": "general"
+    },
+    {
+      "id": "dark_rnb_sub_bass_68",
+      "label": "68 BPM · Dark After-Hours R&B Sub-Bass & Velvet Rhodes",
+      "group": "Sensual & R&B",
+      "rule": "Intimate 68 BPM after-hours dark R&B instrumental with a deep rolling 808 sub-bass, warm Rhodes electric piano chords, and crisp rimshot snaps",
+      "world": "Intimate 68 BPM after-hours dark R&B instrumental with a deep rolling 808 sub-bass, warm Rhodes electric piano chords, and crisp rimshot snaps",
+      "domain": "general"
+    },
+    {
+      "id": "slow_breath_synth_pad_50",
+      "label": "50 BPM · Hypnotic Warm Analog Pad & Sub-Heartbeat",
+      "group": "Sensual & R&B",
+      "rule": "Ultra-slow 50 BPM hypnotic ambient score built on warm analog Juno synth swells and a soft, deep heartbeat sub-pulse",
+      "world": "Ultra-slow 50 BPM hypnotic ambient score built on warm analog Juno synth swells and a soft, deep heartbeat sub-pulse",
+      "domain": "general"
+    },
+    {
+      "id": "french_touch_filter_house_120",
+      "label": "120 BPM · Sleek French-Touch Filter Disco House",
+      "group": "Club, Dance & Pop",
+      "rule": "Sleek 120 BPM French-touch filter house groove with a funky slapped bassline, warm sidechained synth chords, and punchy four-on-the-floor kick",
+      "world": "Sleek 120 BPM French-touch filter house groove with a funky slapped bassline, warm sidechained synth chords, and punchy four-on-the-floor kick",
+      "domain": "general"
+    },
+    {
+      "id": "cyberpunk_industrial_midtempo_105",
+      "label": "105 BPM · Cyberpunk Midtempo Bass & Distorted Analog Synth",
+      "group": "Club, Dance & Pop",
+      "rule": "Heavy 105 BPM cyberpunk midtempo electronic track with gritty analog saw-bass, metallic industrial snare hits, and dark atmospheric arpeggios",
+      "world": "Heavy 105 BPM cyberpunk midtempo electronic track with gritty analog saw-bass, metallic industrial snare hits, and dark atmospheric arpeggios",
+      "domain": "general"
+    },
+    {
+      "id": "drift_phonk_cowbell_135",
+      "label": "135 BPM · Aggressive Drift Phonk Cowbell & Distorted 808",
+      "group": "Hip-Hop & Retro",
+      "rule": "High-energy 135 BPM drift phonk instrumental with a hypnotic pitched cowbell melody, saturated 808 bass slides, and crisp trap hi-hats",
+      "world": "High-energy 135 BPM drift phonk instrumental with a hypnotic pitched cowbell melody, saturated 808 bass slides, and crisp trap hi-hats",
+      "domain": "general"
+    },
+    {
+      "id": "uk_drill_sliding_808_142",
+      "label": "142 BPM · Dark UK Drill Sliding 808 & Haunting Violins",
+      "group": "Hip-Hop & Retro",
+      "rule": "Gritty 142 BPM UK drill instrumental featuring deep sliding 808 sub-bass, syncopated counter-snares, and haunting minor-key string stabs",
+      "world": "Gritty 142 BPM UK drill instrumental featuring deep sliding 808 sub-bass, syncopated counter-snares, and haunting minor-key string stabs",
+      "domain": "general"
+    },
+    {
+      "id": "bossa_nova_sunset_88",
+      "label": "88 BPM · Sultry Sunset Bossa Nova Guitar & Rhodes",
+      "group": "Latin, Afro & World",
+      "rule": "Warm 88 BPM sunset bossa nova groove with nylon-string guitar chords, silky electric piano, and gentle rim-click percussion",
+      "world": "Warm 88 BPM sunset bossa nova groove with nylon-string guitar chords, silky electric piano, and gentle rim-click percussion",
+      "domain": "general"
+    },
+    {
+      "id": "shamisen_taiko_battle_132",
+      "label": "132 BPM · Samurai Shamisen & Thunderous Taiko Combat Score",
+      "group": "Latin, Afro & World",
+      "rule": "Fierce 132 BPM Japanese combat score combining rapid, percussive tsugaru shamisen picking with thunderous taiko drum ensembles",
+      "world": "Fierce 132 BPM Japanese combat score combining rapid, percussive tsugaru shamisen picking with thunderous taiko drum ensembles",
+      "domain": "combat_action"
+    },
+    {
+      "id": "dark_cello_thriller_pulse_90",
+      "label": "90 BPM · Tense Solo Cello Ostinato & Sub-Bass Braam",
+      "group": "Cinematic & Acoustic",
+      "rule": "Tense 90 BPM psychological thriller score driven by a bowing low cello ostinato, ticking clockwork percussion, and deep sub-bass swells",
+      "world": "Tense 90 BPM psychological thriller score driven by a bowing low cello ostinato, ticking clockwork percussion, and deep sub-bass swells",
+      "domain": "general"
+    },
+    {
+      "id": "industrial_dark_metal_130",
+      "label": "130 BPM · Heavy Industrial Dark-Synth & Drop-Tuned Riff",
+      "group": "Hip-Hop & Retro",
+      "rule": "Driving 130 BPM industrial rock and dark-synth anthem with punchy gated drums, drop-tuned guitar chugs, and pulsing bass",
+      "world": "Driving 130 BPM industrial rock and dark-synth anthem with punchy gated drums, drop-tuned guitar chugs, and pulsing bass",
+      "domain": "general"
+    },
+    {
+      "id": "ufotable_orchestral_taiko_choir_140",
+      "label": "140 BPM · Anime2Real Taiko War Drums, Shamisen & Epic Choir",
+      "group": "Cinematic & Acoustic",
+      "rule": "Explosive 140 BPM anime boss-battle score with thunderous Japanese taiko drums, rapid shamisen plucks, soaring soprano choir, and brass swells",
+      "world": "Explosive 140 BPM anime boss-battle score with thunderous Japanese taiko drums, rapid shamisen plucks, soaring soprano choir, and brass swells",
+      "domain": "combat_action"
+    },
+    {
+      "id": "dark_velvet_weeknd_synth_rnb_75",
+      "label": "75 BPM · Dark Velvet Late-Night Synth-R&B & Deep Sub-Bass",
+      "group": "Sensual & R&B",
+      "rule": "Sultry 75 BPM dark-velvet R&B groove with lush analog synth pads, heavy 808 sub-bass glides, and crisp reverb-soaked finger snaps",
+      "world": "Sultry 75 BPM dark-velvet R&B groove with lush analog synth pads, heavy 808 sub-bass glides, and crisp reverb-soaked finger snaps",
+      "domain": "general"
+    },
+    {
+      "id": "kpop_girl_crush_bass_drop_124",
+      "label": "124 BPM · K-Pop Girl-Crush Brass Stabs & Club Bass Drop",
+      "group": "Club, Dance & Pop",
+      "rule": "Punchy 124 BPM K-Pop idol dance anthem with brass horn stabs, syncopated trap hi-hats, and a tight bouncy bassline",
+      "world": "Punchy 124 BPM K-Pop idol dance anthem with brass horn stabs, syncopated trap hi-hats, and a tight bouncy bassline",
+      "domain": "general"
+    },
+    {
+      "id": "cyberpunk_edgerunner_hyper_synth_136",
+      "label": "136 BPM · Cyberpunk Hyper-Synth & Distorted Bass Drive",
+      "group": "Club, Dance & Pop",
+      "rule": "High-adrenaline 136 BPM cyberpunk mid-tempo electro with gritty distorted sawtooth bass, arpeggiated neon synths, and driving drums",
+      "world": "High-adrenaline 136 BPM cyberpunk mid-tempo electro with gritty distorted sawtooth bass, arpeggiated neon synths, and driving drums",
+      "domain": "general"
+    },
+    {
+      "id": "city_pop_80s_112",
+      "label": "112 BPM · Tokyo 80s Neon City-Pop Slap Bass & Rhodes",
+      "group": "Latin, Afro & World",
+      "rule": "Glossy 112 BPM Tokyo 1980s city-pop score featuring funky slap basslines, warm electric Rhodes chords, crisp gated snare, and bright brass synth stabs",
+      "world": "Glossy 112 BPM Tokyo 1980s city-pop score featuring funky slap basslines, warm electric Rhodes chords, crisp gated snare, and bright brass synth stabs",
+      "domain": "general"
+    },
+    {
+      "id": "trap_soul_late_night_72",
+      "label": "72 BPM · Smoky Late-Night Trap-Soul & Sub-808 Glides",
+      "group": "Sensual & R&B",
+      "rule": "Smoky 72 BPM late-night trap-soul instrumental with reverse ambient vocal pads, muted electric guitar plucks, crisp finger snaps, and deep sliding 808 sub-bass",
+      "world": "Smoky 72 BPM late-night trap-soul instrumental with reverse ambient vocal pads, muted electric guitar plucks, crisp finger snaps, and deep sliding 808 sub-bass",
+      "domain": "general"
+    },
+    {
+      "id": "bedroom_lofi_rain_64",
+      "label": "64 BPM · Warm Vinyl Lo-Fi Pillow Beat & Dusty Rhodes",
+      "group": "Sensual & R&B",
+      "rule": "Warm 64 BPM lo-fi bedroom instrumental with gentle vinyl crackle, soft Rhodes chord progressions, muted brush drums, and comforting low-pass sub-bass",
+      "world": "Warm 64 BPM lo-fi bedroom instrumental with gentle vinyl crackle, soft Rhodes chord progressions, muted brush drums, and comforting low-pass sub-bass",
+      "domain": "bedroom"
+    },
+    {
+      "id": "cyberpunk_synthwave_drive_118",
+      "label": "118 BPM · Neon Night-Drive Analog Arpeggio Synthwave",
+      "group": "Club, Dance & Pop",
+      "rule": "Driving 118 BPM analog synthwave night-drive score with pulsing Juno arpeggios, wide shimmering sawtooth leads, and punchy 80s gated-reverb drums",
+      "world": "Driving 118 BPM analog synthwave night-drive score with pulsing Juno arpeggios, wide shimmering sawtooth leads, and punchy 80s gated-reverb drums",
+      "domain": "general"
+    },
+    {
+      "id": "hyperpop_glitch_dance_145",
+      "label": "145 BPM · High-Energy Hyperpop Crystal Bass Drop",
+      "group": "Club, Dance & Pop",
+      "rule": "Hyper-kinetic 145 BPM hyperpop dance instrumental with bright metallic crystal synths, distorted sub-bass drops, rapid glitch percussion, and euphoric energy",
+      "world": "Hyper-kinetic 145 BPM hyperpop dance instrumental with bright metallic crystal synths, distorted sub-bass drops, rapid glitch percussion, and euphoric energy",
+      "domain": "general"
+    },
+    {
+      "id": "cyberpunk_industrial_128",
+      "label": "128 BPM · Driving Cyberpunk Industrial Bass & Synth Arpeggio",
+      "group": "Club, Dance & Pop",
+      "rule": "128 BPM driving cyberpunk industrial analog bassline, crisp snare snaps, and shimmering dark synth arpeggios",
+      "domain": "general"
+    },
+    {
+      "id": "john_wick_club_techno_132",
+      "label": "132 BPM · John Wick Neon Club Dark Techno Pulse",
+      "group": "Club, Dance & Pop",
+      "rule": "132 BPM relentless hypnotic warehouse techno kick drum, filtered dark acid synth bass, and crisp hi-hat drive",
+      "domain": "general"
+    },
+    {
+      "id": "anime_orchestral_choir_148",
+      "label": "148 BPM · Epic Anime Orchestral Strings, Brass & Electric Guitar",
+      "group": "Cinematic & Acoustic",
+      "rule": "148 BPM soaring anime battle symphony with driving staccato strings, brass swells, taiko hits, and screaming lead guitar",
+      "domain": "general"
+    },
+    {
+      "id": "sultry_jazz_noir_sax_72",
+      "label": "72 BPM · 90s Erotic Thriller Noir Saxophone & Brushed Snare",
+      "group": "Sensual & R&B",
+      "rule": "72 BPM smoky late-night noir tenor saxophone melody over deep upright bass and slow brushed jazz drums",
+      "domain": "general"
+    },
+    {
+      "id": "dark_trap_phonk_135",
+      "label": "135 BPM · Heavy Memphis Phonk Cowbell & Distorted 808 Sub",
+      "group": "Hip-Hop & Retro",
+      "rule": "135 BPM hard-hitting drift phonk with crisp metallic cowbell groove, snappy snare rolls, and distorted 808 sub-bass",
+      "domain": "general"
+    },
+    {
+      "id": "ethereal_shoegaze_dream_95",
+      "label": "95 BPM · Dreamy Atmospheric Shoegaze Guitar Reverb & Slow Beat",
+      "group": "Sensual & R&B",
+      "rule": "95 BPM lush reverb-soaked dreamy electric guitars, warm breathy synth pads, and steady unhurried heartbeat kick",
+      "domain": "general"
+    },
+    {
+      "id": "taiko_war_drums_138",
+      "label": "138 BPM · Japanese Taiko War Drums & Shamisen Combat Plucks",
+      "group": "Latin, Afro & World",
+      "rule": "138 BPM thunderous resonant Japanese taiko war drums locking onto fierce rapid shamisen string plucks and shakuhachi wind",
+      "domain": "combat_action"
+    },
+    {
+      "id": "french_house_velvet_118",
+      "label": "118 BPM · Glossy French Touch Filter House Bass & Disco Strings",
+      "group": "Club, Dance & Pop",
+      "rule": "118 BPM warm filtered French house bassline, crisp sidechained disco strings, and shimmering hi-hat groove",
+      "domain": "general"
+    },
+    {
+      "id": "none",
+      "label": "None — Pure Diegetic Sound Only (N/A)",
+      "group": "00 · No Music / Diegetic Only",
+      "rule": "",
+      "domain": "general"
+    },
+    {
+      "id": "rnb_ambient_55",
+      "label": "Midnight Ambient R&B Pad (55 BPM)",
+      "group": "Sensual & R&B",
+      "rule": "a slow 55 BPM warm ambient R&B synth pad with deep sub-bass swells and sparse soft finger snaps",
+      "domain": "general"
+    },
+    {
+      "id": "jazz_lounge_72",
+      "label": "Smoky Noir Lounge Sax (72 BPM)",
+      "group": "Cinematic & Acoustic",
+      "rule": "a smoky 72 BPM upright bass and brushed snare noir groove topped by a lingering muted tenor saxophone",
+      "domain": "general"
+    },
+    {
+      "id": "piano_cello_65",
+      "label": "Intimate Piano & Low Cello (65 BPM)",
+      "group": "Cinematic & Acoustic",
+      "rule": "sparse warm grand piano chords at 65 BPM underpinned by rich sustained low cello resonance",
+      "domain": "general"
+    },
+    {
+      "id": "synthwave_114",
+      "label": "Retro Analog Synthwave Pulse (114 BPM)",
+      "group": "Hip-Hop & Retro",
+      "rule": "a driving 114 BPM analog arpeggiated bassline with shimmering retro poly-synth chords and crisp gated snare",
+      "domain": "general"
+    },
+    {
+      "id": "club_house_124",
+      "label": "Sleek Runway Deep House (124 BPM)",
+      "group": "Club, Dance & Pop",
+      "rule": "a crisp 124 BPM deep house bass groove with warm filtered synth stabs and tight four-on-the-floor percussion",
+      "domain": "general"
+    },
+    {
+      "id": "epic_hybrid_110",
+      "label": "Hybrid Cinema Percussion & Brass (110 BPM)",
+      "group": "Cinematic & Acoustic",
+      "rule": "propulsive 110 BPM taiko and hybrid electronic percussion rising beneath broad low brass swells",
+      "domain": "general"
+    }
+  ]
+}

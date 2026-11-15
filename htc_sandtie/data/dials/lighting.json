@@ -1,0 +1,463 @@
+{
+  "id": "light",
+  "label": "Light",
+  "per": "project",
+  "note": "Practical, atmospheric, and studio lighting architecture.",
+  "options": [
+    {
+      "id": "penthouse_blue_amber",
+      "label": "Penthouse night (cool city-window blue + warm brass lamp amber)",
+      "group": "Light · 00 Signature & Moody Cinema",
+      "rule": "intimate penthouse night lighting: cool sapphire-blue moonlight and city skyline glow from floor-to-ceiling windows balanced against warm amber key light from an indoor brass lamp, casting glossy two-tone highlights across skin and furniture.",
+      "domain": "general"
+    },
+    {
+      "id": "astro_motivated_practical",
+      "label": "Astro Cinema motivated practical (dominant lamp + soft shadow rolloff)",
+      "group": "Light · 00 Signature & Moody Cinema",
+      "rule": "motivated practical cinema lighting: a single visible warm practical lamp acts as the dominant key source on one side of the face and torso with gentle highlight rolloff, balanced by soft ambient room bounce in the shadows.",
+      "domain": "general"
+    },
+    {
+      "id": "red_velvet_boudoir",
+      "label": "Deep crimson velvet boudoir + warm gold skin rim",
+      "group": "Light · Warm, Practical & Boudoir",
+      "rule": "crimson and gold boudoir lighting: rich ruby-red ambient fill paired with a warm golden side-rim light that traces every curve of bare skin, collarbones and hips.",
+      "domain": "general"
+    },
+    {
+      "id": "soft_natural_light",
+      "label": "Soft Natural Light (Balanced Diffused Daylight & Smooth Rolloff)",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "soft natural light: balanced, diffused natural daylight wrapping smoothly across skin, hair, and fabric with gradual shadow rolloff, authentic skin tone, and clear soft eye catchlights.",
+      "domain": "general"
+    },
+    {
+      "id": "soft_natural_window",
+      "label": "Soft Natural Window Light (Gentle Side Daylight & Room Falloff)",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "soft natural window light: gentle, diffused daylight entering from one side window across face and torso while the far side of the room settles into smooth ambient shadow falloff.",
+      "domain": "general"
+    },
+    {
+      "id": "sunset_blinds_gold",
+      "label": "Golden sunset venetian-blind stripes across skin",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "golden-hour venetian-blind lighting: warm amber sunset rays sliced through horizontal window blinds into glowing golden stripes across faces, torsos and sheets.",
+      "domain": "general"
+    },
+    {
+      "id": "anime_cel_hard_rim",
+      "label": "2D Anime drawn light (hard two-tone cel shadow + crisp jaw rim wedge)",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "rule": "hand-drawn 2D cel lighting: hard two-tone cel shadow shapes across the face and body, a crisp drawn rim-light line along the jaw and shoulder, and a bright white wedge specular highlight in the eyes.",
+      "domain": "general"
+    },
+    {
+      "id": "chiaroscuro_hard_slash",
+      "label": "🖤 Chiaroscuro Deep-Shadow Slash (Playtime v2.1 Style — Single Hard Key + Pitch-Black Falloff)",
+      "group": "Light · 00 Signature & Moody Cinema",
+      "rule": "dramatic high-contrast chiaroscuro lighting: a single razor-sharp directional key light carves across one side of the face and body while the opposite side and surrounding background fall off into deep, velvety pitch-black shadow with bright specular skin highlights.",
+      "domain": "general"
+    },
+    {
+      "id": "strobe_on_beat_flash",
+      "label": "⚡ On-Beat Strobe & Lightning Flash Pulses Out of Darkness",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "rule": "rhythmic on-beat strobe lighting: the dark smoke-filled space is punctuated by crisp, high-intensity white and cyan overhead strobe flashes that freeze droplets, hair, and silhouettes in stark relief on each beat.",
+      "domain": "general"
+    },
+    {
+      "id": "candlelight_flicker_boudoir",
+      "label": "🕯️ Warm Flickering Candlelight Cluster (Deep Amber Skin Glow + Dancing Shadows)",
+      "group": "Light · Warm, Practical & Boudoir",
+      "rule": "intimate flickering candlelight: clusters of real wax candles cast a warm 2200K golden-amber glow across dewy skin and silk sheets while soft, living shadows dance across the walls.",
+      "domain": "general"
+    },
+    {
+      "id": "neon_rain_window_caustics",
+      "label": "🌧️ Wet Window Neon Rain Caustics (Moving Cyan/Magenta Ripples Across Skin)",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "rule": "wet neon window caustics: city neon signs shining through rain-streaked glass project slowly sliding cyan and magenta water-ripple patterns across the subject's face, bare shoulders, and bedsheets.",
+      "domain": "bedroom"
+    },
+    {
+      "id": "fireplace_hearth_underglow",
+      "label": "🔥 Fireplace Hearth Underglow (Rolling Warm Orange Ember Flicker)",
+      "group": "Light · Warm, Practical & Boudoir",
+      "rule": "fireplace hearth underglow: a crackling open fire at floor level bathes the subjects from a low angle in rolling warm orange-and-copper light with soft golden rim highlights.",
+      "domain": "general"
+    },
+    {
+      "id": "car_headlight_fog_beams",
+      "label": "🚗 Twin Car Headlight Volumetric Fog Beams (High-Contrast Backlit Rim)",
+      "group": "Light · Atmospheric, Fire, Screen & Night",
+      "rule": "twin car headlight beams cutting through night mist: two bright, low-mounted halogen headlight cones slice through swirling fog behind the subject, outlining their body in a blazing silver rim halo.",
+      "domain": "general"
+    },
+    {
+      "id": "bathroom_vanity_mirror_bulbs",
+      "label": "💡 Warm Hollywood Vanity Mirror Bulbs (Even Glamour Key + Eye Catchlights)",
+      "group": "Light · Studio, Beauty & Glamour",
+      "rule": "warm vanity mirror globe bulbs: a row of glowing tungsten vanity bulbs around the mirror bathes the face and upper torso in flattering, luminous glamour light with crisp circular catchlights in both eyes.",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "club_laser_strobe_haze",
+      "label": "🪩 Nightclub Sweeping Laser & UV Blacklight Haze",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "rule": "nightclub laser and UV lighting: electric violet blacklight and sweeping emerald-and-magenta laser fans slice through suspended club haze, catching glossy skin and metallic fabric.",
+      "domain": "general"
+    },
+    {
+      "id": "refrigerator_door_midnight_spill",
+      "label": "❄️ Midnight Open-Fridge / Doorway Cold Spill in Dark Room",
+      "group": "Light · Atmospheric, Fire, Screen & Night",
+      "rule": "a single cold directional spill from an open refrigerator or doorway in a dark room: cool crisp white-blue light spills across the subject's front profile while the rest of the kitchen stays in moody midnight shadow.",
+      "domain": "general"
+    },
+    {
+      "id": "dappled_sunlight_sheer_curtains",
+      "label": "☀️ Morning Sunlight Through Billowing Sheer White Curtains",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "soft morning sunlight streaming through billowing sheer white curtains: airy, diffused golden-white daylight wraps around skin and hair with gentle moving fabric shadows.",
+      "domain": "general"
+    },
+    {
+      "id": "tv_screen_flicker_dark_room",
+      "label": "📺 Flickering Blue Screen / Monitor Glow on Faces in Dark Room",
+      "group": "Light · Atmospheric, Fire, Screen & Night",
+      "rule": "flickering screen glow in a dark room: a cool cyan-and-indigo light from an off-camera television or monitor pulses softly across the subject's face and eyes against deep shadow.",
+      "domain": "general"
+    },
+    {
+      "id": "golden_rim_halo_backlight",
+      "label": "✨ Pure Golden-Hour Hair & Curve Rim Halo + Soft Warm Fill",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "golden-hour rim backlighting: low warm sun positioned directly behind the subject ignites a glowing halo along their hair strands, shoulders, and hip curves while a soft warm reflector fills their face.",
+      "domain": "general"
+    },
+    {
+      "id": "tokyo_love_hotel_magenta_violet_velvet",
+      "label": "💜 Tokyo Love-Hotel Magenta & Ultraviolet Velvet Wash",
+      "group": "Light · Warm, Practical & Boudoir",
+      "rule": "lit by a sultry Tokyo love-hotel lighting scheme: recessed magenta LED coves behind the headboard, deep ultraviolet wall wash, and warm rose-gold specular highlights across bare skin and satin sheets.",
+      "domain": "bedroom"
+    },
+    {
+      "id": "luxury_yacht_sunset_water_caustics",
+      "label": "🛥️ Superyacht Golden-Hour Sun + Shimmering Turquoise Water Caustics",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "lit by low golden-hour Mediterranean sun grazing across the deck paired with dancing turquoise water-reflection caustics rippling upward across the subject's skin and underside of the jaw.",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "underground_cage_halide_sweat_rim",
+      "label": "🥊 Underground Fight-Club Overhead Cage Halide & Hard Sweat Rim",
+      "group": "Light · Studio, Beauty & Glamour",
+      "rule": "lit by a single harsh industrial metal-halide cage lamp suspended directly overhead in a dark arena, carving razor-sharp silver rim light along sweaty shoulders, knuckles, and rising breath vapor.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "anime2real_elemental_aura_interactive_key",
+      "label": "⚡ Anime2Real Elemental Aura Key — Self-Illuminating Power Glow Casting Colored Shadows",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "rule": "lit dynamically by the subject's own blazing elemental aura or weapon energy, which acts as the primary moving key light and casts vivid interactive colored rim highlights and shadows across their face and the surrounding room.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "strip_club_uv_blacklight_laser_haze",
+      "label": "🪩 VIP Club UV Blacklight, Neon Pink Tube & Emerald Laser Sheet",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "rule": "lit by club UV blacklight that makes white and neon fabrics glow, crossed by a vertical hot-pink neon tube key light and a thin emerald laser fan cutting through the haze.",
+      "domain": "general"
+    },
+    {
+      "id": "candlelit_obsidian_bath_gold_ripples",
+      "label": "🕯️ Candlelit Obsidian Bath — Hundreds of Floating Tealights & Golden Water Bounce",
+      "group": "Light · Warm, Practical & Boudoir",
+      "rule": "lit entirely by dozens of flickering wax candles and floating tealights reflecting off dark obsidian stone and warm bathwater, wrapping wet skin in a rich, dancing amber-gold glow.",
+      "domain": "general"
+    },
+    {
+      "id": "paparazzi_red_carpet_flash_barrage",
+      "label": "📸 Red-Carpet Paparazzi Strobe Barrage — Crisp High-Fashion Xenon Flash Bursts",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "rule": "lit by a continuous barrage of crisp, high-powered white paparazzi camera flashes popping from the front and sides, freezing specular diamond and satin highlights against a velvet night backdrop.",
+      "domain": "general"
+    },
+    {
+      "id": "bioluminescent_abyss_glow",
+      "label": "🌊 Bioluminescent Abyss Cyan & Electric Violet Caustic Glow",
+      "group": "Light · Atmospheric, Fire, Screen & Night",
+      "rule": "bioluminescent dark-water lighting: glowing electric-cyan and deep violet luminescence blooming across wet skin, hair, and misty air against velvety deep-sea shadows",
+      "domain": "general"
+    },
+    {
+      "id": "neon_motel_sign_rain_spill",
+      "label": "🏨 Neon Motel Sign & Wet Rain-Glass Crimson/Teal Spill",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "rule": "flickering neon motel sign light spilling through a rain-streaked glass window in vibrant cherry-red and cool teal reflections across dark interior surfaces and skin",
+      "domain": "general"
+    },
+    {
+      "id": "sunset_car_interior_warm_flare",
+      "label": "🚗 Sunset Car Interior Golden Lens Flare & Dashboard Amber",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "low golden-hour sunlight slicing cleanly across the car cabin interior with warm amber dashboard reflections and natural sun-flare rim light along shoulders and hair",
+      "domain": "general"
+    },
+    {
+      "id": "candlelight_and_moonlight_split",
+      "label": "🌙 Warm Candlelight Key + Cool Silver Moonlight Split",
+      "group": "Light · Warm, Practical & Boudoir",
+      "rule": "dual-temperature split lighting: warm flickering amber candlelight grazing one side of the face and torso while cool silver-blue moonlight from an open window traces the opposite silhouette edge",
+      "domain": "general"
+    },
+    {
+      "id": "editorial_softbox_beauty_key",
+      "label": "📸 Editorial Vogue Softbox Key + Crisp Silver Rim Edge",
+      "group": "Light · Studio, Beauty & Glamour",
+      "rule": "high-fashion studio lighting: a large feathered overhead octabox key sculpting smooth luminous skin tones paired with crisp silver rim strips defining cheekbones, collarbones, and silhouette",
+      "domain": "general"
+    },
+    {
+      "id": "rain_neon_puddle_bounce",
+      "label": "Neon Rain Puddle Uplight (Magenta/Cyan Wet Asphalt Reflections)",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "rule": "Lit from below by vibrant magenta and electric cyan neon reflections bouncing off rain-slicked asphalt and wet stone, carving crisp colored rim highlights along jaws, hair, and damp clothes.",
+      "domain": "general"
+    },
+    {
+      "id": "police_red_blue_strobe_flash",
+      "label": "Police Cruiser Red-Blue Alternating Window Strobes",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "rule": "Alternating pulses of saturated red and cool cobalt-blue light sweeping through dark blinds or car windows every second, catching sharp wet reflections in eyes and across metal surfaces.",
+      "domain": "general"
+    },
+    {
+      "id": "fireplace_ember_warm_low",
+      "label": "Crackling Hearth Firelight + Cool Moonlight Window Rim",
+      "group": "Light · Warm, Practical & Boudoir",
+      "rule": "Bathed on one side in warm flickering amber-orange hearth firelight dancing across skin while cool pale-blue moonlight through tall cabin panes outlines the opposite shoulder and hair.",
+      "domain": "general"
+    },
+    {
+      "id": "lightning_storm_flash_rim",
+      "label": "Storm Lightning Flash Silhouette -> Deep Indigo Shadow",
+      "group": "Light · Atmospheric, Fire, Screen & Night",
+      "rule": "Shadowed in deep stormy indigo twilight punctuated by crisp white-blue lightning sheet flashes from behind the window glass that momentarily backlight silhouettes and bright rain sheets.",
+      "domain": "general"
+    },
+    {
+      "id": "gold_ringlight_catchlight_glamour",
+      "label": "Warm Beauty Ringlight Catchlights + Soft Silk Fill",
+      "group": "Light · Studio, Beauty & Glamour",
+      "rule": "Front-lit by a wide soft warm ringlight casting crisp circular highlights inside both irises and wrapping dewy skin in silky, zero-harshness glamour illumination.",
+      "domain": "general"
+    },
+    {
+      "id": "fluorescent_subway_flicker",
+      "label": "Cool Green-White Subway Fluorescent Tubes + Hard Overhead Shadows",
+      "group": "Light · Atmospheric, Fire, Screen & Night",
+      "rule": "Lit by stark overhead cool-emerald and tungsten subway car tubes with crisp downward brow shadows and brief rhythmic light flickers as the train tears through dark tunnel lights.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "sunset_silhouette_halo_rim",
+      "label": "Golden Hour Hair Halo Rim Light + Warm Amber Skin Fill",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "Low honey-gold sunset rays pouring directly behind the subjects to ignite hair strands and shoulders in a luminous golden halo while soft warm bounce illuminates expressive faces.",
+      "domain": "general"
+    },
+    {
+      "id": "three_point",
+      "label": "Classic Three-Point Studio Key & Rim",
+      "group": "Light · Studio, Beauty & Glamour",
+      "rule": "balanced studio three-point lighting with soft warm key light sculpting cheekbones, subtle bounce fill, and crisp hair-separation rim",
+      "domain": "general"
+    },
+    {
+      "id": "chiaroscuro",
+      "label": "Chiaroscuro Deep Shadow Contrast",
+      "group": "Light · 00 Signature & Moody Cinema",
+      "rule": "dramatic chiaroscuro lighting pitting one sculpted directional beam against deep velvety unlit shadows",
+      "domain": "general"
+    },
+    {
+      "id": "rembrandt",
+      "label": "Rembrandt Cheek-Triangle Key",
+      "group": "Light · 00 Signature & Moody Cinema",
+      "rule": "classic 45-degree Rembrandt side key casting a crisp illuminated triangle beneath the far eye with rich sculpted falloff",
+      "domain": "general"
+    },
+    {
+      "id": "butterfly",
+      "label": "Butterfly Overhead Beauty Key",
+      "group": "Light · Studio, Beauty & Glamour",
+      "rule": "overhead centered butterfly beauty lighting casting symmetrical soft glow across brow, cheekbones, and glossy lower lip",
+      "domain": "general"
+    },
+    {
+      "id": "rim",
+      "label": "Crisp Hair & Shoulder Rim Backlight",
+      "group": "Light · 00 Signature & Moody Cinema",
+      "rule": "bright rear rim backlight carving a luminous glowing halo along hair edges, shoulders, and curved silhouettes",
+      "domain": "general"
+    },
+    {
+      "id": "silhouette",
+      "label": "High-Contrast Backlit Silhouette",
+      "group": "Light · 00 Signature & Moody Cinema",
+      "rule": "strong bright window or stage backlight turning the foreground figure into a sleek sculpted dark silhouette",
+      "domain": "general"
+    },
+    {
+      "id": "golden_hour",
+      "label": "Golden Hour Low Sun Glow",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "low warm amber late-afternoon sunlight casting long soft shadows and rich honeyed rim glow across skin and hair",
+      "domain": "general"
+    },
+    {
+      "id": "blue_hour",
+      "label": "Cool Twilight Blue Hour",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "deep cobalt dusk twilight balanced with small warm interior practical accents",
+      "domain": "general"
+    },
+    {
+      "id": "overcast",
+      "label": "Diffused Overcast Soft Daylight",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "even, shadowless diffused overcast skylight wrapping softly around skin and fabrics",
+      "domain": "general"
+    },
+    {
+      "id": "noon_sun",
+      "label": "Crisp Overhead Midday Sun",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "bright high midday sun throwing short sharp shadows and vivid specular highlights",
+      "domain": "general"
+    },
+    {
+      "id": "candle",
+      "label": "Warm Flickering Candlelight",
+      "group": "Light · Warm, Practical & Boudoir",
+      "rule": "intimate flickering amber candlelight dancing softly across skin, silk, and warm shadowed walls",
+      "domain": "general"
+    },
+    {
+      "id": "moonlight",
+      "label": "Cool Silver Moonlight",
+      "group": "Light · Atmospheric, Fire, Screen & Night",
+      "rule": "silvery-blue nocturnal moonlight streaming through tall panes across deep shadowed corners",
+      "domain": "general"
+    },
+    {
+      "id": "neon",
+      "label": "Vibrant Cyan & Magenta Neon",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "rule": "saturated magenta and electric cyan neon signs bathing wet surfaces and skin in crisp colored speculars",
+      "domain": "general"
+    },
+    {
+      "id": "cyber_dual_gel",
+      "label": "Dual Cyan / Amber Gel Cross-Light",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "rule": "contrasting dual-gel lighting: cool electric cyan key from one side balanced by warm amber-crimson rim from the opposite edge",
+      "domain": "general"
+    },
+    {
+      "id": "blinds",
+      "label": "Venetian Blind Shadow Slats",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "low warm sunlight or streetlamp slicing through venetian blinds into sharp rhythmic diagonal light stripes across face and room",
+      "domain": "general"
+    },
+    {
+      "id": "volumetric",
+      "label": "Volumetric Dust-Beam God Rays",
+      "group": "Light · Atmospheric, Fire, Screen & Night",
+      "rule": "visible dusty shafts of directional volumetric sunlight or spotlight slicing cleanly through thin atmospheric haze",
+      "domain": "general"
+    },
+    {
+      "id": "practical",
+      "label": "Motivated Practical Table & Sconce Lamps",
+      "group": "Light · Warm, Practical & Boudoir",
+      "rule": "warm shaded practical lamps visible in frame creating intimate glowing pools of light amidst rich room shadow",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "firelight",
+      "label": "Warm Hearth Firelight Glow",
+      "group": "Light · Atmospheric, Fire, Screen & Night",
+      "rule": "pulsing orange-amber hearth firelight flickering warmly across skin and textiles",
+      "domain": "general"
+    },
+    {
+      "id": "screen_glow",
+      "label": "Cool Monitor / TV Screen Glow",
+      "group": "Light · Atmospheric, Fire, Screen & Night",
+      "rule": "soft flickering cool blue screen illumination lighting faces in an otherwise dark room",
+      "domain": "general"
+    },
+    {
+      "id": "vip_amber_booth",
+      "label": "Warm Amber Booth Practical & Deep Shadow",
+      "group": "Light · Warm, Practical & Boudoir",
+      "rule": "rich amber booth sconce glow wrapping skin in golden highlights against dark velvet room corners",
+      "domain": "general"
+    },
+    {
+      "id": "low_key",
+      "label": "Low-Key Sculpted Noir Contrast",
+      "group": "Light · 00 Signature & Moody Cinema",
+      "rule": "shadow-dominant low-key lighting illuminating only the essential facial edge and silhouette contour",
+      "domain": "general"
+    },
+    {
+      "id": "high_key",
+      "label": "Bright Airy High-Key Studio Wrap",
+      "group": "Light · Studio, Beauty & Glamour",
+      "rule": "bright, clean high-key wraparound lighting filling shadows evenly for airy editorial polish",
+      "domain": "general"
+    },
+    {
+      "id": "dappled",
+      "label": "Dappled Leaf & Lace Shadow Motifs",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "rule": "soft organic patches of warm filtered light and leaf shadows shifting gently across skin",
+      "domain": "general"
+    },
+    {
+      "id": "light_epiphany_shift",
+      "label": "💡 Epiphany Illumination Shift (Light Finds Face on Realization)",
+      "group": "Light · Dramatic & Storytelling",
+      "rule": "motivated key illumination brightening smoothly across the subject's eyes and cheekbone at the exact beat of realization while surrounding shadows stay deep",
+      "domain": "general"
+    },
+    {
+      "id": "light_gobo_cucoloris_patterns",
+      "label": "🪟 Gobo / Cucoloris Graphic Shadows (Blinds, Leaves & Grille Patterns)",
+      "group": "Light · Dramatic & Storytelling",
+      "rule": "focused hard beam projected through patterned shutters, wrought iron, or foliage throwing crisp alternating bands of light and shadow across skin and walls",
+      "domain": "general"
+    },
+    {
+      "id": "light_cameo_black_pool",
+      "label": "🎭 Cameo Isolated Pool (Bright Figure Carved Out of Deep Darkness)",
+      "group": "Light · Dramatic & Storytelling",
+      "rule": "tightly focused overhead and key pool illuminating only the sculpted subject in warm clarity while the surrounding walls fall away into deep shadow",
+      "domain": "general"
+    },
+    {
+      "id": "light_kicker_cheek_slice",
+      "label": "✨ Hard Side-Back Kicker (Razor Cheekbone & Jaw Accent)",
+      "group": "Light · Dramatic & Storytelling",
+      "rule": "crisp side-back kicker light slicing a bright metallic ribbon along the far jawline, cheekbone, and shoulder contour",
+      "domain": "general"
+    }
+  ]
+}

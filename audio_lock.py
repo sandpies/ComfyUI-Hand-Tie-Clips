@@ -191,6 +191,103 @@ def passthrough_n_samples(n_frames, sr, fps=FPS):
     return int(round(int(n_frames) / float(fps) * int(sr)))
 
 
+def separate_vocals_driver(wav, sr, *, cache_key=None):
+    """Extract stereo vocal stem for lip-sync driving using cached torchaudio HDEMUCS.
+
+    Returns `(vocal_wav, note)` or `(None, reason)` if weights are not locally cached.
+    Never triggers a hub download; final MP4 muxing keeps the unmodified source track.
+    """
+    import hashlib  # noqa: PLC0415
+    import tempfile  # noqa: PLC0415
+    import torch  # noqa: PLC0415
+
+    try:
+        from . import songmap as _sm  # noqa: PLC0415
+    except ImportError:
+        import songmap as _sm  # noqa: PLC0415
+
+    here, _ = _sm._torch_hub_bundle_present("hdemucs_high_trained.pt")
+    if not here:
+        return None, "HDEMUCS vocal separator weights are not cached locally (run MV Listen once or supply vocal stem)"
+
+    x = force_stereo(wav.detach().float().cpu())
+    if cache_key:
+        h = hashlib.sha256(str(cache_key).encode("utf-8")).hexdigest()[:20]
+    else:
+        arr = x[..., :min(int(x.shape[-1]), int(sr) * 8)].numpy().tobytes()
+        h = hashlib.sha256(arr + f"|{int(sr)}|{int(x.shape[-1])}".encode()).hexdigest()[:20]
+
+    cdir = os.path.join(tempfile.gettempdir(), "h3_songmap")
+    os.makedirs(cdir, exist_ok=True)
+    cpath = os.path.join(cdir, f"vocals_driver_{h}.pt")
+    if os.path.isfile(cpath):
+        try:
+            loaded = torch.load(cpath, map_location="cpu", weights_only=True)
+            if isinstance(loaded, dict) and torch.is_tensor(loaded.get("wav")):
+                return loaded["wav"], "cached HDEMUCS vocal stem"
+        except Exception:
+            pass
+
+    try:
+        import torchaudio  # noqa: PLC0415
+        bundle = torchaudio.pipelines.HDEMUCS_HIGH_MUSDB_PLUS
+        srcs = list(getattr(bundle, "sources", ()))
+        if "vocals" not in srcs:
+            return None, f"HDEMUCS has no vocals source ({srcs})"
+        vi = srcs.index("vocals")
+        model = bundle.get_model()
+        dev = "cuda" if torch.cuda.is_available() else "cpu"
+        model = model.to(dev).eval()
+        msr = int(bundle.sample_rate)
+        inp = x
+        if int(sr) != msr:
+            try:
+                from comfy.audio import resample as _rs  # noqa: PLC0415
+                inp = _rs(inp.unsqueeze(0), int(sr), msr)[0]
+            except Exception:
+                inp = torchaudio.functional.resample(inp, int(sr), msr)
+        seg = int(msr * 10)
+        ov = int(msr * 1.0)
+        tot = int(inp.shape[-1])
+        out = torch.zeros_like(inp)
+        wsum = torch.zeros(tot, dtype=torch.float32)
+        win = torch.ones(seg, dtype=torch.float32)
+        if ov > 0 and seg > 2 * ov:
+            r = torch.linspace(0.0, 1.0, ov)
+            win[:ov] = r
+            win[-ov:] = r.flip(0)
+        step = max(1, seg - ov)
+        with torch.inference_mode():
+            for s in range(0, tot, step):
+                e = min(tot, s + seg)
+                chunk = inp[:, s:e]
+                pad = seg - int(chunk.shape[-1])
+                if pad > 0:
+                    chunk = torch.nn.functional.pad(chunk, (0, pad))
+                est = model(chunk.unsqueeze(0).to(dev))[0, vi].cpu()
+                take = e - s
+                cur_w = win[:take]
+                out[:, s:e] += est[:, :take] * cur_w
+                wsum[s:e] += cur_w
+        out = out / wsum.clamp_min(1e-6)
+        if int(sr) != msr:
+            try:
+                from comfy.audio import resample as _rs  # noqa: PLC0415
+                out = _rs(out.unsqueeze(0), msr, int(sr))[0]
+            except Exception:
+                out = torchaudio.functional.resample(out, msr, int(sr))
+        out = fit_samples(out, int(x.shape[-1])).contiguous()
+        del model
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        tmp = cpath + ".tmp"
+        torch.save({"wav": out, "sr": int(sr)}, tmp)
+        os.replace(tmp, cpath)
+        return out, f"separated HDEMUCS vocal stem ({dev})"
+    except Exception as exc:  # noqa: BLE001
+        return None, f"vocal separation skipped ({exc!r})"
+
+
 def assert_mask_polarity(vmask, amask):
     """1 on video (denoise), 0 on audio (freeze). Raises with both numbers."""
     v = float(vmask.float().mean())

@@ -1,0 +1,488 @@
+{
+  "id": "talkstyle",
+  "label": "Speech",
+  "per": "project",
+  "note": "Original SandTie vocal delivery & acting registers.",
+  "options": [
+    {
+      "id": "warm_witty_banter",
+      "label": "💬 Warm Witty Banter (Natural & Grounded Chemistry)",
+      "group": "Everyday",
+      "words": "natural, quick-witted everyday conversational cadence with easy smiles, relaxed timing, and lively eye-line reactions",
+      "small": "wait, seriously?, you knew that already, fair enough, let's get moving",
+      "domain": "general"
+    },
+    {
+      "id": "earnest_dramatic_confession",
+      "label": "🎬 Earnest Dramatic Confession (Grounded Cinema)",
+      "group": "Everyday",
+      "words": "steady, emotionally honest dramatic delivery with quiet weight, brief measured pauses, and unforced sincerity",
+      "small": "look at me for a second, I didn't come here to argue, tell me the truth",
+      "domain": "general"
+    },
+    {
+      "id": "calm_noir_detective",
+      "label": "🕵️ Calm Noir Detective (Measured & Observant)",
+      "group": "Work & broadcast",
+      "words": "low, measured, observant investigative cadence with dry precision and calm control under tension",
+      "small": "interesting timing, check the hallway, keep talking, I'm listening",
+      "domain": "general"
+    },
+    {
+      "id": "bright_vlog_host",
+      "label": "🎥 Bright Camera-Facing Vlog Host (Crisp & Engaging)",
+      "group": "Work & broadcast",
+      "words": "bright, articulate camera-facing presenter rhythm with clear diction, friendly gestures, and crisp beat transitions",
+      "small": "alright, check this out, right behind me, you have to see this",
+      "domain": "general"
+    },
+    {
+      "id": "urgent_action_callout",
+      "label": "🚨 Urgent Action Callout (Fast Under-Fire Focus)",
+      "group": "Work & broadcast",
+      "words": "fast, focused, high-stakes tactical callout spoken crisply mid-movement while keeping steady breath and sharp clarity",
+      "small": "move left, watch the door, on my mark, cover the stairs",
+      "domain": "combat_action"
+    },
+    {
+      "id": "playful_comedy_deadpan",
+      "label": "😏 Playful Deadpan Comedy (Dry Timing & Beat)",
+      "group": "Everyday",
+      "words": "crisp comedic timing with dry understated inflection, raised-brow pauses, and sharp deadpan punchlines",
+      "small": "well that went great, nobody saw that, totally planned, sure",
+      "domain": "general"
+    },
+    {
+      "id": "seductive_purr",
+      "label": "Sultry bedroom purr",
+      "group": "Performance",
+      "words": "low, breathy, close-mic bedroom purr, unhurried vowels, every word dipped in heat and teasing intimacy",
+      "small": "look how wet you made me, keep those eyes up here, slower... let me feel every inch, taste me, mm—just like that",
+      "domain": "bedroom"
+    },
+    {
+      "id": "bratty_domme",
+      "label": "Bratty teasing domme",
+      "group": "Performance",
+      "words": "sharp, amused, effortlessly superior delivery, melodic upward pitch lifts on taunts, cruel giggles into icy commands",
+      "small": "loser, pathetic, eyes on me, beg for it, cute, good boy, on your knees",
+      "domain": "general"
+    },
+    {
+      "id": "husky_velvet",
+      "label": "Husky velvet whisper",
+      "group": "Performance",
+      "words": "deep, smoky, velvety lower-register whisper right against the mic, slow cadence, lingering pauses",
+      "small": "shhh, listen to me, slow down, breathe with me, you are all mine, stay close",
+      "domain": "general"
+    },
+    {
+      "id": "anime_tsundere",
+      "label": "Flustered anime tsundere",
+      "group": "Performance",
+      "words": "snappy, flustered high-pitched protests that crack into embarrassed stammers, defensive attitude hiding affection",
+      "small": "h-hey, wait a second, dummy, as if, shut up, baka, seriously",
+      "domain": "general"
+    },
+    {
+      "id": "breathless_climax_gasps",
+      "label": "🔥 Breathless Climax Tremble & Broken Gasps",
+      "group": "Performance",
+      "words": "trembling, high-pitched breathless vocal delivery broken by sharp intakes of air and quivering vowels at the peak of pleasure",
+      "small": "aaah~!!, my legs are shaking, hold me right against you, I'm losing it~!!",
+      "domain": "general"
+    },
+    {
+      "id": "pillow_talk_afterglow",
+      "label": "💋 Intimate Pillow-Talk Afterglow Whisper",
+      "group": "Performance",
+      "words": "ultra-close-mic, sleepy, velvet-soft bedroom whisper full of warm affection and lingering sighs",
+      "small": "come here, stay with me, look at you",
+      "domain": "bedroom"
+    },
+    {
+      "id": "commanding_mommy_domme",
+      "label": "👑 Commanding Mommy Domme / Soft Dominance",
+      "group": "Performance",
+      "words": "calm, velvet-smooth maternal authority that mixes indulgent praise with unshakeable control",
+      "small": "good boy, eyes on me, just like I told you",
+      "domain": "general"
+    },
+    {
+      "id": "mocking_mean_girl_tease",
+      "label": "😈 Cruel Mean-Girl Giggle & Condescending Smirk",
+      "group": "Performance",
+      "words": "sweetly condescending, sing-song teasing cadence punctuated by airy giggles and biting mockery",
+      "small": "aww, seriously, you wish, pathetic",
+      "domain": "general"
+    },
+    {
+      "id": "kuudere_ice_queen",
+      "label": "❄️ Anime Kuudere / Ice Queen (Cool, Clipped & Deadpan)",
+      "group": "Performance",
+      "words": "cool, low-affect, unhurried aristocrat cadence with crisp consonants and understated emotional control",
+      "small": "how predictable, kneel, do not waste my time",
+      "domain": "general"
+    },
+    {
+      "id": "yandere_obsessive_sweet",
+      "label": "🔪 Anime Yandere (Honey-Sweet Shifting to Obsessive)",
+      "group": "Performance",
+      "words": "syrupy-sweet, overly affectionate cadence that drops suddenly into intense, unblinking possessive devotion",
+      "small": "you're mine forever, only look at me, promise me",
+      "domain": "general"
+    },
+    {
+      "id": "gravelly_alpha_baritone",
+      "label": "🥃 Gravelly Male Lead Baritone (Low, Raspy & Commanding)",
+      "group": "Performance",
+      "words": "deep, chest-resonant gravelly baritone delivered at a calm, unhurried pace with quiet authority",
+      "small": "come closer, hold still, look at me",
+      "domain": "general"
+    },
+    {
+      "id": "late_night_confessional",
+      "label": "🎙️ Late-Night 3AM Confessional (Raw & Vulnerable)",
+      "group": "Everyday",
+      "words": "quiet, unguarded late-night cadence with soft pauses, honest vulnerability, and intimate microphone proximity",
+      "small": "to tell you the truth, I never told anyone, listen",
+      "domain": "general"
+    },
+    {
+      "id": "hypnotic_trance_inducer",
+      "label": "🌀 Hypnotic Mesmerizer (Rhythmic, Slow & Echoing)",
+      "group": "Performance",
+      "words": "slow, rhythmic, metronomic cadence with elongated vowels that lulls the listener into a trance",
+      "small": "breathe with my voice, stay completely locked on my eyes, let every thought melt",
+      "domain": "general"
+    },
+    {
+      "id": "out_of_breath_adrenaline",
+      "label": "⚡ High-Adrenaline Post-Sprint / Post-Fight Panting",
+      "group": "Performance",
+      "words": "ragged, chest-heaving vocal delivery spoken between heavy breaths right after intense physical exertion",
+      "small": "still standing, is that all, catch your breath",
+      "domain": "general"
+    },
+    {
+      "id": "velvet_hypnotic_domme_count",
+      "label": "⛓️ Velvet Femdom Countdown & Praise-Drop ('Good boy… 3, 2, 1…')",
+      "group": "Performance",
+      "words": "slow, purring, unshakably commanding vocal cadence that alternates warm praise with a rhythmic countdown",
+      "small": "good boy, eyes on me, three, two, one, right now",
+      "domain": "general"
+    },
+    {
+      "id": "overstimulated_trembling_whimper",
+      "label": "🔥 Overstimulated Breathless Tremble & High-Pitched Gasp",
+      "group": "Performance",
+      "words": "quivering, breathless, high-pitched vocal delivery broken by sharp gasps and trembling inhales",
+      "small": "wait—my head is spinning, how is every inch of me trembling like this—aaah~!!",
+      "domain": "general"
+    },
+    {
+      "id": "anime_shonen_named_attack_roar",
+      "label": "⚔️ Anime Shonen Technique Invocation & Battle Roar",
+      "group": "Performance",
+      "words": "fierce, resonant, chest-projecting heroic cadence declaring a signature combat technique with explosive intensity",
+      "small": "first form, bankai, domain expansion, finish this",
+      "domain": "general"
+    },
+    {
+      "id": "secretive_office_whisper",
+      "label": "🤫 Hushed Secretive Whisper ('Keep your voice down, someone will hear…')",
+      "group": "Performance",
+      "words": "urgent, close-mic hushed whisper spoken right against the ear or lens while glancing cautiously toward the door to stay discreet",
+      "small": "stay quiet, someone might hear us, don't make a sound",
+      "domain": "office_desk"
+    },
+    {
+      "id": "sultry_pillow_talk",
+      "label": "🛏️ Warm Sultry Pillow-Talk Murmur (Soft & Close-Mic)",
+      "group": "Performance",
+      "words": "warm, unhurried, close-mic bedroom pillow-talk murmur with soft breathy sighs and lingering vowel tails",
+      "small": "mmh, come closer, feel my pulse racing, stay tangled in the sheets",
+      "domain": "bedroom"
+    },
+    {
+      "id": "breathless_mid_motion",
+      "label": "💨 Breathless Mid-Motion Gasps & Broken Cadence",
+      "group": "Performance",
+      "words": "panting, breathless mid-exertion speech broken up by audible inhales, sharp gasps, and clipped emotional bursts",
+      "small": "ah—, wait—fuck, my knees are shaking, hold onto my hips, mmh—",
+      "domain": "general"
+    },
+    {
+      "id": "playful_brat_tease",
+      "label": "😜 Playful Bratty Tease & Smug Eye-Roll Singsong",
+      "group": "Everyday",
+      "words": "smug, playful, singsong bratty delivery dripping with mock surprise, cheeky giggles, and teasing upward inflections",
+      "small": "oh really~?, cute, try harder~",
+      "domain": "general"
+    },
+    {
+      "id": "cold_measured_dominance",
+      "label": "🧊 Ice-Cold Measured Dominance (Calm Unblinking Authority)",
+      "group": "Performance",
+      "words": "slow, calm, ice-cold commanding cadence spoken softly with complete unhurried certainty and deliberate measured pauses",
+      "small": "eyes up on mine, hold that exact angle, obey quietly, good",
+      "domain": "general"
+    },
+    {
+      "id": "breathless_gasp_whisper",
+      "label": "🔥 Breathless Gasp & Soft Panting Whisper",
+      "group": "Performance",
+      "words": "breathless, quivering close-mic gasps broken by soft heated pauses and damp inhales",
+      "small": "ah—, my breath just caught, look at my chest heaving, taste me, mmm",
+      "domain": "general"
+    },
+    {
+      "id": "confident_action_one_liner",
+      "label": "😎 Ice-Cool Action Hero One-Liner",
+      "group": "Performance",
+      "words": "dry, calm, razor-sharp action one-liner delivered effortlessly mid-motion with zero wasted breath",
+      "small": "stay down, missed me, my turn, right on cue",
+      "domain": "general"
+    },
+    {
+      "id": "cold_quiet_menace",
+      "label": "🗡️ Quiet Lethal Threat (Low Unblinking Menace)",
+      "group": "Performance",
+      "words": "quiet, velvet-low, unblinking threat spoken slowly with icy precision",
+      "small": "walk away, think carefully, listen closely",
+      "domain": "general"
+    },
+    {
+      "id": "teasing_playful_giggle",
+      "label": "💋 Playful Bratty Giggle & Teasing Winks",
+      "group": "Performance",
+      "words": "bright, bubbly, teasing sing-song cadence dotted with playful giggles and cheeky smirks",
+      "small": "caught you, oops, look closer, too slow",
+      "domain": "general"
+    },
+    {
+      "id": "fierce_warrior_battle_kiai",
+      "label": "⚔️ Fierce Warrior Battle Cry & Sharp Exhale",
+      "group": "Performance",
+      "words": "explosive martial arts battle kiai and sharp grounded exhales timed squarely onto strikes",
+      "small": "hyah!, move!, now!, break!",
+      "domain": "general"
+    },
+    {
+      "id": "husky_aftercare_murmur",
+      "label": "🌙 Warm Husky Pillow-Talk Aftercare Murmur",
+      "group": "Performance",
+      "words": "slow, sleepy, warm husky murmur spoken inches from the ear with lingering tender vowels",
+      "small": "stay wrapped around me, catch your breath, look at your pupils, mmm",
+      "domain": "bedroom"
+    },
+    {
+      "id": "commanding_goddess_slow_cadence",
+      "label": "👑 Commanding Goddess Slow Measured Cadence",
+      "group": "Performance",
+      "words": "regal, unhurried, silky commanding voice with deliberate pauses expecting instant obedience",
+      "small": "eyes on me, kneel closer, slowly now, good",
+      "domain": "general"
+    },
+    {
+      "id": "panicked_thriller_pant",
+      "label": "🎭 Tense Thriller Hushed Whisper (Checking Doors)",
+      "group": "Performance",
+      "words": "urgent hushed conspiratorial whisper glancing sideways while keeping the voice low",
+      "small": "hurry, listen, footsteps outside, stay quiet, lock the door",
+      "domain": "general"
+    },
+    {
+      "id": "playful_cocky_tease",
+      "label": "😈 Playful Cocky Tease & Mock-Innocent Dare",
+      "group": "Performance",
+      "words": "cheeky, playful, smugly amused delivery mixing teasing dares, airy laughs, and cocky commentary on the partner's cracking composure",
+      "small": "already sweating?, cute little gasp, show me you can keep up, oh—now you're blushing~",
+      "domain": "general"
+    },
+    {
+      "id": "needy_begging_whimper",
+      "label": "🥺 Needy Desperate Pleading & Overwhelmed Whimper",
+      "group": "Performance",
+      "words": "trembling, desperate, breathless pleading with broken clauses, needy sighs, and overwhelmed vocal vulnerability",
+      "small": "please spoil me, my legs are giving out, I can't hold back anymore, fill me up",
+      "domain": "general"
+    },
+    {
+      "id": "possessive_claim_growl",
+      "label": "🖤 Low Possessive Alpha Claim & Praise",
+      "group": "Performance",
+      "words": "deep, smoky, possessive lower-register growl claiming total ownership while praising every shiver, sound, and tight squeeze",
+      "small": "every sound you make belongs to me, look how soaked you got for me, take every inch, good girl",
+      "domain": "general"
+    },
+    {
+      "id": "filthy_shameless_dirty_talk",
+      "label": "🔥 Unfiltered Filthy Dirty-Talk & Explicit Narration",
+      "group": "Performance",
+      "words": "bold, shameless, uninhibited explicit dirty talk narrating exact wet sensations, throbbing pulse, taste, and messy details with hot urgency",
+      "small": "look how slick your cock is, my pussy is gripping you so tight, paint my tits with it, taste yourself on my tongue",
+      "domain": "general"
+    },
+    {
+      "id": "sarcastic_brat_challenge",
+      "label": "💅 Bratty Taunting Dare & Unimpressed Challenge",
+      "group": "Performance",
+      "words": "sassy, mocking, challengingly playful tone daring the partner to prove their stamina while biting back involuntary gasps",
+      "small": "is that really all you've got?, wait—okay that angle actually hit, try that again if you dare~",
+      "domain": "general"
+    },
+    {
+      "id": "shy_flustered_confession",
+      "label": "😳 Shy Flustered Confession & Trying-far from-to-Crack",
+      "group": "Performance",
+      "words": "soft, flustered, stammering honesty trying to sound composed while blushing confessions and tiny helpless squeaks slip out",
+      "small": "w-wait why does that feel so crazy, stop looking at my face while you do that, I-I've been wanting this all week",
+      "domain": "general"
+    },
+    {
+      "id": "sensory_detail_narrator",
+      "label": "🫦 Hyper-Sensory Real-Time Whisper",
+      "group": "Performance",
+      "words": "intimate close-mic sensory narration describing temperature, trembling skin, slick friction, and racing heartbeats in hushed awe",
+      "small": "your skin is burning hot, feel how hard my heart is pounding, every slide is dripping wet, my thighs are trembling",
+      "domain": "general"
+    },
+    {
+      "id": "worshipful_devoted_praise",
+      "label": "✨ Breathless Devoted Praise & Adoration",
+      "group": "Performance",
+      "words": "warm, reverent, awestruck intimate praise marvelling aloud at their partner's body, curves, expressions, and scent",
+      "small": "god you look unreal from down here, look at those curves moving, you taste like heaven, I could stay like this forever",
+      "domain": "general"
+    },
+    {
+      "id": "competitive_switch_banter",
+      "label": "⚡ Spicy Rivalry Banter ('Watch Who Breaks First')",
+      "group": "Performance",
+      "words": "fast, teasing competitive chemistry turning foreplay and pace into a smug bet over who loses control first",
+      "small": "bet you crack before I do, look whose jaw just dropped, steady—keep your eyes open and prove it",
+      "domain": "general"
+    },
+    {
+      "id": "unhinged_overstimulated_spiral",
+      "label": "🌪️ Overstimulated Sensory Overload Babble",
+      "group": "Performance",
+      "words": "dizzy, breathless, half-coherent overwhelmed speech where words dissolve mid-sentence into shivering stammers and overwhelmed laughter",
+      "small": "wait—my brain just short-circuited, how are you—aaah~!!, everything is spinning, hold me steady",
+      "domain": "general"
+    },
+    {
+      "id": "pillow_giggle_banter",
+      "label": "🤭 Breathless Giggle & Flustered Banter",
+      "group": "Performance",
+      "words": "warm, playfully breathless mid-act delivery mixing soft amused giggles, shy eye-contact teasing, and cheeky conversational remarks",
+      "small": "wait why are you grinning like that~?, stop making me laugh mid-breath, okay that actually made my toes curl~",
+      "domain": "bedroom"
+    },
+    {
+      "id": "dirty_whisper_praise_kink",
+      "label": "🫦 Praise-Kink Soft Adoration & Good-Girl Murmurs",
+      "group": "Performance",
+      "words": "velvet, intoxicatingly affectionate praise murmuring explicit appreciation for every shiver, flush, and tight squeeze right into their ear",
+      "small": "look how pretty you sound for me, taking every single inch like a dream, such a good girl, let me spoil you",
+      "domain": "general"
+    },
+    {
+      "id": "risk_adrenaline_hush",
+      "label": "🤫 Hushed Public-Risk Adrenaline & Bitten-Lip Gasps",
+      "group": "Performance",
+      "words": "urgent, whisper-quiet thrill-seeking cadence stifling gasps behind bitten lips while teasing the danger of anyone overhearing",
+      "small": "shhh—keep your voice down, anyone could walk past that glass, bite your lip and hold steady for me~",
+      "domain": "general"
+    },
+    {
+      "id": "bratty_smug_countdown",
+      "label": "😈 Smug Bratty Tease & Cruel Playful Dare",
+      "group": "Performance",
+      "words": "sharp, smug, playful singsong teasing the partner's self-control while dangling eye contact and daring them to survive another beat",
+      "small": "already losing your composure?, blink once and you lose, prove you can keep up with me~",
+      "domain": "general"
+    },
+    {
+      "id": "soft_afterglow_confession",
+      "label": "💗 Melt-Into-Sheets Tender Confession",
+      "group": "Performance",
+      "words": "unhurried, dreamy, vulnerable close-mic murmur glowing with post-climax warmth, soft sighs, and unguarded honesty",
+      "small": "my whole chest is still fluttering, stay tangled right here with me, I've been aching for this all night",
+      "domain": "general"
+    },
+    {
+      "id": "heated_bilingual_slip",
+      "label": "🌶️ Heated Mid-Motion Slip-of-the-Tongue",
+      "group": "Performance",
+      "words": "passionate, breathless English cadence cracking suddenly into raw instinctive exclamations whenever pleasure overwhelms poise",
+      "small": "wait—ah, my poise just vanished completely, look at my blush right now, hold my hips tighter—",
+      "domain": "general"
+    },
+    {
+      "id": "cocky_dominant_commentary",
+      "label": "🖤 Cocky Dominant Real-Time Play-by-Play",
+      "group": "Performance",
+      "words": "amused, low, effortlessly dominant play-by-play narrating every wet sound, trembling knee, and flush with smug satisfaction",
+      "small": "hear how slick that sounds?, your knees are already buckling, keep your eyes glued right on mine",
+      "domain": "general"
+    },
+    {
+      "id": "switch_power_reversal_tease",
+      "label": "⚡ Playful Switch Reversal Taunt ('My Turn Now')",
+      "group": "Performance",
+      "words": "flirty, slyly confident tone flipping smoothly from breathless reaction into bold playful control mid-scene",
+      "small": "cute effort—now hold still, my turn to set the pace, watch how fast your hands start shaking~",
+      "domain": "general"
+    },
+    {
+      "id": "natural_conversational",
+      "label": "Natural Grounded Conversation",
+      "group": "Everyday",
+      "words": "relaxed, natural conversational cadence with realistic breath pauses and unforced warmth",
+      "small": "listen, wait a second, look at me, seriously",
+      "domain": "general"
+    },
+    {
+      "id": "deadpan_dry_wit",
+      "label": "Deadpan Dry Wit & Eye-Roll",
+      "group": "Everyday",
+      "words": "flat, razor-dry understated sarcasm with deadpan pauses and amused micro-sighs",
+      "small": "oh sure, brilliant, fascinating, adorable",
+      "domain": "general"
+    },
+    {
+      "id": "excited_gossip_rush",
+      "label": "Breathless Excited Storytelling",
+      "group": "Everyday",
+      "words": "fast, sparkling, animated upward pitch bursts interrupted by wide-eyed gasps and laughs",
+      "small": "wait—what?!, tell me everything, you are kidding~!!",
+      "domain": "general"
+    },
+    {
+      "id": "dramatic_villain_monologue",
+      "label": "Theatrical Booming Overlord",
+      "group": "Performance",
+      "words": "rich, chest-resonant theatrical projection savoring every syllable before sharp amused laughs",
+      "small": "foolish, observe closely, behold, at last",
+      "domain": "general"
+    },
+    {
+      "id": "calm_tactical_briefing",
+      "label": "Crisp Tactical Field Comms",
+      "group": "Work & broadcast",
+      "words": "clipped, steady, calm under-fire clarity with zero wasted syllables",
+      "small": "eyes sharp, clear the door, stay low, on my mark",
+      "domain": "general"
+    },
+    {
+      "id": "soft_intimate_whisper",
+      "label": "Close-Mic Intimate Whisper",
+      "group": "Performance",
+      "words": "hushed, velvety breathy whisper spoken inches from the ear with lingering pauses",
+      "small": "shhh, stay close, feel that, just breathe",
+      "domain": "general"
+    }
+  ]
+}

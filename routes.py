@@ -44,6 +44,11 @@ FILES_ROUTE = "/h3_ref_chain/files"
 PEAKS_ROUTE = "/h3_ref_chain/peaks"
 REFMOD_EST_ROUTE = "/h3_ref_chain/refmod_estimate"
 REFMOD_PLAN_ROUTE = "/h3_ref_chain/refmod_plan"
+REFMOD_THUMB_ROUTE = "/h3_ref_chain/refmod_thumb"
+REFMOD_INSPECT_ROUTE = "/h3_ref_chain/refmod_inspect"
+REFMOD_UPDATE_ROUTE = "/h3_ref_chain/refmod_update"
+REFMOD_PREVIEW_MASK_ROUTE = "/h3_ref_chain/refmod_preview_mask"
+REFMOD_CAPTION_ROUTE = "/h3_ref_chain/refmod_caption"
 LLM_ROUTE = "/h3_ref_chain/llm"
 PLAN_ROUTE = "/h3_ref_chain/plan"
 SWAP_PLAN_ROUTE = "/h3_ref_chain/swap_plan"
@@ -54,6 +59,15 @@ HOP_SPRITE_ROUTE = "/h3_ref_chain/hop_sprite"
 HOP_CACHE_ROUTE = "/h3_ref_chain/hop_cache"
 HOP_CLIP_ROUTE = "/h3_ref_chain/hop_clip"
 SEAM_CLIP_ROUTE = "/h3_ref_chain/seam_clip"
+MV_CAPS_ROUTE = "/h3_ref_chain/mv/capabilities"
+MV_IDEATE_ROUTE = "/h3_ref_chain/mv/ideate"
+MV_SONGMAP_ROUTE = "/h3_ref_chain/mv/song_map"
+MV_SONGMAP_STATUS_ROUTE = "/h3_ref_chain/mv/song_map_status"
+MV_SOLVE_ROUTE = "/h3_ref_chain/mv/solve"
+MV_GRAPH_ROUTE = "/h3_ref_chain/mv/build_graph"
+MV_EXTRACT_FRAME_ROUTE = "/h3_ref_chain/mv/extract_frame"
+MV_IMPORT_ROUTE = "/h3_ref_chain/mv/import_output"
+STEERING_DIALS_ROUTE = "/h3_ref_chain/dials/list"
 
 # Scrub sheets for the timeline, keyed (hop key, n). A hop key names content,
 # so an entry can never go stale -- only the cache behind it can vanish, and
@@ -302,25 +316,10 @@ def _payload():
     }
 
 
-def _local_addon():
-    """An optional local add-on package beside this file (not shipped).
-
-    Returns the module, or None when it is absent or fails to import, so the
-    public pack never depends on it.
-    """
-    try:
-        from . import htc_personal as addon
-    except Exception:
-        return None
-    return addon
-
-
 async def _addon_writer_ready(llm):
-    """Let a local add-on start the writer first; no-op without one."""
-    if _local_addon() is None:
-        return False
+    """Ensure the SandTie local writer server is ready before generation."""
     try:
-        from .htc_personal import routes_ext as ext
+        from .htc_sandtie import routes as ext
     except Exception:
         return False
     fn = getattr(ext, "ensure_writer_ready", None)
@@ -385,6 +384,7 @@ def register():
                 "clip": body.get("clip") or None,
                 "voice": body.get("voice") or "",
             })
+            layout = str(body.get("layout") or "separate_pictures").strip()
             first = stills[0] if stills else (clip or {}).get("file")
             if not first:
                 return web.json_response({"ok": True, "empty": True})
@@ -396,12 +396,22 @@ def register():
                               f"{first} could not be measured"})
             tw, th = _refmod.canvas_for_hw(size[1], size[0])
             per = _refmod.frame_tokens(tw, th)
+            if layout == "separate_pictures":
+                still_tokens = 0
+                for sn in stills:
+                    ss = _media.probe_size(sn)
+                    if ss is not None:
+                        stw, sth = _refmod.canvas_for_hw(ss[1], ss[0])
+                        still_tokens += _refmod.frame_tokens(stw, sth)
+            else:
+                still_tokens = len(stills) * per
             out = {
                 "ok": True,
+                "layout": layout,
                 "canvas": [tw, th],
                 "per_frame_tokens": per,
                 "stills": len(stills),
-                "still_tokens": len(stills) * per,
+                "still_tokens": still_tokens,
                 "problems": [_refmod.source_problem(n) or
                              f"{n} could not be read"
                              for n in stills
@@ -449,9 +459,240 @@ def register():
             return web.json_response(
                 {"ok": True, "plan": _refmod.stored_plan(name),
                  "description": _refmod.description_of(
-                     _refmod.read_meta(path) if path else None)})
+                     _refmod.read_meta(path) if path else None),
+                 "inspect": _refmod.inspect_refmod(name)})
         except Exception as exc:  # noqa: BLE001
             return web.json_response({"ok": False, "error": str(exc)})
+
+    @instance.routes.get(REFMOD_THUMB_ROUTE)
+    async def _refmod_thumb(request):
+        import asyncio
+        from . import refmod as _refmod
+
+        name = str(request.rel_url.query.get("name") or "").strip()
+        if not name:
+            return web.Response(status=400, text="missing name")
+        try:
+            member = int(request.rel_url.query.get("member") or 0)
+        except Exception:
+            member = 0
+        try:
+            width = int(request.rel_url.query.get("w") or 192)
+        except Exception:
+            width = 192
+        try:
+            jpg = await asyncio.get_running_loop().run_in_executor(
+                None, lambda: _refmod.thumb_bytes(name, member_idx=member, width=width))
+            if not jpg:
+                return web.Response(status=404, text="no preview")
+            return web.Response(body=jpg, content_type="image/jpeg",
+                                headers={"Cache-Control": "public, max-age=120"})
+        except Exception as exc:  # noqa: BLE001
+            return web.Response(status=404, text=str(exc))
+
+    @instance.routes.get(REFMOD_INSPECT_ROUTE)
+    async def _refmod_inspect(request):
+        import asyncio
+        from . import refmod as _refmod
+
+        name = str(request.rel_url.query.get("name") or "").strip()
+        if not name:
+            return web.json_response({"ok": False, "error": "missing name"}, status=400)
+        try:
+            info = await asyncio.get_running_loop().run_in_executor(
+                None, lambda: _refmod.inspect_refmod(name))
+            if not info:
+                return web.json_response({"ok": False, "error": f"{name} not found or not a RefMod"}, status=404)
+            return web.json_response({"ok": True, **info})
+        except Exception as exc:  # noqa: BLE001
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+
+    @instance.routes.post(REFMOD_UPDATE_ROUTE)
+    async def _refmod_update(request):
+        import asyncio
+        from . import refmod as _refmod
+
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "expected JSON"}, status=400)
+        body = body if isinstance(body, dict) else {}
+        name = str(body.get("name") or "").strip()
+        action = str(body.get("action") or "meta").strip().lower()
+        if not name:
+            return web.json_response({"ok": False, "error": "missing name"}, status=400)
+        try:
+            def _do():
+                if action == "remove_member":
+                    _refmod.remove_member(name, int(body.get("member_idx") or 0))
+                else:
+                    _refmod.update_meta(name, body)
+                return _refmod.inspect_refmod(name), _refmod.listing()
+            info, files = await asyncio.get_running_loop().run_in_executor(None, _do)
+            return web.json_response({"ok": True, "inspect": info, "files": files})
+        except Exception as exc:  # noqa: BLE001
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+
+    @instance.routes.post(REFMOD_PREVIEW_MASK_ROUTE)
+    async def _refmod_preview_mask(request):
+        import asyncio
+        from . import refmod as _refmod
+
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "expected JSON"}, status=400)
+        body = body if isinstance(body, dict) else {}
+        image_name = str(body.get("image") or "").strip()
+        if not image_name:
+            return web.json_response({"ok": False, "error": "missing image"}, status=400)
+        try:
+            png = await asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: _refmod.preview_mask_png(
+                    image_name,
+                    subject_mask=str(body.get("subject_mask") or "auto_rembg"),
+                    background_retention=float(body.get("background_retention") or 0.0),
+                    background_mode=str(body.get("background_mode") or "blur_bg"),
+                    crop_margin=float(body.get("crop_margin") or 0.0),
+                ))
+            return web.Response(body=png, content_type="image/png")
+        except Exception as exc:  # noqa: BLE001
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+
+    @instance.routes.post(REFMOD_CAPTION_ROUTE)
+    async def _refmod_caption(request):
+        """Auto-caption staged RefMod stills or stored RefMod `looks` via the active VLM."""
+        import asyncio
+        from . import llm as _llm
+        from . import refmod as _refmod
+        from .htc_sandtie import vision_cv as _vcv
+
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "expected JSON"}, status=400)
+        body = body if isinstance(body, dict) else {}
+        name = str(body.get("name") or "").strip()
+        stills = [str(s).strip() for s in (body.get("stills") or []) if str(s or "").strip()]
+        role = str(body.get("role") or "identity").strip().lower()
+        auto_wake = bool(body.get("auto_wake", True))
+        save_meta = bool(body.get("save_meta", False))
+        unload_after = bool(body.get("unload_after", False))
+
+        def _gather_urls():
+            urls = []
+            for s in stills[:4]:
+                p = _media.resolve(s, kinds={"image"})
+                if p:
+                    try:
+                        urls.append(_vcv.encode_image_mp(p, mp=2.0))
+                    except Exception:
+                        u = _media.vision_data_url(s)
+                        if u:
+                            urls.append(u)
+            if not urls and name:
+                urls = _refmod.vision_data_urls(name, max_images=4, max_side=1024)
+            return urls
+
+        urls = await asyncio.get_running_loop().run_in_executor(None, _gather_urls)
+        if not urls:
+            return web.json_response(
+                {"ok": False, "error": "Add a still or select a stored RefMod with looks first."},
+                status=400,
+            )
+
+        conn = _llm.load_conn()
+        backend = _llm.backend_name(conn.get("backend"))
+        is_up = await _llm.server_running_async(backend)
+        if not is_up:
+            if auto_wake and backend == "ninfer":
+                woke = await _addon_writer_ready(_llm)
+                conn = _llm.load_conn()
+                is_up = await _llm.server_running_async(backend)
+                if not is_up and not woke:
+                    err = _llm.startup_error("ninfer")
+                    return web.json_response({
+                        "ok": False,
+                        "error": (f"nInfer failed to start: {err}" if err
+                                  else "Could not auto-start nInfer — check LLM Settings in Studio."),
+                    })
+            else:
+                lbl = _llm.backend_spec(backend)["label"]
+                hint = ("press Start in Studio's LLM bar" if backend == "ninfer"
+                        else "start LM Studio's server and load a model")
+                return web.json_response({"ok": False, "error": f"{lbl} is offline — {hint}."})
+
+        try:
+            found = await _llm.models(conn["server_url"])
+        except Exception:
+            found = []
+        if not conn.get("model") or (found and not any(m.get("id") == conn.get("model") for m in found if isinstance(m, dict))):
+            loaded = [m for m in found if isinstance(m, dict) and m.get("loaded") is True]
+            pick = loaded[0] if loaded else (found[0] if found and isinstance(found[0], dict) else None)
+            if pick and pick.get("id"):
+                conn["model"] = str(pick["id"])
+        if not conn.get("model"):
+            return web.json_response({"ok": False, "error": "No LLM model selected — open LLM Settings and pick one."})
+
+        if role == "background":
+            prompt_txt = _vcv.ROLE_PROMPTS["place"]
+            strip_studio = False
+        elif role == "helper":
+            prompt_txt = _vcv.ROLE_PROMPTS["prop"]
+            strip_studio = False
+        elif role == "wardrobe":
+            prompt_txt = (
+                "CRITICAL RULE: Describe ONLY the garment, outfit layers, and footwear visible (IGNORE any studio background, backdrop, or lighting). "
+                "Start with \"Wearing \" and state exact garment construction, colors, fabrics, patterns, inner/outer layers, straps, closures, and footwear in one crisp sentence under 45 words. "
+                "Never mention age, studio backdrop, or negative words (no, not, never, without)."
+            )
+            strip_studio = True
+        elif role == "style":
+            prompt_txt = (
+                "Describe the visual rendering medium, color palette, lens texture, and lighting style in one concise sentence under 35 words. "
+                "Never use negative words (no, not, never, without)."
+            )
+            strip_studio = False
+        else:
+            prompt_txt = _vcv.ROLE_PROMPTS["subject"]
+            strip_studio = True
+
+        content = [{"type": "text", "text": prompt_txt}]
+        for u in urls:
+            content.append({"type": "image_url", "image_url": {"url": u}})
+        msgs = [{"role": "user", "content": content}]
+
+        try:
+            raw = await _llm.complete(
+                conn["server_url"], conn["model"], msgs,
+                schema=None, temperature=0.2,
+            )
+        except Exception as exc:  # noqa: BLE001
+            return web.json_response({"ok": False, "error": f"VLM captioning failed: {exc}"})
+
+        caption = _vcv._clean_desc(raw, 480, strip_studio=strip_studio)
+        caption = _refmod._clean_desc_text(caption.strip(" \"'"))
+        if not caption:
+            return web.json_response({"ok": False, "error": "VLM returned an empty caption."})
+
+        if unload_after and conn.get("unload_on_run", True):
+            try:
+                await _llm.unload(conn["server_url"], conn["model"])
+            except Exception:
+                pass
+
+        insp = None
+        if save_meta and name and _refmod.resolve(name):
+            def _save():
+                _refmod.update_meta(name, {"description": caption})
+                return _refmod.inspect_refmod(name)
+            try:
+                insp = await asyncio.get_running_loop().run_in_executor(None, _save)
+            except Exception as exc:  # noqa: BLE001
+                return web.json_response({"ok": False, "error": f"Captioned ok, header save failed: {exc}"})
+
+        return web.json_response({"ok": True, "description": caption, "inspect": insp})
 
     @instance.routes.post(PEAKS_ROUTE)
     async def _peaks(request):
@@ -666,9 +907,9 @@ def register():
                 "backend_label": _llm.backend_spec(conn.get("backend"))["label"],
                 "model_optional": bool(_llm.backend_spec(
                     conn.get("backend"))["model_optional"]),
-"backends": [{"id": k, "label": v["label"],
-                                     "program": k in _llm.SERVER_EXES}
-                                for k, v in _llm.BACKENDS.items()],
+                "backends": [{"id": k, "label": v["label"],
+                              "program": k in dict(_llm.SERVER_EXES)}
+                             for k, v in _llm.BACKENDS.items()],
                   # D1h: the per-backend paths this pack would launch with, so
                   # the panel can show them. Before this the Start button's
                   # failure ("set the path in Settings") pointed at a field that
@@ -682,9 +923,12 @@ def register():
                           "model_file": str((conn.get("servers") or {}).get(name, {})
                                             .get("model_file") or ""),
                           "found_exe": _llm._server_exe(name) or "",
+                          "ctx_size": _llm._server_ctx_size(name),
                       }
                       for name in _llm.BACKENDS
                   },
+                "ctx_size": _llm._server_ctx_size(conn.get("backend")),
+                "ctx_choices": list(_llm.CTX_SIZE_CHOICES),
                 # Whether the writer is up. The panel's Start button is disabled
                 # when it is, so a second click cannot launch a second 27B --
                 # which is a real way to end up with two processes fighting over
@@ -719,20 +963,27 @@ def register():
             # queued graph never can.
             if isinstance(body, dict) and body.get("action") == "start":
                 _ok, _msg = await _llm.start_process_async(
-                    model_file=str(body.get("model_file") or "").strip() or None)
+                    model_file=str(body.get("model_file") or "").strip() or None,
+                    ctx_size=body.get("ctx_size"),
+                )
+                _run = await _llm.server_running_async()
                 return web.json_response({"ok": _ok, "error": "" if _ok else _msg,
                                           "note": _msg,
-                                          "running": await _llm.server_running_async(),
+                                          "running": _run,
+                                          "startup_error": "" if _run else _llm.startup_error(),
                                           **_llm.load_conn()})
             if isinstance(body, dict) and body.get("action") == "stop":
                 _n = _llm.stop_process()
                 return web.json_response({"ok": True,
                                           "note": f"stopped {_n} process(es)",
                                           "running": await _llm.server_running_async(),
+                                          "startup_error": "",
                                           **_llm.load_conn()})
             if isinstance(body, dict) and body.get("action") == "status":
+                _run = await _llm.server_running_async()
                 return web.json_response({"ok": True,
-                                          "running": await _llm.server_running_async(),
+                                          "running": _run,
+                                          "startup_error": "" if _run else _llm.startup_error(),
                                           **_llm.load_conn()})
             conn = _llm.save_conn(body if isinstance(body, dict) else {})
             return web.json_response({"ok": True, **conn})
@@ -749,12 +1000,33 @@ def register():
         it ran, or LM Studio's JIT put a different model in memory than the one
         configured. Pressing it when nothing is loaded is a no-op that says so.
         """
+        import asyncio
         try:
             from . import llm as _llm
         except Exception as exc:
             return web.json_response({"ok": False, "error": str(exc)})
         try:
+            try:
+                body = await request.json()
+            except Exception:
+                body = {}
+            body = body if isinstance(body, dict) else {}
             conn = _llm.load_conn()
+            backend = _llm.backend_name(conn.get("backend"))
+            spec = _llm.backend_spec(backend)
+            if body.get("auto") and not conn.get("unload_on_run", True):
+                return web.json_response({"ok": True, "unloaded": 0, "note": "unload_on_run is off"})
+            if not spec.get("evictable", True):
+                if not _llm.shares_this_gpu(conn["server_url"]):
+                    return web.json_response({"ok": True, "unloaded": 0, "note": "writer is remote"})
+                stopped = _llm.stop_process(backend)
+                if stopped:
+                    await asyncio.sleep(min(1.5, float(conn.get("vram_settle_s") or 1.0)))
+                return web.json_response({
+                    "ok": True,
+                    "unloaded": int(stopped),
+                    "note": f"stopped {stopped} {spec['label']} process(es)" if stopped else f"{spec['label']} is not running",
+                })
             n, note = await _llm.unload_all(conn["server_url"], conn["model"])
             return web.json_response({"ok": True, "unloaded": n, "note": note})
         except Exception as exc:
@@ -1013,34 +1285,48 @@ def register():
         else:
             files = [f["name"] for f in _media.listing({"image", "video"})]
 
+        start_file = str(body.get("start_image_file") or "").strip()
         import asyncio
+        from . import refmod as _refmod
         images = []
-        if pinned:
+        missing_mod_vision = []
+        start_url = None
+        if pinned or start_file:
             def encode():
                 out = []
+                miss_mods = []
                 for p in pinned:
-                    # A RefMod is a latent, not a picture in h3_refs; the
-                    # writer gets its `desc` and nothing to look at.
                     if p.get("source") == "refmod":
+                        mems = p.get("members") if isinstance(p.get("members"), list) else None
+                        m_idx = mems[0] if mems else 0
+                        url = _refmod.vision_data_url(p["file"], member_idx=m_idx)
+                        if url:
+                            out.append({"tag": p["tag"], "data_url": url})
+                        else:
+                            miss_mods.append(p["tag"])
                         continue
                     url = _media.vision_data_url(p["file"])
                     if url:
                         out.append({"tag": p["tag"], "data_url": url})
-                return out
+                s_url = _media.vision_data_url(start_file) if start_file else None
+                return out, miss_mods, s_url
             try:
-                images = await asyncio.get_running_loop().run_in_executor(
+                images, missing_mod_vision, start_url = await asyncio.get_running_loop().run_in_executor(
                     None, encode)
             except Exception as exc:
                 print(f"[{TAG}] could not attach rail stills: {exc!r}",
                       flush=True)
-                images = []
+                images, missing_mod_vision, start_url = [], [], None
 
         vision_notes = []
-        mods = [p["tag"] for p in pinned if p.get("source") == "refmod"]
-        if mods:
+        if start_file and not start_url:
             vision_notes.append(
-                "the writer cannot look at a RefMod; it read the description "
-                "of " + ", ".join("@" + t for t in mods) + " instead")
+                f"the start image '{start_file}' could not be read; the draft ignores it")
+        if missing_mod_vision:
+            vision_notes.append(
+                "the writer read the description of "
+                + ", ".join("@" + t for t in missing_mod_vision)
+                + " (no stored looks frame)")
 
         _plan_calls = 0
 
@@ -1074,17 +1360,20 @@ def register():
                     brief, complete_fn=complete_fn, thread=thread,
                     proposal=proposal, shot_text=cur_shots,
                     ref_text=cur_refs, images=images,
-                    duration=duration, pin_mech=pin_mech, mv=mv)
+                    duration=duration, pin_mech=pin_mech, mv=mv,
+                    start_image=start_url)
             elif stage == "propose":
                 out = await _planner.write_propose(
                     brief, complete_fn=complete_fn, hops=hops, files=files,
                     pinned=pinned, images=images, duration=duration,
-                    thread=thread, pin_mech=pin_mech, mv=mv)
+                    thread=thread, pin_mech=pin_mech, mv=mv,
+                    start_image=start_url)
             elif stage == "edit":
                 out = await _planner.write_edit(
                     brief, cur_shots, cur_refs, complete_fn=complete_fn,
                     hops=hops, files=files, pinned=pinned, duration=duration,
-                    thread=thread, pin_mech=pin_mech, mv=mv)
+                    thread=thread, pin_mech=pin_mech, mv=mv,
+                    proposal=proposal, images=images, start_image=start_url)
             else:
                 out = await _planner.write_plan(
                     brief, hops, complete_fn=complete_fn, files=files,
@@ -1096,7 +1385,7 @@ def register():
                     # song (user, 2026-10-11: 60 s track, 50 s plan).
                     skeleton=(body.get("skeleton")
                               if isinstance(body.get("skeleton"), dict) else None),
-                    mv=mv)
+                    mv=mv, start_image=start_url)
         except _llm.LLMError as exc:
             return web.json_response({"ok": False, "error": str(exc)})
         except Exception as exc:
@@ -1324,35 +1613,43 @@ def register():
         clip = {}
 
         rail_rows = body.get("rail_rows") if isinstance(body.get("rail_rows"), list) else []
-        rail_file_by_tag = {
-            str(r.get("tag") or "").lstrip("@").strip(): str(r.get("file") or "").strip()
+        rail_by_tag = {
+            str(r.get("tag") or "").lstrip("@").strip(): r
             for r in rail_rows if isinstance(r, dict) and r.get("tag") and r.get("file")
         }
+
+        def _row_vision_url(row):
+            if not isinstance(row, dict) or not row.get("file"):
+                return None
+            if row.get("source") == "refmod":
+                from . import refmod as _refmod
+                mems = row.get("members") if isinstance(row.get("members"), list) else None
+                return _refmod.vision_data_url(row["file"], member_idx=(mems[0] if mems else 0))
+            return _media.vision_data_url(row["file"])
 
         def encode():
             images = []
             seen_tags = set()
             for item in ident_list:
-                if item.get("file"):
-                    url = _media.vision_data_url(item["file"])
-                    if url:
-                        images.append({"tag": item["tag"], "data_url": url})
-                        seen_tags.add(item["tag"])
+                row = rail_by_tag.get(item.get("tag")) or item
+                url = _row_vision_url(row)
+                if url:
+                    images.append({"tag": item["tag"], "data_url": url})
+                    seen_tags.add(item["tag"])
             for extra_tag, role_label in (
                 (background_tag if background == "picture" else "", "background setting plate"),
                 (wardrobe_tag, "wardrobe / outfit plate"),
             ):
                 if extra_tag and extra_tag not in seen_tags:
-                    f_extra = rail_file_by_tag.get(extra_tag)
-                    if f_extra:
-                        url = _media.vision_data_url(f_extra)
-                        if url:
-                            images.append({
-                                "tag": extra_tag,
-                                "caption": f"@{extra_tag} ({role_label}) is this picture:",
-                                "data_url": url,
-                            })
-                            seen_tags.add(extra_tag)
+                    row_extra = rail_by_tag.get(extra_tag)
+                    url = _row_vision_url(row_extra)
+                    if url:
+                        images.append({
+                            "tag": extra_tag,
+                            "caption": f"@{extra_tag} ({role_label}) is this picture:",
+                            "data_url": url,
+                        })
+                        seen_tags.add(extra_tag)
             # Five frames across the trimmed window, not one. A single frame
             # is a POSE: the model described somebody standing with their hands
             # on a bed and could not describe what the clip was DOING, because
@@ -1584,6 +1881,7 @@ def register():
         plan = str(body.get("plan") or "").strip()
         ref_plan = str(body.get("ref_plan") or "")
         start_file = str(body.get("start_image_file") or "").strip()
+        prev_hop_context = str(body.get("prev_hop_context") or "").strip()
         raw_vf = body.get("voice_files")
         if isinstance(raw_vf, list):
             voice_files = [str(v or "").strip() for v in raw_vf if str(v or "").strip()]
@@ -1613,13 +1911,20 @@ def register():
         import asyncio
 
         def encode():
+            from . import refmod as _refmod
             try:
                 lab = _std.labels(ref_plan, voice_files=voice_files)
             except Exception:
                 lab = {"pictures": [], "audios": []}
             ims = []
             for p in lab.get("pictures") or []:
-                url = _media.vision_data_url(p["file"]) if p.get("file") else None
+                if not p.get("file"):
+                    continue
+                if p.get("source") == "refmod":
+                    mems = p.get("members") if isinstance(p.get("members"), list) else None
+                    url = _refmod.vision_data_url(p["file"], member_idx=(mems[0] if mems else 0))
+                else:
+                    url = _media.vision_data_url(p["file"])
                 if url:
                     ims.append({"tag": p["tag"], "data_url": url})
             start = _media.vision_data_url(start_file) if start_file else None
@@ -1652,7 +1957,8 @@ def register():
             out = await _std.write(stage, brief, complete_fn=complete_fn,
                                    ref_plan=ref_plan, duration_s=duration_s,
                                    images=images, start_image=start_url, plan=plan,
-                                   voice_files=voice_files)
+                                   voice_files=voice_files,
+                                   prev_hop_context=prev_hop_context)
         except _llm.LLMError as exc:
             return web.json_response({"ok": False, "error": str(exc)})
         except Exception as exc:
@@ -1790,12 +2096,15 @@ def register():
                             headers={"X-Cells": str(hit[1]),
                                      "Cache-Control": "max-age=3600"})
 
+    _clip_locks = {}
+
     async def _serve_clip(name, build, *keys):
         """Encode once into the store's preview folder, then serve the file.
 
         A file response, because a browser `<video>` seeks with byte ranges.
         The folder sits inside the hop store, so it is wiped with it.
         """
+        import asyncio
         hs = _hop_store(*keys)
         if hs is None:
             return None
@@ -1803,9 +2112,12 @@ def register():
         _os.makedirs(out_dir, exist_ok=True)
         path = _os.path.join(out_dir, name + ".mp4")
         if not _os.path.exists(path):
-            ok = await _run(lambda: build(hs, path))
-            if not ok:
-                return None
+            lock = _clip_locks.setdefault(path, asyncio.Lock())
+            async with lock:
+                if not _os.path.exists(path):
+                    ok = await _run(lambda: build(hs, path))
+                    if not ok:
+                        return None
         return web.FileResponse(path, headers={"Content-Type": "video/mp4"})
 
     @instance.routes.get(HOP_CLIP_ROUTE)
@@ -1877,11 +2189,293 @@ def register():
             return web.json_response({"ok": False, "error": str(exc)}, status=500)
         return resp or _missing(f"the {a[:8]}|{b[:8]} join")
 
-    addon = _local_addon()
-    if hasattr(addon, "register_personal_routes"):
+    @instance.routes.get(MV_CAPS_ROUTE)
+    async def _mv_capabilities(_request):
+        import asyncio
+        from . import mv_studio as _mvs
+
         try:
-            addon.register_personal_routes(instance)
+            got = await asyncio.get_running_loop().run_in_executor(
+                None, _mvs.capabilities)
+            return web.json_response(got)
         except Exception as exc:  # noqa: BLE001
-            print(f"[{TAG}] local add-on routes skipped: {exc!r}", flush=True)
+            print(f"[{TAG}] mv capabilities failed: {exc!r}", flush=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    @instance.routes.get(MV_SONGMAP_STATUS_ROUTE)
+    async def _mv_songmap_status(request):
+        from . import mv_studio as _mvs
+
+        song = str(request.rel_url.query.get("song") or "").strip()
+        return web.json_response(_mvs.song_map_status(song))
+
+    @instance.routes.post(MV_SONGMAP_ROUTE)
+    async def _mv_songmap(request):
+        import asyncio
+        from . import mv_studio as _mvs
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        body = body if isinstance(body, dict) else {}
+        song = str(body.get("song") or "").strip()
+        listen = bool(body.get("listen"))
+        secs = body.get("sections") if isinstance(body.get("sections"), list) else None
+        pat = body.get("pattern") if isinstance(body.get("pattern"), list) else None
+        end_s = _secs_or_none(body.get("end_s"))
+        try:
+            got = await asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: _mvs.analyze_song(
+                    song, listen=listen, sections=secs, pattern=pat, end_s=end_s))
+            return web.json_response(got)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[{TAG}] mv song_map failed: {exc!r}", flush=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+
+    @instance.routes.post(MV_SOLVE_ROUTE)
+    async def _mv_solve(request):
+        import asyncio
+        from . import mv_studio as _mvs
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        body = body if isinstance(body, dict) else {}
+        song = str(body.get("song") or "").strip()
+        secs = body.get("sections") if isinstance(body.get("sections"), list) else []
+        listen = bool(body.get("listen"))
+        pat = body.get("pattern") if isinstance(body.get("pattern"), list) else None
+        end_s = _secs_or_none(body.get("end_s"))
+        try:
+            got = await asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: _mvs.solve_mv(
+                    song, secs, listen=listen, pattern=pat, end_s=end_s))
+            return web.json_response(got)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[{TAG}] mv solve failed: {exc!r}", flush=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+
+    @instance.routes.post(MV_GRAPH_ROUTE)
+    async def _mv_build_graph(request):
+        import asyncio
+        from . import mv_studio as _mvs
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        body = body if isinstance(body, dict) else {}
+        kind = str(body.get("kind") or "image").strip().lower()
+        try:
+            if kind == "refmod":
+                got = await asyncio.get_running_loop().run_in_executor(
+                    None,
+                    lambda: _mvs.build_refmod_graph(
+                        name=str(body.get("name") or "hero"),
+                        stills=list(body.get("stills") or []),
+                        clip=body.get("clip") if isinstance(body.get("clip"), dict) else None,
+                        voice=str(body.get("voice") or ""),
+                        subfolder=str(body.get("subfolder") or ""),
+                        description=str(body.get("description") or ""),
+                        layout=str(body.get("layout") or "separate_pictures"),
+                        role=str(body.get("role") or "identity"),
+                        default_step_curve=str(body.get("default_step_curve") or "full"),
+                        subject_mask=str(body.get("subject_mask") or "off"),
+                        background_retention=float(body.get("background_retention") or 0.0),
+                        background_mode=str(body.get("background_mode") or "blur_bg"),
+                        fit_mode=str(body.get("fit_mode") or "crop"),
+                        crop_margin=float(body.get("crop_margin") or 0.0),
+                        max_tokens=int(body.get("max_tokens") or 0),
+                    ))
+            elif kind == "song":
+                got = await asyncio.get_running_loop().run_in_executor(
+                    None,
+                    lambda: _mvs.build_song_graph(
+                        engine=str(body.get("engine") or ""),
+                        style=str(body.get("style") or ""),
+                        lyrics=str(body.get("lyrics") or ""),
+                        mode=str(body.get("mode") or "full"),
+                        max_duration=float(body.get("max_duration") or 120.0),
+                        seed=int(body.get("seed") or 0),
+                        vocals_only=bool(body.get("vocals_only")),
+                        filename_prefix=str(body.get("filename_prefix") or "audio/mv_yue2"),
+                    ))
+            else:
+                got = await asyncio.get_running_loop().run_in_executor(
+                    None,
+                    lambda: _mvs.build_image_graph(
+                        profile_id=str(body.get("profile_id") or ""),
+                        prompt=str(body.get("prompt") or ""),
+                        negative_prompt=str(body.get("negative_prompt") or ""),
+                        ref_files=list(body.get("ref_files") or []),
+                        aspect=str(body.get("aspect") or "16:9"),
+                        width=int(body.get("width") or 0),
+                        height=int(body.get("height") or 0),
+                        megapixels=float(body.get("megapixels") or 0.0),
+                        seed=int(body.get("seed") or 0),
+                        steps=int(body.get("steps") or 0),
+                        filename_prefix=str(body.get("filename_prefix") or "mv_forge/asset"),
+                    ))
+            return web.json_response({"ok": True, **got})
+        except Exception as exc:  # noqa: BLE001
+            print(f"[{TAG}] mv build_graph failed: {exc!r}", flush=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+
+    @instance.routes.post(MV_EXTRACT_FRAME_ROUTE)
+    async def _mv_extract_frame(request):
+        import asyncio
+        from . import mv_studio as _mvs
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        body = body if isinstance(body, dict) else {}
+        video = str(body.get("video") or "").strip()
+        fidx = int(body.get("frame_idx") or 0)
+        ts = _secs_or_none(body.get("time_s"))
+        out_name = str(body.get("out_name") or "").strip()
+        try:
+            got = await asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: _mvs.extract_clip_frame(
+                    video, frame_idx=fidx, time_s=ts, out_name=out_name))
+            return web.json_response(got)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[{TAG}] mv extract_frame failed: {exc!r}", flush=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+
+    @instance.routes.post(MV_IMPORT_ROUTE)
+    async def _mv_import_output(request):
+        import asyncio
+        from . import mv_studio as _mvs
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        body = body if isinstance(body, dict) else {}
+        try:
+            got = await asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: _mvs.import_output(
+                    filename=str(body.get("filename") or ""),
+                    subfolder=str(body.get("subfolder") or ""),
+                    output_type=str(body.get("output_type") or "output"),
+                    dest_name=str(body.get("dest_name") or ""),
+                    kind=str(body.get("kind") or "image"),
+                    tag=str(body.get("tag") or ""),
+                    desc=str(body.get("desc") or ""),
+                    role=str(body.get("role") or "cast"),
+                    register_bible=bool(body.get("register_bible")),
+                ))
+            return web.json_response(got)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[{TAG}] mv import_output failed: {exc!r}", flush=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+
+    @instance.routes.post(MV_IDEATE_ROUTE)
+    async def _mv_ideate(request):
+        from . import llm as _llm
+        from . import mv_studio as _mvs
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        body = body if isinstance(body, dict) else {}
+        idea = str(body.get("idea") or "").strip()
+        if not idea:
+            return web.json_response({"ok": False, "error": "Write a short MV concept or vibe first."})
+
+        auto_wake = bool(body.get("auto_wake", True))
+        conn = _llm.load_conn()
+        backend = _llm.backend_name(conn.get("backend"))
+        is_up = await _llm.server_running_async(backend)
+
+        if not is_up:
+            if auto_wake and backend == "ninfer":
+                woke = await _addon_writer_ready(_llm)
+                conn = _llm.load_conn()
+                is_up = await _llm.server_running_async(backend)
+                if not is_up and not woke:
+                    err = _llm.startup_error("ninfer")
+                    return web.json_response({
+                        "ok": False,
+                        "error": (f"nInfer failed to start: {err}" if err
+                                  else "Could not auto-start nInfer — check Settings in Studio and press Start."),
+                    })
+            else:
+                lbl = _llm.backend_spec(backend)["label"]
+                hint = ("press Start in Studio's LLM bar" if backend == "ninfer"
+                        else "start LM Studio's server and load a model")
+                return web.json_response({"ok": False, "error": f"{lbl} is offline — {hint}."})
+
+        try:
+            found = await _llm.models(conn["server_url"])
+        except Exception:
+            found = []
+        if not conn.get("model") or (found and not any(m.get("id") == conn.get("model") for m in found if isinstance(m, dict))):
+            loaded = [m for m in found if isinstance(m, dict) and m.get("loaded") is True]
+            pick = loaded[0] if loaded else (found[0] if found and isinstance(found[0], dict) else None)
+            if pick and pick.get("id"):
+                conn["model"] = str(pick["id"])
+        if not conn.get("model"):
+            return web.json_response(
+                {"ok": False, "error": "No LLM model selected / loaded — open Studio's ⚙ LLM Settings and pick one."})
+
+        async def complete_fn(messages, schema=None):
+            return await _llm.complete(
+                conn["server_url"],
+                conn["model"],
+                messages,
+                schema=schema,
+                temperature=float(conn.get("temperature") or 0.6),
+            )
+
+        try:
+            got = await _mvs.ideate_mv(
+                idea,
+                complete_fn=complete_fn,
+                cast_rows=body.get("cast_rows") if isinstance(body.get("cast_rows"), list) else None,
+                aspect=str(body.get("aspect") or "16:9"),
+                duration_target_s=int(body.get("duration_target_s") or 105),
+                image_profile=str(body.get("image_profile") or "qwen_viggle_6step"),
+                language=str(body.get("language") or "auto"),
+                vocal_mode=str(body.get("vocal_mode") or "auto"),
+                lyrics_only=bool(body.get("lyrics_only")),
+                existing_style=str(body.get("song_style") or ""),
+                existing_title=str(body.get("title") or ""),
+            )
+            if not conn.get("keep_warm"):
+                try:
+                    await _llm.unload(conn["server_url"], conn["model"])
+                except Exception:
+                    pass
+            return web.json_response(got)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[{TAG}] mv ideate failed: {exc!r}", flush=True)
+            return web.json_response({"ok": False, "error": str(exc)})
+
+    @instance.routes.get(STEERING_DIALS_ROUTE)
+    async def _steering_dials_list(_request):
+        import asyncio
+        from . import steering_dials as _sd
+
+        try:
+            items = await asyncio.get_running_loop().run_in_executor(None, _sd.dial_catalog_info)
+            return web.json_response({"ok": True, "dials": items})
+        except Exception as exc:  # noqa: BLE001
+            return web.json_response({"ok": False, "error": str(exc), "dials": []})
+
+    try:
+        from .htc_sandtie import routes as _st_routes
+        _st_routes.register_sandtie_routes(instance, web)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[{TAG}] SandTie routes skipped: {exc!r}", flush=True)
 
     return True

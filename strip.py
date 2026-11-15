@@ -26,6 +26,8 @@ from __future__ import annotations
 
 import io
 import os
+import threading
+from fractions import Fraction
 
 import av
 import numpy as np
@@ -164,8 +166,9 @@ def encode_clip(imgs, wav, sr, path, fps=FPS, height=CLIP_H):
     if n < 1:
         raise ValueError("nothing to encode")
     th, tw = _fit(imgs.shape[1], imgs.shape[2], height)
-    tmp = path + ".part"
+    tmp = f"{path}.{os.getpid()}.{threading.get_ident()}.part"
     container = av.open(tmp, mode="w", format="mp4")
+    ok = False
     try:
         vs = container.add_stream("libx264", rate=int(fps))
         vs.width, vs.height = tw, th
@@ -179,25 +182,39 @@ def encode_clip(imgs, wav, sr, path, fps=FPS, height=CLIP_H):
             a_s.layout = layout
             resampler = av.AudioResampler(format="fltp", layout=layout,
                                           rate=AUDIO_RATE)
+        v_tb = Fraction(1, int(fps))
         for i in range(n):
             frame = _resize(_frames_u8(imgs[i:i + 1])[0], th, tw)
             vf = av.VideoFrame.from_ndarray(np.ascontiguousarray(frame), format="rgb24")
+            vf.pts = i
+            vf.time_base = v_tb
             for packet in vs.encode(vf):
                 container.mux(packet)
         for packet in vs.encode():
             container.mux(packet)
         if a_s is not None:
             # Packed `flt` is interleaved L R L R, so [C,S] goes in transposed.
+            # Stamp pts/time_base so AudioResampler.resample(None) flush frames
+            # never emit out-of-order PTS against AAC auto-incremented packets.
             af = av.AudioFrame.from_ndarray(
                 np.ascontiguousarray(audio.T.reshape(1, -1)), format="flt",
                 layout=layout)
             af.sample_rate = int(sr)
+            af.pts = 0
+            af.time_base = Fraction(1, int(sr))
             for out in resampler.resample(af) + resampler.resample(None):
                 for packet in a_s.encode(out):
                     container.mux(packet)
             for packet in a_s.encode(None):
                 container.mux(packet)
+        ok = True
     finally:
         container.close()
+        if not ok:
+            try:
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+            except OSError:
+                pass
     os.replace(tmp, path)
     return path

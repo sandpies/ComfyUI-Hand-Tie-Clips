@@ -1,0 +1,64 @@
+{
+  "id": "tv_show",
+  "label": "Genre",
+  "per": "project",
+  "note": "Original tonal cinema worlds (no copyrighted franchise dumps).",
+  "options": [
+    {
+      "id": "world_neo_noir_thriller",
+      "label": "🌃 90s Erotic Noir Thriller",
+      "group": "Cinema Genres",
+      "world": "slick 1990s theatrical neo-noir tension, rain-slicked skyline glass, venetian shadow slats, and smoky jazz undertones",
+      "domain": "general"
+    },
+    {
+      "id": "world_hk_neon_gunfu",
+      "label": "🔫 Hong Kong Neon Gun-Fu Cinema",
+      "group": "Action Worlds",
+      "world": "kinetic Hong Kong rain-soaked neon alleys, glass lobby shootouts, brass shell showers, and razor-sharp close-quarters choreography",
+      "domain": "combat_action"
+    },
+    {
+      "id": "world_kdrama_romance",
+      "label": "✨ High-Gloss Seoul Drama",
+      "group": "Cinema Genres",
+      "world": "luminous soft-diffusion Seoul penthouse romance, warm golden practicals, long longing glances, and glossy skin sheen",
+      "domain": "general"
+    },
+    {
+      "id": "world_tokyo_idol_gravure",
+      "label": "📸 Tokyo Gravure & Idol Stage",
+      "group": "Performance Worlds",
+      "world": "airy daylight photobook softness paired with vibrant idol stage lasers, dewy skin speculars, and crisp dance isolations",
+      "domain": "general"
+    },
+    {
+      "id": "world_cyberpunk_megacity",
+      "label": "⚡ Rain-Soaked Cyberpunk Megacity",
+      "group": "Sci-Fi & Fantasy",
+      "world": "towering rain-drenched holographic alleys, chrome cybernetics, electric cyan-magenta puddles, and humid night steam",
+      "domain": "general"
+    },
+    {
+      "id": "world_wuxia_martial",
+      "label": "🎋 Classical Wuxia Bamboo & Silk",
+      "group": "Action Worlds",
+      "world": "mist-draped bamboo groves, billowing silk martial robes, fluttering courtyard lanterns, and graceful blade clashes",
+      "domain": "general"
+    },
+    {
+      "id": "world_prestige_period",
+      "label": "🕯️ Candlelit Regency & Victorian Estate",
+      "group": "Historical Worlds",
+      "world": "grand candlelit mahogany libraries, rustling heavy brocade, crackling marble hearths, and measured whispered intrigue",
+      "domain": "general"
+    },
+    {
+      "id": "world_shounen_anime2real",
+      "label": "⚔️ Anime2Real Elemental Arena",
+      "group": "Action Worlds",
+      "world": "grounded live-action fighters colliding inside hyper-vivid hand-drawn elemental shockwaves, water dragons, and glowing aura blades",
+      "domain": "combat_action"
+    }
+  ]
+}

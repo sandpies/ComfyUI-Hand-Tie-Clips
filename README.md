@@ -69,7 +69,7 @@ tags:
 | **🎵 MEDIA** (Clips, Voices & Lip-Sync) | Load a starting frame, up to 3 reference videos, 3 voice timbre clips, a background music bed (with auto-ducking), or a **Master Audio File** that locks lip-sync across the entire film. |
 | **✍️ WRITE** (AI Draft Assistant — *WIP*) | Connect a local OpenAI-compatible server (nInfer / LM Studio / llama.cpp) to propose films, draft shot cards, surgically edit individual hops (`Edit shots`), or lay out bar-synced music videos (`Song` → `Lay out`). **Note:** WRITE is an experimental work-in-progress drafting tool, not a 100% hands-off autopilot — always review the generated beats and photo descriptions before rendering. |
 | **🎭 SWAP** (Guided Video Swap) | Standalone one-hop character or head swap driven by a reference video's motion and audio (`replace_person`, `head_swap`, `face_only`, `keep_person`) with a free-text wardrobe override box and automatic dual Swap LoRA loading. Leaves your multi-shot `SCRIPT` and `REFS` untouched. |
-| **📄 STANDARD** (Single-Gen Writer) | One standard MiniMax H3 prompt (T2VA or Ref2VA) for a single generation in `Simple` mode: the model plans a storyboard, you edit it, then it writes the block, checked against the official field contract. Pictures on `REFS` make it Ref2VA. |
+| **📄 STANDARD (`SandTie Scribe`)** | Native clean-room single-generation H3 prompt rig (`Ref2VA`, `T2VA`, `I2VA`/`FL2VA`/`L2VA`, `Start-Frame Prep`) with 19 domain-locked dials, **Reference Bible**, 2.5 MP Eye Scan, Time-Tied beats, and 30-FPS Video → Beats extractor. Also available as the standalone **`SandTie PromptRig (H3)`** node. |
 
 ---
 
@@ -182,5 +182,17 @@ Full authoring guide: **[PROMPTING.md](PROMPTING.md)** · Release history: **[CH
 - **H3 RefMod Builder (`HTCRefModBuilder`):** Builds reusable visual/voice reference modules for the REFS rail.
 - **H3 Token LoRA (HTC) (`HTCTokenLoRA`):** A LoRA loader with one strength per kind of token: video, reference pictures, prompt and soundtrack. Slots A/B/C plus **Add LoRA**, each with its own strengths and block range; a checkbox switches a slot off. Audio 0 keeps the soundtrack on the plain model (a look LoRA no longer changes voices); reference 0 keeps the reference pictures read by the plain model. All 1 = a normal loader. Chain several to stack LoRAs. Works with chunked feed-forward and sparse attention.
 - **H3 Cache (`HTCH3Cache`):** Residual step cache on the MODEL wire ([silveroxides](https://github.com/silveroxides) / [PlagueKind](https://github.com/PlagueKind); see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)).
+- **SandTie PromptRig (H3) (`SandTiePromptRig`):** Standalone plug-and-play MiniMax H3 prompt rig (`Ref2VA`, `T2VA`, `I2VA`/`FL2VA`/`L2VA`, `Start-Frame Prep`, and 0-VRAM `CPU Tie`). Outputs `prompt` (for a stock H3 node) and, with `wire_mode` = Direct H3 Conditioning, `positive` + `latent`.
+- **HTC Sparse Attention (`HTCSparseAttention`):** Sparse and low-VRAM attention for H3 on Comfy Kitchen's `sol_attn` kernels, with presets (`turbo_sla_*` for turbo LoRAs, `native_sol_*` for plain checkpoints, `dense_low_vram`). A preset overrides the numeric widgets; pick `manual` to set them yourself. The Starter uses it in place of external attention nodes.
+- **HTC Steering Dials (`HTCSteeringDials`) / Make Steering Dial (`HTCMakeSteeringDial`):** Push motion, expression and energy (or any dial you build from `A ||| B` prompt pairs) in H3's prompt space, without touching weights or LoRAs. Dials live in `models/loras/dials/`.
+- **HTC AdaLN LoRA Fix (`HTCAdaLNFix`):** Ports dense-trained LoRAs' AdaLN keys onto pruned (curve-form) H3 checkpoints and back. `HTCTokenLoRA`, the upsamplers and realism boost already do this on their own; the node is for other LoRA loaders. Adapted from [PlagueKind](https://github.com/PlagueKind)'s MIT fix (see `THIRD_PARTY_NOTICES.md`).
 
 </details>
+
+---
+
+## Credits & Inspirations (SandTie PromptRig)
+
+- **LD Studio (`H3Studio-LD`)** — Inspired the modular CFG=1 multi-dial prompt architecture, vocal/speech register controls, and positive-only additive prompting discipline.
+- **wangweihong ([`comfyui-cinematic-gallery`](https://github.com/wangweihong/comfyui-cinematic-gallery))** — H3-verified camera motion trajectories, lens/film stock looks, and visual style references.
+- **loopforge0 ([`minimaxh3-shots-skills`](https://github.com/loopforge0/minimaxh3-shots-skills))** — Empirical MiniMax H3 12-primitive camera grammar, Open-End Range Law, Background-Plate amplitude scaling, zero-hardware phrasing, and audio semicolon findings.

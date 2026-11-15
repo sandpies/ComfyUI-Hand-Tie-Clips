@@ -62,15 +62,26 @@ export function createStandardWriter(node, { onWritten } = {}) {
     const blockBox = el("textarea", "h3e-json");
     blockBox.rows = 14;
 
+    const splitGrid = el("div", "h3e-standard-grid");
+    const planCol = el("div", "h3e-standard-col");
+    planCol.append(planLabel, planBox);
+    const blockCol = el("div", "h3e-standard-col");
+    blockCol.append(blockLabel, blockBox);
+    splitGrid.append(planCol, blockCol);
+
     let busy = false;
     let draft = loadDraft();
 
     const planBtn = button("Plan", "Ask the model for a storyboard of this one clip", () => run("plan"));
     const writeBtn = button("Write", "Write the full prompt block from the storyboard", () => run("write"));
     const acceptBtn = button("Accept", "Put the block in Simple mode's prompt (chains = 1)", accept);
+    const hopTargetSel = el("select", "h3e-select");
+    hopTargetSel.style.maxWidth = "145px";
+    hopTargetSel.title = "Target hop in multi-shot SCRIPT chain";
+    const sendHopBtn = button("→ Script Hop", "Send this block's beat & duration into the selected hop on SCRIPT (switches to Shots mode)", sendToHop);
     const row = el("div", "h3e-writer-row");
-    row.append(planBtn, writeBtn, acceptBtn);
-    body.append(row, status, planLabel, planBox, blockLabel, blockBox);
+    row.append(planBtn, writeBtn, acceptBtn, hopTargetSel, sendHopBtn);
+    body.append(row, status, splitGrid);
 
     brief.value = draft.brief || "";
     planBox.value = draft.plan || "";
@@ -140,13 +151,62 @@ export function createStandardWriter(node, { onWritten } = {}) {
 
     let personal = null;
 
-    function syncButtons() {
-        planBtn.disabled = busy || !brief.value.trim();
-        writeBtn.disabled = busy || !planBox.value.trim();
-        acceptBtn.disabled = busy || !blockBox.value.trim();
-        if (personal?.fastBtn) {
-            personal.fastBtn.disabled = busy || !brief.value.trim();
+    function currentPlanShots() {
+        const raw = String(widgetByName(node, "shot_plan")?.value || "").trim()
+            || String(node.properties?.[BACKUP_PROP] || "").trim();
+        if (!raw) return [];
+        try {
+            const parsed = JSON.parse(raw);
+            const arr = Array.isArray(parsed) ? parsed : parsed?.shots;
+            return Array.isArray(arr) ? arr : [];
+        } catch {
+            return [];
         }
+    }
+
+    function activePlanShots() {
+        if (node.properties?.[MODE_PROP] !== "shots") return [];
+        const raw = String(widgetByName(node, "shot_plan")?.value || "").trim();
+        if (!raw) return [];
+        try {
+            const parsed = JSON.parse(raw);
+            const arr = Array.isArray(parsed) ? parsed : parsed?.shots;
+            return Array.isArray(arr) ? arr : [];
+        } catch {
+            return [];
+        }
+    }
+
+    function refreshHopTargetSelect() {
+        const shots = currentPlanShots();
+        const prev = hopTargetSel.value;
+        hopTargetSel.innerHTML = "";
+        const appendOpt = el("option", null, `+ Append Hop (${shots.length + 1})`);
+        appendOpt.value = "append";
+        hopTargetSel.appendChild(appendOpt);
+        for (let i = 0; i < shots.length; i++) {
+            const s = shots[i] || {};
+            const o = el("option", null, `Replace Hop ${i + 1} (${s.id || "s" + (i + 1)})`);
+            o.value = String(i);
+            hopTargetSel.appendChild(o);
+        }
+        if (prev && Array.from(hopTargetSel.options || hopTargetSel.children).some((o) => o.value === prev)) {
+            hopTargetSel.value = prev;
+        }
+    }
+
+    function syncButtons() {
+        const hasBlock = Boolean(blockBox.value.trim());
+        const hasPlan = Boolean(planBox.value.trim());
+        const hasBriefOrDials = Boolean(brief.value.trim() || personal?.hasActiveDials?.());
+        planBtn.disabled = busy || !hasBriefOrDials;
+        writeBtn.disabled = busy || !hasPlan;
+        acceptBtn.disabled = busy || !hasBlock;
+        sendHopBtn.disabled = busy || (!hasBlock && !hasPlan);
+        if (personal?.fastBtn) {
+            personal.fastBtn.disabled = busy || !hasBriefOrDials;
+        }
+        personal?.syncBlockToolbar?.();
     }
 
     function setBusyState(on) {
@@ -161,9 +221,9 @@ export function createStandardWriter(node, { onWritten } = {}) {
         status.textContent = text || "";
     }
 
-    import("./personal_studio.js").then((mod) => {
-        if (typeof mod?.mountPersonalStudio === "function") {
-            personal = mod.mountPersonalStudio(node, {
+    import("./sandtie_ui.js").then((mod) => {
+        if (typeof mod?.mountSandTieInStandard === "function") {
+            personal = mod.mountSandTieInStandard(node, {
                 body,
                 row,
                 brief,
@@ -173,12 +233,36 @@ export function createStandardWriter(node, { onWritten } = {}) {
                 saveDraft,
                 startImage,
                 voiceFiles,
+                previousHopContext,
                 setBusyState,
                 isBusy: () => busy,
+                onRefsChanged: () => renderMode(),
+                onDialsChanged: () => syncButtons(),
             });
             syncButtons();
         }
     }).catch(() => {});
+
+    function previousHopContext() {
+        if (node.properties?.[MODE_PROP] !== "shots") return "";
+        if (!personal?.shouldLinkPrevHop?.()) return "";
+        const shots = activePlanShots();
+        if (!shots.length) return "";
+        const target = hopTargetSel.value;
+        let prevIdx = -1;
+        if (target === "append") prevIdx = shots.length - 1;
+        else if (/^\d+$/.test(target)) prevIdx = Number(target) - 1;
+        if (prevIdx < 0 || !shots[prevIdx]) return "";
+        const prev = shots[prevIdx];
+        const beatTxt = String(prev.beat || "").trim();
+        if (!beatTxt) return "";
+        const d = prev.directives || {};
+        const dirBits = ["join", "camera", "framing", "pace", "tail"]
+            .filter((k) => d[k])
+            .map((k) => `${k}=${d[k]}`);
+        return `Hop ${prevIdx + 1} (${prev.id || "s" + (prevIdx + 1)}`
+            + `${dirBits.length ? ", " + dirBits.join(", ") : ""}): ${beatTxt}`;
+    }
 
     async function run(stage) {
         if (busy) return;
@@ -200,6 +284,7 @@ export function createStandardWriter(node, { onWritten } = {}) {
                     ref_plan: String(widgetByName(node, "ref_plan")?.value || ""),
                     start_image_file: startImage(),
                     voice_files: voiceFiles(),
+                    prev_hop_context: previousHopContext(),
                 }),
             });
             const j = await r.json();
@@ -233,6 +318,15 @@ export function createStandardWriter(node, { onWritten } = {}) {
         }
     }
 
+    function clearStaleSwap() {
+        const swW = widgetByName(node, "swap_script");
+        const srW = widgetByName(node, "swap_refs");
+        const hadSwap = Boolean(swW && String(swW.value || "").trim());
+        if (swW && String(swW.value || "")) commit(node, swW, "");
+        if (srW && String(srW.value || "")) commit(node, srW, "");
+        return hadSwap;
+    }
+
     function accept() {
         const text = blockBox.value.trim();
         if (!text) return;
@@ -245,16 +339,78 @@ export function createStandardWriter(node, { onWritten } = {}) {
             node.properties[BACKUP_PROP] = String(planW.value);
             commit(node, planW, "");
         }
+        const clearedSwap = clearStaleSwap();
         commit(node, widgetByName(node, "prompt"), text);
         commit(node, widgetByName(node, "chains"), "1");
         node.properties[MODE_PROP] = "simple";
-        onWritten?.(text);
-        say("In Simple mode's prompt, chains = 1. Queue it.", "hint");
+        onWritten?.(text, { mode: "simple" });
+        say(
+            "In Simple mode's prompt, chains = 1."
+            + (clearedSwap ? " (Also cleared active Swap script.)" : "")
+            + " Queue it.",
+            "hint",
+        );
+    }
+
+    function extractHopBeatFromBlock(rawText) {
+        const t = String(rawText || "").trim();
+        if (!t) return "";
+        const mDesc = t.match(/(?:detailed_description|integrated_multimodal_description):[ \t]*\n([\s\S]*?)(?=\noverall_soundscape:|$)/i);
+        if (!mDesc) return t;
+        const bodyTxt = mDesc[1].trim();
+        const mSound = t.match(/overall_soundscape:[ \t]*\n([\s\S]*?)(?=\nnon_diegetic_music:|$)/i);
+        const soundTxt = mSound ? mSound[1].trim() : "";
+        return soundTxt ? `${bodyTxt}\n\nSoundscape: ${soundTxt}` : bodyTxt;
+    }
+
+    function sendToHop() {
+        const sourceText = blockBox.value.trim() || planBox.value.trim();
+        if (!sourceText) return;
+        node.properties ??= {};
+        const planW = widgetByName(node, "shot_plan");
+        const shots = currentPlanShots().slice();
+        const beatText = extractHopBeatFromBlock(sourceText);
+        const durVal = String(widgetByName(node, "duration")?.value || "").trim() || null;
+        const target = hopTargetSel.value;
+        let hopNum = shots.length + 1;
+        if (target !== "append" && /^\d+$/.test(target)) {
+            const idx = Number(target);
+            if (shots[idx]) {
+                shots[idx] = Object.assign({}, shots[idx], {
+                    beat: beatText,
+                    ...(durVal ? { duration: durVal } : {}),
+                });
+                hopNum = idx + 1;
+            }
+        } else {
+            const newId = `s${shots.length + 1}`;
+            shots.push({
+                id: newId,
+                beat: beatText,
+                directives: shots.length === 0 ? {} : { join: "hard_cut" },
+                ...(durVal ? { duration: durVal } : {}),
+            });
+            hopNum = shots.length;
+        }
+        const nextJson = JSON.stringify({ shots }, null, 2);
+        delete node.properties[BACKUP_PROP];
+        node.properties[MODE_PROP] = "shots";
+        const clearedSwap = clearStaleSwap();
+        commit(node, planW, nextJson);
+        refreshHopTargetSelect();
+        onWritten?.(nextJson, { mode: "shots", hopIndex: hopNum - 1 });
+        say(
+            `Sent to SCRIPT Hop ${hopNum} (${shots.length} total hop${shots.length > 1 ? "s" : ""}) in Shots mode.`
+            + (clearedSwap ? " (Also cleared active Swap script.)" : ""),
+            "hint",
+        );
     }
 
     function render() {
         renderMode();
+        refreshHopTargetSelect();
         syncButtons();
+        personal?.refresh?.();
         if (root.open) {
             personal?.refreshStatus?.(false);
         }

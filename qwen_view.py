@@ -32,6 +32,8 @@ items pass through untouched, with a note.
 """
 
 import math
+import os
+import threading
 
 import torch
 
@@ -62,22 +64,54 @@ def _fit(h, w, area, multiple=FACTOR):
     return th, tw
 
 
+_VIEW_CACHE = {}
+_VIEW_CACHE_BYTES = 0
+_VIEW_CACHE_MAX_BYTES = 256 * 1024 * 1024
+_VIEW_CACHE_MAX_ITEMS = 16
+_VIEW_CACHE_LOCK = threading.Lock()
+
+
 def identity_view(path, render_area, area=None):
     """The original file at max(IDENTITY_QWEN_PX^2, render_area), down only.
     `area` (pixels) overrides that target: the row's own qwen_mp."""
     from PIL import Image, ImageOps  # noqa: PLC0415
     import numpy as np  # noqa: PLC0415
 
+    want = (float(area) if area else
+            max(float(IDENTITY_QWEN_PX ** 2), float(render_area)))
+    cache_key = None
+    try:
+        st = os.stat(path)
+        cache_key = (os.path.normcase(os.path.normpath(path)), int(st.st_mtime_ns), int(st.st_size), int(round(want)))
+        with _VIEW_CACHE_LOCK:
+            hit = _VIEW_CACHE.get(cache_key)
+            if hit is not None:
+                return hit[0], hit[1]
+    except OSError:
+        cache_key = None
+
     with Image.open(path) as im:
         im = ImageOps.exif_transpose(im).convert("RGB")
-        want = (float(area) if area else
-                max(float(IDENTITY_QWEN_PX ** 2), float(render_area)))
-        area = min(float(im.width * im.height), want)
-        th, tw = _fit(im.height, im.width, area)
+        orig = (im.width, im.height)
+        area_clamped = min(float(im.width * im.height), want)
+        th, tw = _fit(im.height, im.width, area_clamped)
         if (tw, th) != (im.width, im.height):
             im = im.resize((tw, th), Image.Resampling.LANCZOS)
         arr = np.asarray(im, dtype=np.float32) / 255.0
-    return torch.from_numpy(arr)[None], (im.width, im.height)
+    t = torch.from_numpy(arr)[None]
+    if cache_key is not None:
+        nbytes = int(t.numel() * t.element_size())
+        if nbytes <= 64 * 1024 * 1024:
+            global _VIEW_CACHE_BYTES
+            with _VIEW_CACHE_LOCK:
+                while (_VIEW_CACHE_BYTES + nbytes > _VIEW_CACHE_MAX_BYTES
+                       or len(_VIEW_CACHE) >= _VIEW_CACHE_MAX_ITEMS) and _VIEW_CACHE:
+                    old_k = next(iter(_VIEW_CACHE))
+                    old_t, _ = _VIEW_CACHE.pop(old_k)
+                    _VIEW_CACHE_BYTES = max(0, _VIEW_CACHE_BYTES - int(old_t.numel() * old_t.element_size()))
+                _VIEW_CACHE[cache_key] = (t, orig)
+                _VIEW_CACHE_BYTES += nbytes
+    return t, orig
 
 
 def register(tensor, retention, path=None, render_area=0, tag="", qwen_mp=0.0):
@@ -108,6 +142,22 @@ def register(tensor, retention, path=None, render_area=0, tag="", qwen_mp=0.0):
         _REGISTRY[id(tensor)] = (tensor, PROP_QWEN_PX)
         return PROP_QWEN_PX
     return None
+
+
+def cap_refmod_looks(looks, max_frames=4):
+    """Down-sample multi-frame RefMod `looks` `[N,H,W,3]` for Qwen vision efficiency."""
+    if looks is None or looks.ndim != 4 or int(looks.shape[0]) <= int(max_frames or 4):
+        return looks
+    n = int(looks.shape[0])
+    k = max(1, int(max_frames))
+    if k == 1:
+        return looks[:1]
+    idx = [round(i * (n - 1) / float(k - 1)) for i in range(k)]
+    dedup = []
+    for x in idx:
+        if x not in dedup:
+            dedup.append(x)
+    return looks[dedup]
 
 
 def _plan_for(t):

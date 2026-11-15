@@ -1,0 +1,666 @@
+{
+  "id": "lens",
+  "label": "Optics",
+  "per": "project",
+  "note": "Shot sizes, angles, apertures, cinema bodies, and atmospheric air.",
+  "options": [
+    {
+      "id": "close_medium_action_lock",
+      "label": "Close/Medium action lock (chest-to-hips crop, tight on contact)",
+      "group": "Shot size",
+      "rule": "tight close and medium close-up framing: every shot stays cropped closely on the subjects' faces, torsos, hands and point of contact, filling 75 to 85 percent of the frame with the physical action.",
+      "domain": "general"
+    },
+    {
+      "id": "three_quarter_top_down",
+      "label": "3/4 high-angle top-down (45–60° look-down, preserving face & depth)",
+      "group": "Angle",
+      "rule": "a steep three-quarter top-down high angle: the camera sits at a 45 to 60 degree angle above eye level looking down at the subject so their upturned face, throat, chest and body depth stay clear and expressive.",
+      "domain": "general"
+    },
+    {
+      "id": "occupied_edges_depth",
+      "label": "Occupied foreground edges (framed past blurred shoulder/doorframe)",
+      "group": "Composition",
+      "rule": "occupied-edge depth framing: one side edge of the frame is partially occupied by a softly blurred foreground doorframe, lamp or shoulder, leaving a clean open window in the center for the main subject.",
+      "domain": "general"
+    },
+    {
+      "id": "directive_framing_landing",
+      "label": "🎯 Directive Law: Framing as Move Landing (Open on Pin, Land on Target Size)",
+      "group": "Time & motion",
+      "rule": "framing-as-landing directive: open on the starting view and let the camera movement carry the frame smoothly to land on the target framing by the end of the beat.",
+      "domain": "general"
+    },
+    {
+      "id": "directive_tail_ongoing",
+      "label": "🎯 Directive Tail: Ongoing Action Through Final Frame (zero Reference Freeze)",
+      "group": "Time & motion",
+      "rule": "ongoing tail directive: the primary physical action, rhythm, and breathing remain actively underway right through the final millisecond of the clip so the frame stays alive to the very end.",
+      "domain": "general"
+    },
+    {
+      "id": "directive_tail_settle_hold",
+      "label": "🎯 Directive Tail: Smooth Settle & Living Hold in Final 2 Seconds",
+      "group": "Time & motion",
+      "rule": "settle-and-hold tail directive: the main gesture eases smoothly to its resting mark in the final two seconds and holds steady while visible breathing, subtle eye shifts, and ambient light continue.",
+      "domain": "general"
+    },
+    {
+      "id": "fieldcraft_micro_clocks",
+      "label": "⏱️ Field-Craft: Sub-Second Micro-Clocked Limb Paths (Onset -> Path -> Contact -> Recoil)",
+      "group": "Time & motion",
+      "rule": "field-craft micro-clocked action grammar: spell out every physical interaction by naming the actor, the moving body part, the exact trajectory path, the contact point, the immediate skin/cloth deformation, and the follow-through recoil.",
+      "domain": "general"
+    },
+    {
+      "id": "fieldcraft_anchored_isolation",
+      "label": "⚓ Field-Craft: Anchored Body + Single-Axis Isolated Moving Part (Zero Drift)",
+      "group": "Composition",
+      "rule": "anchored body isolation: explicitly state which part of the body stays planted and stationary on the surface and which single limb or hip axis moves, keeping the surrounding frame rock-solid.",
+      "domain": "general"
+    },
+    {
+      "id": "anamorphic_oval_bokeh_streak",
+      "label": "🔭 2x Anamorphic Cinema Prime (Vertical Oval Bokeh + Blue Horizontal Streak)",
+      "group": "Lens",
+      "rule": "shot on a 2x anamorphic cinema prime lens: wide cinematic field of view with creamy vertical oval bokeh highlights, subtle barrel edge breathing, and horizontal blue anamorphic light streaks.",
+      "domain": "general"
+    },
+    {
+      "id": "macro_probe_laowa_24mm",
+      "label": "🔭 24mm Laowa Bug-Eye Macro Probe Lens (Extreme Close Detail + Wide Room Context)",
+      "group": "Lens",
+      "rule": "shot on a 24mm f/14 macro probe lens: inches away from the foreground skin or object in tack-sharp macro detail while keeping the wider room geometry visible in deep perspective behind.",
+      "domain": "general"
+    },
+    {
+      "id": "vintage_helios_swirl_bokeh",
+      "label": "🔭 Vintage Helios 58mm f/2 (Swirly Cat's-Eye Bokeh + Warm Highlight Bloom)",
+      "group": "Lens",
+      "rule": "shot on a vintage Helios 58mm f/2 lens wide open: razor-sharp center subject surrounded by signature swirling cat's-eye background bokeh and warm vintage highlight bloom.",
+      "domain": "general"
+    },
+    {
+      "id": "tilt_shift_selective_plane",
+      "label": "🔭 Tilt-Shift Selective Focus Plane (Oblique Razor-Thin Focus Band)",
+      "group": "Focus",
+      "rule": "tilt-shift oblique focus plane: an angled slice of razor-sharp focus cuts across the subject's eyes and hands while the upper and lower frame melt into creamy blur.",
+      "domain": "general"
+    },
+    {
+      "id": "angle_hip_level_cowboy",
+      "label": "📐 Hip-Level Western / Action Stance Angle",
+      "group": "Angle",
+      "rule": "filmed from hip height: the lens sits at waist/hip level looking slightly up at the torso and face, giving every step, hip sway, or weapon draw commanding physical weight.",
+      "domain": "general"
+    },
+    {
+      "id": "angle_pillow_level_intimate",
+      "label": "📐 Pillow-Level Bedside Eye-to-Eye Intimate Angle",
+      "group": "Angle",
+      "rule": "filmed at pillow level resting right on the mattress: the lens sits eye-to-eye just inches from the subject's face on the bed with soft foreground sheet folds.",
+      "domain": "bedroom"
+    },
+    {
+      "id": "comp_mirror_dual_plane",
+      "label": "🖼️ Mirror Dual-Plane Framing (Real Back in Foreground + Reflected Face in Glass)",
+      "group": "Composition",
+      "rule": "dual-plane mirror framing: the subject's real back and shoulders occupy the near foreground while their front torso and expressive face are framed clearly inside the mirror reflection ahead.",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "comp_ensemble_s1_s9_depth_stagger",
+      "label": "🎭 Directive: Multi-Subject (S1–S9) Depth-Staggered Ensemble Blocking (Zero Face Occlusion)",
+      "group": "Composition",
+      "rule": "multi-subject depth-staggered blocking: arrange all cast subjects (<Subject 1> through <Subject N>) across distinct foreground, midground, and background X/Z coordinates so every single character's face and body remain 100% visible keeping every single face clearly visible and unobstructed.",
+      "domain": "general"
+    },
+    {
+      "id": "comp_zero_clip_headroom_limb_guard",
+      "label": "🛡️ Directive: Zero-Clip Headroom & Full-Limb Frame Guard",
+      "group": "Composition",
+      "rule": "strict headroom and limb framing guard: maintain clean 10% breathing room above the highest head/hair and keep active hands, hips, and contact zones comfortably inside the frame borders across every beat.",
+      "domain": "general"
+    },
+    {
+      "id": "tex_wet_skin_micro_specular_lock",
+      "label": "✨ Directive: Wet / Oiled Skin Micro-Specular & Subsurface Scattering Lock",
+      "group": "Film texture",
+      "rule": "hyper-tactile skin rendering: crisp micro-specular highlights on beads of sweat, body oil, and glossy lips paired with warm red-orange subsurface scattering through ears, fingertips, and curves.",
+      "domain": "general"
+    },
+    {
+      "id": "motion_anime_impact_speed_ramp",
+      "label": "⚡ Directive: Anime2Real Speed-Ramp (Slow-Mo Windup → Instant Whip Strike → Impact Hold)",
+      "group": "Time & motion",
+      "rule": "dynamic anime speed-ramping: slow the windup to a tension-filled 120fps glide, accelerate the strike into a 2-frame supersonic whip-snap, and hold for a micro-beat on the explosive impact shockwave.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "angle_sole_and_heel_ground_worship",
+      "label": "📐 Extreme Ground-Level Sole & Stiletto Heel Worship Angle",
+      "group": "Angle",
+      "rule": "filmed flat on the floor just inches from the subject's bare soles, toes, or stiletto heels in the giant near foreground, tilting steeply up the full length of their legs toward their hips and towering face above.",
+      "domain": "general"
+    },
+    {
+      "id": "lens_24mm_close_intimacy_wide",
+      "label": "🔭 24mm f/1.4 Close-Intimacy Wide Prime (Immersive Near-Proximity Depth)",
+      "group": "Lens",
+      "rule": "filmed on a fast 24mm f/1.4 wide prime positioned within arm's reach of the subject, exaggerating front-to-back proximity and drawing the viewer right inside their personal space with creamy background falloff.",
+      "domain": "general"
+    },
+    {
+      "id": "anamorphic_239_blue_streak",
+      "label": "Anamorphic 2.39:1 Horizontal Cobalt Flare Streaks & Oval Bokeh",
+      "group": "Lens",
+      "rule": "Shot on vintage Panavision C-Series anamorphic glass producing crisp horizontal cobalt-blue streak flares from bright speculars and lush vertical oval background bokeh.",
+      "domain": "general"
+    },
+    {
+      "id": "macro_100mm_eyelash_iris",
+      "label": "100mm Macro Lens (Razor-Thin Eyelash, Pore & Droplet Depth)",
+      "group": "Lens",
+      "rule": "Shot on a 100mm macro cinema lens with razor-thin millimeter focus catching individual eyelashes, iris fibers, glistening skin texture, and slow-falling micro droplets.",
+      "domain": "general"
+    },
+    {
+      "id": "heat_haze_shimmer_telephoto",
+      "label": "200mm Telephoto Compressed Air Heat Haze Shimmer",
+      "group": "Atmosphere",
+      "rule": "200mm telephoto compression slicing through rising radiant heat shimmer waves that softly ripple distant rooflines, flames, or asphalt lights behind sharp foreground figures.",
+      "domain": "general"
+    },
+    {
+      "id": "wet_fog_breath_plumes",
+      "label": "Chilly Night Air Visible Breath Vapor & Drifting Mist",
+      "group": "Atmosphere",
+      "rule": "Crisp cool night air revealing pale billowing breath vapor escaping parted lips on every exhale alongside drifting low atmospheric mist.",
+      "domain": "general"
+    },
+    {
+      "id": "dust_motes_sunbeam_shaft",
+      "label": "Golden Window Sunbeam Shafts With Floating Dust Motes",
+      "group": "Atmosphere",
+      "rule": "Diagonal dusty golden sunbeams slicing cleanly through shaded room air with dozens of shimmering airborne dust motes drifting across light shafts.",
+      "domain": "general"
+    },
+    {
+      "id": "underwater_caustic_ripples",
+      "label": "Dancing Turquoise Pool Water Caustics Across Skin & Walls",
+      "group": "Atmosphere",
+      "rule": "Refracted liquid turquoise pool caustic ribbons dancing steadily upward across bare skin, tiled walls, and glass ceilings in soothing shimmering waves.",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "cam_arri_alexa_lf",
+      "label": "🎥 Arri Alexa LF Digital Cinema (Wide Dynamic Range & Filmic Rolloff)",
+      "group": "Lens",
+      "rule": "Shot on Arri Alexa LF large-format digital cinema camera with lush natural skin tones, gentle highlight rolloff, and rich shadow latitude.",
+      "domain": "general"
+    },
+    {
+      "id": "cam_sony_venice2",
+      "label": "🎥 Sony Venice 2 Low-Light Cinema (Clean Night Shadow Clarity)",
+      "group": "Lens",
+      "rule": "Shot on Sony Venice 2 full-frame dual-ISO cinema camera delivering ultra-clean nocturnal shadow texture and razor-sharp practical neon response.",
+      "domain": "general"
+    },
+    {
+      "id": "cam_panavision_dxl2",
+      "label": "🎥 Panavision Millennium DXL2 (Warm Classic Hollywood Skin)",
+      "group": "Lens",
+      "rule": "Shot on Panavision Millennium DXL2 with warm, flattering Hollywood skin rendition, organic contrast, and creamy focus falloff.",
+      "domain": "general"
+    },
+    {
+      "id": "cam_polaroid_sx70",
+      "label": "📸 Polaroid SX-70 Instant Film (Dreamy Pastel Borders & Soft Fade)",
+      "group": "Film texture",
+      "rule": "Polaroid SX-70 instant analog film aesthetic with creamy pastel fade, gentle optical softness, warm flash falloff, and classic instant-film borders.",
+      "domain": "general"
+    },
+    {
+      "id": "dof_f12_dreamy",
+      "label": "🔭 f/1.2 Razor-Thin Dreamy Bokeh",
+      "group": "Focus",
+      "rule": "Wide-open f/1.2 aperture yielding razor-thin focus strictly on the eyelashes while melting the foreground and background into creamy painterly bokeh.",
+      "domain": "general"
+    },
+    {
+      "id": "dof_f28_pro",
+      "label": "🔭 f/2.8 Cinema Primes (Balanced Subject & Set Separation)",
+      "group": "Focus",
+      "rule": "Crisp cinema f/2.8 aperture balancing sharp facial/garment clarity across two subjects with smooth, natural background separation.",
+      "domain": "general"
+    },
+    {
+      "id": "dof_f16_sunstars",
+      "label": "🔭 f/16 Crisp Deep Focus & Optical Sunstars",
+      "group": "Focus",
+      "rule": "Stopped-down f/16 deep architectural focus keeping foreground props and distant horizons tack-sharp simultaneously with crisp optical sunstars around bright bulbs.",
+      "domain": "general"
+    },
+    {
+      "id": "tex_film_burn",
+      "label": "🎞️ Analog Film Burn & Warm Edge Halation Leaks",
+      "group": "Film texture",
+      "rule": "Organic 35mm celluloid film burn streaks and warm amber-crimson sprocket edge light leaks washing intermittently across frame edges.",
+      "domain": "general"
+    },
+    {
+      "id": "ecu",
+      "label": "Extreme Close-Up (Eyes & Lips)",
+      "group": "Shot size",
+      "rule": "tight extreme close-up filling the frame with eyes, lashes, and lips",
+      "domain": "general"
+    },
+    {
+      "id": "cu",
+      "label": "Close-Up (Head & Shoulders)",
+      "group": "Shot size",
+      "rule": "intimate head-and-shoulders close-up foregrounding subtle expression shifts",
+      "domain": "general"
+    },
+    {
+      "id": "mcu",
+      "label": "Medium Close-Up (Chest Up)",
+      "group": "Shot size",
+      "rule": "chest-up medium close-up capturing face, collarbones, and upper-body gestures",
+      "domain": "general"
+    },
+    {
+      "id": "ms",
+      "label": "Medium Shot (Waist Up)",
+      "group": "Shot size",
+      "rule": "balanced waist-up medium framing ideal for two-person hand and torso interplay",
+      "domain": "general"
+    },
+    {
+      "id": "cowboy",
+      "label": "Cowboy Shot (Mid-Thigh Up)",
+      "group": "Shot size",
+      "rule": "mid-thigh-up American framing keeping hip posture, belt, and hands clearly readable",
+      "domain": "general"
+    },
+    {
+      "id": "full",
+      "label": "Full-Body Head-to-Toe Frame",
+      "group": "Shot size",
+      "rule": "complete head-to-footwear vertical framing with clean headroom and floor margin",
+      "domain": "general"
+    },
+    {
+      "id": "wide",
+      "label": "Wide Environmental Frame",
+      "group": "Shot size",
+      "rule": "broad architectural framing placing subjects cleanly inside the room or street context",
+      "domain": "general"
+    },
+    {
+      "id": "eye_level",
+      "label": "Eye-Level Neutral Angle",
+      "group": "Angle",
+      "rule": "camera held at natural eye height fostering direct personal connection",
+      "domain": "general"
+    },
+    {
+      "id": "low_angle",
+      "label": "Low-Angle Heroic Upward View",
+      "group": "Angle",
+      "rule": "camera positioned below hip height angling upward so subjects loom commanding and tall",
+      "domain": "general"
+    },
+    {
+      "id": "high_angle",
+      "label": "High-Angle Look-Down",
+      "group": "Angle",
+      "rule": "elevated angle looking cleanly downward across upturned gaze, shoulders, and surface layout",
+      "domain": "general"
+    },
+    {
+      "id": "dutch",
+      "label": "Canted Dutch Tilt Angle",
+      "group": "Angle",
+      "rule": "horizon pitched cleanly at a 18-degree slant charging the composition with uneasy energy",
+      "domain": "general"
+    },
+    {
+      "id": "anamorphic",
+      "label": "Anamorphic Oval Bokeh & Flare",
+      "group": "Lens",
+      "rule": "wide cinema anamorphic lens geometry with crisp oval background bokeh and subtle horizontal light streaks",
+      "domain": "general"
+    },
+    {
+      "id": "shallow",
+      "label": "Razor-Thin Shallow Focus",
+      "group": "Focus",
+      "rule": "creamy shallow depth of field locking razor sharpness on the eyes while melting foreground edges and background lights",
+      "domain": "general"
+    },
+    {
+      "id": "deep",
+      "label": "Deep Sharp Focus",
+      "group": "Focus",
+      "rule": "stopped-down deep focus keeping foreground props, subjects, and distant architecture sharp together",
+      "domain": "general"
+    },
+    {
+      "id": "rack",
+      "label": "Smooth Optical Rack Focus",
+      "group": "Focus",
+      "rule": "smooth focus shift gliding cleanly from a sharp foreground prop onto the watching face behind",
+      "domain": "general"
+    },
+    {
+      "id": "rain",
+      "label": "Rain & Wet Specular Sheen",
+      "group": "Atmosphere",
+      "rule": "falling silver rain streaks catching rim lights across wet hair, fabric, and slick reflections",
+      "domain": "general"
+    },
+    {
+      "id": "steam",
+      "label": "Warm Drifting Steam & Mist",
+      "group": "Atmosphere",
+      "rule": "wispy curls of warm translucent steam drifting lazily across skin and tiled glass",
+      "domain": "general"
+    },
+    {
+      "id": "haze",
+      "label": "Soft Atmospheric Cinema Haze",
+      "group": "Atmosphere",
+      "rule": "fine suspended atmospheric haze catching directional light beams and softening distant shadows",
+      "domain": "general"
+    },
+    {
+      "id": "dust_motes",
+      "label": "Floating Sunlit Dust Motes",
+      "group": "Atmosphere",
+      "rule": "tiny luminous golden dust specks drifting through warm window light shafts",
+      "domain": "general"
+    },
+    {
+      "id": "sparks",
+      "label": "Drifting Glowing Embers & Sparks",
+      "group": "Atmosphere",
+      "rule": "bright orange-gold sparks and embers rising cleanly across shadowed air",
+      "domain": "general"
+    },
+    {
+      "id": "birds_eye",
+      "label": "Elevated Bird's-Eye Oblique Angle",
+      "group": "Angle",
+      "rule": "steep elevated bird's-eye angle looking downward across floor geometry and upturned face",
+      "domain": "general"
+    },
+    {
+      "id": "top_down",
+      "label": "90-Degree Vertical Overhead Top-Down",
+      "group": "Angle",
+      "rule": "strictly perpendicular 90-degree overhead shot centered straight down over the surface and figure",
+      "domain": "general"
+    },
+    {
+      "id": "worms_eye",
+      "label": "Floor-Level Worm's-Eye Look-Up",
+      "group": "Angle",
+      "rule": "ultra-low ground-level upward angle emphasizing towering height and ceiling architecture",
+      "domain": "general"
+    },
+    {
+      "id": "bokeh",
+      "label": "Creamy Specular Background Bokeh",
+      "group": "Lens",
+      "rule": "wide-open prime bokeh turning distant practical lamps into luminous soft glowing orbs",
+      "domain": "general"
+    },
+    {
+      "id": "chroma",
+      "label": "Subtle Vintage Chromatic Edge",
+      "group": "Lens",
+      "rule": "delicate vintage lens optical character with soft corner falloff and faint spectral edge color",
+      "domain": "general"
+    },
+    {
+      "id": "dirty_frame",
+      "label": "Foreground Occlusion (Dirty Frame)",
+      "group": "Composition",
+      "rule": "shoot past softly blurred foreground shoulder, doorway edge, or glass rim for lived-in depth",
+      "domain": "general"
+    },
+    {
+      "id": "els",
+      "label": "Extreme Long Architectural Scale",
+      "group": "Shot size",
+      "rule": "vast wide shot showing the tiny subject positioned inside sweeping architecture or landscape",
+      "domain": "general"
+    },
+    {
+      "id": "establishing",
+      "label": "Clean Scene-Establishing Wide",
+      "group": "Shot size",
+      "rule": "clear opening wide shot defining room geography, exits, lighting, and subject placement",
+      "domain": "general"
+    },
+    {
+      "id": "fisheye",
+      "label": "Ultra-Wide Curved Fisheye Distortion",
+      "group": "Lens",
+      "rule": "curved 8mm ultra-wide fisheye barrel perspective exaggerating close hands and room curves",
+      "domain": "general"
+    },
+    {
+      "id": "flare",
+      "label": "Warm Organic Cinema Lens Flare",
+      "group": "Lens",
+      "rule": "warm golden optical flare blooming smoothly across frame when backlight grazes the front glass",
+      "domain": "general"
+    },
+    {
+      "id": "fourth_wall",
+      "label": "Direct Fourth-Wall Eye Contact",
+      "group": "Composition",
+      "rule": "unwavering direct-to-lens gaze acknowledging the viewer cleanly across the action",
+      "domain": "general"
+    },
+    {
+      "id": "frame_in_frame",
+      "label": "Architectural Frame-Within-Frame",
+      "group": "Composition",
+      "rule": "compose subjects neatly framed inside an interior doorway, arch, or mirror border",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "halation",
+      "label": "35mm Film Highlight Halation",
+      "group": "Lens",
+      "rule": "warm crimson-amber celluloid halation halo blooming softly around bright practical highlights",
+      "domain": "general"
+    },
+    {
+      "id": "insert",
+      "label": "Crisp Narrative Prop Insert",
+      "group": "Shot size",
+      "rule": "tight crisp detail insert focusing cleanly on hands, keys, fabric clasp, or glass",
+      "domain": "general"
+    },
+    {
+      "id": "leading_lines",
+      "label": "Perspective Leading Lines",
+      "group": "Composition",
+      "rule": "strong architectural corridor, railing, or bar lines converging cleanly onto the subject",
+      "domain": "general"
+    },
+    {
+      "id": "lens_14",
+      "label": "14mm Ultra-Wide Dynamic Space",
+      "group": "Lens",
+      "rule": "dramatic 14mm wide-angle perspective emphasizing foreground proximity and sweeping space",
+      "domain": "general"
+    },
+    {
+      "id": "lens_85",
+      "label": "85mm Flattering Portrait Compression",
+      "group": "Lens",
+      "rule": "classic 85mm telephoto compression flattering facial contours against softly melted backgrounds",
+      "domain": "general"
+    },
+    {
+      "id": "lens_long",
+      "label": "135mm–200mm Voyeuristic Compression",
+      "group": "Lens",
+      "rule": "long telephoto compression flattening foreground and background into rich painterly bokeh layers",
+      "domain": "general"
+    },
+    {
+      "id": "light_leak",
+      "label": "Warm Analog Edge Light Leak",
+      "group": "Lens",
+      "rule": "soft amber-coral analog film-gate light leak brushing one frame edge",
+      "domain": "general"
+    },
+    {
+      "id": "macro",
+      "label": "True 1:1 Macro Texture Detail",
+      "group": "Shot size",
+      "rule": "ultra-close macro lens revealing lashes, lip sheen, water beads, and fine fabric weave",
+      "domain": "general"
+    },
+    {
+      "id": "negative_space",
+      "label": "Balanced Minimalist Empty Margin",
+      "group": "Composition",
+      "rule": "clean off-center framing placing the subject against generous quiet architectural negative space",
+      "domain": "general"
+    },
+    {
+      "id": "one_point",
+      "label": "Strict One-Point Center Symmetry",
+      "group": "Composition",
+      "rule": "perfectly centered symmetrical perspective converging squarely behind the main subject",
+      "domain": "general"
+    },
+    {
+      "id": "probe",
+      "label": "Needle Macro Probe Glide",
+      "group": "Lens",
+      "rule": "slender macro perspective threading smoothly inches above tabletop props right into a close-up",
+      "domain": "general"
+    },
+    {
+      "id": "speed_ramp",
+      "label": "Fluid Speed-Ramp Cadence",
+      "group": "Time",
+      "rule": "smooth brisk real-time approach gliding cleanly into suspended slow-motion emphasis",
+      "domain": "general"
+    },
+    {
+      "id": "split",
+      "label": "Clean Split-Screen Composition",
+      "group": "Composition",
+      "rule": "vertical optical or architectural split dividing dual parallel actions cleanly across left and right halves",
+      "domain": "general"
+    },
+    {
+      "id": "split_diopter",
+      "label": "Split-Diopter Dual Focus Plane",
+      "group": "Focus",
+      "rule": "split-field optical focus keeping a razor-sharp foreground hand and distant watching face crisp simultaneously",
+      "domain": "general"
+    },
+    {
+      "id": "step_print",
+      "label": "Expressive Motion-Streak Cadence",
+      "group": "Time",
+      "rule": "dreamy stepped shutter cadence leaving delicate silky motion trails across neon nightlife",
+      "domain": "general"
+    },
+    {
+      "id": "thirds",
+      "label": "Classic Rule-of-Thirds Balance",
+      "group": "Composition",
+      "rule": "clean rule-of-thirds placement giving natural eye-line lead room across the frame",
+      "domain": "general"
+    },
+    {
+      "id": "tilt_shift",
+      "label": "Selective Miniature Tilt-Shift Plane",
+      "group": "Focus",
+      "rule": "angled selective focus slice keeping one thin band razor-sharp while foreground and background blur softly",
+      "domain": "general"
+    },
+    {
+      "id": "time_lapse",
+      "label": "Fluid Light-Shift Time-Lapse",
+      "group": "Time",
+      "rule": "smooth accelerated passage of shifting shadows, clouds, and neon trails around a poised subject",
+      "domain": "general"
+    },
+    {
+      "id": "two_shot",
+      "label": "Balanced Two-Subject Framing",
+      "group": "Shot size",
+      "rule": "clean balanced medium two-shot keeping both subjects' eyes, torsos, and hands readable together",
+      "domain": "general"
+    },
+    {
+      "id": "vignette",
+      "label": "Soft Optical Edge Vignette",
+      "group": "Lens",
+      "rule": "gentle dark optical corner falloff drawing attention cleanly toward illuminated center faces",
+      "domain": "general"
+    },
+    {
+      "id": "lens_135mm_eavesdrop",
+      "label": "🔭 135mm Telephoto Eavesdrop (Stacked Planes & Intimate Distance)",
+      "group": "Lens",
+      "rule": "135mm telephoto compression shot from across the room or street stacking foreground and background layers tightly behind crisp shallow subject isolation",
+      "domain": "general"
+    },
+    {
+      "id": "lens_200mm_long_sniper",
+      "label": "🎯 200mm Extreme Long Telephoto (Heat Shimmer & Flattened Depth)",
+      "group": "Lens",
+      "rule": "200mm extreme telephoto lens flattening distant urban or landscape planes into tight layered ribbons with subtle atmospheric air shimmer",
+      "domain": "general"
+    },
+    {
+      "id": "lens_vintage_cooke_k35",
+      "label": "🎞️ Vintage Cine Glass (Warm Rolloff, Subtle Halation & Gentle Edges)",
+      "group": "Lens",
+      "rule": "vintage cinema prime optics yielding creamy highlight rolloff, soft skin rendering, subtle warm amber halation around lamps, and gently rolling outer bokeh",
+      "domain": "general"
+    },
+    {
+      "id": "cadence_low_shutter_staccato",
+      "label": "⚡ Low Shutter Staccato (Crisp Frozen Droplets & Sharp Action Edges)",
+      "group": "Motion Cadence",
+      "rule": "crisp narrow-shutter staccato motion cadence freezing splashing droplets, flying dust, and fast limb snaps with razor-sharp edge clarity in every frame",
+      "domain": "combat_action"
+    },
+    {
+      "id": "cadence_wkw_step_printing",
+      "label": "💫 Wong Kar-Wai Step Printing (Romantic Motion Trails & Repeated Cadence)",
+      "group": "Motion Cadence",
+      "rule": "expressive slow-shutter step-printed cadence trailing luminous neon smears and fluid ghosted movement behind faces walking through crowded midnight air",
+      "domain": "general"
+    },
+    {
+      "id": "comp_over_shoulder_frame",
+      "label": "🗣️ Over-the-Shoulder Conversation Anchor",
+      "group": "Composition",
+      "rule": "classic over-the-shoulder two-shot anchoring the foreground listener's blurred shoulder and cheek at one frame edge while holding sharp focus on the speaker's eyes",
+      "domain": "general"
+    },
+    {
+      "id": "comp_golden_ratio_lead",
+      "label": "🌀 Golden Ratio Lead Room (1.618 Balance & Directional Gaze)",
+      "group": "Composition",
+      "rule": "balanced golden-ratio placement giving generous open breathing room across the direction the subject looks or walks",
+      "domain": "general"
+    }
+  ]
+}

@@ -16,6 +16,7 @@
 import { el, button, widgetByName } from "./widget_utils.js";
 import { parseRefPlan } from "./ref_rail.js";
 import { createPicker } from "./media_picker.js";
+import { IMAGE_MP_STOPS, runForgeGraph, viewUrl } from "./forge_queue.js";
 
 const SWAP_PLAN_URL = "/h3_ref_chain/swap_plan";
 const SWAP_IDS_PROP = "h3_swap_identities";
@@ -251,13 +252,12 @@ export function createVideoSwap(node, { onWritten } = {}) {
     plateRow.append(wardSel, wardInput, pinsInput);
     body.appendChild(plateRow);
 
-    // Optional local add-on (not shipped): may add rows to SWAP and extra
-    // request fields. Absent = nothing happens.
+    // Optional SandTie SWAP speech/style/wardrobe overlays.
     let extras = null;
-    import("./personal_studio.js").then((mod) => {
+    import("./sandtie_ui.js").then((mod) => {
         if (typeof mod?.mountSwapExtras === "function") {
             extras = mod.mountSwapExtras(node, {
-                body, bgSel, wardInput, syncControls: () => syncControls(),
+                body, bgSel, wardInput, plateRow, beforeEl: row, syncControls: () => syncControls(),
             });
         }
     }).catch(() => {});
@@ -304,6 +304,182 @@ export function createVideoSwap(node, { onWritten } = {}) {
         () => run());
     row.appendChild(go);
     body.appendChild(row);
+
+    /* -- Image Forge SWAP Keyframe Pin Painter ---------------------------- */
+    const paintBox = el("details", "h3e-writer-conn");
+    paintBox.appendChild(el("summary", null, "\ud83c\udfa8 Paint Keyframe Pin (Qwen / H3-Image / P-H3)"));
+    const paintRow = el("div", "h3e-writer-row");
+    const frameIdxIn = el("input", "h3e-writer-hops");
+    frameIdxIn.type = "number";
+    frameIdxIn.min = "0";
+    frameIdxIn.value = "0";
+    frameIdxIn.title = "0-based frame index from clip 1 to extract & paint as a SWAP pin.";
+
+    const paintProfSel = el("select", "h3e-select");
+    paintProfSel.title = "Image Forge model used to paint the extracted clip frame";
+    for (const [pid, plbl] of [
+        ["qwen_viggle_6step", "Qwen 2.1 + Viggle Turbo (6-step)"],
+        ["qwen_turbo_8step", "Qwen 2.1 Turbo (8-step)"],
+        ["qwen_unlocked_6step", "RedQW2.1 Unlocked (12-step)"],
+    ]) {
+        const opt = el("option", null, plbl);
+        opt.value = pid;
+        paintProfSel.appendChild(opt);
+    }
+
+    const paintMpSel = el("select", "h3e-select");
+    paintMpSel.title = "Target megapixel resolution for painted SWAP pin (Auto uses profile default / native clip ratio)";
+    for (const [mpVal, mpLbl] of IMAGE_MP_STOPS) {
+        const opt = el("option", null, mpLbl);
+        opt.value = mpVal;
+        paintMpSel.appendChild(opt);
+    }
+
+    if (typeof fetch === "function") {
+        fetch("/h3_ref_chain/mv/capabilities", { cache: "no-store" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((j) => {
+                const editProfs = (j?.image_profiles || []).filter((p) => p.supports_edit && p.ready);
+                if (!editProfs.length) return;
+                const prevProf = paintProfSel.value;
+                paintProfSel.textContent = "";
+                for (const p of editProfs) {
+                    const opt = el("option", null, p.label);
+                    opt.value = p.id;
+                    opt.title = p.note || "";
+                    paintProfSel.appendChild(opt);
+                }
+                if (prevProf && editProfs.some((p) => p.id === prevProf)) {
+                    paintProfSel.value = prevProf;
+                }
+            })
+            .catch(() => {});
+    }
+
+    const paintPrompt = el("input", "h3e-writer-brief");
+    paintPrompt.type = "text";
+    paintPrompt.placeholder = "Swap instruction (e.g. Replace the person in <Picture 1> with the person from <Picture 2>, keeping pose & lighting)";
+
+    let paintedRec = null;
+    let paintedFrameIdx = 0;
+
+    const paintPrevWrap = el("div", "h3e-writer-row");
+    paintPrevWrap.style.display = "none";
+    const paintImg = el("img");
+    paintImg.style.maxHeight = "140px";
+    paintImg.style.borderRadius = "4px";
+    const paintPinBtn = button("\u2713 Keep & Pin to SWAP",
+        "Import painted frame into h3_refs, add as reference plate, and fill pins input",
+        async () => {
+            if (!paintedRec?.filename) return;
+            paintPinBtn.disabled = true;
+            try {
+                const tagBase = `swap_pin_f${paintedFrameIdx}`;
+                const impR = await fetch("/h3_ref_chain/mv/import_output", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        filename: paintedRec.filename,
+                        subfolder: paintedRec.subfolder || "",
+                        output_type: paintedRec.type || "output",
+                        dest_name: `${tagBase}.png`,
+                        kind: "image",
+                        tag: tagBase,
+                        desc: paintPrompt.value || "Painted Viggle SWAP keyframe pin.",
+                        role: "plate",
+                        register_bible: false,
+                    }),
+                });
+                const impJ = await impR.json();
+                if (!impR.ok || !impJ.ok) throw new Error(impJ?.error || "Import failed.");
+
+                const wRef = widgetByName(node, "ref_plan");
+                const curPlan = parseRefPlan(wRef?.value) || { subjects: {}, refs: [] };
+                const nextRefs = Array.isArray(curPlan.refs) ? [...curPlan.refs] : [];
+                const hitIdx = nextRefs.findIndex((x) => String(x.tag || "").replace(/^@/, "") === tagBase);
+                if (hitIdx >= 0) {
+                    nextRefs[hitIdx] = { ...nextRefs[hitIdx], file: impJ.filename };
+                } else {
+                    nextRefs.push({
+                        tag: tagBase,
+                        file: impJ.filename,
+                        slot: nextRefs.length + 1,
+                        subject: null,
+                        retention: "fully_preserved",
+                        desc: "Painted Viggle SWAP keyframe pin.",
+                    });
+                }
+                if (wRef) commit(node, wRef, JSON.stringify({ ...curPlan, refs: nextRefs }, null, 2));
+                if (!selectedTags.includes(tagBase)) {
+                    selectedTags = [tagBase, ...selectedTags];
+                    saveSelectedTags();
+                }
+                pinsInput.value = String(paintedFrameIdx);
+                node.properties ??= {};
+                node.properties[SWAP_PINS_PROP] = pinsInput.value;
+                fillIdentity();
+                say(`Pinned ${impJ.filename} at frame ${paintedFrameIdx} (@${tagBase})!`, "hint");
+            } catch (err) {
+                say(String(err), "error");
+            } finally {
+                paintPinBtn.disabled = false;
+            }
+        });
+    paintPrevWrap.append(paintImg, paintPinBtn);
+
+    const paintRunBtn = button("\ud83c\udfa8 Paint Frame",
+        "Extract frame from clip 1 and paint it with selected identity plates via Qwen-Viggle",
+        async () => {
+            const video = String(wVideo?.value || "").trim();
+            if (!video) { say("Pick clip 1 first.", "error"); return; }
+            const rows = railRows();
+            const activeIds = (selectedTags.length ? selectedTags : (identSel.value ? [identSel.value] : []))
+                .map((t) => rows.find((r) => String(r.tag || "").replace(/^@/, "") === String(t).replace(/^@/, "")))
+                .filter((r) => r?.file);
+            if (!activeIds.length) {
+                say("Pick at least one identity plate above before painting a swap frame.", "error");
+                return;
+            }
+            paintRunBtn.disabled = true;
+            paintedFrameIdx = Math.max(0, Number(frameIdxIn.value) || 0);
+            say(`Extracting frame ${paintedFrameIdx} from ${video}...`, "hint");
+            try {
+                const exR = await fetch("/h3_ref_chain/mv/extract_frame", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ video, frame_idx: paintedFrameIdx }),
+                });
+                const exJ = await exR.json();
+                if (!exR.ok || !exJ.ok) throw new Error(exJ?.error || "Frame extraction failed.");
+
+                const refList = [exJ.filename, ...activeIds.map((r) => r.file)];
+                const defTxt = "Replace the person in <image1> with the character shown in <image2>, preserving the exact pose, framing, camera angle, and lighting.";
+                const res = await runForgeGraph({
+                    kind: "image",
+                    profile_id: paintProfSel.value || "qwen_viggle_6step",
+                    prompt: String(paintPrompt.value || "").trim() || defTxt,
+                    ref_files: refList,
+                    aspect: "match",
+                    megapixels: Number(paintMpSel.value || 0) || 0,
+                    filename_prefix: "mv_forge/swap_pin",
+                }, {
+                    onStatus: (m) => say(m, "hint"),
+                    onProgress: (v, max) => say(`Painting SWAP pin (${v}/${max})...`, "hint"),
+                });
+                paintedRec = res.file;
+                paintImg.src = viewUrl(res.file);
+                paintPrevWrap.style.display = "";
+                const wh = (res.meta?.width && res.meta?.height) ? ` (${res.meta.width}×${res.meta.height})` : "";
+                say(`Painted frame ready${wh}! Review preview below and click Keep & Pin to SWAP.`, "hint");
+            } catch (err) {
+                say(String(err), "error");
+            } finally {
+                paintRunBtn.disabled = false;
+            }
+        });
+    paintRow.append(frameIdxIn, paintProfSel, paintMpSel, paintPrompt, paintRunBtn);
+    paintBox.append(paintRow, paintPrevWrap);
+    body.appendChild(paintBox);
 
     const status = el("div", "h3e-note h3e-writer-status");
     status.style.display = "none";

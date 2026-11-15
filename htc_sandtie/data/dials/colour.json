@@ -1,0 +1,291 @@
+{
+  "id": "colour",
+  "label": "Colour",
+  "per": "project",
+  "note": "Film stocks and color grading palettes.",
+  "options": [
+    {
+      "id": "kodak_vision3_500t",
+      "label": "🎞️ Kodak Vision3 500T 35mm (Rich Tungsten Shadows & Warm Skin)",
+      "group": "Natural & Film Stocks",
+      "key": "Kodak Vision3 500T 35mm film grade",
+      "rule": "a Kodak Vision3 500T 35mm motion-picture film grade: deep indigo-blue shadow density, natural warm peach-and-amber skin tones, and creamy highlight rolloff",
+      "domain": "general"
+    },
+    {
+      "id": "cinestill_800t_halation",
+      "label": "🎞️ CineStill 800T Night Film (Cool Cyan Shadows + Red Halation Glow)",
+      "group": "Natural & Film Stocks",
+      "key": "CineStill 800T night film grade",
+      "rule": "a CineStill 800T night tungsten film grade: cool emerald-cyan night shadows, warm skin under practical lights, and signature ruby-red halation blooming around bright light sources",
+      "domain": "general"
+    },
+    {
+      "id": "fuji_eterna_soft",
+      "label": "🎞️ Fujifilm Eterna 250D (Soft Pastel Contrast & Silky Skin Tones)",
+      "group": "Natural & Film Stocks",
+      "key": "Fujifilm Eterna soft cinema grade",
+      "rule": "a Fujifilm Eterna cinema film grade: gentle low-contrast shadow lift, silky-smooth pastel skin rendering, and muted jade-green and warm cream midtones",
+      "domain": "general"
+    },
+    {
+      "id": "velvet_crimson_gold",
+      "label": "🍷 Velvet Crimson & Champagne Gold (Luxury Boudoir Grade)",
+      "group": "Warm & Golden",
+      "key": "velvet crimson and champagne gold",
+      "rule": "a luxury boudoir colour grade of deep ruby crimson shadows, luminous champagne-gold highlights, and warm honeyed skin tones",
+      "domain": "general"
+    },
+    {
+      "id": "honey_bronze_sun_glow",
+      "label": "🍯 Sun-Drenched Honey Bronze & Warm Amber",
+      "group": "Warm & Golden",
+      "key": "sun-drenched honey bronze",
+      "rule": "a sun-drenched honey-bronze colour grade with rich golden skin luminosity, warm amber midtones, and soft ivory highlights",
+      "domain": "general"
+    },
+    {
+      "id": "sapphire_moonlight_silver",
+      "label": "🌙 Sapphire Moonlight & Liquid Silver (Crisp Night Cool)",
+      "group": "Cool & Night",
+      "key": "sapphire moonlight and silver",
+      "rule": "a midnight sapphire-and-silver colour grade: deep cobalt-blue shadows, cool porcelain-and-silver skin highlights, and crisp specular contrast",
+      "domain": "general"
+    },
+    {
+      "id": "emerald_gold_wkw",
+      "label": "🏮 Lush Emerald Green & Tungsten Amber (Arthouse Night)",
+      "group": "Cool & Night",
+      "key": "emerald green and tungsten amber",
+      "rule": "an arthouse night palette of lush jade-emerald shadows contrasted against warm tungsten-amber practical lights and rich skin tones",
+      "domain": "general"
+    },
+    {
+      "id": "magenta_violet_bisexual_lighting",
+      "label": "💜 Electric Violet, Magenta & Cyan Dual-Gel Glow",
+      "group": "Stylized, Neon & Monochrome",
+      "key": "magenta violet and cyan neon",
+      "rule": "a saturated dual-gel neon palette of electric violet and hot magenta on one side balanced against cool cyan-blue on the other",
+      "domain": "general"
+    },
+    {
+      "id": "silver_nitrate_noir",
+      "label": "🖤 Silver Nitrate High-Contrast B&W (Liquid Metallic Highlights)",
+      "group": "Stylized, Neon & Monochrome",
+      "key": "silver-nitrate monochrome",
+      "rule": "a silver-nitrate monochrome grade: crushed pitch-black shadows paired with gleaming, liquid-mercury silver highlights on skin and eyes",
+      "domain": "general"
+    },
+    {
+      "id": "peach_milk_gravure",
+      "label": "🍑 Airy Peach & Milky Cream (Soft High-Key Glamour)",
+      "group": "Warm & Golden",
+      "key": "airy peach and milky cream",
+      "rule": "a high-key glamour grade with milky cream highlights, soft rosy-peach skin tones, and lifted airy shadows",
+      "domain": "general"
+    },
+    {
+      "id": "ufotable_neon_hdr_contrast",
+      "label": "⚡ Ufotable HDR Elemental Grade (Deep Obsidian Blacks + Blazing Neon Highlights)",
+      "group": "Stylized, Neon & Monochrome",
+      "key": "ufotable HDR elemental contrast",
+      "rule": "a high-dynamic-range anime-cinema grade: deep obsidian shadow density contrasted with ultra-saturated, self-luminous cyan, crimson, and gold elemental highlights and warm skin tones",
+      "domain": "general"
+    },
+    {
+      "id": "tokyo_velvet_magenta_gold",
+      "label": "💜 Tokyo Velvet Magenta & Champagne Gold (Sultry Boudoir Grade)",
+      "group": "Warm & Golden",
+      "key": "velvet magenta and champagne gold",
+      "rule": "a sensual Tokyo boudoir grade with rich velvet-magenta shadow tinting, luminous champagne-gold specular highlights, and warm, creamy rose-tinted skin",
+      "domain": "general"
+    },
+    {
+      "id": "miami_sun_drenched_kodachrome",
+      "label": "🌴 Sun-Drenched Kodachrome 64 (Vibrant Turquoise, Coral & Golden Tan)",
+      "group": "Natural & Film Stocks",
+      "key": "sun-drenched Kodachrome 64",
+      "rule": "a vintage Kodachrome 64 daylight grade with punchy turquoise blues, rich coral-reds, and glowing golden-bronze skin tones",
+      "domain": "general"
+    },
+    {
+      "id": "emerald_matrix_gunmetal",
+      "label": "🟢 Cyberpunk Gunmetal & Phosphor Emerald (90s Tech-Noir)",
+      "group": "Cool & Night",
+      "key": "gunmetal and phosphor emerald",
+      "rule": "a sleek tech-noir colour grade with cool gunmetal-slate midtones, deep asphalt blacks, and crisp phosphor-emerald highlights",
+      "domain": "combat_action"
+    },
+    {
+      "id": "crimson_john_wick_gold",
+      "label": "Crimson Velvet & Warm Gold Highlights",
+      "group": "Stylized, Neon & Monochrome",
+      "rule": "deep ruby crimson midtones and rich obsidian blacks balanced against luminous warm champagne-gold skin highlights",
+      "domain": "general"
+    },
+    {
+      "id": "cyan_rain_cyberpunk",
+      "label": "Electric Cyan Rain & Neon Magenta Blacks",
+      "group": "Stylized, Neon & Monochrome",
+      "rule": "saturated electric cyan rain highlights paired with rich ultraviolet and neon magenta shadows",
+      "domain": "general"
+    },
+    {
+      "id": "champagne_honey_glow",
+      "label": "Warm Champagne Skin & Honey Roll-Off",
+      "group": "Warm & Golden",
+      "rule": "creamy warm champagne-honey highlights giving skin a luminous golden glow with velvety warm chocolate shadows",
+      "domain": "general"
+    },
+    {
+      "id": "emerald_anime_midnight",
+      "label": "Deep Midnight Teal & Luminous Emerald Accents",
+      "group": "Cool & Night",
+      "rule": "inky midnight blue-teal shadows contrasted sharply with vivid emerald and silver moonlight accents",
+      "domain": "general"
+    },
+    {
+      "id": "bleach_bypass_gritty",
+      "label": "High-Contrast Action Bleach-Bypass Steel",
+      "group": "Stylized, Neon & Monochrome",
+      "rule": "silver-retained high-contrast bleach-bypass look with desaturated steel blues, punchy deep blacks, and crisp specular highlights",
+      "domain": "general"
+    },
+    {
+      "id": "fujifilm_velvia_50",
+      "label": "🎞️ Fujifilm Velvia 50 (Deep Blacks & Saturated Landscape Punch)",
+      "group": "Natural & Film Stocks",
+      "key": "Fujifilm Velvia 50 slide stock",
+      "rule": "a rich Fujifilm Velvia 50 slide-film grade with ink-deep blacks, jewel-bright saturated greens and reds, and punchy daylight contrast",
+      "domain": "general"
+    },
+    {
+      "id": "kodak_ektachrome_cool",
+      "label": "🎞️ Kodak Ektachrome Slide Film (Crisp Cool Blues & Fine Grain)",
+      "group": "Cool & Night",
+      "key": "Kodak Ektachrome cool slide film",
+      "rule": "a clean Kodak Ektachrome reversal-film look with cool cyan-cobalt shadows, crisp silver highlights, and fine slide-film grain",
+      "domain": "general"
+    },
+    {
+      "id": "bw_infrared_silver",
+      "label": "🤍 Monochrome Infrared Silver Film (Chalk-White Foliage & Jet-Black Skies)",
+      "group": "Stylized, Neon & Monochrome",
+      "key": "monochrome infrared silver",
+      "rule": "a stark monochrome infrared silver-gelatin grade where sunlit foliage glows chalk-white against dramatic jet-black skies and porcelain skin",
+      "domain": "general"
+    },
+    {
+      "id": "natural",
+      "label": "Clean True-to-Life Natural Grade",
+      "group": "Natural & Film Stocks",
+      "rule": "accurate neutral color balance preserving natural skin tones, clean whites, and rich subtle shadow density",
+      "domain": "general"
+    },
+    {
+      "id": "teal_orange",
+      "label": "Blockbuster Teal Shadows & Warm Skin",
+      "group": "Cool & Night",
+      "rule": "classic cinema teal-and-orange grade with cool cyan-blue shadow contrast lifting warm golden skin highlights",
+      "domain": "general"
+    },
+    {
+      "id": "kodachrome",
+      "label": "Rich Vintage Kodachrome Warmth",
+      "group": "Natural & Film Stocks",
+      "rule": "classic Kodachrome slide colors with punchy reds, deep velvety shadows, and warm nostalgic skin",
+      "domain": "general"
+    },
+    {
+      "id": "golden_hour",
+      "label": "Warm Amber Golden Glow",
+      "group": "Warm & Golden",
+      "rule": "sun-kissed amber-honey highlights with lifted warm cream midtones and soft shadow rolloff",
+      "domain": "general"
+    },
+    {
+      "id": "cool_steel",
+      "label": "Crisp Slate & Silver Thriller",
+      "group": "Cool & Night",
+      "rule": "cool desaturated steel-blue shadows with crisp silver highlights and taut clinical contrast",
+      "domain": "general"
+    },
+    {
+      "id": "vivid",
+      "label": "Punchy High-Saturation Gloss",
+      "group": "Stylized, Neon & Monochrome",
+      "rule": "vibrant saturated color pop with deep clean blacks and bright luminous highlights",
+      "domain": "general"
+    },
+    {
+      "id": "pastel",
+      "label": "Soft Airy Pastel Wash",
+      "group": "Stylized, Neon & Monochrome",
+      "rule": "gentle low-contrast pastel palette with creamy lifted shadows and soft blossom highlights",
+      "domain": "general"
+    },
+    {
+      "id": "bw",
+      "label": "Crisp Monochrome Silver B&W",
+      "group": "Stylized, Neon & Monochrome",
+      "rule": "pure achromatic black-and-white silver-gelatin grade with luminous skin highlights and deep ink shadows",
+      "domain": "general"
+    },
+    {
+      "id": "sin_city",
+      "label": "Stark B&W + Selective Crimson Pop",
+      "group": "Stylized, Neon & Monochrome",
+      "rule": "high-contrast monochrome black and white contrasted by vivid saturated crimson red on lips, silk, or neon",
+      "domain": "general"
+    },
+    {
+      "id": "bleach",
+      "label": "Gritty Silver-Retention Bleach Bypass",
+      "group": "Cool & Night",
+      "rule": "punchy desaturated bleach-bypass thriller grade with crushed dark shadows and metallic skin sheen",
+      "domain": "general"
+    },
+    {
+      "id": "cross_process",
+      "label": "Indie Cross-Processed Cyan & Lime",
+      "group": "Stylized, Neon & Monochrome",
+      "rule": "edgy cross-processed film contrast tinting shadows cool emerald-cyan against warm highlights",
+      "domain": "general"
+    },
+    {
+      "id": "day_for_night",
+      "label": "Deep Cobalt Moonlight Filter",
+      "group": "Cool & Night",
+      "rule": "silvery cobalt blue-hour wash transforming scene shadows into cool nocturnal moonlight",
+      "domain": "general"
+    },
+    {
+      "id": "grade_split_tone_amber_cyan",
+      "label": "🎨 Split-Tone Cinema (Warm Gold Highlights / Cool Cyan Shadows)",
+      "group": "Stylized, Neon & Monochrome",
+      "rule": "balanced two-hue split-tone curve washing crisp highlights in warm honey-gold while cooling shadows into deep cinema teal-cyan",
+      "domain": "general"
+    },
+    {
+      "id": "grade_filmic_faded_print",
+      "label": "🎞️ Filmic Faded Print (Lifted Velvety Blacks & Creamy Rolloff)",
+      "group": "Film & Natural",
+      "rule": "soft photochemical print grade with gently lifted charcoal blacks, creamy highlight rolloff, and organic midtone warmth",
+      "domain": "general"
+    },
+    {
+      "id": "grade_monochrome_silver",
+      "label": "🖤 Silver Gelatin Monochrome (Rich Tonal Range & Crisp Whites)",
+      "group": "Stylized, Neon & Monochrome",
+      "rule": "pure silver-gelatin monochrome cinema palette balancing deep ink shadows, luminous silver midtones, and crisp specular skin highlights",
+      "domain": "general"
+    },
+    {
+      "id": "grade_hyper_saturated_pop",
+      "label": "🌈 Hyper-Saturated Pop (Vivid Candy Primaries & Glossy Contrast)",
+      "group": "Stylized, Neon & Monochrome",
+      "rule": "bold high-saturation color palette popping luminous reds, electric blues, and warm skin tones against deep glossy darks",
+      "domain": "general"
+    }
+  ]
+}

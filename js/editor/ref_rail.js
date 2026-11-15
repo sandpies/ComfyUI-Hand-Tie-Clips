@@ -41,21 +41,38 @@ function hopBarWidth(node) {
 
 const MAX_SLOTS = 9;
 
-/** `[{name, kind, description}]` from the refmods folder listing. */
+/** `[{name, kind, role, format, tokens, members_count, description, voice, ...}]` from refmods listing. */
 let _refmods = null;
+const _inspectCache = new Map();
 // The builder writes its file on a queue, so a list cached at mount never
 // learns about it until a browser refresh. Re-read after every finished
 // prompt and re-render only when a name or a caption actually moved, so a
 // queue that built nothing does not rebuild a rail being edited.
 const _refmodListeners = new Set();
+export function invalidateRefmods(forceRender = true) {
+    _refmods = null;
+    _inspectCache.clear();
+    return refmodRows().then((rows) => {
+        if (forceRender) {
+            for (const fn of _refmodListeners) fn();
+        }
+        return rows;
+    });
+}
 api.addEventListener("execution_success", () => {
     const before = JSON.stringify(_refmods || []);
     _refmods = null;
+    _inspectCache.clear();
     refmodRows().then((rows) => {
         if (JSON.stringify(rows) === before) return;
         for (const fn of _refmodListeners) fn();
     });
 });
+if (typeof window !== "undefined") {
+    window.addEventListener?.("htc:refmods-changed", () => {
+        invalidateRefmods(true);
+    });
+}
 function refmodRows() {
     if (_refmods) return Promise.resolve(_refmods);
     return fetch("/h3_ref_chain/files?folder=refmods")
@@ -69,8 +86,22 @@ function refmodRows() {
             return _refmods;
         });
 }
-function refmodNames() {
-    return refmodRows().then((rows) => rows.map((f) => f.name));
+function refmodInspect(name) {
+    if (!name) return Promise.resolve(null);
+    if (_inspectCache.has(name)) return Promise.resolve(_inspectCache.get(name));
+    return fetch(`/h3_ref_chain/refmod_inspect?name=${encodeURIComponent(name)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+            if (j?.ok) {
+                _inspectCache.set(name, j);
+                return j;
+            }
+            return null;
+        })
+        .catch(() => null);
+}
+function refmodRowMeta(name) {
+    return (_refmods || []).find((f) => f.name === name) || null;
 }
 /** The voice a mod's header names, `{file, start, end}`, or null. A row that
  *  cites the mod with no voice of its own inherits exactly this. */
@@ -81,7 +112,8 @@ export function refmodVoice(name) {
 /** The caption stored in a mod's header, from the cached listing. */
 function refmodCaption(name) {
     const row = (_refmods || []).find((f) => f.name === name);
-    return String(row?.description || "").trim();
+    const s = String(row?.description || "").trim();
+    return (s === "0" || s === "none" || s === "None" || s === "null") ? "" : s;
 }
 
 function blankRef(existing) {
@@ -113,6 +145,18 @@ function pruneSubjects(plan) {
         if (!used.has(String(k))) delete plan.subjects[k];
     }
 }
+
+const STEP_CURVES = [
+    ["full", "full"],
+    ["early_lock", "early lock"],
+    ["late_detail", "late detail"],
+    ["fade", "fade out"],
+    ["mid_peak", "mid peak"],
+];
+const CONCEPT_ROLES = [
+    "generic", "identity", "wardrobe", "bodyshape",
+    "helper", "pose_motion", "background", "style",
+];
 
 export function parseRefPlan(text) {
     // A widget value is not guaranteed to be a string. ComfyUI restores
@@ -171,6 +215,12 @@ export function parseRefPlan(text) {
             qwen_mp: r.qwen_mp == null ? 0 : Number(r.qwen_mp) || 0,
             source: r.source === "refmod" ? "refmod" : "image",
             strength: r.strength == null ? 1 : Number(r.strength),
+            step_curve: typeof r.step_curve === "string" && r.step_curve ? r.step_curve : "full",
+            members: Array.isArray(r.members)
+                ? r.members.map((x) => Number(x)).filter((x) => Number.isInteger(x) && x >= 0)
+                : null,
+            shot_strengths: (r.shot_strengths && typeof r.shot_strengths === "object" && !Array.isArray(r.shot_strengths))
+                ? { ...r.shot_strengths } : null,
             voice: r.voice || "",
             voice_start: Number(r.voice_start) || 0,
             voice_end: Number(r.voice_end) || 0,
@@ -223,10 +273,15 @@ export function refPlanToJson(plan) {
         // Same rule for the trim: absent is the whole file.
         if (r.voice_start) out.voice_start = Math.round(r.voice_start * 1000) / 1000;
         if (r.voice_end) out.voice_end = Math.round(r.voice_end * 1000) / 1000;
-        // Omitted on a still, and at strength 1, for the same reason.
+        // Omitted on a still, and at defaults, for byte-identical round trips.
         if (r.source === "refmod") {
             out.source = "refmod";
             if (r.strength != null && Number(r.strength) !== 1) out.strength = Number(r.strength);
+            if (r.step_curve && r.step_curve !== "full") out.step_curve = r.step_curve;
+            if (Array.isArray(r.members) && r.members.length) out.members = r.members;
+            if (r.shot_strengths && Object.keys(r.shot_strengths).length) {
+                out.shot_strengths = r.shot_strengths;
+            }
         }
         return out;
     });
@@ -294,7 +349,7 @@ function validate(plan, wired) {
 }
 
 export function createRefRail(node, { getPlan, setPlan, onChange, hopCount,
-                                      getRaw, isBad }) {
+                                      getRaw, isBad, onBuildRefMod }) {
     const root = el("div", "h3e-section");
     const head = el("div", "h3e-head");
     const title = el("span", "h3e-title", "REFERENCES");
@@ -302,6 +357,11 @@ export function createRefRail(node, { getPlan, setPlan, onChange, hopCount,
     head.appendChild(title);
     head.appendChild(count);
     head.appendChild(el("span", "h3e-spacer"));
+    if (typeof onBuildRefMod === "function") {
+        head.appendChild(button("\u2b21 RefMod Builder", "Open the in-node RefMod Workbench & Sheet Extractor", () => {
+            onBuildRefMod("");
+        }));
+    }
     head.appendChild(button("+ ref", "Add a reference row", () => {
         const plan = getPlan();
         plan.refs.push(blankRef(plan.refs));
@@ -401,11 +461,266 @@ export function createRefRail(node, { getPlan, setPlan, onChange, hopCount,
     }
 
     // Each bar runs an animation frame and holds an <audio>; a render that
-    // drops the row has to let go of both.
+    // drops the row has to let go of both. Pickers hold shared file-list
+    // subscriptions that must also be unsubscribed on re-render.
     const trimBars = [];
+    const pickers = [];
+    let openDrawerKey = null;
+    let drawerQuery = "";
+    let drawerRole = "all";
+
+    function renderRefmodDrawer(container, r, plan) {
+        container.textContent = "";
+        const filterRow = el("div", "h3e-refmod-filter");
+        const qIn = el("input", "h3e-input");
+        qIn.type = "text";
+        qIn.placeholder = "search refmods by name, role, or description...";
+        qIn.value = drawerQuery;
+        qIn.addEventListener("input", () => {
+            drawerQuery = qIn.value;
+            paintGrid();
+        });
+        filterRow.appendChild(qIn);
+
+        const roleChips = el("div", "h3e-refmod-chips");
+        const roleFilterOpts = ["all", "identity", "wardrobe", "bodyshape", "helper", "pose_motion", "background", "style", "reflora"];
+        for (const rf of roleFilterOpts) {
+            const b = button(rf.replace("_", " "), `Filter RefMods by ${rf}`, () => {
+                drawerRole = rf;
+                renderRefmodDrawer(container, r, plan);
+            }, "h3e-btn h3e-refmod-chip" + (drawerRole === rf ? " h3e-refmod-chip-on" : ""));
+            roleChips.appendChild(b);
+        }
+        filterRow.appendChild(roleChips);
+        filterRow.appendChild(button("↻", "Refresh RefMods list from disk", () => {
+            invalidateRefmods(true);
+        }));
+        container.appendChild(filterRow);
+
+        const grid = el("div", "h3e-refmod-grid");
+        container.appendChild(grid);
+
+        const inspectWrap = el("div", "h3e-refmod-inspect");
+        container.appendChild(inspectWrap);
+
+        function paintGrid() {
+            grid.textContent = "";
+            const rows = _refmods || [];
+            if (_refmods === null) {
+                grid.appendChild(el("div", "h3e-note h3e-note-hint", "Loading RefMods..."));
+                refmodRows().then(() => renderRefmodDrawer(container, r, plan));
+                return;
+            }
+            const q = String(drawerQuery || "").trim().toLowerCase();
+            const filtered = rows.filter((f) => {
+                if (drawerRole !== "all") {
+                    if (drawerRole === "reflora") {
+                        if (f.format !== "reflora") return false;
+                    } else if ((f.role || "generic") !== drawerRole) {
+                        return false;
+                    }
+                }
+                if (q) {
+                    const hay = `${f.name || ""} ${f.role || ""} ${f.description || ""}`.toLowerCase();
+                    if (!hay.includes(q)) return false;
+                }
+                return true;
+            });
+            if (!filtered.length) {
+                grid.appendChild(el("div", "h3e-note h3e-note-hint",
+                    rows.length ? "No RefMods match this filter." : "No .safetensors found in models/refmods/ (or RefLoRAs in models/loras/)."));
+                return;
+            }
+            for (const f of filtered) {
+                const card = el("div", "h3e-refmod-card" + (r.file === f.name ? " h3e-refmod-card-on" : ""));
+                card.title = `${f.name} · ${f.format || "v4"} · ${f.role || "generic"} · ${f.tokens || 0} tokens`;
+                if (f.has_looks) {
+                    const img = el("img", "h3e-refmod-cardimg");
+                    img.loading = "lazy";
+                    img.src = `/h3_ref_chain/refmod_thumb?name=${encodeURIComponent(f.name)}&member=0&w=160`;
+                    img.alt = f.name;
+                    img.addEventListener("error", () => { img.style.display = "none"; });
+                    card.appendChild(img);
+                } else {
+                    card.appendChild(el("div", "h3e-refmod-cardimg", f.kind === "audio" ? "♪ audio" : "no looks"));
+                }
+                const meta = el("div", "h3e-refmod-cardmeta");
+                meta.appendChild(el("div", null, f.name));
+                const pills = el("div", "h3e-refmod-chips");
+                pills.appendChild(el("span", "h3e-refmod-pill", `${f.format || "v4"}${f.members_count > 1 ? ` · ${f.members_count}m` : ""}`));
+                pills.appendChild(el("span", "h3e-refmod-pill", f.role || "generic"));
+                if (f.tokens) pills.appendChild(el("span", "h3e-refmod-pill", `${f.tokens}t`));
+                if (f.has_audio_latent || f.voice?.file) pills.appendChild(el("span", "h3e-refmod-pill", "♪"));
+                meta.appendChild(pills);
+                card.appendChild(meta);
+                card.addEventListener("click", () => {
+                    r.file = f.name;
+                    r.legacy_slot = null;
+                    r.members = null;
+                    if (!String(r.desc || "").trim()) {
+                        const cap = refmodCaption(f.name);
+                        if (cap) r.desc = cap;
+                    }
+                    if (f.default_step_curve && f.default_step_curve !== "full" && (!r.step_curve || r.step_curve === "full")) {
+                        r.step_curve = f.default_step_curve;
+                    }
+                    commit();
+                });
+                grid.appendChild(card);
+            }
+        }
+
+        function paintInspector() {
+            inspectWrap.textContent = "";
+            if (!r.file) return;
+            const targetFile = r.file;
+            refmodInspect(targetFile).then((info) => {
+                if (!info || r.file !== targetFile) return;
+                inspectWrap.textContent = "";
+                const visMembers = (info.members || []).filter((m) => m.kind === "image" || m.kind === "video");
+                if (visMembers.length > 1) {
+                    const mHead = el("div", "h3e-note h3e-note-hint",
+                        `v5 Bundle Members (${visMembers.length} visual): click to filter which members load on this row`);
+                    inspectWrap.appendChild(mHead);
+                    const mRow = el("div", "h3e-refmod-mchips");
+                    const activeSet = new Set(
+                        Array.isArray(r.members) && r.members.length
+                            ? r.members
+                            : visMembers.map((m) => m.index),
+                    );
+                    for (const m of visMembers) {
+                        const isOn = activeSet.has(m.index);
+                        const chip = el("button", "h3e-btn h3e-refmod-mchip" + (isOn ? " h3e-refmod-mchip-on" : ""));
+                        chip.type = "button";
+                        const dim = `${(m.shape?.[2] || 0) * 16}×${(m.shape?.[1] || 0) * 16}`;
+                        chip.title = `Member #${m.index + 1} (${m.kind} ${dim}, ${m.tokens || 0} tok)`;
+                        if (m.has_looks) {
+                            const mi = el("img", "h3e-refmod-thumb");
+                            mi.src = `/h3_ref_chain/refmod_thumb?name=${encodeURIComponent(targetFile)}&member=${m.index}&w=96`;
+                            mi.alt = `#${m.index + 1}`;
+                            mi.addEventListener("error", () => { mi.style.display = "none"; });
+                            chip.appendChild(mi);
+                        }
+                        chip.appendChild(el("span", null, `#${m.index + 1} ${dim}`));
+                        chip.addEventListener("click", () => {
+                            const next = new Set(activeSet);
+                            if (next.has(m.index)) {
+                                if (next.size <= 1) return;
+                                next.delete(m.index);
+                            } else {
+                                next.add(m.index);
+                            }
+                            const sorted = [...next].sort((a, b) => a - b);
+                            r.members = sorted.length === visMembers.length ? null : sorted;
+                            commit();
+                        });
+                        mRow.appendChild(chip);
+                    }
+                    inspectWrap.appendChild(mRow);
+                }
+
+                // Header-only quick metadata editor (scrubs legacy "0" descriptions, sets role / curve)
+                const editRow = el("div", "h3e-refmod-edit");
+                const descIn = el("input", "h3e-input");
+                descIn.type = "text";
+                descIn.placeholder = "stored header description (empty)";
+                descIn.value = info.description || "";
+                descIn.title = "Stored inside the .safetensors header (does not touch the latent).";
+
+                const roleSel = el("select", "h3e-select");
+                for (const rc of CONCEPT_ROLES) {
+                    const o = el("option", null, rc);
+                    o.value = rc;
+                    roleSel.appendChild(o);
+                }
+                roleSel.value = CONCEPT_ROLES.includes(info.role) ? info.role : "generic";
+
+                const scSel = el("select", "h3e-select");
+                for (const [val, lbl] of STEP_CURVES) {
+                    const o = el("option", null, lbl);
+                    o.value = val;
+                    scSel.appendChild(o);
+                }
+                scSel.value = info.default_step_curve || "full";
+
+                const saveStatus = el("span", "h3e-count");
+                const capBtn = button("✨", "Auto-caption from stored RefMod looks via your VLM writer", async () => {
+                    capBtn.disabled = true;
+                    saveStatus.textContent = "captioning...";
+                    try {
+                        const res = await fetch("/h3_ref_chain/refmod_caption", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                name: targetFile,
+                                role: roleSel.value || "identity",
+                                auto_wake: true,
+                                save_meta: false,
+                            }),
+                        });
+                        const j = await res.json();
+                        if (!res.ok || !j.ok || !j.description) {
+                            saveStatus.textContent = j.error || "caption failed";
+                        } else {
+                            descIn.value = j.description;
+                            saveStatus.textContent = "captioned — click save header";
+                        }
+                    } catch (err) {
+                        saveStatus.textContent = String(err);
+                    } finally {
+                        capBtn.disabled = false;
+                    }
+                });
+                const saveBtn = button("save header", "Write description, role & default curve to the .safetensors header without re-encoding", async () => {
+                    saveBtn.disabled = true;
+                    saveStatus.textContent = "saving...";
+                    try {
+                        const res = await fetch("/h3_ref_chain/refmod_update", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                name: targetFile,
+                                action: "meta",
+                                description: descIn.value,
+                                role: roleSel.value,
+                                default_step_curve: scSel.value,
+                            }),
+                        });
+                        const j = await res.json();
+                        if (!res.ok || !j.ok) {
+                            saveStatus.textContent = j.error || "failed";
+                        } else {
+                            if (Array.isArray(j.files)) _refmods = j.files;
+                            if (j.inspect) _inspectCache.set(targetFile, j.inspect);
+                            if (typeof window !== "undefined") {
+                                window.dispatchEvent?.(new CustomEvent("htc:refmods-changed"));
+                            }
+                            saveStatus.textContent = "saved!";
+                        }
+                    } catch (err) {
+                        saveStatus.textContent = String(err);
+                    } finally {
+                        saveBtn.disabled = false;
+                    }
+                });
+                editRow.append(el("span", "h3e-chips-label", "header"), descIn, capBtn, roleSel, scSel, saveBtn, saveStatus);
+                inspectWrap.appendChild(editRow);
+            });
+        }
+
+        paintGrid();
+        paintInspector();
+    }
+
+    function commitLive(planObj) {
+        setPlan(planObj || getPlan());
+        onChange?.();
+        render();
+    }
 
     function render() {
         for (const b of trimBars.splice(0)) b.destroy();
+        for (const p of pickers.splice(0)) p.destroy?.();
         list.textContent = "";
         // Never while focused: it would reformat mid-keystroke and steal the caret.
         if (document.activeElement !== jsonArea) jsonArea.value = getRaw?.() ?? "";
@@ -470,7 +785,12 @@ export function createRefRail(node, { getPlan, setPlan, onChange, hopCount,
             source.addEventListener("change", () => {
                 r.source = source.value;
                 r.file = "";
-                if (r.source !== "refmod") r.strength = 1;
+                if (r.source !== "refmod") {
+                    r.strength = 1;
+                    r.step_curve = "full";
+                    r.members = null;
+                    r.shot_strengths = null;
+                }
                 commit();
             });
             row.appendChild(source);
@@ -478,14 +798,26 @@ export function createRefRail(node, { getPlan, setPlan, onChange, hopCount,
             // Was a `slot N` dropdown naming one of nine IMAGE sockets. The
             // picture itself lives here now: drop a file on it, click to
             // browse, or choose one already in the reference folder.
+            const rowSlot = r.slot;
+            const rowTag = r.tag;
+            const resolveLiveRow = () => {
+                const livePlan = getPlan();
+                const live = (livePlan?.refs || []).find(
+                    (x) => (rowTag && x.tag === rowTag) || x.slot === rowSlot,
+                ) || r;
+                return { livePlan, live };
+            };
+            let pendingPlan = null;
             const pick = createPicker({
                 kind: "image",
                 get: () => r.file || "",
                 set: (v) => {
-                    r.file = v;
+                    const { livePlan, live } = resolveLiveRow();
+                    live.file = v;
                     // Choosing a picture is what retires a legacy row, so the
                     // "was wired to slot N" note has to go with it.
-                    if (v) r.legacy_slot = null;
+                    if (v) live.legacy_slot = null;
+                    pendingPlan = livePlan;
                 },
                 // Rebuild on a later turn. `commit` tears down this <select>
                 // in the middle of its own `change`; the browser then fires
@@ -493,43 +825,83 @@ export function createRefRail(node, { getPlan, setPlan, onChange, hopCount,
                 // the red "no picture chosen" banner on a row that just
                 // showed a thumbnail. Paste-JSON never hit this because it
                 // never goes through the dropdown.
-                onChange: () => queueMicrotask(() => commit()),
+                onChange: () => queueMicrotask(() => {
+                    const p = pendingPlan || getPlan();
+                    pendingPlan = null;
+                    commitLive(p);
+                }),
                 title: "The picture this reference stands for. Drop a file, or click to browse.",
             });
+            pickers.push(pick);
             pick.root.classList.add("h3e-slot");
+            const rowKey = r.tag || String(r.slot);
             if (r.source === "refmod") {
-                const mod = el("select", "h3e-select h3e-slot");
+                const modWrap = el("div", "h3e-slot h3e-refmod-slot");
+                if (r.file) {
+                    const th = el("img", "h3e-refmod-thumb");
+                    th.src = `/h3_ref_chain/refmod_thumb?name=${encodeURIComponent(r.file)}&member=${Array.isArray(r.members) && r.members.length ? r.members[0] : 0}&w=96`;
+                    th.alt = r.file;
+                    th.addEventListener("error", () => { th.style.display = "none"; });
+                    modWrap.appendChild(th);
+                }
+                const mod = el("select", "h3e-select");
                 const blank = el("option", null, "choose a refmod");
                 blank.value = "";
                 mod.appendChild(blank);
                 const have = new Set();
-                const addName = (name) => {
+                const addOption = (item) => {
+                    const name = typeof item === "string" ? item : item?.name;
                     if (!name || have.has(name)) return;
                     have.add(name);
-                    const o = el("option", null, name);
+                    const label = (typeof item === "object" && item)
+                        ? `${name} [${item.format || "v4"}${item.members_count > 1 ? `·${item.members_count}m` : ""}·${item.role || "gen"}]`
+                        : name;
+                    const o = el("option", null, label);
                     o.value = name;
                     mod.appendChild(o);
                 };
-                addName(r.file);
-                refmodNames().then((names) => {
-                    for (const name of names) addName(name);
+                if (r.file) addOption(refmodRowMeta(r.file) || r.file);
+                refmodRows().then((rows) => {
+                    for (const item of rows) addOption(item);
                     if (mod.value !== (r.file || "")) mod.value = r.file || "";
                 });
                 mod.value = r.file || "";
-                mod.title = "A safetensors file in models/refmods. Build one with HTC RefMod Builder.";
+                mod.title = "A safetensors file in models/refmods (or RefLoRA in models/loras).";
                 mod.addEventListener("change", () => {
                     r.file = mod.value;
+                    r.members = null;
                     if (r.file) r.legacy_slot = null;
-                    // An empty describe box takes the file's own caption. A
-                    // filled one is the person's and is left alone; the
-                    // button beside it offers the file text instead.
                     if (r.file && !String(r.desc || "").trim()) {
                         const cap = refmodCaption(r.file);
                         if (cap) r.desc = cap;
                     }
+                    const meta = refmodRowMeta(r.file);
+                    if (meta?.default_step_curve && meta.default_step_curve !== "full" && (!r.step_curve || r.step_curve === "full")) {
+                        r.step_curve = meta.default_step_curve;
+                    }
                     queueMicrotask(() => commit());
                 });
-                row.appendChild(mod);
+                modWrap.appendChild(mod);
+                const browseBtn = button(
+                    openDrawerKey === rowKey ? "▾" : "▤",
+                    "Browse RefMods visually, toggle v5 bundle members, or edit header metadata",
+                    () => {
+                        openDrawerKey = openDrawerKey === rowKey ? null : rowKey;
+                        render();
+                    },
+                );
+                if (Array.isArray(r.members) && r.members.length) {
+                    browseBtn.textContent = `${r.members.length}m`;
+                }
+                modWrap.appendChild(browseBtn);
+                if (typeof onBuildRefMod === "function") {
+                    modWrap.appendChild(button(
+                        "\u270e",
+                        r.file ? `Open ${r.file} in the RefMod Builder tab` : "Build a new RefMod in the RefMod tab",
+                        () => onBuildRefMod(r.file || ""),
+                    ));
+                }
+                row.appendChild(modWrap);
             } else {
                 row.appendChild(pick.root);
             }
@@ -648,38 +1020,62 @@ export function createRefRail(node, { getPlan, setPlan, onChange, hopCount,
             }
 
             if (r.source === "refmod") {
+                const ctrl = el("div", "h3e-qmp h3e-refmod-ctrl");
                 const strength = el("input", "h3e-input");
                 strength.type = "number";
                 strength.min = "0";
-                strength.max = "1";
+                strength.max = "3";
                 strength.step = "0.05";
                 strength.value = String(r.strength == null ? 1 : r.strength);
-                strength.title = "1 keeps the stored latent. Lower mixes it toward a blurred copy of itself.";
-                strength.style.width = "4.2em";
+                strength.title = "RefMod strength (0..3). 1.0 keeps the stored latent; <1 blends toward blur; >1 stacks copies + blur residual for stronger lock.";
                 strength.addEventListener("input", () => {
                     const n = Number(strength.value);
-                    if (Number.isFinite(n)) r.strength = Math.min(1, Math.max(0, n));
+                    if (Number.isFinite(n)) r.strength = Math.min(3, Math.max(0, n));
                     setPlan(plan);
                 });
                 strength.addEventListener("change", commit);
-                row.appendChild(strength);
+
+                const curveSel = el("select", "h3e-select");
+                for (const [val, lbl] of STEP_CURVES) {
+                    const o = el("option", null, lbl);
+                    o.value = val;
+                    curveSel.appendChild(o);
+                }
+                curveSel.value = r.step_curve || "full";
+                curveSel.title = "Per-step denoising curve: early lock anchors anatomy/helpers in steps 0-40%; late detail refines textures; fade decays smoothly.";
+                curveSel.addEventListener("change", () => {
+                    r.step_curve = curveSel.value || "full";
+                    commit();
+                });
+                ctrl.append(strength, curveSel);
+                row.appendChild(ctrl);
             }
 
             // The voice this reference speaks with. Bound to the ROW, not
             // to the run, so it rides exactly the hops the row rides --
             // voice_file 1-3 are global and cannot say which of two faces
             // owns which of two recordings.
+            let pendingVoicePlan = null;
             const voice = createPicker({
                 kind: "audio",
                 get: () => r.voice || "",
-                set: (v) => { r.voice = v; },
-                onChange: () => queueMicrotask(() => commit()),
+                set: (v) => {
+                    const { livePlan, live } = resolveLiveRow();
+                    live.voice = v;
+                    pendingVoicePlan = livePlan;
+                },
+                onChange: () => queueMicrotask(() => {
+                    const p = pendingVoicePlan || getPlan();
+                    pendingVoicePlan = null;
+                    commitLive(p);
+                }),
                 title: "Optional voice for this reference. It rides beside the "
                     + "picture or clip as its own <Audio N>, cited on the hops "
                     + "this row rides. Empty on a RefMod row uses the mod's own "
                     + "voice. Trim it below to one clean sentence: H3 encodes "
                     + "the whole file, and a hop whose lines run out replays it.",
             });
+            pickers.push(voice);
             voice.root.classList.add("h3e-slot", "h3e-voice");
             row.appendChild(voice.root);
 
@@ -863,6 +1259,16 @@ export function createRefRail(node, { getPlan, setPlan, onChange, hopCount,
                 // The listing that says whether this mod has a voice is not
                 // in yet; draw again once it is.
                 refmodRows().then(() => render());
+            } else if (r.source === "refmod" && r.file && refmodRowMeta(r.file)?.has_audio_latent) {
+                const aNote = el("div", "h3e-trimrow h3e-ref-trim");
+                aNote.appendChild(el("span", "h3e-media-label", "audio: pre-encoded inside RefMod (zero re-encode)"));
+                row.appendChild(aNote);
+            }
+
+            if (r.source === "refmod" && openDrawerKey === rowKey) {
+                const drawer = el("div", "h3e-refmod-drawer");
+                renderRefmodDrawer(drawer, r, plan);
+                row.appendChild(drawer);
             }
 
             list.appendChild(row);

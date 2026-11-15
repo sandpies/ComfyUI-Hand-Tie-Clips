@@ -24,6 +24,7 @@ and concatenates once at the end.
 import hashlib
 import json
 import os
+import sys
 import time
 
 import av
@@ -157,9 +158,15 @@ def audio_digest(a):
     return h.hexdigest()[:16]
 
 
+_FAST_U16 = (sys.byteorder == "little" and hasattr(torch, "uint16"))
+
+
 def _q16(frame):
-    """One float frame [H,W,3] as the cache writes it: uint16, 0..65535."""
-    return (frame.clamp(0, 1) * 65535.0).round().to(torch.int32).numpy().astype("<u2")
+    """One float frame [H,W,3] (or batch [K,H,W,3]) as the cache writes it: uint16, 0..65535."""
+    q = (frame.clamp(0, 1) * 65535.0).round()
+    if _FAST_U16:
+        return q.to(torch.uint16).numpy()
+    return q.to(torch.int32).numpy().astype("<u2")
 
 
 def as_stored(imgs, wav):
@@ -173,8 +180,13 @@ def as_stored(imgs, wav):
     """
     out = (imgs if imgs.dtype == torch.float32 and imgs.device.type == "cpu"
            and imgs.is_contiguous() else torch.empty(imgs.shape, dtype=torch.float32))
-    for i in range(int(imgs.shape[0])):
-        out[i] = torch.from_numpy(_q16(imgs[i].detach().cpu()).astype(np.float32) / 65535.0)
+    n = int(imgs.shape[0])
+    src = imgs.detach().cpu()
+    chunk = 16
+    for s0 in range(0, n, chunk):
+        s1 = min(n, s0 + chunk)
+        q = (src[s0:s1].clamp(0, 1) * 65535.0).round().to(torch.int32)
+        torch.div(q.to(torch.float32), 65535.0, out=out[s0:s1])
     wav = torch.from_numpy(wav.detach().cpu().contiguous().numpy().astype(np.float32))
     return out, wav
 
@@ -348,11 +360,16 @@ class HopStore:
                 stream.width, stream.height = wid, hgt
                 stream.pix_fmt = PIX_FMT
                 stream.options = dict(FFV1_OPTIONS)
-                # Frame at a time: never materialise a second full-size copy.
-                for i in range(n):
-                    frame = av.VideoFrame.from_ndarray(_q16(imgs[i]), format=PIX_FMT)
-                    for packet in stream.encode(frame):
-                        container.mux(packet)
+                # Slice-batched quantize to uint16: faster than per-frame PyTorch calls
+                # while keeping memory bounded to 16 frames.
+                chunk = 16
+                for s0 in range(0, n, chunk):
+                    s1 = min(n, s0 + chunk)
+                    u16 = _q16(imgs[s0:s1].detach().cpu())
+                    for k in range(s1 - s0):
+                        frame = av.VideoFrame.from_ndarray(u16[k], format=PIX_FMT)
+                        for packet in stream.encode(frame):
+                            container.mux(packet)
                 for packet in stream.encode():          # flush the encoder
                     container.mux(packet)
             finally:
@@ -492,11 +509,14 @@ class HopStore:
         with open(self._p(key, META_EXT), encoding="utf-8") as fh:
             info = json.load(fh)
         n, hgt, wid = int(info["frames"]), int(info["height"]), int(info["width"])
-        # Decoded straight into one preallocated array rather than a list of
-        # frames: the meta file already states the geometry, so the destination
-        # is known up front and there is never a second full-size copy to stack.
-        arr = np.empty((n, hgt, wid, 3), dtype=np.uint16)
+        # Decode straight into the final float32 tensor in small 16-frame uint16
+        # batches so we never allocate a second 1.5-6 GB full-clip staging copy.
+        imgs = torch.empty((n, hgt, wid, 3), dtype=torch.float32)
+        chunk = min(16, max(1, n))
+        buf_np = np.empty((chunk, hgt, wid, 3), dtype=np.uint16)
+        buf_t = torch.from_numpy(buf_np) if _FAST_U16 else None
         seen = 0
+        pos = 0
         try:
             container = av.open(self._p(key, VIDEO_EXT))
             try:
@@ -504,8 +524,15 @@ class HopStore:
                     if seen >= n:                      # more frames than meta
                         seen += 1
                         break
-                    arr[seen] = frame.to_ndarray(format=PIX_FMT)
+                    buf_np[pos] = frame.to_ndarray(format=PIX_FMT)
+                    pos += 1
                     seen += 1
+                    if pos == chunk:
+                        if buf_t is not None:
+                            torch.div(buf_t.to(torch.float32), 65535.0, out=imgs[seen - pos:seen])
+                        else:
+                            imgs[seen - pos:seen].copy_(torch.from_numpy(buf_np.astype(np.float32) / 65535.0))
+                        pos = 0
             finally:
                 container.close()
         except Exception as e:                         # noqa: BLE001
@@ -517,7 +544,11 @@ class HopStore:
             raise RuntimeError(
                 f"{TAG}: cached hop {key} decoded {seen} frame(s), expected {n}. "
                 f"Delete the cache entry and re-render.")
-        imgs = torch.from_numpy(arr.astype(np.float32) / 65535.0)
+        if pos:
+            if buf_t is not None:
+                torch.div(buf_t[:pos].to(torch.float32), 65535.0, out=imgs[seen - pos:seen])
+            else:
+                imgs[seen - pos:seen].copy_(torch.from_numpy(buf_np[:pos].astype(np.float32) / 65535.0))
         wav = torch.from_numpy(np.load(self._p(key, AUDIO_EXT)))
         os.utime(self._p(key, VIDEO_EXT), None)  # LRU touch
         return imgs, wav, int(info["sample_rate"]), self._get_latent(key)

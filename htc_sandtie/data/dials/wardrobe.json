@@ -1,0 +1,799 @@
+{
+  "id": "wardrobe",
+  "label": "Wardrobe",
+  "per": "project",
+  "note": "Displaced, nude, glamour, tactical, and everyday outfits.",
+  "options": [
+    {
+      "id": "nude_full",
+      "label": "🔥 NUDE — Completely Unclothed (Full Bare Body)",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Completely nude and unclothed from head to toe with bare shoulders, bare pendulous breasts and pink nipples, bare toned midriff, bare hips, bare rounded glutes, and bare legs.",
+      "domain": "general"
+    },
+    {
+      "id": "nude_oiled_gloss",
+      "label": "🔥 NUDE — Glistening Oiled Full Body (Mirror-Gloss Skin)",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Completely nude and unclothed from head to toe with a thick, mirror-like sheen of warm golden body oil glistening across bare collarbones, bare pendulous breasts, pink nipples, toned stomach, bare rounded glutes, and thighs.",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "nude_wet_shower",
+      "label": "🔥 NUDE — Wet Shower-Slicked Skin & Water Droplets",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Completely nude and unclothed with dewy, shower-wet skin covered in glistening clear water droplets across bare shoulders, bare pendulous breasts, erect pink nipples, bare waist, and bare rounded glutes, with damp hair strands clinging to the neck.",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "nude_sweaty_workout",
+      "label": "🔥 NUDE — Post-Workout Flushed & Sweaty Bare Skin",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Completely nude and unclothed with warm, flushed post-workout skin glistening with beads of natural perspiration along the collarbones, deep cleavage between bare pendulous breasts, underarms, toned abs, and bare hips.",
+      "domain": "general"
+    },
+    {
+      "id": "nude_post_climax_mascara",
+      "label": "🔥 NUDE — Post-Climax Tousled & Mascara-Streaked",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Completely nude and unclothed with flushed, sweat-sheened bare breasts and hips, tousled bedroom hair, and dark mascara streaks smudged beneath glistening watery eyes.",
+      "domain": "bedroom"
+    },
+    {
+      "id": "nude_topless",
+      "label": "🔥 TOPLESS — Bare Breasts & Upper Body Only",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Topless and bare from the waist up with bare shoulders, bare back, and bare pendulous breasts and pink nipples fully exposed, wearing only fitted bottoms on the lower body.",
+      "domain": "general"
+    },
+    {
+      "id": "nude_bottomless",
+      "label": "🔥 BOTTOMLESS — Bare Hips, Glutes & Pussy (Top Only)",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Unclothed from the waist down with bare hips, bare rounded glutes, bare pink pussy, and bare thighs fully exposed while wearing only an upper top.",
+      "domain": "general"
+    },
+    {
+      "id": "nude_stockings_heels_only",
+      "label": "🔥 FETISH NUDE — Lace Thigh-High Stockings, Garter & Heels ONLY",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Completely bare and unclothed across the torso, bare pendulous breasts, bare waist, bare pink pussy, and bare rounded ass cheeks, framed ONLY by a black lace garter belt around the waist clipped to sheer black thigh-high stockings and glossy stiletto heels.",
+      "domain": "general"
+    },
+    {
+      "id": "nude_unbuttoned_shirt_open",
+      "label": "🔥 PARTIAL — Unbuttoned White Dress Shirt Hanging Wide Open (Bare Chest & Pussy)",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Wearing only a crisp oversized white button-down dress shirt left completely unbuttoned and parted wide down the front, framing bare pendulous breasts, pink nipples, bare stomach, and bare pink pussy between the open fabric tails.",
+      "domain": "general"
+    },
+    {
+      "id": "nude_wet_white_tshirt",
+      "label": "🔥 PARTIAL — Soaked Clinging Translucent White Cropped T-Shirt (zero Bra)",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Wearing a water-soaked white cotton cropped tee that clings like a second skin and turns completely translucent across the chest, clearly showing the full curves of bare breasts and erect pink nipples underneath, paired with bare hips below.",
+      "domain": "general"
+    },
+    {
+      "id": "nude_both_partners",
+      "label": "🔥 NUDE (BOTH PARTNERS) — Both Subject 1 & Subject 2 Completely Unclothed",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Both partners are completely nude and unclothed from head to toe from Frame 0 with bare shoulders, bare chests/breasts, bare toned midriffs, bare hips, bare rounded glutes, and bare legs.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_dress_hiked_waist",
+      "label": "🔥 PARTIAL — Mini Dress Hiked Up Above Waist (Upper Dress On, Bare Hips & Ass Exposed)",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Wearing her fitted mini dress hiked and bunched high up above her waist around her ribs so her upper dress stays on while her bare hips, bare rounded ass cheeks, bare pink pussy, and bare thighs remain completely exposed across every shot.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_skirt_bunched_hips",
+      "label": "🔥 PARTIAL — Skirt Bunched High at Waist & Panties Pulled Aside",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Wearing her skirt bunched high around her waist with her thong strap pulled aside, leaving her bare hips, bare rounded ass cheeks, and bare pink pussy fully exposed.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_bodysuit_unsnapped",
+      "label": "🔥 PARTIAL — Lace/Latex Bodysuit Pulled Aside at Crotch & Plunging Open Chest",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Wearing a form-fitting bodysuit unzipped low across bare breasts and unsnapped/pulled aside between the thighs to leave the bare pink pussy and bare rounded glutes completely exposed.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_bra_unhooked_hanging",
+      "label": "🔥 PARTIAL — Unhooked Lace Bra Hanging Loose on Arms Over Bare Breasts",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Wearing an unhooked lace bra hanging loose off the shoulders so bare pendulous breasts and erect pink nipples swing completely free in the open air.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_pants_unbuttoned_hips",
+      "label": "🔥 PARTIAL — Upper Shirt Kept On + Trousers Unfastened & Pushed Down Thighs",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Keeping the upper shirt on while trousers and waistband are unfastened and pushed down around the thighs, leaving the groin and hips completely bare and unobstructed.",
+      "domain": "general"
+    },
+    {
+      "id": "nude_shirt_pulled_up_flash",
+      "label": "🔥 PARTIAL — Cropped Top Pulled High Above Bare Breasts",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Wearing a snug cropped top bunched and pulled high up above the chest near the collarbones so bare pendulous breasts and pink nipples hang fully exposed below the lifted hem.",
+      "domain": "general"
+    },
+    {
+      "id": "nude_cupless_crotchless_set",
+      "label": "🔥 FETISH — Cupless Open-Wire Bra & Crotchless Strappy Thong",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a black satin cupless underwire shelf bra whose open wire rings frame fully bare pendulous breasts and erect pink nipples, paired with a matching strappy crotchless thong that leaves the bare pink pussy and tight anal ring completely open and exposed.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "nude_torn_fishnet_bodystocking",
+      "label": "🔥 FETISH — Sheer Black Fishnet Bodystocking (Open Chest & Crotch)",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a tight diamond-pattern black fishnet bodystocking with wide ripped cutouts across the chest and between the thighs, exposing bare breasts, pink nipples, and bare pink pussy through the taut mesh.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_latex_catsuit_unzipped",
+      "label": "🔥 FETISH — High-Gloss Black Latex Dominatrix Catsuit (Plunging Zip)",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a mirror-gloss skintight black latex catsuit with the front metal zipper pulled down to the navel to frame deep oiled cleavage, paired with thigh-high black patent stiletto boots and long latex opera gloves.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_leather_harness_nude",
+      "label": "🔥 FETISH — Studded Black Leather Body Harness & Collar Over Bare Skin",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Unclothed bare skin framed by a black leather BDSM body harness with chrome O-rings and silver studs strapping around the throat, under and between bare pendulous breasts, and around the waist and bare thighs.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_strapon_harness_nude",
+      "label": "🔥 FETISH — Bare Nude Body + Black Leather Strap-On Harness at Hips",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Completely bare and unclothed across the shoulders, bare pendulous breasts, and bare rounded glutes, wearing a snug black leather strap-on harness buckled firmly around the bare hips with a chrome O-ring at the front.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_micro_string_bikini",
+      "label": "🔥 FETISH — Metallic Gold Micro-String Bikini (Minimal Coverage)",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing an ultra-minimal metallic gold micro-string bikini with tiny triangle cups barely covering the nipples over heavy bare underboob and sideboob, and a thin G-string waist strap framing bare rounded glutes.",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "fetish_maid_apron_bare_back",
+      "label": "🔥 ROLEPLAY — French Maid Ruffles & Apron Only (Bare Back & Glutes)",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a sheer white lace French maid mini-apron tied with a big satin bow behind an open bare back and completely bare rounded ass cheeks, paired with a ruffled lace choker, wrist cuffs, and sheer black stockings.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_nurse_open_coat",
+      "label": "🔥 ROLEPLAY — Unbuttoned White Clinical Coat Over Red Lace Lingerie",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a fitted white medical coat hanging open over a plunging crimson lace push-up bra, matching garter belt, sheer white thigh-high stockings with red bows, and a stethoscope around the neck.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_cheer_micro_skirt",
+      "label": "🔥 ROLEPLAY — Cropped Cheerleader Top & Micro-Pleated Skirt",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a tight cropped V-neck cheerleader top exposing the toned midriff and underboob, paired with an ultra-short high-waisted pleated micro-skirt that flares above bare rounded glutes and knee-high striped athletic socks.",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "fetish_office_siren_skirt",
+      "label": "🔥 ROLEPLAY — Unbuttoned Silk Blouse, Glasses & Slit Pencil Skirt",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing narrow black designer glasses, a sheer black silk blouse unbuttoned low to expose a lace-trimmed cleavage, a high-waisted leather pencil skirt with a hip-high side slit, and glossy black stiletto heels.",
+      "domain": "office_desk"
+    },
+    {
+      "id": "action_tactical_catsuit",
+      "label": "🥊 ACTION — Sleek Black Tactical Combat Bodysuit & Holsters",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a form-fitting matte-black tactical combat bodysuit with carbon-fiber shoulder pads, a front zip opened at the collarbone, dual leather thigh holsters strapped over the hips, fingerless combat gloves, and heavy combat boots.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "action_battle_damaged_armor",
+      "label": "🥊 ACTION — Battle-Damaged Cyber-Samurai / Superhero Armor",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing sleek metallic combat armor with glowing neon energy seams, scuffed chest plates, torn fabric panels exposing toned skin and smudge marks from battle, and a wind-whipped tactical cape.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "action_mma_fighter_kit",
+      "label": "🥊 ACTION — MMA / Muay Thai Fighter Sports Top, Satin Shorts & Hand Wraps",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a snug athletic fighter sports bra/top, high-cut satin Muay Thai fight shorts with gold trim, crimson cloth hand-wraps taped tightly around the knuckles and wrists, and bare feet with glistening sweat-sheened skin.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "partial_panties_pulled_aside",
+      "label": "🔥 DISPLACED — Lace Thong Pulled Aside at Hip (Exposing Bare Labia)",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a delicate lace thong whose narrow crotch strap is pulled tautly aside at the hip, leaving her bare labia and pelvis completely uncovered and accessible across every shot.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_panties_around_one_ankle",
+      "label": "🔥 DISPLACED — Panties Hooked Around One Ankle / Knee with Bare Hips",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Completely bare from the waist down with her lace panties slid all the way down and hooked around one ankle/calf while her bare hips, rounded glutes, and parted thighs remain completely exposed.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_blouse_open_bra_pushed_up",
+      "label": "🔥 DISPLACED — Unbuttoned Silk Blouse + Bra Cups Pushed Up Above Bare Breasts",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a fitted silk blouse hanging completely unbuttoned down the front with her lace bra cups pushed up above her bare pendulous breasts and erect pink nipples.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_skirt_flipped_over_waistband",
+      "label": "🔥 DISPLACED — Pleated Micro-Skirt Flipped Up Over Waistband (Bare Glutes)",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a cropped top and a high-waisted pleated micro-skirt that stays flipped and bunched up over her waistband across every shot, leaving her bare hips, bare rounded ass cheeks, and inner thighs completely uncovered.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_jeans_unzipped_pulled_mid_thigh",
+      "label": "🔥 DISPLACED — Tight Denim Jeans Unzipped & Pulled Down to Mid-Thigh",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a cropped tank top with her tight blue denim jeans unzipped, unbuttoned, and pulled halfway down her thighs, exposing her bare hips and bare rounded glutes.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_male_suit_trousers_unfastened",
+      "label": "🔥 PARTNER (S2) — Tailored Suit & Unbuttoned Shirt with Trousers Unfastened at Hips",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a sharp tailored dark suit jacket and white dress shirt unbuttoned at the collar, with his suit trousers unfastened and lowered at the hips to expose his bare pelvis and erect cock.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_male_shirtless_sweatpants_low",
+      "label": "🔥 PARTNER (S2) — Shirtless Muscular Torso with Grey Sweatpants Pulled Low at Hips",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Shirtless with a broad muscular chest, sculpted abs, and V-taper waist, wearing soft grey athletic sweatpants pulled down low below his bare hips.",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "partial_male_open_silk_robe",
+      "label": "🔥 PARTNER (S2) — Open Black Silk Robe Over Bare Muscular Frame",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a floor-length black silk robe hanging completely open down the front to expose his bare muscular chest, abs, bare hips, and thighs.",
+      "domain": "general"
+    },
+    {
+      "id": "glam_crimson_halter_backless_slit_gown",
+      "label": "👗 GLAMOUR — Crimson Silk Halter Evening Gown (Plunging V-Neck, Open Back & Hip-High Slit)",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing a liquid-draped crimson silk halter evening gown defined by a plunging V-neckline to the sternum, a completely bare open back to the lumbar dimples, and a hip-high left thigh slit over silver stiletto heels.",
+      "domain": "general"
+    },
+    {
+      "id": "glam_emerald_satin_cowl_slip_dress",
+      "label": "👗 GLAMOUR — Emerald Bias-Cut Satin Cowl-Neck Slip Dress on Bare Skin",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing a bias-cut emerald-green satin mini slip dress with spaghetti straps and a low draped cowl neckline clinging directly to bare braless breasts and hips.",
+      "domain": "general"
+    },
+    {
+      "id": "glam_black_velvet_offshoulder_corset_gown",
+      "label": "👗 GLAMOUR — Black Velvet Off-Shoulder Boned Corset Gown with Sweetheart Neckline",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing a form-fitting black velvet evening gown with a structured off-the-shoulder sweetheart corset bodice lifting the cleavage and a high front slit.",
+      "domain": "general"
+    },
+    {
+      "id": "lingerie_black_strappy_cage_garter_set",
+      "label": "🖤 LINGERIE — Black Strappy Elastic Cage Bra, Suspender Garter Belt & Sheer Thigh-Highs",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing a provocative black elastic cage-strap lingerie set with geometric chest straps framing the cleavage, a high-waisted suspender garter belt, a minimal G-string, and sheer black welt-top thigh-high stockings.",
+      "domain": "general"
+    },
+    {
+      "id": "lingerie_bridal_white_corset_stockings",
+      "label": "🤍 LINGERIE — Bridal White Lace Basque Corset, Pearl G-String & Stay-Up Stockings",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing a romantic bridal-white floral lace basque corset with satin ribbon lacing, a matching pearl-strand G-string, and sheer white lace-top stay-up stockings.",
+      "domain": "general"
+    },
+    {
+      "id": "lingerie_sheer_mesh_see_through_babydoll",
+      "label": "✨ LINGERIE — Translucent Black Mesh Babydoll Nightgown Over Bare Breasts & Thong",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing an ultra-sheer, completely translucent black mesh babydoll nightgown tied at the bust that reveals her bare breasts and pink nipples underneath, paired with a tiny black G-string.",
+      "domain": "general"
+    },
+    {
+      "id": "fetish_reverse_bunny_cuffs_ears",
+      "label": "🔥 COSPLAY — Reverse Bunny Suit (Collar, Bowtie, Wrist Cuffs, Bunny Ears & Pasties Only)",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a provocative reverse-bunny cosplay: black satin bunny ears headband, a white wingtip collar with a black bowtie at the throat, white French cuffs with gold cufflinks at the wrists, sheer black fishnet stockings, and otherwise completely bare skin.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_glossy_red_latex_bunny_bodysuit",
+      "label": "🔥 COSPLAY — High-Gloss Crimson Latex High-Cut Bunny Bodysuit & Fishnets",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a mirror-gloss crimson latex strapless bunny bodysuit with a deep sweetheart plunge, high-cut French-leg hip straps exposing bare rounded glutes, a white fluffy tail, black fishnet pantyhose, and redbunny ears.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_shibari_red_rope_on_bare_skin",
+      "label": "🔥 FETISH — Intricate Red Hemp Shibari Chest & Hip Rope Tie Over Bare Skin",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Completely unclothed and bare-skinned, bound in an intricate crimson-red hemp shibari diamond harness knotted tightly above and below her bare breasts and around her bare hips, accentuating soft-tissue curves.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_cow_print_micro_bikini_bell",
+      "label": "🔥 COSPLAY — Cow-Print Velvet Micro-Bikini, Choker with Gold Bell & Stockings",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a black-and-white cow-print velvet triangle micro-bikini barely covering heavy underboob and cleavage, a black ribbon choker with a gleaming brass bell at the throat, cow-ear headband, and cow-print thigh-high stockings.",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "fetish_succubus_leather_wings_corset",
+      "label": "🔥 COSPLAY — Gothic Succubus Spiked Leather Corset, Bat Wings & Thigh-High Boots",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a dark-fantasy succubus outfit: curved black horns, a plunging crimson-and-black spiked leather underbust corset, small leathery bat wings at the lower back, a heart-tipped tail, and lace-up stiletto thigh boots.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_flight_attendant_tight_skirt",
+      "label": "🔥 ROLEPLAY — Fitted Navy Flight Attendant Jacket, Silk Scarf & Micro Pencil Skirt",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a tailored navy-blue flight attendant cropped jacket unbuttoned over bare cleavage, a striped silk neck scarf, a skin-tight high-waisted navy micro pencil skirt, sheer black pantyhose, and classic pumps.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_tennis_pleated_skirt_visor",
+      "label": "🔥 ATHLETIC — Cropped White Tennis Polo, Ultra-Short Pleated Skirt & Visor",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing a tight cropped white tennis polo shirt unbuttoned low at the chest, an ultra-short white pleated tennis micro-skirt, white crew socks, and a sporty sun visor.",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "fetish_yoga_scrunch_butt_leggings_sportsbra",
+      "label": "🔥 ATHLETIC — Low-Cut Strappy Sports Bra & Skin-Tight Scrunch-Seam Yoga Leggings",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing a low-cut cross-back athletic sports bra and second-skin high-waisted scrunch-seam yoga leggings that hug and contour every curve of the hips and rounded glutes.",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "street_oversized_boyfriend_hoodie_bare_legs",
+      "label": "🧥 COZY — Unzipped Oversized Hoodie Over Bare Breasts, Lace Panties & Knee Socks",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing an oversized charcoal zip-up hoodie hanging open with nothing underneath to frame her bare inner cleavage and toned midriff, paired with white lace panties and cosy ribbed knee-high socks.",
+      "domain": "bedroom"
+    },
+    {
+      "id": "street_cyberpunk_holo_jacket_straps",
+      "label": "⚡ CYBER — Cropped Holographic Techwear Jacket, Cutout Buckle Bodysuit & Boots",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing an iridescent cropped holographic techwear bolero jacket with glowing LED collar trim over a matte-black cutout buckle bodysuit exposing the cleavage and hips, and heavy platform combat boots.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "anime2real_demon_slayer_haori_corps",
+      "label": "🌊 ANIME2REAL — Demon Slayer Corps Uniform + Open Chest & Flowing Patterned Haori Coat",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a live-action photorealistic Demon Slayer style outfit: a tailored dark-black gakuran corps jacket unbuttoned at the chest over bare cleavage, a flowing silk haori coat with vivid geometric wave or butterfly wing patterns, a white leather belt with a katana scabbard at the hip, and knee-high wrapped kyahan gaiters.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "anime2real_jjk_sorcerer_high_collar",
+      "label": "🟣 ANIME2REAL — High-Collar Dark Sorcerer Jacket & Blindfold / Round Sunglasses",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a sleek live-action dark-navy high-collar sorcerer uniform jacket with gold swirl buttons, form-fitting dark trousers, and dark round sunglasses perched low on the nose.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "anime2real_open_silk_kimono_katana",
+      "label": "🌸 ANIME2REAL — Loosened Crimson Silk Kimono Off One Shoulder + Obi Sash & Katana",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a luxurious crimson-and-gold embroidered silk kimono slipped loosely off one bare shoulder to reveal deep cleavage and a bare thigh through the high front split, cinched with a black brocade obi sash holding a katana.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "anime2real_shadow_monarch_longcoat",
+      "label": "🖤 ANIME2REAL — Sleek Matte-Black High-Collar Monarch Trench Coat & Glowing Daggers",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a tailored matte-black wool-and-leather longcoat with a swept-up collar billowing behind a fitted black dress shirt unbuttoned at the collarbone, dark tailored trousers, and combat boots.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "anime2real_kunoichi_mesh_shinobi_suit",
+      "label": "🥷 ANIME2REAL — Kunoichi Fishnet-Mesh & Black Silk Shinobi Suit with Thigh Kunai Holster",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a form-fitting black silk kunoichi shinobi top with a translucent diamond-mesh chest panel over bare cleavage, a high-slit loincloth apron over bare hips, a leather kunai holster strapped around the right thigh, and shinobi sandals.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "partial_torn_pantyhose_open_crotch",
+      "label": "🔥 DISPLACED — Sheer Black Pantyhose with Crotch Seam Torn Open (Exposing Bare Labia)",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing sheer black nylon pantyhose encasing her legs, thighs, and waist with the center crotch seam freshly torn wide open to leave her bare labia and pelvis completely exposed.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_towel_dropped_at_feet",
+      "label": "🔥 DISPLACED — Damp White Bath Towel Dropped Around Ankles (Completely Bare Wet Body)",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Completely nude with dewy, water-beaded bare skin from head to toe, bare pendulous breasts, and bare rounded glutes, with a white cotton bath towel freshly dropped in a heap around her ankles.",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "partial_bikini_top_untied_sliding",
+      "label": "🔥 DISPLACED — String Bikini Top Untied & Sliding Off Bare Breasts + Thong Pulled Aside",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a wet micro-string bikini with the neck strings untied so the triangle cups hang loose beside her bare pendulous breasts and pink nipples, and the bottom thong strap pulled aside at the hip.",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "partial_virgin_killer_backless_sweater",
+      "label": "🔥 GLAMOUR — Ribbed White 'Virgin Killer' Halter Sweater (Completely Bare Back & Sideboob)",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing a sleeveless white ribbed-knit halter-neck sweater that is completely open and backless from the shoulders down to the lower curve of her bare rounded glutes, exposing heavy sideboob, bare hips, and completely bare skin underneath.",
+      "domain": "bedroom"
+    },
+    {
+      "id": "partial_oiled_fishnet_micro_slingshot",
+      "label": "🔥 FETISH — Oiled Bare Body in Ultra-Thin Neon Slingshot Monokini",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Glistening with baby oil across her bare skin, wearing an ultra-narrow elastic V-slingshot monokini whose thin straps run from her shoulders between her bare breasts and down to a micro G-string.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "nude_all_cast_subjects_s1_s9",
+      "label": "🔥 NUDE (ALL SUBJECTS S1–S9) — Every Cast Character Completely Unclothed & Bare",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Every cast subject (<Subject 1> through <Subject N>) is completely nude and unclothed from head to toe from Frame 0 with bare shoulders, bare chests/breasts, bare toned midriffs, bare hips, bare rounded glutes, and bare legs.",
+      "domain": "general"
+    },
+    {
+      "id": "nude_honey_gold_shimmer_body_glaze",
+      "label": "🔥 NUDE — Liquid Gold Shimmer Oil & Warm Dewy Body Glaze",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Completely nude from head to toe with warm golden-champagne body shimmer oil catching specular highlights across bare collarbones, bare pendulous breasts, erect pink nipples, toned waist, and bare rounded glutes.",
+      "domain": "general"
+    },
+    {
+      "id": "nude_soap_suds_bubble_foam",
+      "label": "🔥 NUDE — Wet Shower Skin with Clinging White Soap Foam & Bubbles",
+      "group": "00 · Nude, Oiled & Partial States",
+      "rule": "Completely nude in the shower with warm water streaming over bare skin and wisps of white soap lather clinging along the curves of bare pendulous breasts, hips, and thighs.",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "partial_evening_gown_bodice_peeled_waist",
+      "label": "🔥 DISPLACED — Silk Evening Gown Bodice Peeled Down to Waist (Bare Breasts Exposed)",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a luxury silk evening gown with the shoulder straps and bodice peeled all the way down and bunched around her narrow waist, leaving her bare shoulders, bare pendulous breasts, and erect pink nipples completely uncovered.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_yoga_leggings_pulled_below_glutes",
+      "label": "🔥 DISPLACED — Scrunch Yoga Leggings Pulled Down Below Bare Rounded Glutes + Sports Bra Pushed Up",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing an athletic sports bra pushed up above her bare pendulous breasts and tight scrunch-seam yoga leggings peeled halfway down her thighs just below the full curve of her bare rounded glutes and bare pink labia.",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "partial_office_pencil_skirt_unzipped_dropped",
+      "label": "🔥 DISPLACED — Unbuttoned Office Blouse + Pencil Skirt Unzipped at Ankles (Garter & Bare Hips)",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing an unbuttoned white silk office blouse hanging open over bare breasts, a black garter belt and sheer thigh-high stockings with bare hips and bare labia exposed, and her tailored pencil skirt unzipped in a ring around her stiletto heels.",
+      "domain": "office_desk"
+    },
+    {
+      "id": "partial_kimono_yukata_parted_wide_nude",
+      "label": "🔥 DISPLACED — Loosened Silk Kimono / Yukata Parted Wide Open Over Bare Nude Body",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a floral silk kimono with the obi sash untied so the robe hangs parted wide open off both shoulders, framing her completely bare pendulous breasts, bare toned stomach, and bare pink pussy.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_latex_catsuit_rear_zip_open",
+      "label": "🔥 DISPLACED — Glossy Black Latex Catsuit with Two-Way Crotch & Rear Zipper Pulled Open",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a second-skin mirror-gloss black latex catsuit with the two-way metal zipper pulled wide open from the lower front through the crotch and up the lower back, framing her bare pink labia and bare rounded glutes against the shiny black latex.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "partial_sweater_dress_hiked_over_hips",
+      "label": "🔥 DISPLACED — Ribbed Knit Sweater Dress Bunched High at Ribs (Bare Hips & Glutes)",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a soft cream ribbed-knit long-sleeve sweater dress bunched and hiked high up around her lower ribs, completely bare underneath and leaving her bare hips, bare rounded ass cheeks, and bare thighs completely exposed.",
+      "domain": "bedroom"
+    },
+    {
+      "id": "partial_silk_robe_open_front",
+      "label": "🔥 DISPLACED — Unfastened Satin Robe Parted Off Shoulders (Bare Torso & Thighs)",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a lustrous silk satin robe with the waist sash untied so the front hangs parted wide open off one shoulder, exposing her bare natural breasts, bare midriff, bare hips, and toned bare thighs.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_oversized_hoodie_bare_legs",
+      "label": "🔥 DISPLACED — Cropped / Hiked Oversized Hoodie (Bare Hips & Long Bare Legs)",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing only a soft oversized cotton hoodie bunched high above her waist, bare underneath and exposing her bare hips, bare rounded glutes, and long bare legs.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_unbuttoned_boyfriend_shirt",
+      "label": "🔥 DISPLACED — Oversized Crisp White Dress Shirt Unbuttoned to Navel (Bare Cleavage & Hips)",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing an oversized crisp white button-down shirt unbuttoned all the way to the navel and draped loosely off one shoulder, revealing bare inner breasts and bare thighs beneath the open hem.",
+      "domain": "general"
+    },
+    {
+      "id": "fetish_oiled_micro_string_bikini",
+      "label": "🔥 FETISH — Glossy Oiled Skin + Ultra-Micro Triangle String Bikini",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Body gleaming with a bright coat of warm massage oil, wearing a minimal glossy micro-triangle string bikini with razor-thin ties framing bare oiled curves and bare rounded glutes.",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "partial_male_tuxedo_unbuttoned_bow_untied",
+      "label": "🔥 PARTNER (S2–S9) — Unbuttoned Black Tuxedo, Untied Bowtie & Unfastened Trousers",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a midnight-black tuxedo jacket with an untied black silk bowtie hanging loose around an unbuttoned white dress shirt, and tailored tuxedo trousers unfastened at the hips.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_male_tactical_vest_shirtless_cargo",
+      "label": "🔥 PARTNER (S2–S9) — Shirtless Muscular Chest with Open Tactical Harness & Unbuckled Belt",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Shirtless with a broad muscular chest and abs framed by matte-black tactical chest straps, wearing dark cargo trousers with the heavy belt unbuckled and lowered at the waist.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_male_towel_around_hips_wet",
+      "label": "🔥 PARTNER (S2–S9) — Wet Shower-Slicked Muscular Torso & Loose White Waist Towel",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Shirtless with water-beaded muscular shoulders, pectoral muscles, and six-pack abs, with a white cotton bath towel loosely knotted low at the hips.",
+      "domain": "wet_shower"
+    },
+    {
+      "id": "glam_gold_chainmail_backless_haltermini",
+      "label": "👗 GLAMOUR — Liquid Gold Metallic Chainmail Halter Mini Dress (Deep Plunge & Open Back)",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing a shimmering liquid-gold metallic mesh halter mini dress with a deep cowl plunge exposing inner cleavage, a completely bare back to the tailbone, and gold strappy stiletto heels.",
+      "domain": "general"
+    },
+    {
+      "id": "glam_sheer_black_chantilly_lace_column_gown",
+      "label": "👗 GLAMOUR — Translucent Black Chantilly Lace Floor-Length Gown Over Micro-Thong",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing a figure-hugging floor-length black Chantilly lace evening gown that is sheer and translucent across the bust and legs, revealing bare breasts and a minimal black G-string underneath.",
+      "domain": "general"
+    },
+    {
+      "id": "glam_pearl_draped_body_chains_bare",
+      "label": "💎 GLAMOUR — Draped Freshwater Pearl & Gold Body Chains Over Bare Skin",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Unclothed bare skin adorned with cascading strands of luminous white freshwater pearls and fine gold body chains draped across the shoulders, looping under bare breasts, and wrapping around the bare hips.",
+      "domain": "general"
+    },
+    {
+      "id": "fetish_gothic_nun_latex_habit_cutout",
+      "label": "🔥 COSPLAY — Sinful Latex Nun Habit Veil, Open-Bust Cross Bodysuit & Thigh-Highs",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a fetish gothic nun cosplay: a black-and-white latex habit veil and white collar at the throat, a glossy black latex bodysuit with a large cross-shaped chest cutout framing bare cleavage, and sheer black stockings.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_cyber_bunny_led_visor_bodysuit",
+      "label": "🔥 COSPLAY — Neon Cyber-Bunny High-Cut PVC Bodysuit & Glowing LED Ears",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a futuristic cyber-bunny outfit: glowing neon magenta LED bunny ears, a mirror-gloss black-and-pink PVC strapless high-cut bodysuit exposing bare rounded glutes, and holographic thigh-high boots.",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "fetish_police_officer_unbuttoned_tie_cuffs",
+      "label": "🔥 ROLEPLAY — Unbuttoned Cropped Police Shirt, Black Tie, Utility Belt & Micro-Skirt",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a tight navy police officer roleplay uniform: a cropped short-sleeve uniform shirt unbuttoned low over a black push-up bra, a black necktie, a leather utility belt with chrome handcuffs at the hip, a micro pleated skirt, and aviator sunglasses.",
+      "domain": "office_desk"
+    },
+    {
+      "id": "partial_skirt_unzipped_side_slit",
+      "label": "🔥 DISPLACED — Pleated Mini-Skirt Pushed High Around Waist + Bra Unclasped",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a tight pleated mini-skirt bunched high around her waist with a sheer black lace bra unclasped open in front, leaving her bare breasts, bare waist, bare pink labia, and bare rounded glutes exposed across every shot.",
+      "domain": "general"
+    },
+    {
+      "id": "partial_button_down_shirt_open_tie",
+      "label": "🔥 DISPLACED — Crisp White Dress Shirt Unbuttoned + Loose Black Necktie & Bare Thighs",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a crisp white button-down office shirt unbuttoned wide past the navel with a loosened black silk necktie hanging between her bare breasts and bare hips exposed beneath the shirt tails.",
+      "domain": "office_desk"
+    },
+    {
+      "id": "partial_bikini_strings_untied_hanging",
+      "label": "🔥 DISPLACED — Metallic Micro-Bikini Strings Untied & Hanging Loose Over Bare Curves",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a gleaming metallic micro-string bikini with neck and hip ties freshly unfastened so thin shimmering cords drape loosely around her bare breasts, pink nipples, and bare rounded glutes.",
+      "domain": "wet_pool"
+    },
+    {
+      "id": "partial_yoga_leggings_peeled_mid_thigh",
+      "label": "🔥 DISPLACED — Compression Gym Leggings Peeled Down Below Mid-Thigh + Cropped Tank",
+      "group": "00 · Partial, Displaced & Sheer",
+      "rule": "Wearing a fitted cropped athletic top and sleek compression leggings peeled halfway down below her mid-thighs so her bare hips, glistening rounded glutes, and bare pink labia stay fully uncovered.",
+      "domain": "gym_sport"
+    },
+    {
+      "id": "fetish_shibari_crimson_rope_harness",
+      "label": "🪢 FETISH — Intricate Crimson Shibari Rope Chest & Hip Harness Over Bare Skin",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Unclothed bare skin framed by an intricate crimson braided jute shibari chest diamond harness wrapping tightly above, between, and beneath bare pendulous breasts and around her bare hips.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_sheer_black_bodystocking_open",
+      "label": "🔥 FETISH — Full-Body Sheer Black Fishnet Bodystocking (Open Crotch & Collar)",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a form-fitting full-body sheer black diamond-fishnet bodystocking with a wide open crotch cutout framing bare pink labia and a snug black leather collar around her throat.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_bunny_casino_satin_corset",
+      "label": "🐰 ROLEPLAY — Glossy Black Bunny Satin Corset, Ears, Cuffs & Sheer Fishnets",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a strapless glossy black satin bunny-girl corset framing deep cleavage, tall velvet bunny ears, crisp white tuxedo cuffs, sheer black thigh-high fishnets, and glossy stiletto heels.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "action_tactical_leather_catsuit_holster",
+      "label": "🥊 ACTION — Matte Black Tactical Catsuit, Dual Thigh Holsters & Utility Belt",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a form-fitting matte-black tactical leather catsuit zipped halfway at the collar with dual pistol holsters strapped snugly across her thighs, fingerless tactical gloves, and combat boots.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "action_cyberpunk_techwear_neon_jacket",
+      "label": "🌆 ACTION — Cropped Cyberpunk Techwear Jacket With Glowing Cyan Trim & Combat Shorts",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a cropped matte charcoal techwear bomber jacket lined with glowing electric-cyan LED piping over a black ribbed crop top, strapped utility belt, tight combat shorts, and heavy treaded boots.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "action_traditional_samurai_kimono_slit",
+      "label": "⚔️ ACTION — Flowing Silk Battle-Slit Kimono With Obi Sash & Katana Scabbards",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a dramatic dark silk battle kimono with high side leg slits flowing in motion, a wide embroidered brocade obi sash holding twin lacquered katana scabbards at her hip, and wrapped wrist bracers.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "action_mma_fight_rashguard_shorts",
+      "label": "🥊 ACTION — Cropped Athletic Fight Rashguard, Split Fight Shorts & Knuckle Wraps",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a sleek cropped compression MMA rashguard, high-split satin fight shorts, tightly taped white cloth knuckle wraps around both fists, and bare feet braced on the mat.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "glamour_wet_silk_slip_clinging",
+      "label": "💧 GLAMOUR — Soaking-Wet Translucent Ivory Silk Slip Dress Clinging Against Curves",
+      "group": "00 · Glamour, Lingerie & Defining Cuts",
+      "rule": "Wearing a delicate ivory bias-cut silk slip dress drenched with water so the wet satin clings tightly like a second skin, outlining bare breasts, erect nipples, and curves in warm rim light.",
+      "domain": "general"
+    },
+    {
+      "id": "fetish_secretary_latex_pencil_skirt_suspenders",
+      "label": "🔥 ROLEPLAY — Sheer White Blouse, Red Latex Pencil Skirt & Exposed Garter Straps",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Wearing a translucent white chiffon blouse tied in a high knot under the bust, a skin-tight crimson latex pencil skirt with a high rear slit showing black garter straps and seamed stockings, and black-framed glasses.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "fetish_leather_collar_chain_leash_cuffs_nude",
+      "label": "🔥 FETISH — Bare Nude Body + Locked Leather Collar, Chrome Chain Leash & Wrist Cuffs",
+      "group": "00 · Fetish, BDSM & Roleplay",
+      "rule": "Completely bare and unclothed from head to toe, wearing only a padded black leather collar with a gleaming chrome O-ring and metal chain leash at the throat plus matching leather cuffs buckled around both wrists and ankles.",
+      "domain": "bdsm_dom"
+    },
+    {
+      "id": "anime2real_bleach_shihakusho_open_chest_zanpakuto",
+      "label": "⚔️ ANIME2REAL — Soul Reaper Black Silk Shihakusho Gi (Loosened Chest) & White Haori",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a live-action photorealistic Soul Reaper outfit: a black silk kimono gi loosened at the collar to frame bare cleavage/chest, a white woven waist sash holding a katana scabbard, and a billowing sleeveless white captain's haori coat.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "anime2real_solo_leveling_shadow_armor_daggers",
+      "label": "🟣 ANIME2REAL — Shadow Monarch Obsidian Knight Armor & Glowing Violet Seams",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing articulated matte-obsidian dark knight armor with glowing violet shadow-energy runes etched along the breastplate and gauntlets, a torn dark cloak trailing violet smoke, and twin curved daggers.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "anime2real_2b_gothic_combat_dress_thigh_boots",
+      "label": "🖤 ANIME2REAL — Black Velvet Android Combat Dress (High Slit, Feather Trim & Thigh Boots)",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a live-action black velvet gothic combat dress with a sheer mesh chest window, puff sleeves with white feather trim, a hip-high skirt slit revealing a white bodysuit and black over-the-knee stiletto boots, and a black satin eye-band.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "anime2real_chainsaw_white_shirt_black_tie_blood",
+      "label": "🩸 ANIME2REAL — Crisp White Devil-Hunter Dress Shirt, Black Tie & Rolled Sleeves",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a tailored Public Safety Devil Hunter outfit: a crisp white button-down shirt with sleeves rolled to the elbows and top button undone, a loose black necktie, high-waisted black trousers, and battle scuffs.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "anime2real_miko_shrine_maiden_red_hakama",
+      "label": "⛩️ ANIME2REAL — Crimson-and-White Shrine Maiden Miko Kosode (Off-Shoulder) & Split Hakama",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "rule": "Wearing a mystical shrine maiden outfit: a white silk kosode top slipped off one bare shoulder with wide red-trimmed sleeves, and high-waisted crimson pleated hakama trousers with high side slits exposing bare thighs.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "casual_silk_camisole_denim",
+      "label": "Silk Camisole & High-Waist Denim",
+      "group": "Everyday",
+      "domain": "general",
+      "rule": "an ivory silk bias-cut camisole tucked cleanly into fitted high-waist blue jeans with minimalist gold hoops"
+    },
+    {
+      "id": "tailored_black_blazer_trousers",
+      "label": "Tailored Obsidian Blazer & Open Collar",
+      "group": "Tailored",
+      "domain": "office_desk",
+      "rule": "a sharp tailored black blazer worn over an unbuttoned crisp silk shirt and matching sleek trousers"
+    },
+    {
+      "id": "crimson_satin_evening_gown",
+      "label": "High-Slit Crimson Satin Gown",
+      "group": "Glamour",
+      "domain": "bedroom",
+      "rule": "a fluid floor-length crimson satin evening dress with plunging cowl neckline and high thigh slit"
+    },
+    {
+      "id": "black_lace_balconette_set",
+      "label": "Black Sheer Lace Lingerie Set",
+      "group": "Lingerie",
+      "domain": "bedroom",
+      "rule": "a delicate sheer black lace balconette bra and matching high-cut lace thong with sheer thigh-high stockings"
+    },
+    {
+      "id": "crimson_silk_slip_robe",
+      "label": "Belted Silk Kimono Robe & Lace Trim",
+      "group": "Lingerie",
+      "domain": "bedroom",
+      "rule": "a glossy belted silk robe with wide draped sleeves and delicate lace trim"
+    },
+    {
+      "id": "gold_metallic_bikini_swim",
+      "label": "Metallic Gold String Bikini",
+      "group": "Swim",
+      "domain": "wet_pool",
+      "rule": "a shimmering wet metallic gold triangle string bikini and matching side-tie bikini bottom glistening with droplets"
+    },
+    {
+      "id": "black_cutout_swimsuit",
+      "label": "Sleek Black Cutout One-Piece Swimsuit",
+      "group": "Swim",
+      "domain": "wet_pool",
+      "rule": "a sleek wet black cutout one-piece swimsuit hugging curves with silver ring hardware"
+    },
+    {
+      "id": "street_cropped_jacket_cargo",
+      "label": "Cropped Moto Jacket & Utility Cargo",
+      "group": "Street",
+      "domain": "combat_action",
+      "rule": "a fitted cropped matte leather moto jacket over a ribbed tank top, dark utility cargos, and chunky combat boots"
+    }
+  ]
+}

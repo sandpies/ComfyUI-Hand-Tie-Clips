@@ -59,6 +59,7 @@ OTHER_KEYS = ("skip", "A to all tokens", "B to all tokens", "A+B to all tokens",
               "C to all tokens", "A+B+C to all tokens")
 _OTHER_LETTERS = ("", "A", "B", "AB", "C", "ABC")
 ADD_MODES = ("bf16", "fp32_stochastic")
+ADALN_MODES = ("port", "strip", "off")
 _OPT_KEY = "htc_token_lora"
 N_BLOCKS = 50
 
@@ -75,9 +76,15 @@ _PREFIXES = ("model.diffusion_model.", "diffusion_model.", "base_model.model.",
 _KOHYA = re.compile(r"^lora_unet_blocks_(\d+)_(attn_qkv_proj|attn_out_proj|mlp_fc1|mlp_fc2)\.(.+)$")
 _BLOCK = re.compile(r"^diffusion_model\.blocks\.(\d+)\.(attn\.qkv_proj|attn\.out_proj|mlp\.fc1|mlp\.fc2)\.(.+)$")
 _ROLE = {"lora_A.weight": "A", "lora_down.weight": "A", "lora.down.weight": "A",
-         "lora_A.default.weight": "A",
+         "lora_A.default.weight": "A", "lora_A": "A", "lora_down": "A",
+         "lora.down": "A", "lora_A.default": "A",
          "lora_B.weight": "B", "lora_up.weight": "B", "lora.up.weight": "B",
-         "lora_B.default.weight": "B", "alpha": "alpha"}
+         "lora_B.default.weight": "B", "lora_B": "B", "lora_up": "B",
+         "lora.up": "B", "lora_B.default": "B",
+         "alpha": "alpha"}
+
+_PARSE_CACHE = {}
+_PARSE_CACHE_MAX = 16
 
 
 def canonical(key):
@@ -110,7 +117,11 @@ def parse(sd, dtype=torch.bfloat16):
             continue
         rank = int(a[1].shape[0])
         alpha = g.get("alpha")
-        scale = float(alpha[1]) / rank if alpha is not None else 1.0
+        if alpha is not None:
+            av = alpha[1].item() if hasattr(alpha[1], "item") else float(alpha[1])
+            scale = float(av) / rank
+        else:
+            scale = 1.0
         blocks[key] = (a[1].to(dtype).contiguous(), b[1].to(dtype).contiguous(), scale)
     refiner = {k: v for k, v in rest.items() if k.startswith("diffusion_model.token_refiner.")}
     other = {k: v for k, v in rest.items() if k not in refiner}
@@ -209,26 +220,35 @@ class Spec:
         return f"{self.name}|{self.file_id}|{self.block_range[0]}-{self.block_range[1]}|{st}"
 
 
-def _round_add_(dst, delta_fn):
-    """dst (bf16) <- dst + delta, summed in fp32 and rounded to bf16 with an
-    unbiased random tie-break. `delta_fn(acc)` adds the term into the fp32 acc."""
-    acc = dst.float()
-    delta_fn(acc)
-    bits = acc.view(torch.int32)
-    bits.add_(torch.randint_like(bits, 0, 1 << 16))
-    bits.bitwise_and_(-65536)
-    dst.copy_(acc)
+_SR_CHUNK = 8192
+
+
+def _round_add_(dst, lhs, B, alpha=1.0):
+    """dst (bf16) <- dst + alpha * lhs @ B.t(), summed in fp32 and rounded to bf16
+    with an unbiased random tie-break, row-chunked to cap temporary fp32 VRAM."""
+    n = int(dst.shape[0])
+    B32 = B.float().t()
+    for r0 in range(0, n, _SR_CHUNK):
+        r1 = min(n, r0 + _SR_CHUNK)
+        acc = dst[r0:r1].float()
+        acc.addmm_(lhs[r0:r1].float(), B32, alpha=alpha)
+        bits = acc.view(torch.int32)
+        bits.add_(torch.randint_like(bits, 0, 1 << 16))
+        bits.bitwise_and_(-65536)
+        dst[r0:r1].copy_(acc)
 
 
 class Session:
     """Forward hooks for one model call. `items`: {(i, target): [(A, B, scale, spans)]}
-    already on the compute device. `gather`: the sparse-attention padded-row map
-    (row -> source row, -1 = pad) when qkv is fed in vsa tile order, else None.
-    `stochastic`: fp32 add + stochastic rounding on bf16 outputs."""
+    already on the compute device, or `grouped` {(i, target): (A_all, B_all, span_ops, gather_spec)}
+    pre-packed per run so multi-LoRA stacks read x / write out / run SwiGLU once per span.
+    `gather`: the sparse-attention padded-row map (row -> source row, -1 = pad) when qkv
+    is fed in vsa tile order, else None. `stochastic`: fp32 add + stochastic rounding on bf16."""
 
-    def __init__(self, blocks, items, seq_len, gather=None, swiglu=None, stochastic=False):
+    def __init__(self, blocks, items, seq_len, gather=None, swiglu=None, stochastic=False, grouped=None):
         self.blocks = blocks
-        self.items = items
+        self.items = items or {}
+        self.grouped = grouped or {}
         self.seq_len = int(seq_len)
         self.gather = gather
         self.swiglu = swiglu or _swiglu
@@ -237,6 +257,8 @@ class Session:
         self.fc2_parts = {}
         self.handles = []
         self._w = {}
+        self._gw = {}
+        self._pad_idx = None
 
     # rows of this call
     def _rows(self, idx, tgt, n):
@@ -268,13 +290,27 @@ class Session:
             self._w[key] = w
         return w
 
+    def _gather_weights(self, gkey, total_r, ops, device, dtype):
+        w = self._gw.get(gkey)
+        if w is None:
+            w = torch.zeros((self.seq_len + 1, total_r), dtype=dtype, device=device)
+            for op in ops:
+                if op[0] == "slice":
+                    _, a, b, r0, r1, sv = op
+                    w[a:b, r0:r1] = sv.to(dtype=dtype) if isinstance(sv, torch.Tensor) else float(sv)
+                else:
+                    _, a, b, idx_t, sv = op
+                    w[a:b, idx_t] = sv.to(dtype=dtype)
+            self._gw[gkey] = w
+        return w
+
     def _sr(self, out):
         return self.stochastic and out.dtype == torch.bfloat16
 
     def _addmm(self, dst, lhs, B, alpha=1.0):
         """dst += alpha * lhs @ B.t(), plain or stochastic."""
         if self._sr(dst):
-            _round_add_(dst, lambda acc: acc.addmm_(lhs.float(), B.float().t(), alpha=alpha))
+            _round_add_(dst, lhs, B, alpha=alpha)
         else:
             dst.addmm_(lhs.to(dst.dtype), B.t(), alpha=alpha)
 
@@ -291,49 +327,128 @@ class Session:
         w = self._weights(spans, x.device)[sel] * sc
         self._addmm(out, F.linear(x, A) * w.to(x.dtype).unsqueeze(1), B)
 
+    def _add_grouped(self, out, x, g_entry, rows):
+        A_all, B_all, span_ops, gkey = g_entry
+        kind, at = rows
+        sr = self._sr(out)
+        if kind == "slice":
+            n = x.shape[0]
+            for op in span_ops:
+                a, b = op[1], op[2]
+                lo, hi = max(a, at), min(b, at + n)
+                if lo >= hi:
+                    continue
+                xs = x[lo - at:hi - at]
+                if op[0] == "slice":
+                    _, _, _, r0, r1, sv = op
+                    A_sub = A_all[r0:r1]
+                    B_sub = B_all[:, r0:r1]
+                else:
+                    _, _, _, idx_t, sv = op
+                    A_sub = A_all[idx_t]
+                    B_sub = B_all[:, idx_t]
+                if not isinstance(sv, torch.Tensor):
+                    self._addmm(out[lo - at:hi - at], F.linear(xs, A_sub), B_sub, float(sv))
+                elif sr:
+                    dA = F.linear(xs, A_sub).float().mul_(sv.float())
+                    _round_add_(out[lo - at:hi - at], dA, B_sub)
+                else:
+                    dA = F.linear(xs, A_sub).mul_(sv)
+                    out[lo - at:hi - at].addmm_(dA, B_sub.t())
+            return
+        if self._pad_idx is None or self._pad_idx.device != x.device:
+            self._pad_idx = torch.tensor(self.seq_len, device=x.device, dtype=at.dtype)
+        sel = torch.where(at >= 0, at, self._pad_idx)
+        w = self._gather_weights(gkey, int(A_all.shape[0]), span_ops, x.device,
+                                 torch.float32 if sr else x.dtype)[sel]
+        if sr:
+            dA = F.linear(x, A_all).float().mul_(w)
+            _round_add_(out, dA, B_all)
+        else:
+            dA = F.linear(x, A_all).mul_(w)
+            out.addmm_(dA, B_all.t())
+
     def _hook(self, idx, tgt):
-        own = self.items.get((idx, tgt), ())
-        fc2 = self.items.get((idx, "mlp.fc2"), ()) if tgt == "mlp.fc1" else ()
+        g_own = self.grouped.get((idx, tgt))
+        own = () if g_own is not None else self.items.get((idx, tgt), ())
+        g_fc2 = self.grouped.get((idx, "mlp.fc2")) if tgt == "mlp.fc1" else None
+        fc2 = () if (g_fc2 is not None or tgt != "mlp.fc1") else self.items.get((idx, "mlp.fc2"), ())
 
         def hook(mod, inputs, out):
             x = inputs[0]
             if x.ndim != 2:
                 raise RuntimeError(f"{TAG}: blocks.{idx}.{tgt} input {tuple(x.shape)} is not packed rows")
             rows = self._rows(idx, tgt, x.shape[0])
-            for A, B, sc, spans in own:
-                self._add(out, x, A, B, sc, spans, rows)
-            if fc2:
+            if g_own is not None:
+                self._add_grouped(out, x, g_own, rows)
+            else:
+                for A, B, sc, spans in own:
+                    self._add(out, x, A, B, sc, spans, rows)
+            if g_fc2 is not None:
                 if rows[0] != "slice":
                     raise RuntimeError(f"{TAG}: blocks.{idx}.mlp.fc1 rows are not in order")
                 at, n = rows[1], x.shape[0]
                 parts = self.fc2_parts.setdefault(idx, [])
+                A_all, B_all, span_ops, _ = g_fc2
+                sr = self._sr(out)
+                for op in span_ops:
+                    a, b = op[1], op[2]
+                    lo, hi = max(a, at), min(b, at + n)
+                    if lo >= hi:
+                        continue
+                    h = self.swiglu(out[lo - at:hi - at])
+                    if op[0] == "slice":
+                        _, _, _, r0, r1, sv = op
+                        A_sub = A_all[r0:r1]
+                        B_sub = B_all[:, r0:r1]
+                    else:
+                        _, _, _, idx_t, sv = op
+                        A_sub = A_all[idx_t]
+                        B_sub = B_all[:, idx_t]
+                    if not isinstance(sv, torch.Tensor):
+                        parts.append((lo, F.linear(h, A_sub), B_sub, float(sv)))
+                    elif sr:
+                        parts.append((lo, F.linear(h, A_sub).float().mul_(sv.float()), B_sub, 1.0))
+                    else:
+                        parts.append((lo, F.linear(h, A_sub).mul_(sv), B_sub, 1.0))
+            elif fc2:
+                if rows[0] != "slice":
+                    raise RuntimeError(f"{TAG}: blocks.{idx}.mlp.fc1 rows are not in order")
+                at, n = rows[1], x.shape[0]
+                parts = self.fc2_parts.setdefault(idx, [])
+                h_cache = {}
                 for A, B, sc, spans in fc2:
                     for a, b, s in spans:
                         lo, hi = max(a, at), min(b, at + n)
                         if lo < hi:
-                            h = self.swiglu(out[lo - at:hi - at])
-                            parts.append((lo, F.linear(h, A).mul_(s * sc), B))
+                            hk = (lo, hi)
+                            h = h_cache.get(hk)
+                            if h is None:
+                                h = self.swiglu(out[lo - at:hi - at])
+                                h_cache[hk] = h
+                            parts.append((lo, F.linear(h, A).mul_(s * sc), B, 1.0))
             return out
         return _nocompile(hook)
 
     def _mlp_hook(self, idx):
         def hook(mod, inputs, out):
-            for lo, dA, B in self.fc2_parts.pop(idx, ()):
-                self._addmm(out[lo:lo + dA.shape[0]], dA, B)
+            for lo, dA, B, alpha in self.fc2_parts.pop(idx, ()):
+                self._addmm(out[lo:lo + dA.shape[0]], dA, B, alpha=alpha)
             return out
         return _nocompile(hook)
 
     def __enter__(self):
         try:
-            for i in sorted({i for i, _ in self.items}):
+            active_keys = set(self.grouped) | set(self.items)
+            for i in sorted({i for i, _ in active_keys}):
                 blk = self.blocks[i]
                 for tgt in ("attn.qkv_proj", "attn.out_proj"):
-                    if (i, tgt) in self.items:
+                    if (i, tgt) in active_keys:
                         mod = blk.get_submodule(tgt)
                         self.handles.append(mod.register_forward_hook(self._hook(i, tgt)))
-                if (i, "mlp.fc1") in self.items or (i, "mlp.fc2") in self.items:
+                if (i, "mlp.fc1") in active_keys or (i, "mlp.fc2") in active_keys:
                     self.handles.append(blk.mlp.fc1.register_forward_hook(self._hook(i, "mlp.fc1")))
-                if (i, "mlp.fc2") in self.items:
+                if (i, "mlp.fc2") in active_keys:
                     self.handles.append(blk.mlp.register_forward_hook(self._mlp_hook(i)))
         except Exception:
             self.__exit__()
@@ -347,6 +462,8 @@ class Session:
         self.fc2_parts.clear()
         self.cursor.clear()
         self._w.clear()
+        self._gw.clear()
+        self._pad_idx = None
         return False
 
 
@@ -408,12 +525,13 @@ class Runtime:
         text = "||".join(sp.describe() for sp in self.specs) + f"||{'sr' if self._stochastic else 'bf16'}"
         self.key = f"{_OPT_KEY}_{hashlib.sha256(text.encode()).hexdigest()[:16]}"
         self._dev = {}
+        self._step_plans = {}
         self._logged = False
         _RUNTIMES[self.key] = self
 
     def _on(self, device, dtype):
-        """Specs' tensors on the device; a tensor shared by two specs (same file,
-        another block range or slot) is moved once."""
+        """Pack each `(block, target)` onto `device` once per run so multiple LoRAs
+        share one concatenated `(A_all, B_all)` without duplicate GPU weights."""
         k = (str(device), dtype)
         if k not in self._dev:
             moved = {}
@@ -421,18 +539,114 @@ class Runtime:
             def mv(t):
                 key = id(t)
                 if key not in moved:
-                    moved[key] = t.to(device, dtype)
+                    moved[key] = t.to(device, dtype, non_blocking=True)
                 return moved[key]
-            self._dev[k] = [{bk: (mv(A), mv(B), sc) for bk, (A, B, sc) in sp.blocks.items()}
-                            for sp in self.specs]
+
+            by_key = {}
+            for sp_idx, sp in enumerate(self.specs):
+                for bk, (A, B, sc) in sp.blocks.items():
+                    by_key.setdefault(bk, []).append((sp_idx, mv(A), mv(B), float(sc)))
+            packed = {}
+            for bk, entries in by_key.items():
+                if len(entries) == 1:
+                    sp_idx, A_d, B_d, sc = entries[0]
+                    r = int(A_d.shape[0])
+                    rank_sig = ((sp_idx,), ((sp_idx, r, sc),))
+                    packed[bk] = (A_d, B_d, ((sp_idx, 0, r, sc),), rank_sig)
+                else:
+                    A_all = torch.cat([e[1] for e in entries], dim=0)
+                    B_all = torch.cat([e[2] for e in entries], dim=1)
+                    meta = []
+                    cur = 0
+                    for sp_idx, A_d, _B_d, sc in entries:
+                        r = int(A_d.shape[0])
+                        meta.append((sp_idx, cur, cur + r, sc))
+                        cur += r
+                    meta_t = tuple(meta)
+                    rank_sig = (
+                        tuple(e[0] for e in entries),
+                        tuple((sp_idx, r1 - r0, sc) for sp_idx, r0, r1, sc in meta_t),
+                    )
+                    packed[bk] = (A_all, B_all, meta_t, rank_sig)
+            self._dev[k] = packed
         return self._dev[k]
 
+    def _plan_for(self, lay, spans, packed, dev, dt):
+        """Compile per-rank-signature span execution ops once per layout signature."""
+        pk = (tuple(lay.segments), tuple(tuple(sp) for sp in spans), str(dev), dt)
+        cached = self._step_plans.get(pk)
+        if cached is not None:
+            return cached
+        seg_groups = []
+        for a, b, kind in lay.segments:
+            grp = KIND_GROUP.get(kind, "")
+            act = tuple(
+                (sp_idx, float(sp.strengths.get(grp, 0.0)))
+                for sp_idx, sp in enumerate(self.specs)
+                if spans[sp_idx] and float(sp.strengths.get(grp, 0.0)) != 0.0
+            )
+            if not act:
+                continue
+            if seg_groups and seg_groups[-1][1] == a and seg_groups[-1][2] == act:
+                seg_groups[-1] = (seg_groups[-1][0], b, act)
+            else:
+                seg_groups.append((a, b, act))
+        seg_maps = [(a, b, dict(act)) for a, b, act in seg_groups]
+
+        ops_by_rsig = {}
+        sv_dtype = torch.float32 if self._stochastic else dt
+        grouped = {}
+        for bk, (A_all, B_all, meta, rsig) in packed.items():
+            ops = ops_by_rsig.get(rsig)
+            if ops is None:
+                built = []
+                for a, b, amap in seg_maps:
+                    act_slots = [(r0, r1, sc * amap[sp_idx])
+                                 for sp_idx, r0, r1, sc in meta if sp_idx in amap]
+                    if not act_slots:
+                        continue
+                    if len(act_slots) == 1:
+                        r0, r1, coef = act_slots[0]
+                        built.append(("slice", a, b, r0, r1, float(coef)))
+                        continue
+                    r_lo, r_hi = act_slots[0][0], act_slots[-1][1]
+                    r_span = r_hi - r_lo
+                    r_act = sum(r1 - r0 for r0, r1, _ in act_slots)
+                    if (r_span - r_act) <= 32:
+                        sv = torch.zeros((1, r_span), device=dev, dtype=sv_dtype)
+                        for r0, r1, coef in act_slots:
+                            sv[:, r0 - r_lo:r1 - r_lo] = coef
+                        built.append(("slice", a, b, r_lo, r_hi, sv))
+                    else:
+                        idx_list = []
+                        sv_list = []
+                        for r0, r1, coef in act_slots:
+                            idx_list.extend(range(r0, r1))
+                            sv_list.extend([coef] * (r1 - r0))
+                        idx_t = torch.tensor(idx_list, device=dev, dtype=torch.long)
+                        sv = torch.tensor(sv_list, device=dev, dtype=sv_dtype).unsqueeze(0)
+                        built.append(("gather_rank", a, b, idx_t, sv))
+                ops = tuple(built)
+                ops_by_rsig[rsig] = ops
+            if ops:
+                grouped[bk] = (A_all, B_all, ops, (rsig, len(ops)))
+        self._step_plans[pk] = grouped
+        return grouped
+
     def outer_sample_wrapper(self, executor, *args, **kwargs):
+        guider = getattr(executor, "class_obj", None)
+        mp = getattr(guider, "model_patcher", None)
+        dev = getattr(mp, "load_device", None)
+        dt_fn = getattr(mp, "model_dtype", None)
+        dt = dt_fn() if callable(dt_fn) else None
+        if dev is not None and getattr(dev, "type", "cpu") != "cpu" and dt is not None:
+            self._on(dev, dt)
         self._logged = False
         try:
             return executor(*args, **kwargs)
         finally:
             self._dev.clear()
+            self._step_plans.clear()
 
     def diffusion_wrapper(self, executor, x, timestep, context, transformer_options, *args, **kwargs):
         dm = executor.class_obj
@@ -441,13 +655,10 @@ class Runtime:
         if not any(spans):
             return executor(x, timestep, context, transformer_options, *args, **kwargs)
         dev, dt = x[0].device, x[0].dtype
-        on = self._on(dev, dt)
-        items = {}
-        for sp_dev, sp_spans in zip(on, spans):
-            if not sp_spans:
-                continue
-            for bk, (A, B, sc) in sp_dev.items():
-                items.setdefault(bk, []).append((A, B, sc, sp_spans))
+        packed = self._on(dev, dt)
+        grouped = self._plan_for(lay, spans, packed, dev, dt)
+        if not grouped:
+            return executor(x, timestep, context, transformer_options, *args, **kwargs)
         patch = _sparse_patch(transformer_options or {})
         gather = None
         if patch is not None and getattr(patch, "vsa", False):
@@ -462,7 +673,7 @@ class Runtime:
                 + (" | add fp32-stochastic" if self._stochastic else "")
                 + (" | sparse vsa order" if gather is not None else ""),
                 flush=True)
-        with Session(dm.blocks, items, lay.seq_len, gather=gather, stochastic=self._stochastic):
+        with Session(dm.blocks, None, lay.seq_len, gather=gather, stochastic=self._stochastic, grouped=grouped):
             return executor(x, timestep, context, transformer_options, *args, **kwargs)
 
 
@@ -514,9 +725,14 @@ def _check_model(model, blocks, name):
         if i >= len(mblocks):
             bad.append(f"blocks.{i} (model has {len(mblocks)})")
             continue
-        w = mblocks[i].get_submodule(tgt).weight
-        if A.shape[1] != w.shape[1] or B.shape[0] != w.shape[0]:
-            bad.append(f"blocks.{i}.{tgt} {B.shape[0]}x{A.shape[1]} vs {w.shape[0]}x{w.shape[1]}")
+        mod = mblocks[i].get_submodule(tgt)
+        in_f = getattr(mod, "in_features", None)
+        out_f = getattr(mod, "out_features", None)
+        if in_f is None or out_f is None:
+            w = mod.weight
+            out_f, in_f = int(w.shape[0]), int(w.shape[1])
+        if A.shape[1] != in_f or B.shape[0] != out_f:
+            bad.append(f"blocks.{i}.{tgt} {B.shape[0]}x{A.shape[1]} vs {out_f}x{in_f}")
     if bad:
         raise RuntimeError(f"{TAG}: {name} does not fit this model ({len(bad)} layers), e.g. {bad[:3]}")
     for (i, tgt), (A, B, _) in blocks.items():
@@ -624,6 +840,10 @@ class HTCTokenLoRA:
             "Slots D, E, ... added with the Add LoRA button, as JSON. Edited by the node's panel.")})
         opt["disabled_loras"] = ("STRING", {"default": "[]", "tooltip": (
             "Slot letters switched off with the checkbox, as JSON. Their settings stay.")})
+        opt["adaln_fix"] = (list(ADALN_MODES), {"default": ADALN_MODES[0], "tooltip": (
+            "Built-in AdaLN LoRA adapter for dense vs curve-form pruned H3 models: "
+            "port (recommended) converts mismatched AdaLN deltas onto this checkpoint's basis automatically; "
+            "strip removes incompatible AdaLN patches while keeping the rest of the LoRA; off skips.")})
         return {"required": req, "optional": opt}
 
     RETURN_TYPES = ("MODEL",)
@@ -637,7 +857,8 @@ class HTCTokenLoRA:
               lora_b, b_video, b_audio, b_reference, b_text, b_refiner, b_block_start, b_block_end,
               other_keys=OTHER_KEYS[0], add_mode=ADD_MODES[0],
               lora_c=NONE, c_video=1.0, c_audio=0.0, c_reference=-1.0, c_text=0.0, c_refiner=0.0,
-              c_block_start=0, c_block_end=N_BLOCKS - 1, extra_loras="[]", disabled_loras="[]"):
+              c_block_start=0, c_block_end=N_BLOCKS - 1, extra_loras="[]", disabled_loras="[]",
+              adaln_fix=ADALN_MODES[0]):
         import os
         import comfy.sd
         import comfy.utils
@@ -660,14 +881,23 @@ class HTCTokenLoRA:
             if L in disabled or nm in (None, "", NONE) or nm in loaded:
                 continue
             path = folder_paths.get_full_path_or_raise("loras", nm)
-            blocks, refiner, other = parse(comfy.utils.load_torch_file(path, safe_load=True))
+            st = os.stat(path)
+            ck = (os.path.normcase(os.path.abspath(path)), int(st.st_size), int(st.st_mtime_ns))
+            cached = _PARSE_CACHE.get(ck)
+            if cached is None:
+                blocks, refiner, other = parse(comfy.utils.load_torch_file(path, safe_load=True))
+                if blocks:
+                    if len(_PARSE_CACHE) >= _PARSE_CACHE_MAX:
+                        _PARSE_CACHE.pop(next(iter(_PARSE_CACHE)), None)
+                    _PARSE_CACHE[ck] = (blocks, refiner, other)
+            else:
+                blocks, refiner, other = cached
             if not blocks:
                 raise RuntimeError(f"{TAG}: {nm} (slot {L}) has no H3 block layers "
                                    "(blocks.N.attn.qkv_proj / out_proj / mlp.fc1 / fc2). It may use "
                                    "Diffusers names: load it with a normal LoRA loader.")
             _check_model(model, blocks, nm)
-            loaded[nm] = (blocks, refiner, other)
-            st = os.stat(path)
+            loaded[nm] = (blocks, dict(refiner), dict(other))
             file_ids[nm] = f"{st.st_size}:{int(st.st_mtime)}"
 
         specs_in, patches, lines = plan_slots(slots, loaded, other_keys, extra_all, disabled)
@@ -675,6 +905,11 @@ class HTCTokenLoRA:
         for sd, s, note in patches:
             m, _ = comfy.sd.load_lora_for_models(m, None, sd, float(s), 0.0)
             lines.append(note)
+        if adaln_fix != "off":
+            from . import htc_adaln as _adaln  # noqa: PLC0415
+            m, _adaln_rep = _adaln.fix_model_safe(m, mode=adaln_fix)
+            if _adaln_rep.get("keys"):
+                lines.append(_adaln.format_report(_adaln_rep))
         if not specs_in:
             print(f"[{TAG}] nothing to apply in the blocks:\n  " + "\n  ".join(lines), flush=True)
             return (m if m is not model else model.clone(),)

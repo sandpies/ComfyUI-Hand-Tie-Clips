@@ -184,6 +184,34 @@ SERVER_EXES = (("ninfer", "ninfer-serve.exe"),)
 # Filled in by the route from the node's own widgets; kept here so the default
 # is discoverable in one place rather than at the call site.
 DEFAULT_MODEL_FILE = "swift-1.5-qwen3.8-27b-orcarouter-dflash2-nvfp4.ninfer"
+DEFAULT_CTX_SIZE = 65536
+MIN_CTX_SIZE = 8192
+MAX_CTX_SIZE = 131072
+CTX_SIZE_CHOICES = (16384, 24576, 32768, 49152, 65536, 98304, 131072)
+
+
+def normalize_ctx_size(val, default=DEFAULT_CTX_SIZE):
+    """Parse and clamp context length into `[MIN_CTX_SIZE, MAX_CTX_SIZE]`."""
+    if val in (None, "", "auto"):
+        return int(default)
+    try:
+        n = int(float(val))
+    except (TypeError, ValueError):
+        return int(default)
+    if n <= 0:
+        return int(default)
+    return max(MIN_CTX_SIZE, min(MAX_CTX_SIZE, n))
+
+
+def _server_ctx_size(name=None, ctx_size=None):
+    """Configured context size for `name`, falling back to global/default."""
+    if ctx_size not in (None, ""):
+        return normalize_ctx_size(ctx_size, DEFAULT_CTX_SIZE)
+    n = backend_name(name or CONN.get("backend"))
+    entry = (CONN.get("servers") or {}).get(n) or {}
+    if isinstance(entry, dict) and entry.get("ctx_size") not in (None, ""):
+        return normalize_ctx_size(entry.get("ctx_size"), DEFAULT_CTX_SIZE)
+    return normalize_ctx_size(CONN.get("ctx_size"), DEFAULT_CTX_SIZE)
 
 
 def _server_exe(name):
@@ -199,12 +227,18 @@ def _server_exe(name):
     spec = dict(SERVER_EXES).get(name)
     if not spec:
         return None
+    exe = spec[1] if isinstance(spec, (list, tuple)) else spec
     saved = str((CONN.get("servers") or {}).get(name, {}).get("exe") or "").strip()
     if saved:
         p = os.path.abspath(saved)
+        if os.path.isdir(p):
+            p = os.path.join(p, exe)
         return p if os.path.isfile(p) else None
-    exe = spec[1] if isinstance(spec, (list, tuple)) else spec
-    roots = [os.path.join(f"{d}:\\", p) for d in ("C", "D") for p in ("", "ninfer")]
+    roots = [
+        os.path.join(f"{d}:\\", p)
+        for d in ("C", "D")
+        for p in ("", "ninfer", "NInfer", os.path.join("AI", "NInfer"), os.path.join("AI", "ninfer"))
+    ]
     for r in roots:
         p = os.path.join(r, exe)
         if os.path.isfile(p):
@@ -212,7 +246,148 @@ def _server_exe(name):
     return None
 
 
-def _server_args(name, model_file=None):
+def _inspect_ninfer(path):
+    """Read a v3 `.ninfer` container header in <1 ms to detect components.
+
+    Returns `{components: set[str], has_proposal: bool, name: str}` or `None`
+    for older/unrecognized files so `_server_args` never passes `--vision`,
+    `--spec mtp`, or `--lm-head-draft` to a `.ninfer` that lacks them.
+    """
+    import os
+    import struct
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "rb") as fh:
+            magic = fh.read(8)
+            if magic != b"NINFER\x00\x03":
+                return None
+            hlen = struct.unpack("<Q", fh.read(8))[0]
+            if hlen <= 0 or hlen > 16 * 1024 * 1024:
+                return None
+            raw = fh.read(min(hlen, 4 * 1024 * 1024))
+    except OSError:
+        return None
+    idx = raw.find(b"{")
+    if idx < 0:
+        return None
+    try:
+        obj, _ = json.JSONDecoder().raw_decode(raw[idx:].decode("utf-8", "replace"))
+    except Exception:
+        return None
+    if not isinstance(obj, dict):
+        return None
+    comps = obj.get("components")
+    if not isinstance(comps, dict):
+        return None
+    text_meta = comps.get("text") if isinstance(comps.get("text"), dict) else {}
+    meta = obj.get("metadata") if isinstance(obj.get("metadata"), dict) else {}
+    return {
+        "components": {str(k).lower() for k in comps.keys()},
+        "has_proposal": bool(text_meta.get("proposal")),
+        "name": str(meta.get("name") or "").strip(),
+    }
+
+
+def _find_ninfer_in_dir(mdir):
+    """Find the best `.ninfer` artifact inside `mdir` (searching subfolders too)."""
+    import os
+    if not mdir or not os.path.isdir(mdir):
+        return "", False
+    default = os.path.join(mdir, DEFAULT_MODEL_FILE)
+    if os.path.isfile(default):
+        return default, False
+    cands = []
+    has_gguf = False
+    try:
+        for root, dirs, files in os.walk(mdir):
+            dirs[:] = [d for d in dirs if d.lower() not in ("webui", ".git", "__pycache__")]
+            for fn in files:
+                low = fn.lower()
+                full = os.path.join(root, fn)
+                if low.endswith(".ninfer") and os.path.isfile(full):
+                    cands.append(full)
+                elif low.endswith(".gguf"):
+                    has_gguf = True
+    except OSError:
+        return "", False
+    if not cands:
+        return "", has_gguf
+    non_table = [p for p in cands if "ngram-table" not in os.path.basename(p).lower()]
+    pool = non_table or cands
+    return max(pool, key=os.path.getsize), has_gguf
+
+
+def _resolve_ninfer_model(model_arg, exe):
+    """Resolve `.ninfer` artifact path from explicit file, folder, or `<exe>/models`."""
+    import os
+    raw = str(model_arg or "").strip()
+    if not raw:
+        raw = str((CONN.get("servers") or {}).get("ninfer", {}).get("model_file") or "").strip()
+    exe_dir = os.path.dirname(exe)
+    default_mdir = os.path.join(exe_dir, "models")
+
+    if raw:
+        cand = os.path.abspath(raw) if (os.path.isabs(raw) or os.sep in raw or "/" in raw) else ""
+        if not cand:
+            for base in (default_mdir, exe_dir):
+                joined = os.path.join(base, raw)
+                if os.path.exists(joined):
+                    cand = os.path.abspath(joined)
+                    break
+        if cand and os.path.isfile(cand):
+            if cand.lower().endswith(".gguf"):
+                return "", (
+                    f"nInfer cannot load GGUF files ({os.path.basename(cand)}). "
+                    "Select a .ninfer v3 artifact, or switch Writer mode to LM Studio for GGUF."
+                )
+            return cand, ""
+        if cand and os.path.isdir(cand):
+            found, has_gguf = _find_ninfer_in_dir(cand)
+            if found:
+                return found, ""
+            if has_gguf:
+                return "", (
+                    f"No .ninfer model found in {cand} (found .gguf — nInfer only runs "
+                    ".ninfer v3 artifacts; use LM Studio for GGUF)."
+                )
+            return "", f"No .ninfer model file found inside folder: {cand}"
+        if not cand:
+            # Bare filename not in top-level; walk <exe>/models in case it's in a subfolder
+            for root, dirs, files in os.walk(default_mdir) if os.path.isdir(default_mdir) else ():
+                dirs[:] = [d for d in dirs if d.lower() not in ("webui", ".git", "__pycache__")]
+                for fn in files:
+                    if fn.lower() == raw.lower():
+                        return os.path.join(root, fn), ""
+        return "", f"nInfer model file not found: {raw}"
+
+    found, has_gguf = _find_ninfer_in_dir(default_mdir)
+    if found:
+        return found, ""
+    if has_gguf:
+        return "", (
+            f"No .ninfer model found in {default_mdir} (found .gguf — nInfer only runs "
+            ".ninfer v3 artifacts; use LM Studio for GGUF)."
+        )
+    return "", (
+        f"No .ninfer model file found in {default_mdir}. "
+        "Put a .ninfer artifact there or set the .ninfer file path in Settings."
+    )
+
+
+def _server_port(name):
+    entry = (CONN.get("servers") or {}).get(name) or {}
+    base = normalise_base(entry.get("server_url") or BACKENDS.get(name, {}).get("default_base") or "")
+    try:
+        parsed = urllib.parse.urlparse(base)
+        if parsed.port:
+            return str(parsed.port)
+    except Exception:
+        pass
+    return BACKENDS.get(name, {}).get("default_base", ":8080").rsplit(":", 1)[-1]
+
+
+def _server_args(name, model_file=None, ctx_size=None):
     """The command line for a server this pack starts.
 
     Deliberately short and deliberately explicit rather than clever. Every flag
@@ -244,13 +419,43 @@ def _server_args(name, model_file=None):
     if name == "ninfer":
         model = str(model_file or os.path.join("C:\\ninfer\\models",
                                                DEFAULT_MODEL_FILE))
-        port = (BACKENDS["ninfer"]["default_base"].rsplit(":", 1)[-1])
-        spec = (["--spec", "dflash2", "--draft-tokens", "7"]
-                if "dflash" in os.path.basename(model).lower()
-                else ["--spec", "mtp", "--draft-tokens", "3"])
-        return [model, "--host", "127.0.0.1", "--port", port,
-                "--max-context", "65536", "--vision", "--no-thinking",
-                *spec, "--lm-head-draft"]
+        port = _server_port("ninfer")
+        low = os.path.basename(model).lower()
+        is_ternary = "ternary" in low or "bonsai" in low
+        info = _inspect_ninfer(model)
+
+        if info is not None:
+            comps = info["components"]
+            has_vision = "vision" in comps
+            if "dflash" in low and "dflash2" in comps:
+                spec = ["--spec", "dflash2", "--draft-tokens", "7"]
+            elif "mtp" in comps:
+                spec = ["--spec", "mtp", "--draft-tokens", "3"]
+            elif "dflash2" in comps:
+                spec = ["--spec", "dflash2", "--draft-tokens", "5"]
+            elif "dflash" in comps:
+                spec = ["--spec", "dflash", "--draft-tokens", "7"]
+            else:
+                spec = []
+            use_lm_head_draft = bool(info["has_proposal"]) and not is_ternary
+        else:
+            has_vision = True
+            spec = (["--spec", "dflash2", "--draft-tokens", "7"]
+                    if "dflash" in low
+                    else ["--spec", "mtp", "--draft-tokens", "3"])
+            use_lm_head_draft = not is_ternary
+
+        ctx = _server_ctx_size("ninfer", ctx_size=ctx_size)
+        args = [model, "--host", "127.0.0.1", "--port", port, "--max-context", str(ctx)]
+        if is_ternary:
+            args.extend(["--kv-capacity", str(ctx) if ctx != DEFAULT_CTX_SIZE else "auto"])
+        if has_vision:
+            args.append("--vision")
+        args.append("--no-thinking")
+        args.extend(spec)
+        if use_lm_head_draft:
+            args.append("--lm-head-draft")
+        return args
     return []
 
 
@@ -332,15 +537,19 @@ def startup_error(name=None, tail_bytes=65536):
     except OSError:
         return ""
     last = text.rfind("starting engine")
-    if last < 0:
-        return ""
-    for line in text[last:].splitlines():
+    tail = text[last:] if last >= 0 else text[-2048:]
+    for line in tail.splitlines():
         if " FATAL " in line:
             return line.split(" FATAL ", 1)[1].strip()
+    if "listening on" not in tail:
+        for line in reversed(tail.splitlines()[-6:]):
+            low = line.lower()
+            if "error:" in low or "unknown " in low or "unrecognized " in low or " ERROR " in line:
+                return line.strip()
     return ""
 
 
-async def start_process_async(model_file=None, name=None):
+async def start_process_async(model_file=None, name=None, ctx_size=None):
     """The route-handler version of start_process. Awaits its own probe.
 
     start_process() opens with a liveness probe so a second click does not
@@ -356,10 +565,10 @@ async def start_process_async(model_file=None, name=None):
     n = backend_name(name or CONN.get("backend"))
     if await server_running_async(n):
         return True, f"{backend_spec(n)['label']} is already running."
-    return start_process(model_file=model_file, name=n, already_checked=True)
+    return start_process(model_file=model_file, name=n, already_checked=True, ctx_size=ctx_size)
 
 
-def start_process(model_file=None, name=None, already_checked=False):
+def start_process(model_file=None, name=None, already_checked=False, ctx_size=None):
     """Start the writer server for this backend. Returns (ok, message).
 
     Explicit only: called from the panel's button and from the route that
@@ -391,34 +600,14 @@ def start_process(model_file=None, name=None, already_checked=False):
         return True, f"{backend_spec(n)['label']} is already running."
     exe = _server_exe(n)
     if not exe:
-        return False, (f"No {backend_spec(n)['label']} binary found. Put it in "
-                       f"C:\\ninfer, or set the path in Settings.")
+        return False, (f"No {backend_spec(n)['label']} binary found. Put ninfer-serve.exe in "
+                       f"C:\\ninfer (or C:\\AI\\NInfer), or set its path in Settings.")
     model = str(model_file or "").strip()
-    # D1h: the SAVED model file, before the search order. Before this the
-    # settings panel could show and write the path and the server would ignore
-    # it -- the field would have looked broken on every machine that is not the
-    # author's. Argument first, then saved, then beside-the-binary, then the
-    # conventional folder.
-    if n == "ninfer" and not model:
-        model = str((CONN.get("servers") or {}).get(n, {})
-                    .get("model_file") or "").strip()
-    if n == "ninfer" and not os.path.isfile(model):
-        mdir = os.path.join(os.path.dirname(exe), "models")
-        default = os.path.join(mdir, DEFAULT_MODEL_FILE)
-        model = default if os.path.isfile(default) else ""
-        if not model and os.path.isdir(mdir):
-            try:
-                cand = [os.path.join(mdir, f) for f in os.listdir(mdir)
-                        if f.lower().endswith(".ninfer")
-                        and os.path.isfile(os.path.join(mdir, f))]
-                if cand:
-                    model = max(cand, key=os.path.getsize)
-            except OSError:
-                pass
+    if n == "ninfer":
+        model, err_msg = _resolve_ninfer_model(model, exe)
         if not model:
-            return False, ("No .ninfer model file found. Put one in "
-                           "C:\\ninfer\\models, or set the path in Settings.")
-    args = _server_args(n, model or None)
+            return False, err_msg
+    args = _server_args(n, model or None, ctx_size=ctx_size)
     try:
         logdir = os.path.dirname(exe)
         out = open(os.path.join(logdir, "server.out"), "ab")
@@ -434,7 +623,8 @@ def start_process(model_file=None, name=None, already_checked=False):
         _flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         subprocess.Popen([exe] + args, cwd=logdir, stdout=out, stderr=err,  # noqa: S603
                          creationflags=_flags)
-        print(f"[{TAG}] started {backend_spec(n)['label']}: {os.path.basename(exe)}",
+        print(f"[{TAG}] started {backend_spec(n)['label']}: {os.path.basename(exe)}"
+              + (f" (max-context {_server_ctx_size(n, ctx_size=ctx_size)})" if n == "ninfer" else ""),
               flush=True)
         return True, (f"Starting {backend_spec(n)['label']}. A 27B takes about "
                       f"30 s to load; press Test -- it turns green once the "
@@ -589,6 +779,7 @@ CONN = {
     # existing saved htc_llm.json -- keeps reading the two keys it always read.
     "server_url": DEFAULT_BASE,
     "model": "",
+    "ctx_size": DEFAULT_CTX_SIZE,
     "servers": {},
     "temperature": 0.75,
     # Warm between plans; evicted when a render is queued.
@@ -747,6 +938,7 @@ def load_conn():
     # name that server has never heard of, and the failure reads as "the server
     # is down" rather than "that model is not loaded here".
     CONN["model"] = str(pair.get("model") or "").strip()
+    CONN["ctx_size"] = _server_ctx_size(name)
     return dict(CONN)
 
 
@@ -766,7 +958,9 @@ def _merge_servers(current, patch):
             continue
         keep = dict(out.get(name) or {})
         for k, v in entry.items():
-            if isinstance(v, str):
+            if k == "ctx_size":
+                keep[k] = normalize_ctx_size(v, DEFAULT_CTX_SIZE)
+            elif isinstance(v, str):
                 keep[k] = v.strip()
             else:
                 keep[k] = v
@@ -790,6 +984,7 @@ def save_conn(patch):
     prev_name = backend_name(CONN.get("backend"))
     prev_url = normalise_base(CONN.get("server_url"))
     prev_model = str(CONN.get("model") or "").strip()
+    prev_ctx = _server_ctx_size(prev_name)
     servers = CONN.get("servers") if isinstance(CONN.get("servers"), dict) else {}
 
     for k in _CONN_KEYS:
@@ -810,6 +1005,8 @@ def save_conn(patch):
             v = normalise_base(v)
             if not v:
                 continue
+        elif k == "ctx_size":
+            v = normalize_ctx_size(v, DEFAULT_CTX_SIZE)
         elif k == "temperature":
             try:
                 v = max(0.0, min(2.0, float(v)))
@@ -850,51 +1047,40 @@ def save_conn(patch):
     spec = backend_spec(name)
     switched = "backend" in patch and name != prev_name
     if switched:
-        servers[prev_name] = {"server_url": prev_url, "model": prev_model}
+        servers[prev_name] = dict(servers.get(prev_name) or {}, **{
+            "server_url": prev_url, "model": prev_model, "ctx_size": prev_ctx})
     if switched and not normalise_base(patch.get("server_url")) \
             and not str(patch.get("model") or "").strip():
-        # A bare switch RESTORES the bank. That is what picking a backend from
-        # a dropdown means: "use the settings I saved for this one".
-        #
-        # The panel's real sequence is the awkward case -- type the nInfer
-        # address and model while the dropdown still says LM Studio, then pick
-        # nInfer -- and the type is its own save, so it has already been banked
-        # under lmstudio by the time the switch arrives. That is harmless now
-        # that a plain edit banks under the backend you are actually on: the
-        # bank the switch reads is the one for the backend being switched TO.
         banked = servers.get(name) or {}
         CONN["server_url"] = (normalise_base(banked.get("server_url"))
                               or spec["default_base"])
         CONN["model"] = str(banked.get("model") or "").strip()
+        CONN["ctx_size"] = normalize_ctx_size(banked.get("ctx_size"), DEFAULT_CTX_SIZE)
 
     # Mirror the active backend's pair onto the flat keys, and remember it under
     # its own name, so each backend keeps its own address and model.
     url = normalise_base(CONN.get("server_url")) or spec["default_base"]
     model = str(CONN.get("model") or "").strip()
-    if not switched:
-        # Only ever write the bank when this save was NOT a switch, and the
-        # pair being written is still the previous backend's.
-        #
-        # The old unconditional write was the bug behind two failures at once:
-        # typing an address while the dropdown said LM Studio banked the nInfer
-        # address under lmstudio, so switching to nInfer later found lmstudio's
-        # "own" pair already equal to the nInfer one, concluded nothing had been
-        # typed, and dropped the model. Switching away is what banks the
-        # outgoing pair; a plain edit only updates the backend you are on.
-        servers[prev_name] = dict(servers.get(prev_name) or {}, **{
-            "server_url": url, "model": model})
+    srv_patch_ctx = (
+        (patch.get("servers") or {}).get(name, {}).get("ctx_size")
+        if isinstance(patch.get("servers"), dict) and isinstance((patch.get("servers") or {}).get(name), dict)
+        else None
+    )
+    if "ctx_size" in patch and not switched and srv_patch_ctx is None:
+        ctx = normalize_ctx_size(CONN.get("ctx_size"), DEFAULT_CTX_SIZE)
     else:
-        # D1h: MERGE, never assign. These two lines replaced the whole entry,
-        # which dropped the `exe` and `model_file` a previous save had put
-        # there -- so the panel would show the paths, Save would write them, and
-        # the next Save would erase them. 41 green checks, because every check
-        # looked at the source and none of them round-tripped a value.
+        ctx = _server_ctx_size(name)
+    if not switched:
+        servers[prev_name] = dict(servers.get(prev_name) or {}, **{
+            "server_url": url, "model": model, "ctx_size": ctx})
+    else:
         servers[name] = dict(servers.get(name) or {}, **{
-            "server_url": url, "model": model})
+            "server_url": url, "model": model, "ctx_size": ctx})
     CONN["servers"] = servers
     CONN["backend"] = name
     CONN["server_url"] = url
     CONN["model"] = model
+    CONN["ctx_size"] = ctx
 
     out = dict(CONN)
     # The panel needs to draw the right editor: the model box is optional on
@@ -1117,11 +1303,16 @@ async def _post(session, url, body, timeout):
                 raise LLMError(
                     f"server returned HTTP {resp.status}: {text[:400].strip()}")
             try:
-                return json.loads(text)
+                parsed = json.loads(text)
             except ValueError as exc:
                 raise LLMError(
                     f"server replied with something that is not JSON "
                     f"({exc}): {text[:200].strip()}") from exc
+            if not isinstance(parsed, dict):
+                raise LLMError(
+                    f"server returned {type(parsed).__name__} instead of a JSON object: "
+                    f"{str(parsed)[:200].strip()}")
+            return parsed
     except LLMError:
         raise
     except aiohttp.ClientConnectorError as exc:
@@ -1281,17 +1472,19 @@ def _content(data, max_tokens=None):
         were genuinely ignored. Retry with `/no_think`, then give up on it.
       * nothing at all -- the server is answering, but with nothing.
     """
+    if not isinstance(data, dict):
+        raise LLMError(f"unexpected server response type ({type(data).__name__})")
     choices = data.get("choices") or []
-    if not choices:
+    if not choices or not isinstance(choices, list):
         raise LLMError("the server returned no choices")
-    choice = choices[0] or {}
-    msg = choice.get("message") or {}
-    text = (msg.get("content") or "").strip()
+    choice = choices[0] if isinstance(choices[0], dict) else {}
+    msg = choice.get("message") if isinstance(choice.get("message"), dict) else {}
+    text = str(msg.get("content") or "").strip()
 
-    usage = (data.get("usage") or {})
-    detail = (usage.get("completion_tokens_details") or {})
+    usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+    detail = usage.get("completion_tokens_details") if isinstance(usage.get("completion_tokens_details"), dict) else {}
     reasoned = detail.get("reasoning_tokens") or 0
-    reasoning = (msg.get("reasoning_content") or msg.get("reasoning") or "")
+    reasoning = str(msg.get("reasoning_content") or msg.get("reasoning") or "")
 
     # Checked BEFORE the text is handed back, because the expensive case is a
     # reply that is truncated but not empty: half a JSON object parses as no
@@ -1858,7 +2051,50 @@ def free_for_render(settle_sleep=None):
         # Said out loud, because an unexplained pause before a render looks
         # exactly like a hang -- and this one lands after the queue button, the
         # moment the user is most primed to read a stall as a crash.
-        print(f"[{TAG}] freed the writer ({note}); waiting {settle:.1f}s for "
-              f"the driver to release", flush=True)
-        (settle_sleep or time.sleep)(settle)
+        if settle_sleep is not None:
+            print(f"[{TAG}] freed the writer ({note}); waiting {settle:.1f}s for "
+                  f"the driver to release", flush=True)
+            settle_sleep(settle)
+        else:
+            # Poll driver free VRAM every 150ms and exit early once the freed
+            # allocation settles instead of sleeping the full static 5.0s cap.
+            try:
+                import torch  # noqa: PLC0415
+                has_cuda = torch.cuda.is_available()
+            except Exception:
+                has_cuda = False
+            if not has_cuda:
+                time.sleep(min(settle, 0.25))
+            else:
+                t_start = time.monotonic()
+                deadline = t_start + settle
+                best_free = 0
+                stable_ticks = 0
+                rose = False
+                try:
+                    best_free, total_vram = torch.cuda.mem_get_info()
+                except Exception:
+                    best_free, total_vram = 0, 0
+                if not total_vram or best_free < total_vram * 0.78:
+                    print(f"[{TAG}] freed the writer ({note}); settling VRAM (up to {settle:.1f}s)",
+                          flush=True)
+                    while time.monotonic() < deadline:
+                        time.sleep(0.15)
+                        try:
+                            cur_free, cur_tot = torch.cuda.mem_get_info()
+                        except Exception:
+                            break
+                        if cur_tot and cur_free >= cur_tot * 0.80:
+                            break
+                        if cur_free > best_free + (64 * 1024 * 1024):
+                            best_free = cur_free
+                            stable_ticks = 0
+                            rose = True
+                        else:
+                            stable_ticks += 1
+                            # Quiet only counts AFTER the release has started: a killed
+                            # server can take over a second to hand VRAM back, and
+                            # leaving before it does loads the DiT into taken memory.
+                            if rose and stable_ticks >= 3 and (time.monotonic() - t_start) >= 0.45:
+                                break
     return f"writer unloaded: {note}"

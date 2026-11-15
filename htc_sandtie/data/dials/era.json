@@ -1,0 +1,127 @@
+{
+  "id": "era",
+  "label": "Era",
+  "per": "project",
+  "note": "Historical and speculative period locks.",
+  "options": [
+    {
+      "id": "edo_japan_1600s",
+      "label": "1600s Edo Japan · Samurai & Yoshiwara Lanterns",
+      "group": "17th–19th Century",
+      "rule": "everything in view belongs to 17th-century Edo-period Japan: sliding shoji paper screens, woven tatami reed mats, warm paper-lantern and oil-lamp light, lacquered wood, silk kimono and haori robes, and katana scabbards.",
+      "domain": "combat_action"
+    },
+    {
+      "id": "belle_epoque_1890s",
+      "label": "1890s Parisian Belle Époque · Moulin Rouge & Velvet",
+      "group": "17th–19th Century",
+      "rule": "everything in view belongs to 1890s Parisian Belle Époque cabaret: Art Nouveau wrought-iron flourishes, crimson velvet curtains, warm gaslight and incandescent bulbs, silk corsets, lace stockings, and champagne flutes.",
+      "domain": "general"
+    },
+    {
+      "id": "y2k_2000s_gloss",
+      "label": "2000s Y2K Era · Metallic Gloss, Flip Phones & Low-Rise",
+      "group": "Late 20th & 21st Century",
+      "rule": "everything in view belongs to the early-2000s Y2K era: silver metallic and translucent plastic surfaces, flip phones, rimless tinted sunglasses, low-rise denim, velour tracksuits, and high-gloss lip shine.",
+      "domain": "general"
+    },
+    {
+      "id": "cyberpunk_2099",
+      "label": "2099 Neo-Tokyo Cyberpunk · Holograms, Chrome & Wet Neon",
+      "group": "Future & Alternate Eras",
+      "rule": "everything in view belongs to 2099 Neo-Tokyo cyberpunk: towering holographic kanji advertisements, rain-slicked carbon-fiber and chrome surfaces, sub-dermal gold cyberware lines, and glowing techwear.",
+      "domain": "general"
+    },
+    {
+      "id": "dark_gothic_vampiric",
+      "label": "Timeless Gothic Aristocracy · Candlelit Stone & Velvet",
+      "group": "Future & Alternate Eras",
+      "rule": "everything in view belongs to a timeless gothic aristocratic estate: vaulted stone arches, towering stained-glass windows, silver candelabras, black silk and velvet couture, and moonlit mist.",
+      "domain": "general"
+    },
+    {
+      "id": "solarpunk_ecotopia",
+      "label": "2150 Solarpunk Ecotopia · Sunlit Glass, Gold & Hanging Gardens",
+      "group": "Future & Alternate Eras",
+      "rule": "everything in view belongs to a sunlit solarpunk future: sweeping Art-Nouveau glass-and-brass arches, lush hanging botanical gardens, flowing linen-and-gold attire, and warm natural daylight.",
+      "domain": "general"
+    },
+    {
+      "id": "taisho_era_japan_1915",
+      "label": "1915 Taishō-Era Japan · Gaslit Wooden Machiya, Silk Haori & Wisteria Lanterns",
+      "group": "Early–Mid 20th Century",
+      "rule": "everything in view belongs to 1915 Taishō-era Japan: traditional dark-wood machiya architecture, paper shoji screens, glowing wisteria lanterns, patterned silk haori coats over gakuran uniforms, and warm gaslight.",
+      "domain": "general"
+    },
+    {
+      "id": "heian_imperial_court_1000",
+      "label": "1000 AD Heian Imperial Court · Layered Silk Robes, Gold Leaf Screens & Cherry Blossoms",
+      "group": "Ancient & Medieval",
+      "rule": "everything in view belongs to the imperial court of Heian-period Japan: gleaming cypress wood floors, painted gold-leaf folding screens, bamboo blinds, and flowing multi-layered silk kimono robes.",
+      "domain": "general"
+    },
+    {
+      "id": "neo_shibuya_2099_hyper_neon",
+      "label": "2099 Neo-Shibuya Megacity · Towering Hologram Skyscrapers, Cyberware & Rain",
+      "group": "Future & Alternate Eras",
+      "rule": "everything in view belongs to 2099 Neo-Shibuya: towering megastructures draped in 100-foot 3D kanji holograms, rain-slicked neon crosswalks, cybernetic chrome accents, and sleek techwear.",
+      "domain": "general"
+    },
+    {
+      "id": "now",
+      "label": "Contemporary Present Day",
+      "group": "Late 20th & 21st Century",
+      "rule": "contemporary present-day architecture, smartphones, sleek modern interiors, and current tailoring",
+      "domain": "general"
+    },
+    {
+      "id": "1990s",
+      "label": "1990s Analog Pre-Digital",
+      "group": "Late 20th & 21st Century",
+      "rule": "authentic 1990s styling with analog rotary switches, vintage boxy sedans, 35mm film color, and classic 90s tailoring",
+      "domain": "car_cabin"
+    },
+    {
+      "id": "1980s",
+      "label": "1980s Neon Synth Era",
+      "group": "Late 20th & 21st Century",
+      "rule": "authentic 1980s chrome glass blocks, neon storefront signage, cassette decks, and sculpted shoulder silhouettes",
+      "domain": "general"
+    },
+    {
+      "id": "1970s",
+      "label": "1970s Warm Walnut & Velvet",
+      "group": "Late 20th & 21st Century",
+      "rule": "rich 1970s wood-paneled lounges, warm burnt-orange textiles, analog brass fixtures, and soft film stock",
+      "domain": "general"
+    },
+    {
+      "id": "1920s",
+      "label": "1920s Art Deco Jazz Age",
+      "group": "Early–Mid 20th Century",
+      "rule": "ornate 1920s Art Deco geometric brass, beveled mirrors, crystal coupes, and beaded eveningwear",
+      "domain": "mirror_vanity"
+    },
+    {
+      "id": "victorian",
+      "label": "19th-Century Victorian Gaslight",
+      "group": "17th–19th Century",
+      "rule": "gaslit cobblestone lanes, heavy velvet drapes, brass fixtures, corseted tailoring, and mahogany paneling",
+      "domain": "general"
+    },
+    {
+      "id": "feudal_japan",
+      "label": "Feudal Edo / Samurai Era",
+      "group": "Ancient & Medieval",
+      "rule": "hand-carved cedar architecture, shoji paper screens, tatami flooring, traditional kimono silks, and forged steel blades",
+      "domain": "general"
+    },
+    {
+      "id": "cyberpunk_2077",
+      "label": "High-Tech Cyberpunk Future",
+      "group": "Future & Alternate Eras",
+      "rule": "neon-drenched towering megastructures, glowing holographic interfaces, chrome cybernetics, and sleek techwear",
+      "domain": "general"
+    }
+  ]
+}

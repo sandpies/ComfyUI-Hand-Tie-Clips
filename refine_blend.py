@@ -41,7 +41,12 @@ import torch.nn.functional as F
 
 # Pixel frames carried by each H3 video latent step, cycling. The first step is
 # the odd one: one frame, then fours.
-FRAME_PER_TOKEN = (1, 4, 4, 4, 4)
+try:
+    from comfy.ldm.minimax.model import FRAME_PER_TOKEN as _CORE_FPT  # type: ignore[import-not-found]
+    FRAME_PER_TOKEN = tuple(_CORE_FPT)
+    assert FRAME_PER_TOKEN == (1, 4, 4, 4, 4)
+except ImportError:
+    FRAME_PER_TOKEN = (1, 4, 4, 4, 4)
 
 # xyzdist's published ramp. Raw across a 22 f overlap, crossing to fully
 # refined over the 22 frames after it.

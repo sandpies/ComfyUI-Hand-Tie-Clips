@@ -2,7 +2,7 @@
   "id": "h3-ref2va-chain",
   "revision": 1,
   "last_node_id": 46,
-  "last_link_id": 40,
+  "last_link_id": 41,
   "nodes": [
     {
       "id": 2,
@@ -45,7 +45,7 @@
           "type": "MODEL",
           "slot_index": 0,
           "links": [
-            23
+            36
           ]
         }
       ],
@@ -111,7 +111,7 @@
           "type": "CLIP",
           "slot_index": 0,
           "links": [
-            24
+            37
           ]
         }
       ],
@@ -238,13 +238,13 @@
           "localized_name": "model",
           "name": "model",
           "type": "MODEL",
-          "link": 30
+          "link": 41
         },
         {
           "localized_name": "clip",
           "name": "clip",
           "type": "CLIP",
-          "link": 31
+          "link": 37
         },
         {
           "localized_name": "vae",
@@ -1613,7 +1613,7 @@
           "localized_name": "images",
           "name": "images",
           "type": "IMAGE",
-          "links": null
+          "links": []
         }
       ],
       "title": "Contact sheet",
@@ -1623,598 +1623,6 @@
         "Node name for S&R": "PreviewImage"
       },
       "widgets_values": []
-    },
-    {
-      "id": 30,
-      "type": "LTX_lora_loader",
-      "pos": [
-        520,
-        312
-      ],
-      "size": [
-        420,
-        240
-      ],
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "link": 25
-        },
-        {
-          "localized_name": "clip",
-          "name": "clip",
-          "shape": 7,
-          "type": "CLIP",
-          "link": 24
-        },
-        {
-          "localized_name": "mode",
-          "name": "mode",
-          "type": "COMBO",
-          "widget": {
-            "name": "mode"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "stack_data",
-          "name": "stack_data",
-          "type": "STRING",
-          "widget": {
-            "name": "stack_data"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            26
-          ]
-        },
-        {
-          "localized_name": "clip",
-          "name": "clip",
-          "type": "CLIP",
-          "links": [
-            31
-          ]
-        }
-      ],
-      "title": "LoRA Loader Stack",
-      "properties": {
-        "cnr_id": "plaguekind-nodes",
-        "ver": "d58d006a4ea32c25c06499f2ff104f0852a045a6",
-        "Node name for S&R": "LTX_lora_loader",
-        "htc_speed": "lora",
-        "stack_data": "[]"
-      },
-      "widgets_values": [
-        "minimax",
-        "[]",
-        ""
-      ]
-    },
-    {
-      "id": 31,
-      "type": "H3AdaLNLoRAFix",
-      "pos": [
-        520,
-        582
-      ],
-      "size": [
-        340,
-        150
-      ],
-      "flags": {},
-      "order": 8,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "link": 26
-        },
-        {
-          "localized_name": "mode",
-          "name": "mode",
-          "type": "COMBO",
-          "widget": {
-            "name": "mode"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "MODEL",
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            27
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "plaguekind-nodes",
-        "ver": "d58d006a4ea32c25c06499f2ff104f0852a045a6",
-        "Node name for S&R": "H3AdaLNLoRAFix",
-        "htc_speed": "adaln"
-      },
-      "widgets_values": [
-        "port"
-      ]
-    },
-    {
-      "id": 32,
-      "type": "MiniMaxLowVRAMAttention",
-      "pos": [
-        520,
-        762
-      ],
-      "size": [
-        330,
-        58
-      ],
-      "flags": {},
-      "order": 9,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "link": 27
-        },
-        {
-          "localized_name": "head_chunks",
-          "name": "head_chunks",
-          "type": "INT",
-          "widget": {
-            "name": "head_chunks"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            28
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-kjnodes",
-        "ver": "d7641533d6634eb05f8570c980fce8fc8528dc7b",
-        "Node name for S&R": "MiniMaxLowVRAMAttention",
-        "htc_speed": "lowvram"
-      },
-      "widgets_values": [
-        2
-      ]
-    },
-    {
-      "id": 33,
-      "type": "H3SLAAttention",
-      "pos": [
-        547.5,
-        -111.17000000000016
-      ],
-      "size": [
-        340,
-        370
-      ],
-      "flags": {},
-      "order": 6,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "link": 23
-        },
-        {
-          "localized_name": "sparsity_ratio",
-          "name": "sparsity_ratio",
-          "type": "FLOAT",
-          "widget": {
-            "name": "sparsity_ratio"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "block_size",
-          "name": "block_size",
-          "type": "COMBO",
-          "widget": {
-            "name": "block_size"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "min_seq_len",
-          "name": "min_seq_len",
-          "shape": 7,
-          "type": "INT",
-          "widget": {
-            "name": "min_seq_len"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "dense_last_steps",
-          "name": "dense_last_steps",
-          "shape": 7,
-          "type": "INT",
-          "widget": {
-            "name": "dense_last_steps"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "protect_audio",
-          "name": "protect_audio",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "protect_audio"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "enabled",
-          "name": "enabled",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "enabled"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "dense_steps",
-          "name": "dense_steps",
-          "shape": 7,
-          "type": "STRING",
-          "widget": {
-            "name": "dense_steps"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "dense_backend",
-          "name": "dense_backend",
-          "shape": 7,
-          "type": "COMBO",
-          "widget": {
-            "name": "dense_backend"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "disable_fp16_accum",
-          "name": "disable_fp16_accum",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "disable_fp16_accum"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "stabilize_motion",
-          "name": "stabilize_motion",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "stabilize_motion"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "Protect Vid/Ref",
-          "name": "reference_protection",
-          "shape": 7,
-          "type": "COMBO",
-          "widget": {
-            "name": "reference_protection"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "tail_correction",
-          "name": "tail_correction",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "tail_correction"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "use_int8_qk",
-          "name": "use_int8_qk",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "use_int8_qk"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "engine",
-          "name": "engine",
-          "shape": 7,
-          "type": "COMBO",
-          "widget": {
-            "name": "engine"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "MODEL",
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            25
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "plaguekind-nodes",
-        "ver": "d58d006a4ea32c25c06499f2ff104f0852a045a6",
-        "Node name for S&R": "H3SLAAttention",
-        "htc_speed": "sla"
-      },
-      "widgets_values": [
-        0.65,
-        "32",
-        12288,
-        0,
-        false,
-        true,
-        "0",
-        "comfy_kitchen",
-        true,
-        false,
-        "Off",
-        false,
-        true,
-        "comfy_kitchen"
-      ]
-    },
-    {
-      "id": 34,
-      "type": "ModelPreviewOverrideKJ",
-      "pos": [
-        520,
-        850
-      ],
-      "size": [
-        360,
-        480
-      ],
-      "flags": {},
-      "order": 10,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "link": 28
-        },
-        {
-          "localized_name": "vae",
-          "name": "vae",
-          "shape": 7,
-          "type": "VAE",
-          "link": null
-        },
-        {
-          "localized_name": "audio_vae",
-          "name": "audio_vae",
-          "shape": 7,
-          "type": "VAE",
-          "link": null
-        },
-        {
-          "localized_name": "max_resolution",
-          "name": "max_resolution",
-          "type": "INT",
-          "widget": {
-            "name": "max_resolution"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "jpeg_quality",
-          "name": "jpeg_quality",
-          "type": "INT",
-          "widget": {
-            "name": "jpeg_quality"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "suppress_default_preview",
-          "name": "suppress_default_preview",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "suppress_default_preview"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "preview_frames",
-          "name": "preview_frames",
-          "type": "INT",
-          "widget": {
-            "name": "preview_frames"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "preview_fps",
-          "name": "preview_fps",
-          "type": "INT",
-          "widget": {
-            "name": "preview_fps"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "tiny_vae",
-          "name": "tiny_vae",
-          "shape": 7,
-          "type": "COMBO",
-          "widget": {
-            "name": "tiny_vae"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "MODEL",
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            29
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-kjnodes",
-        "ver": "d7641533d6634eb05f8570c980fce8fc8528dc7b",
-        "Node name for S&R": "ModelPreviewOverrideKJ",
-        "htc_speed": "preview"
-      },
-      "widgets_values": [
-        512,
-        80,
-        true,
-        100,
-        8,
-        "taeh3.safetensors",
-        ""
-      ]
-    },
-    {
-      "id": 40,
-      "type": "HTCH3Cache",
-      "pos": [
-        520,
-        1360
-      ],
-      "size": [
-        340,
-        200
-      ],
-      "flags": {},
-      "order": 11,
-      "mode": 4,
-      "inputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "link": 29
-        },
-        {
-          "localized_name": "reuse_threshold",
-          "name": "reuse_threshold",
-          "type": "FLOAT",
-          "widget": {
-            "name": "reuse_threshold"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "start_percent",
-          "name": "start_percent",
-          "type": "FLOAT",
-          "widget": {
-            "name": "start_percent"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "end_percent",
-          "name": "end_percent",
-          "type": "FLOAT",
-          "widget": {
-            "name": "end_percent"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "max_steps",
-          "name": "max_steps",
-          "type": "INT",
-          "widget": {
-            "name": "max_steps"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "device",
-          "name": "device",
-          "type": "COMBO",
-          "widget": {
-            "name": "device"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "verbose",
-          "name": "verbose",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "verbose"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "MODEL",
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            30
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-hand-tie-clips",
-        "ver": "cf7231deaef34db99c9c21d919ee4a5fb80d7c79",
-        "Node name for S&R": "HTCH3Cache",
-        "htc_speed": "cache"
-      },
-      "widgets_values": [
-        0.05,
-        0.3,
-        0.8,
-        1,
-        "auto",
-        false
-      ]
     },
     {
       "id": 42,
@@ -2293,7 +1701,7 @@
         "htc_card": "start"
       },
       "widgets_values": [
-        "## Hand Tie Clips: start here\n\nWrite one shot per hop on **SCRIPT**; the node renders them in turn and joins each hop to the last.\n\n**Links**: [GitHub](https://github.com/sandpies/ComfyUI-Hand-Tie-Clips) · [HuggingFace](https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips) · the full writing guide is `PROMPTING.md` in the pack folder.\n\n**Before you queue**\n- **steps 6-8** let the audio fully resolve (the author's advice); go down to 4 only with a 4-step turbo LoRA in the LoRA loader. The DiT here is the official ref2va checkpoint, with no turbo built in. Style LoRAs go in the loader too.\n- **cache_hops on**: retakes, render_from and the **TIMELINE** tab need it.\n- **upsample is on** (RUN tab): after the last hop the film is sized up to `upsample_megapixels` and re-drawn. It needs the two upsample files below; turn it off for quick tests.\n- Judge joins at **8 s** hops or longer.\n\n**Models**: the files this graph loads, and the folder each goes in.\n\n| loader | file | folder |\n|---|---|---|\n| DiT, and the refine / upsample DiT | [`minimax_h3_ref2va_int8_convrot`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors) | `diffusion_models` |\n| Text encoder | [`qwen3vl_32b_minimax_h3_int8_convrot`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors) | `text_encoders` |\n| Video VAE | [`minimax_h3_lynnreal_light_vae_int8_convrot`](https://huggingface.co/Kijai/MiniMax-H3-experimental/blob/main/minimax_h3_lynnreal_light_vae_int8_convrot.safetensors) (or the stock [`minimax_h3_video_vae_fp16`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/vae/minimax_h3_video_vae_fp16.safetensors)) | `vae` |\n| Audio VAE | [`minimax_h3_audio_vae_fp32`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/vae/minimax_h3_audio_vae_fp32.safetensors) | `vae` |\n| Live preview | [`taeh3`](https://huggingface.co/Kijai/MiniMax-H3-TAE/blob/main/vae_approx/taeh3.safetensors) | `vae_approx` |\n| Upsample size-up (`upsample_model`) | [`minimax_h3_latent_upscaler_3d_conv_v1_bf16`](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler/blob/main/minimax_h3_latent_upscaler_3d_conv_v1/minimax_h3_latent_upscaler_3d_conv_v1_bf16.safetensors) (the old name `minimax_h3_latent_upscaler_3d_bf16.safetensors` also loads). Or the 2D one, [`minimax_h3_latent_upscaler_2d_conv_v1_bf16`](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler/blob/main/minimax_h3_latent_upscaler_2d_conv_v1/minimax_h3_latent_upscaler_2d_conv_v1_bf16.safetensors), which takes `sharpness` 1-6 | `latent_upscale_models` |\n| Upsample re-draw (`regen2k`, the default upsample method) | [`open_h3_regenerate_2k_r256pp_bf16`](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/blob/main/lora/open_h3_regenerate_2k_r256pp_bf16.safetensors) | `loras` |\n\n**Optional files** (`models/loras`), only for the feature named:\n- **Upsample method `ic`** (RUN tab → UPSAMPLE → **upsample method**; keeps faces, lettering and mouths exactly the film's own; slower): [`minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16`](https://huggingface.co/Kijai/MiniMax-H3-experimental/blob/main/loras/minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16.safetensors) (200 MB) + [`minimax_h3_hyperflow_8step_v1.0`](https://huggingface.co/videorebirth/hyperflow/blob/main/minimax_h3_hyperflow_8step_v1.0.safetensors), and [`minimax_h3_lms_v1.0_r64`](https://huggingface.co/Alissonerdx/Minimax-H3-ComfyUI/blob/main/loras/minimax_h3_lms_v1.0_r64.safetensors) if you have it. IC runs on the DiT wired to `upsample_dit`, which must be the plain [`minimax_h3_ref2va_int8_convrot`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors) with no LoRAs. fl2va, pruned and merged models cannot run it; the run stops before any hop if one is wired there.\n- **Upscale 2nd pass** (RUN tab): renders small, sizes up, then re-draws the texture at `2nd pass megapixels` (default 1.0 MP) in `2nd pass steps`: 2-3, to taste. Its LoRA slots are for your own LoRAs and use case.\n- **SWAP tab** (one-hop person swap or scene edit from a clip): [`viggle_remake_swap_comfyui`](https://huggingface.co/Viggle/Viggle-Remake/blob/main/comfyui/viggle_remake_swap_comfyui.safetensors) and [`viggle_remake_edit_comfyui`](https://huggingface.co/Viggle/Viggle-Remake/blob/main/comfyui/viggle_remake_edit_comfyui.safetensors). The node loads the right one by itself.\n\n**Custom node packs**: install from ComfyUI Manager or clone into `custom_nodes`.\n\n| pack | nodes here |\n|---|---|\n| [ComfyUI-PlagueKind-Nodes](https://github.com/PlagueKind/ComfyUI-PlagueKind-Nodes) | LoRA Loader Stack, H3 AdaLN LoRA Fix, H3 SLA Attention |\n| [ComfyUI-KJNodes](https://github.com/kijai/ComfyUI-KJNodes) | MiniMax H3 Low VRAM Attention, Model Preview Override |\n| [ComfyUI_Nvidia_VFX_Nodes](https://github.com/Comfy-Org/ComfyUI_Nvidia_VFX_Nodes) | optional: installs the `nvidia-vfx` package HTC Save Video's frame generation uses (RTX GPU) |\n\nEverything else is core ComfyUI or this pack. Missing a pack? Delete its red node and wire around it.\n\n- **The second Load Diffusion Model** feeds `refine_model` and `upsample_dit`: refine and upsample re-draw on a clean DiT, and `ic` needs it. It is not loaded while both are off.\n- **Saving:** HTC Save Video writes the MP4. `frame_gen x2` doubles the film to 48 fps inside the save (RTX GPU + `nvidia-vfx`); `off` keeps 24 fps. Leave it `off` if you will upsample the file later.\n\n**The MODEL chain stays drawn:** loader → H3 SLA Attention → LoRA loader → H3 AdaLN LoRA Fix → Low VRAM Attention → Model Preview Override → H3 Cache → this node. CLIP comes from the LoRA loader, not the encoder.\n\n**Writing**\n- One shot per hop. Later shots say only what happens next.\n- Name what you want, never what you don't: the prompt only adds.\n- Put `@tags` in the action where you want that reference used.\n- Dialogue: one line per sentence: `@kelly says, 'Coffee's on me,' and slides a cup over.` Give the listener a closed-mouth action.\n"
+        "## Hand Tie Clips: start here\n\nWrite one shot per hop on **SCRIPT**; the node renders them in turn and joins each hop to the last.\n\n**Links**: [GitHub](https://github.com/sandpies/ComfyUI-Hand-Tie-Clips) \u00b7 [HuggingFace](https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips) \u00b7 the full writing guide is `PROMPTING.md` in the pack folder.\n\n**Before you queue**\n- **steps 6-8** let the audio fully resolve (the author's advice); go down to 4 only with a 4-step turbo LoRA in the LoRA loader. The DiT here is the official ref2va checkpoint, with no turbo built in. Style LoRAs go in the loader too.\n- **cache_hops on**: retakes, render_from and the **TIMELINE** tab need it.\n- **upsample is on** (RUN tab): after the last hop the film is sized up to `upsample_megapixels` and re-drawn. It needs the two upsample files below; turn it off for quick tests.\n- Judge joins at **8 s** hops or longer.\n\n**Models**: the files this graph loads, and the folder each goes in.\n\n| loader | file | folder |\n|---|---|---|\n| DiT, and the refine / upsample DiT | [`minimax_h3_ref2va_int8_convrot`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors) | `diffusion_models` |\n| Text encoder | [`qwen3vl_32b_minimax_h3_int8_convrot`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors) | `text_encoders` |\n| Video VAE | [`minimax_h3_lynnreal_light_vae_int8_convrot`](https://huggingface.co/Kijai/MiniMax-H3-experimental/blob/main/minimax_h3_lynnreal_light_vae_int8_convrot.safetensors) (or the stock [`minimax_h3_video_vae_fp16`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/vae/minimax_h3_video_vae_fp16.safetensors)) | `vae` |\n| Audio VAE | [`minimax_h3_audio_vae_fp32`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/vae/minimax_h3_audio_vae_fp32.safetensors) | `vae` |\n| Live preview | [`taeh3`](https://huggingface.co/Kijai/MiniMax-H3-TAE/blob/main/vae_approx/taeh3.safetensors) | `vae_approx` |\n| Upsample size-up (`upsample_model`) | [`minimax_h3_latent_upscaler_3d_conv_v1_bf16`](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler/blob/main/minimax_h3_latent_upscaler_3d_conv_v1/minimax_h3_latent_upscaler_3d_conv_v1_bf16.safetensors) (the old name `minimax_h3_latent_upscaler_3d_bf16.safetensors` also loads). Or the 2D one, [`minimax_h3_latent_upscaler_2d_conv_v1_bf16`](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler/blob/main/minimax_h3_latent_upscaler_2d_conv_v1/minimax_h3_latent_upscaler_2d_conv_v1_bf16.safetensors), which takes `sharpness` 1-6 | `latent_upscale_models` |\n| Upsample re-draw (`regen2k`, the default upsample method) | [`open_h3_regenerate_2k_r256pp_bf16`](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler/blob/main/lora/open_h3_regenerate_2k_r256pp_bf16.safetensors) | `loras` |\n\n**Optional files** (`models/loras`), only for the feature named:\n- **Upsample method `ic`** (RUN tab \u2192 UPSAMPLE \u2192 **upsample method**; keeps faces, lettering and mouths exactly the film's own; slower): [`minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16`](https://huggingface.co/Kijai/MiniMax-H3-experimental/blob/main/loras/minimax_h3_open_regenerate_2k_ic_lora_avg_rank_21_bf16.safetensors) (200 MB) + [`minimax_h3_hyperflow_8step_v1.0`](https://huggingface.co/videorebirth/hyperflow/blob/main/minimax_h3_hyperflow_8step_v1.0.safetensors), and [`minimax_h3_lms_v1.0_r64`](https://huggingface.co/Alissonerdx/Minimax-H3-ComfyUI/blob/main/loras/minimax_h3_lms_v1.0_r64.safetensors) if you have it. IC runs on the DiT wired to `upsample_dit`, which must be the plain [`minimax_h3_ref2va_int8_convrot`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors) with no LoRAs. fl2va, pruned and merged models cannot run it; the run stops before any hop if one is wired there.\n- **Upscale 2nd pass** (RUN tab): renders small, sizes up, then re-draws the texture at `2nd pass megapixels` (default 1.0 MP) in `2nd pass steps`: 2-3, to taste. Its LoRA slots are for your own LoRAs and use case.\n- **SWAP tab** (one-hop person swap or scene edit from a clip): [`viggle_remake_swap_comfyui`](https://huggingface.co/Viggle/Viggle-Remake/blob/main/comfyui/viggle_remake_swap_comfyui.safetensors) and [`viggle_remake_edit_comfyui`](https://huggingface.co/Viggle/Viggle-Remake/blob/main/comfyui/viggle_remake_edit_comfyui.safetensors). The node loads the right one by itself.\n\n**Custom node packs**: install from ComfyUI Manager or clone into `custom_nodes`.\n\n| pack | nodes here |\n|---|---|\n| [ComfyUI-KJNodes](https://github.com/kijai/ComfyUI-KJNodes) | optional: Model Preview Override (`taeh3` live previews) |\n| [ComfyUI_Nvidia_VFX_Nodes](https://github.com/Comfy-Org/ComfyUI_Nvidia_VFX_Nodes) | optional: installs the `nvidia-vfx` package HTC Save Video's frame generation uses (RTX GPU) |\n\nEverything else is core ComfyUI or built directly into this pack (`HTC Sparse Attention`, `H3 Token LoRA` with built-in AdaLN LoRA porting, and `H3 Cache`). Missing a pack? Delete its red node and wire around it.\n\n- **The second Load Diffusion Model** feeds `refine_model` and `upsample_dit`: refine and upsample re-draw on a clean DiT, and `ic` needs it. It is not loaded while both are off.\n- **Saving:** HTC Save Video writes the MP4. `frame_gen x2` doubles the film to 48 fps inside the save (RTX GPU + `nvidia-vfx`); `off` keeps 24 fps. Leave it `off` if you will upsample the file later.\n\n**The MODEL chain stays drawn:** loader \u2192 HTC Sparse Attention (`native_sol_balanced`; switch to `turbo_sla_balanced` with a Turbo LoRA) \u2192 H3 Token LoRA (ships bypassed; press `Ctrl+B` to enable a LoRA with built-in AdaLN fix) \u2192 Model Preview Override \u2192 H3 Cache (ships bypassed) \u2192 this node. CLIP connects straight from the Text Encoder.\n\n**Writing**\n- One shot per hop. Later shots say only what happens next.\n- Name what you want, never what you don't: the prompt only adds.\n- Put `@tags` in the action where you want that reference used.\n- Dialogue: one line per sentence: `@kelly says, 'Coffee's on me,' and slides a cup over.` Give the listener a closed-mouth action.\n"
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -2351,6 +1759,236 @@
         "max",
         "video/HANDTIECLIPS/chain"
       ]
+    },
+    {
+      "id": 30,
+      "type": "HTCSparseAttention",
+      "pos": [
+        520,
+        -100
+      ],
+      "size": [
+        360,
+        470
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 36
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            38
+          ]
+        }
+      ],
+      "title": "HTC Sparse Attention (built-in SLA+ / Sol)",
+      "properties": {
+        "htc_speed": "sla",
+        "Node name for S&R": "HTCSparseAttention",
+        "cnr_id": "comfyui-hand-tie-clips"
+      },
+      "widgets_values": [
+        "native_sol_balanced",
+        "sol-attn",
+        20.0,
+        -1.0,
+        1.35,
+        -1.0,
+        true,
+        0,
+        "exact_prefix_rows",
+        0,
+        0.2,
+        1,
+        "0",
+        12288,
+        true,
+        1,
+        "comfy_kitchen_int8",
+        true,
+        0.0,
+        1.0,
+        false
+      ]
+    },
+    {
+      "id": 31,
+      "type": "HTCTokenLoRA",
+      "pos": [
+        520,
+        410
+      ],
+      "size": [
+        380,
+        290
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 38
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            39
+          ]
+        }
+      ],
+      "title": "H3 Token LoRA + AdaLN Fix (bypassed \u2014 Ctrl+B to enable)",
+      "properties": {
+        "htc_speed": "lora",
+        "Node name for S&R": "HTCTokenLoRA",
+        "cnr_id": "comfyui-hand-tie-clips",
+        "htc_token_lora": {
+          "open": [
+            "A"
+          ],
+          "expanded": []
+        }
+      },
+      "widgets_values": [
+        "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+        1.0,
+        1.0,
+        -1.0,
+        1.0,
+        1.0,
+        0,
+        49,
+        "None",
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0,
+        49,
+        "A to all tokens",
+        "bf16",
+        "None",
+        1.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0,
+        49,
+        "[]",
+        "[]",
+        "port"
+      ]
+    },
+    {
+      "id": 32,
+      "type": "ModelPreviewOverrideKJ",
+      "pos": [
+        520,
+        740
+      ],
+      "size": [
+        360,
+        480
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 39
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            40
+          ]
+        }
+      ],
+      "title": "Model Preview Override",
+      "properties": {
+        "htc_speed": "preview",
+        "Node name for S&R": "ModelPreviewOverrideKJ",
+        "cnr_id": "comfyui-kjnodes"
+      },
+      "widgets_values": [
+        512,
+        80,
+        true,
+        100,
+        8,
+        "taeh3.safetensors",
+        ""
+      ]
+    },
+    {
+      "id": 33,
+      "type": "HTCH3Cache",
+      "pos": [
+        520,
+        1260
+      ],
+      "size": [
+        340,
+        200
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 40
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            41
+          ]
+        }
+      ],
+      "title": "H3 Cache",
+      "properties": {
+        "htc_speed": "cache",
+        "Node name for S&R": "HTCH3Cache",
+        "cnr_id": "comfyui-hand-tie-clips"
+      },
+      "widgets_values": [
+        0.05,
+        0.3,
+        0.8,
+        1,
+        "auto",
+        false
+      ]
     }
   ],
   "links": [
@@ -2403,78 +2041,6 @@
       "IMAGE"
     ],
     [
-      23,
-      2,
-      0,
-      33,
-      0,
-      "MODEL"
-    ],
-    [
-      24,
-      3,
-      0,
-      30,
-      1,
-      "CLIP"
-    ],
-    [
-      25,
-      33,
-      0,
-      30,
-      0,
-      "MODEL"
-    ],
-    [
-      26,
-      30,
-      0,
-      31,
-      0,
-      "MODEL"
-    ],
-    [
-      27,
-      31,
-      0,
-      32,
-      0,
-      "MODEL"
-    ],
-    [
-      28,
-      32,
-      0,
-      34,
-      0,
-      "MODEL"
-    ],
-    [
-      29,
-      34,
-      0,
-      40,
-      0,
-      "MODEL"
-    ],
-    [
-      30,
-      40,
-      0,
-      7,
-      0,
-      "MODEL"
-    ],
-    [
-      31,
-      30,
-      1,
-      7,
-      1,
-      "CLIP"
-    ],
-    [
       32,
       42,
       0,
@@ -2505,6 +2071,54 @@
       43,
       1,
       "AUDIO"
+    ],
+    [
+      36,
+      2,
+      0,
+      30,
+      0,
+      "MODEL"
+    ],
+    [
+      37,
+      3,
+      0,
+      7,
+      1,
+      "CLIP"
+    ],
+    [
+      38,
+      30,
+      0,
+      31,
+      0,
+      "MODEL"
+    ],
+    [
+      39,
+      31,
+      0,
+      32,
+      0,
+      "MODEL"
+    ],
+    [
+      40,
+      32,
+      0,
+      33,
+      0,
+      "MODEL"
+    ],
+    [
+      41,
+      33,
+      0,
+      7,
+      0,
+      "MODEL"
     ]
   ],
   "groups": [
