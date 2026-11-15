@@ -20,12 +20,19 @@ Per character, decide and write down:
 - **One-sided details agree in every view** (an earring, a scar). In a front view the character's
   left is on the picture's right. Send the sheet back with the exact fix before using it; plain
   symmetric designs avoid the problem.
-- **Sings:** which sections (masked or faceless: none). **Job:** what they do when not singing.
+- **Sings:** which sections (faceless, or a mask with no jaw: none; a jaw mask can sing, SKILL.md rule 24). **Job:** what they do when not singing.
 - `ref_plan.subjects`: `name` (a short description, not a real name), `locked` (face and hair
   traits; ethnicity and age first: "a young East Asian woman, ..."), `context` (wardrobe as prose,
   never a pose or place; sent on every hop). The same for a person seen only in a photo.
+- **Lettering a character wears** (a name pendant, a shirt print, a badge) goes into `context`
+  spelled out exactly as on the sheet ("a gold pendant spelling MAYA in capital letters").
+  Written as "a name pendant", the model read the letters off the sheet and misspelled them.
 - **Never dress two characters alike;** alike clothes merge two people into one. Fix outfits and
   colours before the sheets are made.
+- **Never give two characters voices alike.** A voice clip is timbre only; two clips close in
+  pitch and texture swap, even with each line alone in its own shot. Measure each clip's pitch
+  and compare the cast before the plans; remake one higher, thinner, rougher or with a stronger
+  accent until every pair that shares a scene sounds clearly apart. Not yet proven as a fix.
 
 The camera can be "you": the singer performs to the lens and the camera has no body.
 
@@ -60,6 +67,15 @@ prompt from that exact viewpoint.
 - **Image models keep returning to their favourite view of a room.** Plan a small room on two
   plates at most (the view and its reverse); cover a third angle with framing. Assume single
   text-to-image generations: never plan on an image-edit model.
+- **Separate generations of one room disagree on its size.** Three plates of one coffee shop came
+  back as three rooms: three stools in two, four in the third; the counter four steps from the front
+  wall in one and an arm's length in another; the window on a side wall in one and the front wall in
+  another. Cut together, the room changed size at every angle. Before the prompts, write one floor
+  plan in steps (what stands on each wall, the counts, the distances) and repeat it word for word in
+  every plate prompt of that room. Put the returned plates side by side: every count, distance and
+  wall that differs is rerolled, or never shown. Making the extra views by editing one master
+  picture of the room (rather than new generations) is being tried; until it holds in a render,
+  the rule above stands.
 
 ### Plate prompt template
 

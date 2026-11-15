@@ -56,6 +56,9 @@ with it, say so to the user, and write the words that steer it. "Never" and "alw
 mean "every time it was tried, this happened", not "you may not". Guide the user the same way:
 explain the trade-off and suggest the stronger option; the user decides.
 
+A sitcom or comic scene adds [comedy](references/comedy.md) (reactions, holds, frame gags).
+Any piece can look a technique up in [techniques](references/techniques.md): what each camera move, shot, angle, lens, light, atmosphere, time effect and edit is for, the look-alike the model draws instead, and what to write; plus moves tested on single clips.
+
 This is [continuity](references/continuity.md). How each sentence, verb, face and camera move
 reads once the blocking is right is [performance](references/performance.md). An adult or explicit piece adds
 [adult](references/adult.md) to both.
@@ -125,6 +128,10 @@ gives the model a reason to redraw the frame. Every take:
   (0 to the hop's length).
 - **Has few timed sentences.** Every sentence boundary is a place the picture can jump: a
   handful across a minute holds, one per hop does not.
+- **Ends every hop but the take's last on an action with no line in it,** and gives each line
+  its own timed sentence. The next window opens by restating the hop's last timed sentence;
+  if that sentence holds lines, they are spoken again (lints `carry-line`, `stacked-lines`).
+  A take with no lines (an act, a walk) does not hit this.
 - **Names a place in the same words in every sentence set there,** time of day included. A
   new background detail in one sentence redraws the place at that boundary. No arc in one
   sentence ("first walks, then stops"): a sentence is given whole to every window it spans,
@@ -286,7 +293,11 @@ held; your own frame stats can move a rule down, never up.
 23. **Whoever is not singing has a concrete action.** A non-singer alone on screen over vocals
     mouths the song: put their solos on instrumental bars, or keep the singer in frame and give
     them a closed mouth.
-24. **A masked or faceless character never sings.**
+24. **A masked or faceless character never sings,** unless the mask has a jaw the model can move (a
+    lower-face skull half-mask sang a whole MV): then the jaw does the singing ("the jaw of the
+    skull half-mask working with every word"). Never write a masked character unmasked, not even
+    from behind or putting the mask on: the model invents a bare face and every continuation keeps it.
+    The mask phrase names what shows round it ("his bare forehead, brows and eyes above it").
 25. **Sung beats only over sung music;** check the section table.
 26. **No song-structure words** ("hook", "chorus", "verse", "the last line"); describe what the
     mouth and body do.
@@ -313,6 +324,10 @@ through `check_plan.py --map` and these questions first; the hand-over says the 
 lists every flag left with its reason. A "no" is a fix before the user spends the render.
 
 1. Does every shot's view match a plate on its hop, or is it close with its background named?
+   Open each plate image now (the gate refuses the check until you have) and ask for every shot:
+   can the camera see this from where it stands, past whatever is in the foreground? Can each spot's
+   contact (an elbow, a lean, a hand on) actually reach that furniture as the plate draws it?
+   Does each line belong to a face turned to the camera, alone in its shot or the dominant face?
 2. Does every journey go the way the map says, the goal ahead of the traveller?
 3. Does every person keep their side in each view, and their place when the scene carries on?
 4. Can each person see what they look at, and do the eyelines meet?

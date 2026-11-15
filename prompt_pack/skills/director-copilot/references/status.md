@@ -85,8 +85,47 @@ can only move a rule down.
 - Rerouting a walk to open floor the plate shows ended the clipping through furniture.
 - Naming the garment's defining cut (neckline) in the outfit phrase fixed a close restart that had
   redrawn the garment plainer.
+- An undress run as one unbroken shot (turn, zip, drop, then the cut): a version cutting
+  mid-undress had replayed it; the one-shot version held (user-watched).
+- Waist-up framing plus "the low glass table a full step in front of them" ended bare legs
+  clipping through a glass table.
+- An arousal state phrase in every nude shot: the version naming it only where touched drew him
+  at rest (from the sheet) and made it appear on mention; the state-phrase version held.
+- `sand_tie` on a fixed-camera adult take with no lines (five windows, three position changes):
+  held as one shot (user: "mint").
+
+- A lower-face skull half-mask singing a whole MV, the beats giving the jaw every word ("the jaw of
+  the skull half-mask working with every word"): held, user-watched (11-13).
+- A masked character masked from the first frame, the mask phrase naming the bare forehead, brows
+  and eyes above it: held through 15 hops (11-13).
+
+**Sitcom film** (one user-passed 10-hop pilot, 11-15: "done and good")
+- An entrance written as one continuous take from the door to the mark, the camera pushing in with the
+  walker, after a cut there had read as a jump.
+- A vanish revealed by a move: a close on a watcher, the camera arcing round and drawing back until the
+  empty spot is in frame, a soft chime, heads shaking.
+- A whole exit in one take with everyone and every prop named from the first frame (the cup set down and
+  named as left there in every later shot).
+- Dialogue through a lower-face skull half-mask ("the jaw ... working with every word"), voiced row on
+  speaking hops only.
+- Five voiced characters across a film, at most three voices per hop, banter at about two words a second.
+- Two plates per set (a view and its reverse), spots named by which end of the counter.
+
+**Finish and retakes** (one user-passed MV, 11-14: "pass, fantastic")
+- A black-and-white film rendered in colour, the noir look carried by hard practical light in the
+  plates and beats, then graded to mono in the edit in one ffmpeg pass at the render's own bitrate,
+  yuv420p. Colour refs and plates stay usable and every hop gets the identical grade.
+- White dips (`transitions.py`, 0.6 s) on the cut into a flashback and the cut back out.
+- A wordless humming choir kept as dark silhouettes against bright windows, faces in shadow, while
+  the lead sings in the foreground.
+- Retaking one hard-cut continuation and locking every hop after it (`locked: true`): the locked
+  hops loaded from cache; the retake's last frames met the next locked hop with a small mismatch
+  the user still read as coherent, because that join is a cut.
 
 ## Failed (tried on purpose; do not rely on it)
+
+- A selective colour hold (ffmpeg `colorhold`) on candle flames in a mono grade: caught the flames
+  weakly and leaked onto skin tones (11-14).
 
 - A hop's end state in its own short last window ("At 00:15.800-00:17.000, @kyo stands with her lips
   closed in a cold smirk"): a hard cut there. Fold it into the window before (lint `end-state-window`).
@@ -112,10 +151,64 @@ can only move a rule down.
 - A story readable only with the plot in hand: a showcase opening with no want, an untriggered
   flashback, a cut from a yes to a new place.
 
+- `sand_tie` dialogue with several lines stacked in one timed sentence that ended the window:
+  the next window restated it and the lines were spoken again, several times in a one-minute
+  take (lints `carry-line`, `stacked-lines`).
+
+- A cut in the middle of one continuous action (a man walks in, cut, he leans on the counter): read as a
+  jump. Keep the action in one shot and move the camera with it (11-15, user-watched).
+- A vanish written as a cut back to the same framing with the person gone: read as an error. Reveal the
+  empty spot with a move (a close on a watcher, the camera arcing round until the spot comes into view).
+- A shot that leaves out someone sitting in the frame: at the next cut he popped in with a prop that had not
+  been there, and an unnamed cup vanished (11-15). Name everyone and every prop from the shot's first frame.
+- A tilt down to someone's feet from a camera behind a counter (11-15, three renders and previews): the
+  counter hides the floor beyond it, so the model removed the counter and the room floated. Ask what the
+  camera can see from where it stands; show it with a low angle from the room side or by people looking
+  (lint `tilt-past-near`).
+- A spot asking for contact the plate cannot give ("one elbow on the counter top" where the plate's low
+  stools stand a step back from a bar-height counter): the stools stayed where the plate had them and the
+  man was drawn at the counter, sitting on air (11-15). Look at the plate and write only the contact
+  its furniture allows.
+- Three speakers trading back-to-back lines in one wide (11-15, twice): the model gave each line to the
+  clearest face, merged two lines into one in the wrong voice and rushed the third. The proven form is
+  above (each line its own shot). A line written into a walk or an action stretch came out early, and a
+  line given to a face looking down went to the biggest face in frame (lint `multi-speaker`).
+- Six shots in a 14 s hop with lines (11-15): the model drew fewer shots than written and every line
+  slid one shot early onto the wrong face (lint `shot-count`; 3-4 shots per hop with lines is proven).
+
 ## Unproven (from one failure; test before a piece depends on it)
+
+- A mask-on moment on screen (the man unmasked from behind, then pressing the mask over his face)
+  ended the hop on a fully unmasked, invented face, and the next continuations would have kept it
+  (11-12). Never write a masked character unmasked; start him masked.
+
+- A `motion_context` restart (`anchor: "restart"`) on a stack with character sheets put the sheet
+  itself into frame 0 (11-11). Two later MVs wrote every new place as a hard-cut continuation
+  instead (`join: "hard_cut"`, no anchor, the hop before ending on the face) and both were rated
+  the best so far; the checker still warns on that form, so waive it with this reason. Not yet a
+  same-seed A/B against the restart.
+
+- A masked character kept far in the background with no sheet on the hop, carried by words only
+  ("a man in a black sweatshirt, a white skull half-mask over his mouth and jaw, his bare forehead,
+  brows and eyes above it"), came out as a whole cartoon skull head every time; the same character
+  with his sheet on the hop, close, looked right (11-13). For a recurring masked or costumed
+  character, put the sheet on every hop where he appears, even small, and keep the words to
+  clothes and place; the sheet carries the mask.
+
+- `sand_tie` dialogue with one line per timed sentence and every window ending on a line-free
+  action (the fix for the repeated lines above).
 
 - Dialogue density of about two words a second (three or four capped turns per 10 s hop) without
   gibberish or swapped mouths. Written after a chain ran at 0.7 words a second and played thin.
+
+- Two voice clips close in pitch (two low male voices) swapped timbre on lines even with each line
+  alone in its own close (11-15). Keep the cast's voices apart (story_cast_plates.md).
+- A dialogue hop rebuilt as four shots, one line each, the speaker alone and facing the camera
+  (after six shots and a shared wide had failed): the user called it "still kinda iffy, wrong people
+  speaking, but it worked out" (11-15). Better, not yet clean; the close voices above may be the rest.
+- Three plates of one room made as separate generations: the room changed size and layout from angle
+  to angle (11-15). One floor plan repeated in every plate prompt, or views edited from one master
+  picture, are the candidates.
 
 - `dialogue_lock` on a `motion_context` film: safe so far (lip sync and sound bed held), never yet
   seen removing babble. Does nothing under `hand_tie`.

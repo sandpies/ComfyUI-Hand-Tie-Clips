@@ -23,6 +23,9 @@ the first hop ignores it.
 | Two people circling each other | a slow arc, the speaker centred |
 | Energy, a crowd, a performance | moves with the lead: alongside, orbiting, rising |
 | An ending, isolation | pulls back until the people are small |
+| Suspicion, a tense silence | a slow zoom from a camera that stays put, the background flattening |
+| A shock, a punchline | a crash zoom onto the face that takes it, then dead still |
+| The turn from speaker to listener | focus pulls from the near person to the reactor's eyes |
 
 ## The shape of a hop
 
@@ -178,6 +181,30 @@ One move per shot: **type + amount + speed + what stays in frame + where it stop
   and an end view can be drawn as a cut.
 - In a close shot of one moving part (hands on a deck, a prop), say what stays still and where,
   and that only that part moves, or the body and the frame slide with it.
+
+### Each move and the look-alike it turns into
+
+The full list for every move, shot, lens and light is in [techniques](techniques.md). Every move has a cousin the model draws instead, and a tell that shows it on screen. Write the
+thing that only the real move has. Tested on single H3 clips elsewhere, not yet in a chain.
+
+| Move | It turns into | The tell | Write |
+|---|---|---|---|
+| Push in / pull back | a zoom | the frame just grows; nothing near slides past | say the camera travels, and name a near thing that slides out of the frame ("the counter edge slides out of the bottom of the frame") |
+| Zoom | a push in | the foreground shifts | "the camera stays where it is and the lens tightens; the background flattens behind him" |
+| Arc | a pan | only the view turns; near things do not shift against far ones | name a near thing that slides across the frame as the camera curves round |
+| Whip pan | a fast pan | the middle stays readable | a smear of blur in the middle, then a sharp dead stop on the target |
+| Crash zoom | a fast push in | the foreground shifts, or it keeps creeping | the camera stays put, the lens snaps in on one face in under a second and freezes |
+
+- **Snap moves land dead still.** A crash zoom, whip pan or jolt snaps, then the camera holds
+  stock-still on the target; any drift after the snap reads as a mistake.
+- **The camera stops when the body stops.** A track or arc with a walk, turn or lean starts and
+  stops on the same moment as the person ("and stops as he reaches the counter").
+- **Give the move its own times:** "At 00:03.000-00:06.000, the camera starts a slow arc to the
+  left ... and stops on @b's face." A hold is "the camera holds dead still on ...", with no start.
+- **One axis per move.** A push, arc, tilt and zoom stacked in one beat comes out as a wobble.
+- **A reveal from behind a foreground edge:** a dark, out-of-focus doorframe or pillar fills part
+  of the frame, and the camera trucks sideways until it slides off and the person is in full
+  view. A shoulder or pillar wiping across the lens can also bridge two angles in one take.
 - Proven: holds, arcs, backs away ahead, rises, starts low tilted up, push in, draws back, tracks
   backward ahead, handheld, cuts, tilt up, a fast zoom to a close, drone high wide, a mounted low
   camera, a helmet POV, a drone alongside. Truck, pedestal and roll are unproven: try one at low

@@ -12,7 +12,15 @@ because bodies in contact are the hardest thing the model draws.
   phrase ("her skirt bunched at her waist", "both nude") from the hop it happens to the end. The
   undress is shown on screen in a hop of its own or inside one; never across a cut. A sheet's
   outfit stays in the header lines (`locked`, `context`); the beats carry the state phrase, and a
-  nude person's ref is `partially_preserved`.
+  nude person's ref is a sheet of its own (the same person undressed, made by image-editing
+  the dressed sheet), `fully_preserved`, riding from the first hop they are nude.
+- **An undress plays in one shot.** A cut while the garment is coming off replays the whole
+  undress in the next shot. Run the turn, the zip and the drop as one unbroken shot, then cut.
+- **Arousal is a state too.** A nude sheet shows its person at rest, and the hop draws them that
+  way until a beat names otherwise; then it appears from nowhere. Put "his penis erect" (or
+  the like) in every shot from the hop he is nude, not only where it is touched.
+- **Bare legs near low furniture clip into it** (a glass table at shin height): frame the
+  shot from the waist up, or put the piece a stated step away and out of the frame.
 - **The position is a spot.** Write it as a fixed phrase with the camera's side: "on all fours on
   the bed, facing the headboard, her back to the camera". A change of position is a row of its
   own, shown on screen, with its real seconds.

@@ -51,6 +51,11 @@ Part 2 is this skill's lints. Each one is a failure seen on a real render:
                    rendered as written, not on the take's clock.
   arc              (sand_tie) "first ... then" in one timed sentence: every window it
                    spans replays the whole arc.
+  carry-line       (sand_tie) a hop that is not its take's last ends on a timed sentence
+                   with a spoken line: the next window opens by restating that
+                   sentence, and the line is spoken again. End on a line-free action.
+  stacked-lines    (sand_tie) two or more spoken lines in one timed sentence: the
+                   sentence is given whole to every window it touches. One line each.
   slope            (sand_tie) stairs or a slope with no direction relative to the
                    camera: a person facing the lens climbs backwards.
   join-calm       (hand_tie) a hop ends, or the next one starts, on a raised hand
@@ -404,6 +409,25 @@ def main():
         if not mv and re.search(r"(?:^|[\s,])'[A-Z][^']{2,}'", beat) and not re.search(r"\beyes (?:stay |fixed |locked )?on @", beat, re.I):
             lint.append(f"shot {i}: eyeline: a line is spoken with no eyeline. Give the speaker's eyes a target "
                         f"and a direction (\"his eyes on @b just left of the lens\"), or he talks to the audience.")
+        # Two speakers trading lines inside one framing: the model hands each line to the clearest face
+        # and merges back-to-back lines (a sitcom render: two lines fused in the wrong timbre, twice).
+        shot_segs = [g for g in re.split(r"\[Shot\s+\d+\]", beat, flags=re.I) if g.strip()] or [beat]
+        for k, seg in enumerate(shot_segs, 1):
+            spk = []
+            for m in re.finditer(r"@(\w+)(?:'s)?[^.@']{0,90}?\b(?:says|whispers|shouts|asks|yells|mutters|answers)\b"
+                                 r"[^']{0,200}'[A-Z]", seg):
+                if not any(same_base(m.group(1), x) for x in spk):
+                    spk.append(m.group(1))
+            if not mv and len(spk) >= 2:
+                where = f"[Shot {k}]" if len(shot_segs) > 1 else "the beat"
+                lint.append(f"shot {i}: multi-speaker: {where} has lines from {', '.join('@' + x for x in spk)}. In one "
+                            f"framing the model gives each line to the clearest face and merges back-to-back lines. "
+                            f"Give each speaker their own shot, face toward the camera; a shared frame may carry one "
+                            f"speaker only, the dominant face.")
+        n_shots = len(re.findall(r"\[Shot\s+\d+\]", beat, re.I))
+        if n_shots > 4:
+            lint.append(f"shot {i}: shot-count: {n_shots} shots in one hop. The model drew fewer shots than written and "
+                        f"every line slid onto the wrong face (6 shots in 14 s). Keep a hop to 4 shots or fewer.")
         nxt = shots[i] if i < len(shots) else None
         if nxt is not None and nxt.get("anchor") != "restart" and (nxt.get("directives") or {}).get("join") != "hard_cut":
             last = sents[-1] if sents else ""
@@ -445,7 +469,16 @@ def main():
                         lint.append(f"shot {h + 1}: take-lead: its opening (\"{lead[:60]}\") differs from the "
                                     f"take's (shot {grp[0] + 1}). Only the take's first opening is used; make "
                                     f"it the same words, or cut with anchor: restart.")
+                    if j < len(grp) - 1 and events and QUOTE.search(events[-1][2]):
+                        lint.append(f"shot {h + 1}: carry-line: the hop ends on a timed sentence with a "
+                                    f"spoken line (\"{events[-1][2][:60]}\"). The next window of the take "
+                                    f"opens by restating it, so the line is spoken again. End the hop on "
+                                    f"a line-free action sentence.")
                     for _t0, _t1, body in events:
+                        if len(grp) > 1 and len(QUOTE.findall(body)) >= 2:
+                            lint.append(f"shot {h + 1}: stacked-lines: \"{body[:60]}\" holds "
+                                        f"{len(QUOTE.findall(body))} spoken lines in one timed sentence. "
+                                        f"Give each line its own timed sentence.")
                         if ARC.search(body):
                             lint.append(f"shot {h + 1}: arc: \"{body[:70]}\" puts a first/then arc in one "
                                         f"sentence. It is given whole to every window it spans, and each one "
@@ -721,6 +754,23 @@ def main():
                         lint.append(f"shot {h}: state: {where} shows @{mine[0]} but drops '{name}' "
                                     f"(\"{phrase}\"). Each cut redraws them from the sheet; repeat the phrase "
                                     f"word for word in every shot they are in while it holds.")
+        # A camera behind foreground furniture cannot tilt down past it: the near piece hides the floor
+        # beyond, so the model deletes the furniture to show what was asked (a sitcom render: the counter vanished twice).
+        for pl, info in (smap.get("places") or {}).items():
+            near = str(info.get("near") or "").strip()
+            if not near:
+                continue
+            for i, s in enumerate(shots, 1):
+                for k, seg in enumerate([g for g in re.split(r"\[Shot\s+\d+\]", s.get("beat") or "", flags=re.I)
+                                         if g.strip()], 1):
+                    if f"@{pl}".lower() not in seg.lower():
+                        continue
+                    if re.search(r"\b(?:camera|lens)\b[^.]{0,60}\btilts?\b[^.]{0,20}\bdown\b|\btilts? (?:slowly )?down\b",
+                                 seg, re.I):
+                        lint.append(f"shot {i}: tilt-past-near: [Shot {k}] tilts down in @{pl}, whose plate has "
+                                    f"\"{near}\" in the foreground between the camera and the room. A tilt down shows "
+                                    f"that, not the floor beyond it; the model removes it to obey. Cut to a low angle "
+                                    f"from the room side, or show it by people looking.")
         for pl, info in (smap.get("places") or {}).items():
             lacks = [str(x) for x in (info.get("lacks") or []) if str(x).strip()]
             if not lacks:

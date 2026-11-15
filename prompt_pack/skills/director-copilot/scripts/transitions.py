@@ -33,8 +33,14 @@ def main():
     # brightness lifts or drops luma; saturation goes to 0 at the peak so white is white, not tinted
     vf = (f"eq=eval=frame:brightness='min(1,{w})-min(1,{d})':"
           f"saturation='1-min(1,{w}+{d})'")
-    cmd = ["ffmpeg", "-y", "-v", "error", "-i", src, "-vf", vf, "-c:v", "libx264", "-crf", "16",
-           "-preset", "medium", "-c:a", "copy", out]
+    # Keep the render's quality: encode at the source's own video bitrate (a CRF re-encode of a
+    # grainy render came out at a third of the size), in yuv420p so every player opens it.
+    br = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                         "stream=bit_rate", "-of", "csv=p=0", src],
+                        capture_output=True, text=True).stdout.strip()
+    rate = ["-b:v", br, "-maxrate", str(int(int(br) * 1.25)), "-bufsize", str(int(br) * 2)]         if br.isdigit() else ["-crf", "12"]
+    cmd = ["ffmpeg", "-y", "-v", "error", "-i", src, "-vf", vf, "-c:v", "libx264", "-pix_fmt", "yuv420p",
+           *rate, "-preset", "slow", "-c:a", "copy", out]
     print(" ".join(cmd))
     subprocess.run(cmd, check=True)
     print("wrote", out)

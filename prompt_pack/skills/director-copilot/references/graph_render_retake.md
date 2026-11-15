@@ -44,6 +44,12 @@ python scripts/build_graph.py TEMPLATE.json OUT.json \
 
 ## Retakes
 
+**Build a retake graph from what the user actually rendered, never from the template.** The hop
+cache keys every hop on the model and every LoRA's on/off and strength; users change these in the
+UI between the build and the render. Before handing over a retake graph, read the last run's
+`LTX_lora_loader` lines and `hop cache: ... model <key>` line in the ComfyUI log and make the graph
+match them exactly; tell the user the key to expect. A mismatch re-renders the whole piece.
+
 With `cache_hops` on, a hop whose inputs did not change loads from disk. To retake one hop, change
 only that shot. A `motion_context` continuation after it re-renders too (it starts from the changed
 frames), and so does the next continuation after that, up to the next restart: a restart starts
