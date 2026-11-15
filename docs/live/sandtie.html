@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SandTie PromptRig · Live Demo</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="extensions/htc/h3_ref_chain.css">
+<style>
+:root{color-scheme:dark}
+body{margin:0;background:#141517;color:#e8e8e8;font:14px/1.5 system-ui,sans-serif}
+header{padding:14px 18px;border-bottom:1px solid #2a2c31;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+header h1{font-size:16px;margin:0} header a{color:#74c0fc;margin-right:12px} header .note{color:#9aa0a6;font-size:12px;flex-basis:100%}
+#stage{margin:12px;border:1px solid #2a2c31;border-radius:8px;padding:12px;background:#0d0e10;min-height:760px}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#25262b;border:1px solid #444;padding:9px 16px;border-radius:6px;opacity:0;transition:.2s;pointer-events:none}
+#toast.on{opacity:1}
+</style></head><body>
+<header><h1>SandTie PromptRig (H3)</h1>
+<span><a href="./">Hand Tie Clips</a><a href="sandtie.html">SandTie PromptRig</a>
+<a href="https://github.com/sandpies/ComfyUI-SandTie-PromptRig">GitHub</a></span>
+<span class="note">The rig's real Studio UI with its full dial catalogs. Pick dials, then press Write with the Instant CPU Tie mode: the page shows the real CPU Tie output for the sample brief. LLM modes need your local writer in ComfyUI.</span></header>
+<div id="stage">loading SandTie Studio…</div><div id="toast"></div>
+<script type="module">
+
+const ready = async () => {
+  if (!("serviceWorker" in navigator)) { document.body.textContent = "This demo needs a browser with service workers."; return false; }
+  await navigator.serviceWorker.register("./sw.js");
+  if (!navigator.serviceWorker.controller) {
+    await new Promise((r) => navigator.serviceWorker.addEventListener("controllerchange", r, { once: true }));
+  }
+  return true;
+};
+const toastEl = document.getElementById("toast");
+window.__demoToast = (t) => { if (!t) return; toastEl.textContent = t; toastEl.classList.add("on");
+  clearTimeout(window.__tt); window.__tt = setTimeout(() => toastEl.classList.remove("on"), 3200); };
+function makeNode(type, title, widgets, size) {
+  const domWidgets = [];
+  const node = {
+    id: type === "HandTieClips" ? 1 : 2, type, title, size: size.slice(), properties: {}, inputs: [], outputs: [],
+    widgets: widgets.map((w) => ({ ...w, options: { ...(w.options || {}) }, callback: undefined })),
+    graph: window.__appStub ? null : null,
+    addDOMWidget(name, kind, el, opts) { domWidgets.push(el); return { name, type: kind, element: el, options: opts || {}, value: "" }; },
+    addWidget(kind, name, value, cb, opts) { const w = { type: kind, name, value, callback: cb, options: opts || {} }; this.widgets.push(w); return w; },
+    setSize(sz) { this.size = [sz[0], sz[1]]; }, computeSize() { return this.size; },
+    setDirtyCanvas() {}, remove() {}, getInputNode() { return null; }, onResize() {},
+    domWidgets,
+  };
+  return node;
+}
+
+if (await ready()) {
+  const nodes = await (await fetch("data/nodes.json")).json();
+  const { mountSandTieStandalone } = await import("./extensions/htc/editor/sandtie_ui.js");
+  const node = makeNode("SandTiePromptRig", "SandTie PromptRig (H3)", nodes.sandtie, [1200, 800]);
+  const stage = document.getElementById("stage"); stage.textContent = "";
+  mountSandTieStandalone(node, stage, { onSyncOutputs: () => window.__demoToast("Prompt synced to the node's output.") });
+}
+</script></body></html>

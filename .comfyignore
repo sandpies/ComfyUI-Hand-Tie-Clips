@@ -36,6 +36,7 @@ docs/DEVLOG.md
 # Lever-sweep working notes. Engineering, not installer material.
 docs/LEVER_AUDIT.md
 docs/demo.html
+docs/live/
 
 # The music-video agent skill: documents plus helper scripts an agent runs from
 # a git checkout (they find the pack and launch tools). Nothing in the node
