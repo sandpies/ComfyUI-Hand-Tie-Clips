@@ -458,6 +458,48 @@
       "group": "Light · Dramatic & Storytelling",
       "rule": "crisp side-back kicker light slicing a bright metallic ribbon along the far jawline, cheekbone, and shoulder contour",
       "domain": "general"
+    },
+    {
+      "id": "light_ring_beauty_plus_neon_rim",
+      "label": "📱 Beauty Ring-Light Catchlight + Soft Neon Magenta/Cyan Rim",
+      "group": "Light · Neon, Cyberpunk, Club & SFX",
+      "domain": "general",
+      "rule": "Crisp circular ring-light key illuminating facial features with clean catchlights, paired with soft magenta-and-cyan neon rim lights separating hair and shoulders from the background."
+    },
+    {
+      "id": "light_golden_hour_dust_slats",
+      "label": "☀️ Golden-Hour Window Slats & Floating Dust Motes",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "domain": "general",
+      "rule": "Warm low-angle golden afternoon sunlight slicing diagonally through window slats across skin and floor, illuminating delicate floating dust motes in soft natural bounce."
+    },
+    {
+      "id": "light_subway_cool_fluorescent_flicker",
+      "label": "🚇 Underground Metro Cool Fluorescent & Warm Train Sweep",
+      "group": "Light · Atmospheric, Fire, Screen & Night",
+      "domain": "general",
+      "rule": "Cool overhead subway fluorescent tubes casting crisp industrial top-light, punctuated by warm amber train headlight sweeps gliding across faces and tiled walls."
+    },
+    {
+      "id": "light_paper_lantern_amber_glow",
+      "label": "🏮 Warm Red Paper-Lantern Glow & Wet Asphalt Bounce",
+      "group": "Light · Warm, Practical & Boudoir",
+      "domain": "general",
+      "rule": "Rich warm amber and crimson practical glow from hanging paper lanterns wrapping skin naturally, mirrored by cool teal street reflections bouncing up from damp pavement."
+    },
+    {
+      "id": "light_kpop_concert_multi_spot_haze",
+      "label": "🎤 K-Pop Concert Multi-Spot Beams & Soft Stage Haze",
+      "group": "Light · Studio, Beauty & Glamour",
+      "domain": "general",
+      "rule": "Clean overhead concert spotlights in crisp white and pastel lavender cutting through light atmospheric haze, sculpting crisp rim highlights along hair and stage outfits."
+    },
+    {
+      "id": "light_overcast_editorial_skylight",
+      "label": "☁️ Soft Overcast Editorial Skylight (Even Wrap & Clean Shadows)",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "domain": "general",
+      "rule": "Huge diffused overcast skylight washing evenly across the scene with gentle, natural shadow falloff and true-to-life skin and fabric color fidelity."
     }
   ]
 }

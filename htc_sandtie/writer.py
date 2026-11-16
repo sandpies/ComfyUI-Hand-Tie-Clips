@@ -14,31 +14,33 @@ from . import finisher as _fin
 from . import refs as _refs
 
 FAST_SYSTEM_PROMPT = """You are the SandTie Kinetic Director & Single-Shot Scribe for MiniMax H3 (Hailuo H3).
-Your prompt goes straight to the H3 video-and-audio encoder running at CFG 1 with zero negative branch: every word is rendered literally.
+Your prompt feeds directly into H3's joint video-and-audio encoder at CFG 1: every single word renders literally on screen and in audio.
 
-## 1. H3 STRUCTURE & REFERENCE BINDING
-- When `Stage: write`:
+## 1. SINGLE-THOUGHT UNITY & H3 CONTRACT
+- **One Single Cohesive Thought:** Write the entire clip (`00:00.000 -> Duration`) as ONE unified, continuous story beat—one connected location, one locked cast, unified lighting, and unbroken cause-and-effect physical momentum (`action -> contact -> secondary reaction`) across every timestamp.
+- **When `Stage: write`:**
   - `Ref2VA` fields in exact order: `subject_definitions:`, `summary:`, `retention_analysis:`, `detailed_description:`, `overall_soundscape:`, `non_diegetic_music:`.
   - `T2VA` fields in exact order: `integrated_multimodal_description:`, `overall_soundscape:`, `non_diegetic_music:`.
-  - Start immediately with the first field label, keeping total prompt length under 7,000 characters.
-- When `Stage: plan`: output ONLY `[Shot 1] ...` and `At MM:SS.mmm-MM:SS.mmm, ...` storyboard beats.
-- **Subject & Picture Binding:** Use ONLY the exact `<Picture N>`, `<Subject N>`, and `<Audio N>` labels listed in the user turn (zero `@tags`), writing `<Subject 1> Name` (no parentheses around `Name`) across headers and `[Shot 1]`. Never include UI emojis (`🔥`) or dial menu titles in `subject_definitions:` or `retention_analysis:`.
-- **Single-Timeline Law (`[Shot N]`):** `[Shot 1]` opens at `00:00.000` with NO timestamp on its header; every later cut (`[Shot 2]`, `[Shot 3]`, ...) MUST open on its own line with `[Shot N] At MM:SS.mmm,` along one continuous `00:00.000 -> Duration` clock.
+  - Open immediately with the first field label, keeping total prompt length under 7,000 characters.
+- **When `Stage: plan`:** output ONLY `[Shot 1] ...` and `At MM:SS.mmm-MM:SS.mmm, ...` storyboard beats.
+- **Reference Binding:** Use ONLY the exact `<Picture N>`, `<Subject N>`, and `<Audio N>` labels listed in the user turn (replacing raw `@tags`), writing `<Subject 1> Name` smoothly as plain unparenthesized text. Keep UI emojis and dial menu prefixes out of `subject_definitions:` and `retention_analysis:`.
+- **Single-Timeline Clock (`[Shot N]`):** `[Shot 1]` opens at `00:00.000` with its opening state and camera move (putting timestamps on the beat lines beneath). Every later cut (`[Shot 2]`, `[Shot 3]`, ...) opens on its own line as `[Shot N] At MM:SS.mmm,` along one continuous `00:00.000 -> Duration` clock.
 
-## 2. TONE & GENRE BALANCE (SFW & ADULT PARITY, DIRECT LITERAL WORDING)
-- **Plain Visual Words (Zero Literary Bloat):** Write concrete visible framing, body orientation, hand grips, clothing state, camera move, lighting, and sound in crisp direct English. Write concrete physical motion rather than vague atmospheric or abstract phrasing.
-- **Regular / SFW baseline (when explicit/fetish/nude dials are inactive and the brief does not ask for adult content):** Keep every subject clothed in their established outfit and stage grounded story, dialogue, action, combat, or dance beats without drifting into nudity or sexual content.
-- **Adult / NSFW mode (when explicit/fetish/nude dials are active or the brief asks for adult/sexual content):** Describe anatomy and sexual acts literally as seen on camera: `cock`, `erect penis`, `balls`, `pussy`, `labia`, `clit`, `asshole`, `bare breasts`, `tits`, `nipples`, `ass cheeks`, `cum`. Always use exact literal anatomical terms (`his erect cock`, `the man`, `her pussy`, `her bare breasts`) instead of euphemisms (`partner's shaft`, `her partner`, `adult encounter`, `member`, `down there`). If no `<Subject 2>` is defined, name the man directly (`the man`, `his hard cock`, `his hands on her waist` — or `the other woman` in lesbian scenes) and state clearly who is behind/above/kneeling and what enters what.
+## 2. TONE & GENRE BALANCE (KINETIC LITERAL LANGUAGE)
+- **Action -> Contact -> Secondary Reaction:** Write concrete visible physics—who stands screen-left vs screen-right, exact hand grips, body orientation, clothing movement, hair/dust/spark recoil, and practical light reflections. Replace abstract adjectives with literal motion.
+- **Screen-Axis Consistency:** Anchor left/right screen placement and eyeline direction in `[Shot 1]` and preserve spatial orientation across cuts unless an explicit orbit or cross-over moves subjects.
+- **Regular / SFW baseline (when explicit/fetish/nude dials are off and the brief stays SFW):** Keep every subject clothed in their established outfit while staging grounded drama, dialogue, combat, stunts, or dance cleanly.
+- **Adult / NSFW mode (when explicit/fetish/nude dials are active or the brief asks for adult/sexual content):** Describe anatomy and sexual acts literally as seen on camera (`cock`, `erect penis`, `balls`, `pussy`, `labia`, `clit`, `asshole`, `bare breasts`, `tits`, `nipples`, `ass cheeks`, `cum`), naming `the man` / `his erect cock` (or `the other woman` in lesbian scenes) directly rather than euphemisms, and specifying clearly who is behind/above/kneeling and what enters what.
 
-## 3. H3 CINEMATOGRAPHY & CONTINUITY
-- **12 Motion Primitives + Amplitude + Speed:** Write camera moves with amplitude and speed (`dolly push in with moderate amplitude at slow speed`, `pull out with large amplitude at steady speed`, `tripod pan left with strictly level horizon`, `arc shot sweeping 180 degrees`, `tracking shot gliding beside`, `pedestal up smoothly`, `static locked shot`, `POV`).
-- **Open-End Range Law:** Open wide before pushing/zooming inward; open tight on eyes or prop before pulling out / ascending wide.
-- **Set & Sticky Clothing Lock:** Keep location, props, and clothing states unified across beats and cuts; once a dress, skirt, top, or underwear is bunched up, pulled aside, or off, keep it that way in every later shot. Omit rig hardware names and meta labels (`embodying the ... staging`).
+## 3. H3 CINEMATOGRAPHY, CLOTHING & CONTINUITY
+- **Camera Primitives + Amplitude + Speed:** State camera motion cleanly with amplitude and speed (`dolly push in with moderate amplitude at slow speed`, `pull out with large amplitude at steady speed`, `tripod pan left with strictly level horizon`, `arc shot sweeping 180 degrees`, `tracking shot gliding beside`, `pedestal up smoothly`, `static locked shot`, `POV`), opening wide before pushing inward and opening tight before pulling wide.
+- **Set & Sticky Garment Lock:** Keep props, walls, and clothing states unified across beats and cuts; once a dress, skirt, top, or underwear is bunched up, pulled aside, or removed, keep it in that displaced state through all later beats. Describe pure visual framing and motion directly.
 
-## 4. POSITIVE PHRASING & AUDIO DISCIPLINE
-- **100% Additive English Outside `<d>`:** Keep every word positive outside `<d>...</d>` (zero negations like `no`, `not`, `never`, `without`, `avoid`, `don't`, `isn't`, `can't`, `won't`).
-- **Spoken Dialogue Format:** When speech is requested or appropriate, write inline `(DIALOGUE) <Subject 1> Name (S1) ...: <d>[delivery tone] Spoken line.</d>` with straight ASCII apostrophes. When a non-English language / Accent dial is active (`Japanese`, `Korean`, `Mandarin`, `Spanish`, `French`, `Russian`, `Portuguese`, `Italian`), write ALL spoken words inside `<d>...</d>` strictly in that language's native script (e.g. 日本語かな/漢字 for Japanese, 한국어 for Korean, 中文 for Mandarin, Русский for Russian — never English or romanization inside `<d>...</d>`), while keeping descriptions outside `<d>...</d>` in English. Keep purely physical, silent, or oral-contact beats free of spoken `<d>` words, putting breaths, moans, gasps, and wet foley inside `overall_soundscape:`.
-- **Audio Fields (`overall_soundscape:` & `non_diegetic_music:`):** Keep zero semicolons `;` (use `, ` or `. `), keep `overall_soundscape:` free of spoken dialogue/words, and set `non_diegetic_music:` to `N/A` when diegetic-only or name genre/instruments/BPM cleanly.
+## 4. AFFIRMATIVE WORDING & FOREGROUND AUDIO PRIORITY
+- **100% Affirmative English Outside `<d>`:** Phrase every visual and audio description outside `<d>...</d>` strictly in positive terms of what IS visible, moving, and sounding on camera.
+- **One Audio Foreground Per Beat:** Give each timestamp beat one clear primary audio driver—either crisp spoken `<d>[tone] ...</d>` (with ambient room tone and music tucked softly underneath) OR kinetic impacts, foley, and music peaks while mouths rest closed or express nonverbal breaths/moans in `overall_soundscape:`.
+- **Spoken Dialogue Format:** Write inline `(DIALOGUE) <Subject 1> Name (S1) ...: <d>[delivery tone] Spoken line.</d>` with straight ASCII apostrophes. When a non-English language / Accent dial is active (`Japanese`, `Korean`, `Mandarin`, `Cantonese`, `Spanish`, `French`, `Russian`, `Portuguese`, `Italian`, `German`, `Arabic`, `Hindi`), write ALL spoken words inside `<d>...</d>` strictly in that language's authentic native script (e.g. 日本語かな/漢字 for Japanese, 한국어 for Korean, 中文 for Mandarin, Русский for Russian), keeping all surrounding descriptions in English.
+- **Audio Fields:** Keep `overall_soundscape:` and `non_diegetic_music:` clean comma-separated prose (period-terminated, free of semicolons and spoken dialogue), setting `non_diegetic_music:` to `N/A` when diegetic-only.
 
 ## 5. OUTPUT FORMAT
 Reply with ONLY a valid JSON object matching:
@@ -72,6 +74,14 @@ def _extract_beat_clauses_from_rule(rule_text: str, lab: dict | None = None, *, 
     out: dict[int, str] = {}
     if not txt:
         return out
+    ms_parts = re.split(r"\bAt\s+\d+:\d+(?:\.\d+)?\s*[-–—]\s*\d+:\d+(?:\.\d+)?\s*,?\s*", txt, flags=re.I)
+    if len(ms_parts) >= 3:
+        for b_idx, raw_c in enumerate(ms_parts[1:]):
+            clause = raw_c.strip(" .;,-")
+            if clause:
+                out[b_idx] = clause
+        if out:
+            return out
     shot_parts = re.split(
         r"(?:\(\d+\)\s*)?(?:In\s+)?`?\[\s*Shot\s+([1-6])\s*\]`?(?:\s*,?\s*At\s+MM:SS\.mmm\s*,?\s*)?",
         txt,
@@ -112,6 +122,59 @@ def _extract_beat_clauses_from_rule(rule_text: str, lab: dict | None = None, *, 
     return out
 
 
+def _infer_subject_pronouns(s_n: int, lab: dict | None = None, brief: str = "", flavors: dict | None = None) -> tuple[str, str, str]:
+    """Infer (possessive, object, subject) pronouns (`her/her/she` vs `his/him/he`) from subject sheet, archetype, or brief."""
+    lab = lab or {}
+    flavors = flavors or {}
+    pics = [p for p in (lab.get("pictures") or []) if p.get("subject") == s_n]
+    desc = " ".join(str(p.get("desc") or "") for p in pics)
+    char_opts = _cat.resolve_dial_opts("character", flavors.get("character"))
+    char_txt = " ".join(f"{o.get('label','')} {o.get('rule','')}" for o in char_opts) if s_n == 1 else ""
+    blob = f"{desc} {char_txt} {brief if s_n == 1 else ''}".lower()
+    has_male = bool(re.search(r"\b(?:man|male|boy|guy|gentleman|husband|boyfriend|samurai|swordsman|mr\.|he|his)\b", blob))
+    has_fem = bool(re.search(r"\b(?:woman|female|girl|lady|wife|girlfriend|idol|she|her|bra|dress|skirt|bikini|lingerie|breasts|pussy)\b", blob))
+    if has_male and not has_fem:
+        return ("his", "him", "he")
+    if has_fem and not has_male:
+        return ("her", "her", "she")
+    # Check explicit brief cues like "a man fights" vs female lead
+    if s_n == 1 and re.search(r"\b(?:the\s+man|a\s+man|young\s+man|male\s+lead|guy)\b", brief or "", re.I) and not re.search(r"\b(?:woman|girl|female|she|her)\b", brief or "", re.I):
+        return ("his", "him", "he")
+    return ("her", "her", "she")
+
+
+def _genre_micro_example(*, sex_scene: bool, combat_scene: bool, has_dance: bool, mode: str) -> str:
+    """Return one concise 4-line structural rhythm hint matching the active genre without adding token bloat."""
+    s_tok = "<Subject 1> Name" if mode == "Ref2VA" else "The lead"
+    if sex_scene:
+        return (
+            f"[Shot 1] Vertical framing inside the active setting as {s_tok} establishes eye-level closeness and concrete hand grips.\n"
+            f"At 00:00.000-00:03.200, {s_tok} opens the physical contact with steady hip motion and skin friction while clothing stays cleanly displaced.\n"
+            f"At 00:03.200-00:07.500, rhythm builds into full-depth strokes with concrete hand pressure and audible skin foley.\n"
+            f"At 00:07.500-00:10.000, climax peaks cleanly through the final hold into a steady exhale."
+        )
+    if combat_scene:
+        return (
+            f"[Shot 1] Wide tracking shot inside the arena as {s_tok} holds screen-left guard facing incoming threats.\n"
+            f"At 00:00.000-00:02.200, {s_tok} slips a swing and drives a crisp counter-strike sending sparks and dust flying.\n"
+            f"At 00:02.200-00:06.500, {s_tok} chains parry-to-vault momentum across the set while camera tracks tightly beside.\n"
+            f"At 00:06.500-00:10.000, {s_tok} lands the decisive strike and settles into calm alert guard."
+        )
+    if has_dance:
+        return (
+            f"[Shot 1] Medium-full framing inside the venue as {s_tok} locks eyes with the camera in poised opening stance.\n"
+            f"At 00:00.000-00:03.000, {s_tok} snaps crisp upper-body accents on beat while hair and fabric flare smoothly.\n"
+            f"At 00:03.000-00:07.000, {s_tok} glides through fluid hip isolations and a sharp turn as camera arcs smoothly inward.\n"
+            f"At 00:07.000-00:10.000, {s_tok} lands an ending-fairy hold with bright smile and poised eye lock."
+        )
+    return (
+        f"[Shot 1] Grounded cinema framing inside the set as {s_tok} anchors screen position in motivated practical light.\n"
+        f"At 00:00.000-00:03.500, {s_tok} initiates concrete gesture and posture shift while speaking cleanly: (DIALOGUE) {s_tok} (S1) speaks warmly: <d>[natural tone] Spoken line.</d>\n"
+        f"At 00:03.500-00:07.500, camera pushes slowly inward as expression deepens and secondary fabric or light reacts.\n"
+        f"At 00:07.500-00:10.000, {s_tok} settles into a lingering, grounded closing beat."
+    )
+
+
 def _adapt_rule_subjects(rule_text: str, lab: dict | None = None, *, brief: str = "", explicit_id: str = "") -> str:
     if not rule_text:
         return ""
@@ -123,20 +186,29 @@ def _adapt_rule_subjects(rule_text: str, lab: dict | None = None, *, brief: str 
         cname = str(m.get("char_name") or m.get("name") or "").strip()
         if cname:
             out = re.sub(rf"<Subject\s+{sn}>(?!(?:\s+{re.escape(cname)})\b)", f"<Subject {sn}> {cname}", out)
+    comb_s = f"{explicit_id} {brief} {out}".lower()
+    is_sex_s = bool(explicit_id or _dir.is_sexual(brief, explicit_id=explicit_id))
+    if 1 not in sub_meta:
+        s1_noun = "the woman" if (is_sex_s and not re.search(r"\b(?:male\s+lead|gay)\b", comb_s)) else "the lead"
+        out = re.sub(r"<Subject\s+1>'s\b", f"{s1_noun}'s", out)
+        out = re.sub(r"<Subject\s+1>", s1_noun, out)
     if 2 not in sub_meta:
-        comb = f"{explicit_id} {brief} {out}".lower()
-        is_les = bool(re.search(r"\b(?:lesbian|scissoring|tribadism|cunnilingus|two women|other woman|fff)\b", comb))
-        is_sex = bool(explicit_id or _dir.is_sexual(brief, explicit_id=explicit_id))
+        is_les = bool(re.search(r"\b(?:lesbian|scissoring|tribadism|cunnilingus|two women|other woman|fff)\b", comb_s))
         if is_les:
             out = re.sub(r"<Subject\s+2>'s\b", "the other woman's", out)
             out = re.sub(r"<Subject\s+2>", "the other woman", out)
-        elif is_sex:
+        elif is_sex_s:
             out = re.sub(r"<Subject\s+2>'s\s+(?:(thick|hard|vertical|oiled|glistening|throbbing|swollen)\s+)?(?:erect\s+)?shaft\b", lambda m: f"his {m.group(1) + ' ' if m.group(1) else ''}erect cock", out, flags=re.I)
             out = re.sub(r"<Subject\s+2>'s\b", "the man's", out)
             out = re.sub(r"<Subject\s+2>", "the man", out)
         else:
             out = re.sub(r"<Subject\s+2>'s\b", "the other person's", out)
             out = re.sub(r"<Subject\s+2>", "the other person", out)
+    for sn_extra in range(3, 10):
+        if sn_extra not in sub_meta and re.search(rf"<Subject\s+{sn_extra}>", out):
+            extra_noun = "the second woman" if re.search(r"\b(?:ffm|lesbian|fff)\b", comb_s) else "the other companion"
+            out = re.sub(rf"<Subject\s+{sn_extra}>'s\b", f"{extra_noun}'s", out)
+            out = re.sub(rf"<Subject\s+{sn_extra}>", extra_noun, out)
     # Replace euphemistic "her partner's shaft" / "her partner" in explicit text when heterosexual male anatomy is implied
     if _dir.is_sexual(brief, explicit_id=explicit_id) and not re.search(r"\b(?:lesbian|fff|strap[- ]?on)\b", f"{explicit_id} {out}", re.I):
         out = re.sub(
@@ -199,9 +271,10 @@ def build_flavor_facts(
             if eth:
                 if s_n == 1 and rear_prelim and not mirror_prelim:
                     eth_r = _refs.strip_front_facial_features_for_rear(eth)
+                    poss_p, _, _ = _infer_subject_pronouns(s_n, lab=lab, brief=brief, flavors=flavors)
                     facts.append(
                         f"CHARACTER IDENTITY LOCK (<Subject {s_n}>{cname_str} in {sp['label']}): "
-                        f"Identify as `{eth}` in `subject_definitions:`, `summary:`, `retention_analysis:`, and in `[Shot 1]` (rear view) write `{eth_r}` only, keeping her face turned forward away from the camera."
+                        f"Identify as `{eth}` in `subject_definitions:`, `summary:`, `retention_analysis:`, and in `[Shot 1]` (rear view) write `{eth_r}` only, keeping {poss_p} face turned forward away from the camera."
                     )
                 else:
                     facts.append(
@@ -284,10 +357,21 @@ def build_flavor_facts(
                 f"STRICT ENVIRONMENT PRIORITY LOCK: Anchor all walls, flooring, and props strictly to {place_opt['label']} (`domain={place_opt.get('domain', 'general')}`) — discard incompatible props (like pool sunbeds inside showers) if another preset mentions them."
             )
         if ward_opts:
-            w_desc = ", ".join(_clean_ui_label(o["label"]) for o in ward_opts)
-            facts.append(
-                f"WARDROBE LOCK: Keep `{w_desc}` consistent across `[Shot 1]` and every cut (`At MM:SS.mmm`) unless an explicit undress/displacement beat moves it aside."
-            )
+            wmode_lock = _bg.get_dial_mode(flavors, "wardrobe", "sequence")
+            if len(ward_opts) >= 2 and wmode_lock == "split":
+                subj_keys = sorted((lab.get("subjects") or {}).keys())
+                pairs = []
+                for idx, o in enumerate(ward_opts):
+                    sn = subj_keys[idx] if idx < len(subj_keys) else (idx + 1)
+                    pairs.append(f"<Subject {sn}>: {_clean_ui_label(o['label'])}")
+                facts.append(
+                    f"WARDROBE LOCK (PER-SUBJECT SPLIT): Keep {', '.join(pairs)} consistent on their assigned subjects across `[Shot 1]` and every cut (`At MM:SS.mmm`) unless an explicit undress/displacement beat moves it aside."
+                )
+            else:
+                w_desc = ", ".join(_clean_ui_label(o["label"]) for o in ward_opts)
+                facts.append(
+                    f"WARDROBE LOCK: Keep `{w_desc}` consistent across `[Shot 1]` and every cut (`At MM:SS.mmm`) unless an explicit undress/displacement beat moves it aside."
+                )
 
     # Aspect lock
     canvas_asp = _bg.detect_canvas_aspect(brief=brief, node_aspect=str(flavors.get("aspect") or ""), camera_id=cam_id, plan=plan, plan_hint=plan_hint)
@@ -339,12 +423,30 @@ def build_flavor_facts(
         else:
             facts.append("VISUAL FX: " + " + ".join(f"{o['label']} ({_fin.sanitize_additive_rule(o.get('rule',''))})" for o in fx_opts))
 
-    if place_opt and place_opt.get("rule"):
+    if len(place_opts) >= 2 and _bg.get_dial_mode(flavors, "place", "sequence") == "sequence":
+        alloc_pl = _bg.allocate_stages_to_spans(place_opts, spans)
+        facts.append("SCENE PROGRESSION (1->2): " + " -> ".join(f"{_clean_ui_label(o['label'])} ({', '.join(ts for _, ts in bl)}): {_fin.sanitize_additive_rule(o.get('rule',''))}" for o, bl in alloc_pl))
+    elif place_opt and place_opt.get("rule"):
         facts.append(f"SCENE SETTING ({_clean_ui_label(place_opt['label'])}): {_fin.sanitize_additive_rule(place_opt['rule'])}")
     if char_opts and not (lab.get("pictures")):
         facts.append("CAST ARCHETYPES: " + " | ".join(f"{_clean_ui_label(o['label'])} ({_fin.sanitize_additive_rule(o.get('rule',''))})" for o in char_opts))
     if ward_opts:
-        facts.append("WARDROBE: " + " | ".join(_fin.sanitize_additive_rule(o.get('rule') or _clean_ui_label(o['label'])) for o in ward_opts))
+        wmode = _bg.get_dial_mode(flavors, "wardrobe", "sequence")
+        if len(ward_opts) >= 2 and wmode == "split":
+            subj_keys = sorted((lab.get("subjects") or {}).keys())
+            split_parts = []
+            for idx, o in enumerate(ward_opts):
+                sn = subj_keys[idx] if idx < len(subj_keys) else (idx + 1)
+                s_meta = (lab.get("subjects") or {}).get(sn) or {}
+                cname = s_meta.get("char_name") or s_meta.get("name") or ""
+                s_lbl = f"<Subject {sn}> {cname}".strip()
+                split_parts.append(f"{s_lbl}: {_fin.sanitize_additive_rule(o.get('rule') or _clean_ui_label(o['label']))}")
+            facts.append("WARDROBE (PER-SUBJECT SPLIT): " + " | ".join(split_parts))
+        elif len(ward_opts) >= 2 and wmode == "sequence":
+            alloc = _bg.allocate_stages_to_spans(ward_opts, spans)
+            facts.append("WARDROBE PROGRESSION (1->2): " + " -> ".join(f"{_clean_ui_label(o['label'])} ({', '.join(ts for _, ts in bl)}): {_fin.sanitize_additive_rule(o.get('rule') or _clean_ui_label(o['label']))}" for o, bl in alloc))
+        else:
+            facts.append("WARDROBE: " + " | ".join(_fin.sanitize_additive_rule(o.get('rule') or _clean_ui_label(o['label'])) for o in ward_opts))
 
     # Poses & Cinema Knowledge
     if pose_opts:
@@ -481,12 +583,16 @@ def build_flavor_facts(
     if combat_scene:
         facts.append("COMBAT PHYSICS: Write concrete strike-to-impact-to-recoil mechanics with physically lit sparks, dust, shell casings, or elemental VFX reflections.")
 
+    if len((lab.get("subjects") or {}).keys()) >= 2 or (combat_scene and any(re.search(r"<Subject\s+2>|S1\s*(?:vs|\+)\s*S2", str(o.get("label") or "") + " " + str(o.get("rule") or ""), re.I) for o in combat_opts)):
+        facts.append("SCREEN-AXIS GEOMETRY: Anchor each subject's screen-left / screen-right placement and eyeline direction in [Shot 1] and keep orientation consistent across cuts unless an orbit or cross-over moves them.")
+
+    s1_poss, _, _ = _infer_subject_pronouns(1, lab=lab, brief=brief, flavors=flavors)
     if sex_scene:
-        facts.append("LITERAL ANATOMY LAW: Write concrete physical thrusts, grips, and skin contact in plain English using exact anatomy (`cock`, `erect penis`, `balls`, `pussy`, `labia`, `clit`, `asshole`, `bare breasts`, `nipples`, `cum`) — refer to the male partner directly as `the man` / `his erect cock`, never `partner's shaft` or euphemisms.")
+        facts.append("LITERAL ANATOMY LAW: Write concrete physical thrusts, grips, and skin contact in plain English using exact anatomy (`cock`, `erect penis`, `balls`, `pussy`, `labia`, `clit`, `asshole`, `bare breasts`, `nipples`, `cum`) — refer to the male partner directly as `the man` / `his erect cock`, using literal phrasing over euphemisms.")
         if rear_scene and not anal_scene and not mirror_scene:
-            facts.append("REAR-FACING LOCK: Keep torso, chest, shoulders, and head facing forward away from the camera across every beat.")
+            facts.append(f"REAR-FACING LOCK: Keep torso, chest, shoulders, and head facing forward away from the camera across every beat.")
         if over_shoulder:
-            facts.append("OVER-SHOULDER LOCK: Keep hips and shoulders angled away while only her chin turns back over one shoulder.")
+            facts.append(f"OVER-SHOULDER LOCK: Keep hips and shoulders angled away while only {s1_poss} chin turns back over one shoulder.")
         if solo_bj_oral or mouth_occupied:
             facts.append("ORAL SEAL LAW: Keep lips sealed tightly around his cock during sucking beats, opening to pant only after pulling clear.")
         if pegging_scene:
@@ -499,7 +605,9 @@ def build_flavor_facts(
         exp_has_dlg = any("<d>" in str(o.get("rule") or "") for o in exp_opts)
         if has_quotes or talk_opt or acc_opt or fetish_opts or tm_mode == "talk_all" or has_speech_req or exp_has_dlg:
             cues = _dlg.pick_beat_dialogue_cues(brief=brief, talk_opt=talk_opt, acc_opt=acc_opt, playbook_entries=fetish_opts, n_beats=len(spans), is_sexual_scene=sex_scene)
-            facts.append("SUGGESTED BEAT DIALOGUE ARC (adapt freely to voice & brief — avoid repetitive clichés): " + " | ".join(f"Beat {i+1}: `{c}`" for i, c in enumerate(cues)))
+            facts.append("SUGGESTED BEAT DIALOGUE ARC (adapt freely to voice & brief — keep fresh and natural): " + " | ".join(f"Beat {i+1}: `{c}`" for i, c in enumerate(cues)))
+            if combat_scene or music_opts or amb_opts:
+                facts.append("AUDIO FOREGROUND PRIORITY: Give spoken `<d>` beats clear vocal foreground while ducking heavy foley and music beneath, saving loud impacts and music peaks for wordless action beats.")
         else:
             facts.append("DIALOGUE CHOICE: Keep non-verbal, physical, or oral beats wordless with breathing/moans/wet foley in `overall_soundscape:`; add `<d>[tone] ...</d>` speech ONLY if the brief calls for spoken words.")
     else:
@@ -586,9 +694,29 @@ def build_skeleton_text(
         is_sexual_scene=is_sex,
     )
 
-    exp_clauses = _extract_beat_clauses_from_rule(exp_opts[0].get("rule") or "", lab=lab, brief=brief, explicit_id=exp_opts[0]["id"]) if exp_opts else {}
-    cb_clauses = _extract_beat_clauses_from_rule(combat_opts[0].get("rule") or "", lab=lab, brief=brief) if combat_opts else {}
-    pose_clauses = _extract_beat_clauses_from_rule(pose_opts[0].get("rule") or "", lab=lab, brief=brief) if pose_opts else {}
+    def _clauses_for_dial(opts: list[dict], *, is_explicit: bool = False) -> dict[int, str]:
+        if not opts:
+            return {}
+        if len(opts) == 1:
+            return _extract_beat_clauses_from_rule(
+                opts[0].get("rule") or "", lab=lab, brief=brief, explicit_id=opts[0]["id"] if is_explicit else "",
+            )
+        mapped: dict[int, str] = {}
+        alloc = _bg.allocate_stages_to_spans(opts, spans)
+        for opt, b_list in alloc:
+            sub = _extract_beat_clauses_from_rule(
+                opt.get("rule") or "", lab=lab, brief=brief, explicit_id=opt["id"] if is_explicit else "",
+            )
+            for k_idx, (b_num, _) in enumerate(b_list):
+                b_i = b_num - 1
+                clause_txt = sub.get(k_idx) or sub.get(0) or _sanitize_beat_clause(_adapt_rule_subjects(opt.get("rule") or "", lab, brief=brief, explicit_id=opt["id"] if is_explicit else ""))
+                if clause_txt:
+                    mapped[b_i] = clause_txt
+        return mapped
+
+    exp_clauses = _clauses_for_dial(exp_opts, is_explicit=True)
+    cb_clauses = _clauses_for_dial(combat_opts)
+    pose_clauses = _clauses_for_dial(pose_opts)
     brief_clean = _fin.sanitize_additive_rule(re.sub(r"[\"“”]", "", brief or "")).strip().rstrip(".")
 
     lines = [header_s1]
@@ -597,9 +725,18 @@ def build_skeleton_text(
     for i, (t0, t1) in enumerate(spans):
         if i > 0 and i in cuts:
             shot_counter += 1
-            lines.append(f"[Shot {shot_counter}] At {_bg.stamp(t0)}, camera cuts smoothly onto the next angle.")
+            pl_note = ""
+            if len(place_opts) >= 2 and _bg.get_dial_mode(flavors, "place", "sequence") == "sequence":
+                pl_idx = min(len(place_opts) - 1, shot_counter - 1)
+                pl_rule = _fin.sanitize_additive_rule(place_opts[pl_idx].get("rule") or "")
+                if pl_rule:
+                    pl_note = f" inside {pl_rule}"
+            lines.append(f"[Shot {shot_counter}] At {_bg.stamp(t0)}, camera cuts cleanly onto the next angle{pl_note}.")
         if exp_clauses.get(i) or cb_clauses.get(i) or pose_clauses.get(i):
-            clause = exp_clauses.get(i) or cb_clauses.get(i) or pose_clauses.get(i)
+            if cb_clauses.get(i) and pose_clauses.get(i) and i == 0 and not exp_clauses.get(i):
+                clause = f"{pose_clauses[0].rstrip('.')} before {cb_clauses[0]}"
+            else:
+                clause = exp_clauses.get(i) or cb_clauses.get(i) or pose_clauses.get(i)
             if clause and clause[0].islower() and "<Subject" not in clause and not re.match(
                 r"^(?:the|a|an|her|his|their|under|inside|in|at|on|beside|behind|against|through|from|frame|camera)\b",
                 clause,
@@ -656,7 +793,16 @@ def build_keyframe_prep_prompt(brief: str, flavors: dict | None, lab: dict | Non
         if desc:
             parts.append(f"{cname}: {_fin.sanitize_additive_rule(desc)}")
     ward = _cat.resolve_dial_opts("wardrobe", flavors.get("wardrobe"))
-    if ward and ward[0].get("rule"):
+    wmode_kf = _bg.get_dial_mode(flavors, "wardrobe", "sequence")
+    if ward and wmode_kf == "split" and len(ward) >= 2 and len(lab.get("subjects") or {}) >= 2:
+        subj_keys = sorted((lab.get("subjects") or {}).keys())
+        for idx, o in enumerate(ward):
+            if idx < len(subj_keys) and o.get("rule"):
+                sn = subj_keys[idx]
+                meta = lab["subjects"][sn]
+                cname = meta.get("char_name") or meta.get("name") or f"Subject {sn}"
+                parts.append(f"{cname} wearing {_fin.sanitize_additive_rule(o['rule'])}")
+    elif ward and ward[0].get("rule"):
         parts.append("wearing " + _fin.sanitize_additive_rule(ward[0]["rule"]))
     pose = _cat.resolve_dial_opts("pose", flavors.get("pose"))
     if pose and pose[0].get("rule"):
@@ -790,10 +936,20 @@ async def run_sandtie_write(
     mode = _std.mode_for(lab)
 
     # Apply wardrobe override onto Subject descriptions (clean natural prose, zero UI emoji/labels!)
-    if ward_opt and lab.get("subjects"):
-        w_rule_clean = _fin.sanitize_additive_rule(ward_opt.get("rule") or _clean_ui_label(ward_opt.get("label") or ""))
-        for s_n, s_meta in (lab.get("subjects") or {}).items():
-            if s_n == 1 or "nude_both_partners" in _cat.parse_multi_ids(flavors.get("wardrobe")):
+    if ward_opts_init and lab.get("subjects"):
+        w_ids_init = _cat.parse_multi_ids(flavors.get("wardrobe"))
+        wmode_init = _bg.get_dial_mode(flavors, "wardrobe", "sequence")
+        all_nude = bool({"nude_both_partners", "nude_all_cast_subjects_s1_s9"} & set(w_ids_init))
+        subj_keys = sorted((lab.get("subjects") or {}).keys())
+        for idx, s_n in enumerate(subj_keys):
+            chosen_w = None
+            if wmode_init == "split" and len(ward_opts_init) >= 2:
+                if idx < len(ward_opts_init):
+                    chosen_w = ward_opts_init[idx]
+            elif s_n == 1 or all_nude:
+                chosen_w = ward_opt
+            if chosen_w:
+                w_rule_clean = _fin.sanitize_additive_rule(chosen_w.get("rule") or _clean_ui_label(chosen_w.get("label") or ""))
                 for p in lab.get("pictures") or []:
                     if p.get("subject") == s_n and w_rule_clean:
                         base_d = str(p.get("desc") or "")
@@ -868,8 +1024,13 @@ async def run_sandtie_write(
         lines.append(_pl.fence(prev_hop_context, "previous_hop_end"))
     lines.append("Active SandTie Directives & Continuity Laws:")
     lines += ["- " + fl for fl in flavor_lines]
+    is_sex_rw = _dir.is_sexual(brief, str(flavors.get("explicit") or ""), str(flavors.get("wardrobe") or ""), fetish_id=str(flavors.get("fetish") or ""))
+    is_combat_rw = _dir.is_combat(brief, str(flavors.get("combat") or ""), str(flavors.get("wardrobe") or ""), str(flavors.get("fx") or ""))
+    is_dance_rw = bool(re.search(r"\bdance\b", f"{flavors.get('pose') or ''} {brief or ''}", re.I))
+    lines.append("Single-Thought Rhythm Example (structure guide only — fill with your active brief, cast, and dials):")
+    lines.append(_pl.fence(_genre_micro_example(sex_scene=is_sex_rw, combat_scene=is_combat_rw, has_dance=is_dance_rw, mode=mode), "rhythm_example"))
     if time_tied:
-        lines.append("Time-Tied Continuity Flow (preserve timestamps cleanly as smooth momentum bridges without pausing action between beats):")
+        lines.append("Time-Tied Continuity Flow (preserve timestamps cleanly as smooth momentum bridges so action flows continuously across beats):")
         lines.append(_pl.fence(skel, "beat_skeleton"))
     lines.append("Scene Brief:")
     lines.append(_pl.fence(brief or "Perform the staged scene cleanly.", "scene_brief"))
@@ -924,10 +1085,11 @@ async def run_sandtie_write(
     raw_blk = _extract_json_field(raw_out, "block")
     blk = _fin.finish_block(raw_blk, mode=mode, lab=lab, duration_s=duration_s, silent=silent, brief=brief, flavors=flavors)
 
-    # Optional Pass-2 Double-Knot refinement (also triggers automatically when non-English <d> script needs repair!)
+    # Optional Pass-2 Double-Knot refinement (also triggers automatically on contract defects or non-English <d> script repair!)
     double_knot = bool(flavors.get("double_knot", flavors.get("pass2_refine", True)))
     need_lang_repair = bool(blk and not silent and target_lang_rw != "English" and _dlg.language_script_missing(blk, target_lang_rw))
-    if (double_knot or need_lang_repair) and blk:
+    pass1_errs = _std.contract_errors(blk, mode=mode, lab=lab, duration_s=duration_s) if blk else []
+    if (double_knot or need_lang_repair or pass1_errs) and blk:
         anal_sc = _dir.is_anal(brief, explicit_id=str(flavors.get("explicit") or ""), plan=plan)
         rear_sc = _dir.is_rear_facing(brief, str(flavors.get("explicit") or ""), plan=plan, camera_id=resolved_cam)
         os_sc = _dir.is_over_shoulder(brief, explicit_id=str(flavors.get("explicit") or ""), camera_id=resolved_cam, plan=plan)
@@ -940,6 +1102,8 @@ async def run_sandtie_write(
             anal_scene=anal_sc, no_dialogue=silent, flavor_lines=flavor_lines, plan=plan,
             prev_hop_context=prev_hop_context,
         )
+        if pass1_errs:
+            checklist = [f"CONTRACT REPAIR: Fix `{pe}` cleanly in Pass 2." for pe in pass1_errs[:4]] + checklist
         if checklist:
             p2_user = "Audit Checklist:\n" + "\n".join(f"- {c}" for c in checklist) + "\n\nPass-1 Draft:\n" + blk
             try:

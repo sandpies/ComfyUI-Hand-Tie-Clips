@@ -703,6 +703,48 @@
       "group": "Digital",
       "rule": "glossy die-cut vinyl sticker edge curling smoothly off the frame corner with crisp adhesive sheen to reveal an active live scene underneath",
       "domain": "general"
+    },
+    {
+      "id": "fx_sakura_petal_wind_drift",
+      "label": "🌸 Floating Cherry Blossom Petals & Warm Wind Drift",
+      "group": "Elements",
+      "domain": "general",
+      "rule": "soft pink cherry-blossom petals drifting naturally across the foreground and midground in warm air currents, catching crisp specular highlights against shallow depth of field"
+    },
+    {
+      "id": "fx_kpop_confetti_sparkle_cannon",
+      "label": "🎉 Stage Confetti & Metallic Foil Sparkle Drift",
+      "group": "Elements",
+      "domain": "general",
+      "rule": "iridescent metallic foil confetti and delicate stage sparkle drifting slowly down through bright concert spotlights, catching brilliant highlights around the dancing subject"
+    },
+    {
+      "id": "fx_anamorphic_warm_lens_flare",
+      "label": "🎞️ Horizontal Anamorphic Amber-Blue Streak Lens Flare",
+      "group": "Optical",
+      "domain": "general",
+      "rule": "authentic anamorphic cinema lens flare casting a subtle horizontal warm-amber and cyan optical streak across highlights whenever practical bulbs or headlights graze the glass"
+    },
+    {
+      "id": "fx_kinetic_motion_trails_speedramp",
+      "label": "⚡ Subtle Step-Printed Kinetic Motion Trail (90s Arthouse)",
+      "group": "Optical",
+      "domain": "general",
+      "rule": "delicate Wong Kar-wai style step-printed shutter drag creating poetic dreamy motion trails behind rapid hand gestures and turning hair while keeping eyes clear"
+    },
+    {
+      "id": "fx_golden_dust_motes_sunbeam",
+      "label": "✨ Illuminated Golden Dust Motes Floating in Window Sunbeam",
+      "group": "Elements",
+      "domain": "general",
+      "rule": "thousands of microscopic warm golden dust motes floating lazily through slanted sunlight beams, adding rich atmospheric depth to indoor movement"
+    },
+    {
+      "id": "fx_raindrop_on_camera_glass",
+      "label": "💧 Natural Raindrops & Condensation Beads on Camera Lens Edge",
+      "group": "Optical",
+      "domain": "general",
+      "rule": "occasional fine raindrops and warm edge condensation beading softly near the periphery of the camera lens glass, refracting distant neon bokeh into glowing orbs"
     }
   ]
 }

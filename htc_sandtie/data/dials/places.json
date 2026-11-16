@@ -883,6 +883,366 @@
       "rule": "a brushed-titanium sci-fi observation bay with curved panoramic glass looking out over glowing nebula light and warm console panels",
       "sound": "deep gentle starship reactor hum and soft ambient console chimes",
       "life": "nebula glow shifts softly across brushed metal decks"
+    },
+    {
+      "id": "plate_european_cobblestone_alley_bluehour",
+      "label": "🏛️ Realistic Plate: Wet European Cobblestone Alley at Blue Hour (Bistro & Lanterns)",
+      "group": "Urban",
+      "character": "wet European cobblestone alley at blue hour",
+      "domain": "general",
+      "rule": "a narrow historic European cobblestone alleyway slick from fresh rain, with wrought-iron bistro chairs in the foreground, warm amber wall sconces illuminating wet stone walls in the midground, and an arched stone passageway receding into cool indigo twilight",
+      "sound": "soft footsteps on wet cobblestones, distant café clink, and gentle evening breeze",
+      "life": "warm lantern reflections shimmer across damp cobblestones"
+    },
+    {
+      "id": "plate_brooklyn_brownstone_stoop_golden",
+      "label": "🏛️ Realistic Plate: Golden-Hour Brooklyn Brownstone Stoop & Tree-Lined Sidewalk",
+      "group": "Urban",
+      "character": "sunlit Brooklyn brownstone stoop",
+      "domain": "general",
+      "rule": "a classic sandstone brownstone stoop with ornate black iron handrails in the foreground, dappled late-afternoon golden sunlight filtering through sidewalk tree leaves across brick facades, and parked vintage sedans receding down the block",
+      "sound": "rustling street-tree leaves, distant city hum, and warm neighborhood ambience",
+      "life": "dappled golden leaf shadows sway gently across the sandstone steps"
+    },
+    {
+      "id": "plate_tokyo_izakaya_lantern_alley",
+      "label": "🏛️ Realistic Plate: Tokyo Izakaya Red-Lantern Alleyway (Steam & Wet Asphalt)",
+      "group": "Urban",
+      "character": "Tokyo izakaya lantern alleyway",
+      "domain": "general",
+      "rule": "a bustling narrow Tokyo alley lined with glowing red chochin paper lanterns and wooden sliding doors, white grill steam rising from street-level vents in the midground, and neon kanji signage reflecting off damp dark asphalt",
+      "sound": "sizzling street grill, muffled izakaya chatter, and warm alley hum",
+      "life": "paper lanterns sway slightly as white steam curls upward past neon signs"
+    },
+    {
+      "id": "plate_mediterranean_cliff_promenade",
+      "label": "🏛️ Realistic Plate: Sunlit Mediterranean Cliffside Promenade & Turquoise Sea",
+      "group": "Contemporary",
+      "character": "sunlit Mediterranean cliffside promenade",
+      "domain": "general",
+      "rule": "a warm limestone coastal walkway with a carved stone balustrade and terracotta bougainvillea planters in the foreground, overlooking sparkling turquoise Mediterranean water and distant whitewashed cliffside villas under clear golden sunlight",
+      "sound": "gentle surf washing against cliff rocks below and warm coastal breeze",
+      "life": "magenta bougainvillea petals stir softly in the sea breeze over sunlit water"
+    },
+    {
+      "id": "plate_subway_platform_approaching_train",
+      "label": "🏛️ Realistic Plate: Metro Subway Platform with Approaching Train Headlights",
+      "group": "Urban",
+      "character": "metro subway platform at night",
+      "domain": "combat_action",
+      "rule": "a tiled underground metro platform with a bright yellow tactile safety strip along the foreground edge, brushed steel support columns down the center, and twin warm train headlights sweeping from the dark tunnel mouth onto the tracks",
+      "sound": "distant rail rumble growing louder, echoing platform ventilation hum, and steel track clack",
+      "life": "headlight beams sweep across tiled pillars as tunnel air drafts stir"
+    },
+    {
+      "id": "plate_scandinavian_sunlit_apartment",
+      "label": "🏛️ Realistic Plate: Sunlit Minimalist Scandinavian Living Room (Oak & Linen)",
+      "group": "Contemporary",
+      "character": "sunlit Scandinavian apartment living room",
+      "domain": "sofa_lounge",
+      "rule": "an airy contemporary apartment with warm herringbone oak floorboards, a deep cream bouclé sofa and travertine coffee table in the foreground, tall floor-to-ceiling sheer linen curtains billowing softly, and lush indoor fiddle-leaf plants in crisp morning daylight",
+      "sound": "quiet sunlit room tone, soft linen rustle, and distant morning birdsong",
+      "life": "sheer linen curtains breathe slowly in bright morning sunbeams"
+    },
+    {
+      "id": "plate_24h_neon_laundromat_midnight",
+      "label": "🏛️ Realistic Plate: 24-Hour Neon Laundromat at Midnight (Chrome Washers & Rain Glass)",
+      "group": "Urban",
+      "character": "24-hour neon laundromat at midnight",
+      "domain": "general",
+      "rule": "a retro-modern 24-hour laundromat with rows of gleaming stainless-steel front-loading washers along the left wall, a laminated folding table and plastic chairs in the midground, cool overhead fluorescent tubes humming above, and rain-streaked storefront glass glowing with pink-and-cyan street neon",
+      "sound": "rhythmic washer drum hum, soft fluorescent buzz, and steady rain tapping storefront glass",
+      "life": "washer drums spin smoothly behind glass doors as neon street reflections ripple"
+    },
+    {
+      "id": "plate_retro_chrome_diner_booth",
+      "label": "🏛️ Realistic Plate: Retro Chrome & Red-Vinyl Midnight Diner Booth",
+      "group": "Contemporary",
+      "character": "retro chrome and red-vinyl midnight diner",
+      "domain": "sofa_lounge",
+      "rule": "a classic Americana midnight diner featuring a tufted red-vinyl booth and Formica table with chrome napkin dispenser in the foreground, checkered floor tiles leading to a stainless counter with glowing pie case in the midground, and rain-beaded window glass reflecting neon signs outside",
+      "sound": "soft coffee-pot bubble, distant diner grill sizzle, and muffled rain on glass",
+      "life": "warm neon window glow reflects across polished chrome trim and glass"
+    },
+    {
+      "id": "plate_recording_studio_vocal_booth",
+      "label": "🏛️ Realistic Plate: Warm Wood Recording Studio & Condenser Vocal Booth",
+      "group": "Performance",
+      "character": "warm wood recording studio vocal booth",
+      "domain": "general",
+      "rule": "an intimate acoustically treated vocal booth with ribbed walnut wood slats, a suspended gold-capsule condenser microphone with pop filter centered in the foreground, and a wide double-pane studio window revealing glowing mixing-console faders and warm tungsten lamps in the control room behind",
+      "sound": "clean deadened vocal-booth room tone and faint electronic console warmth",
+      "life": "warm amber VU meters pulse softly behind the studio control-room glass"
+    },
+    {
+      "id": "plate_boutique_espresso_roastery",
+      "label": "🏛️ Realistic Plate: Boutique Coffee Roastery & Marble Espresso Bar",
+      "group": "Contemporary",
+      "character": "boutique coffee roastery and espresso bar",
+      "domain": "general",
+      "rule": "an artisanal coffee bar with a veined Carrara marble counter and gleaming brass espresso machine releasing a wisp of steam in the foreground, warm Edison bulb pendants hanging above timber shelving, and sunlight streaming through tall industrial-grid windows",
+      "sound": "crisp espresso steam hiss, ceramic cup clink, and soft morning café murmur",
+      "life": "delicate espresso steam curls upward into warm slanted window sunbeams"
+    },
+    {
+      "id": "plate_white_cube_art_gallery",
+      "label": "🏛️ Realistic Plate: Minimalist White-Cube Art Gallery (Skylight & Concrete)",
+      "group": "Contemporary",
+      "character": "minimalist white-cube art gallery",
+      "domain": "general",
+      "rule": "a spacious contemporary art gallery with seamless matte-polished concrete floors, a low oak viewing bench centered in the midground, large vibrant abstract canvases spaced cleanly along crisp white walls, and diffused overhead skylight illumination",
+      "sound": "hushed gallery acoustics and clean echoing footsteps on concrete",
+      "life": "soft diffused skylight shifts subtly across the gallery floor"
+    },
+    {
+      "id": "plate_proscenium_theater_stage_spotlight",
+      "label": "🏛️ Realistic Plate: Proscenium Theater Stage (Velvet Curtains & Volumetric Spot)",
+      "group": "Performance",
+      "character": "proscenium theater stage with spotlight",
+      "domain": "general",
+      "rule": "a grand performance theater stage with scuffed dark hardwood boards, heavy crimson velvet wing curtains framing left and right edges, warm brass footlights along the front apron, and a crisp overhead follow-spot cutting through floating theatrical haze",
+      "sound": "deep quiet theater room tone and subtle stage floorboard creak",
+      "life": "dust motes drift slowly through the crisp overhead spotlight cone"
+    },
+    {
+      "id": "plate_pacific_wet_sand_sunset_beach",
+      "label": "🏛️ Realistic Plate: Pacific Wet-Sand Shoreline at Golden Sunset (Mirror Surf)",
+      "group": "Contemporary",
+      "character": "wet-sand shoreline at golden sunset",
+      "domain": "wet_pool",
+      "rule": "an expansive coastal beach at low tide where smooth wet sand acts as a natural mirror reflecting warm amber-and-rose sunset clouds, gentle white-foam ocean waves rolling diagonally across the midground, and dark coastal headlands silhouetting along the horizon",
+      "sound": "rhythmic rolling ocean surf, fizzing shore foam, and warm coastal wind",
+      "life": "shallow surf glides across mirror-smooth wet sand catching golden sunset reflections"
+    },
+    {
+      "id": "plate_misty_pine_forest_sunbeams",
+      "label": "🏛️ Realistic Plate: Misty Pine Forest Trail with Morning Volumetric Sunbeams",
+      "group": "Historical & Adventure",
+      "character": "misty pine forest trail at dawn",
+      "domain": "general",
+      "rule": "a winding packed-earth forest path framed by moss-covered boulders and emerald ferns in the foreground, towering straight pine trunks receding into cool silver morning mist, and slanted golden sunbeams piercing the canopy",
+      "sound": "crunching pine needles underfoot, gentle high-canopy wind, and distant forest birds",
+      "life": "slanted golden sunbeams shimmer through drifting morning forest mist"
+    },
+    {
+      "id": "plate_boxing_gym_ring_sunlight",
+      "label": "🏛️ Realistic Plate: Gritty Urban Boxing Gym (Canvas Ring, Heavy Bags & Window Slats)",
+      "group": "Contemporary",
+      "character": "gritty urban boxing gym",
+      "domain": "gym_sport",
+      "rule": "an authentic brick-walled boxing gym with a taut canvas ring and red-white-blue ropes in the foreground, worn leather heavy bags hanging on steel chains in the midground, and dusty afternoon sunbeams slicing through high industrial factory windows",
+      "sound": "heavy leather bag thud, rattling suspension chains, and rhythmic jump-rope snap",
+      "life": "chalk dust floats visibly inside slanted afternoon window beams"
+    },
+    {
+      "id": "plate_concrete_rooftop_parking_golden",
+      "label": "🏛️ Realistic Plate: Open Concrete Rooftop Parking Deck at Golden Hour (360° Skyline)",
+      "group": "Urban",
+      "character": "open rooftop parking deck at golden hour",
+      "domain": "car_cabin",
+      "rule": "a sweeping top-level concrete parking deck with painted yellow lane stripes and low concrete parapet walls, warm golden-hour sunlight casting long dramatic shadows across the asphalt, and a panoramic downtown glass skyline glowing on the horizon",
+      "sound": "open-air rooftop breeze and distant city traffic murmur below",
+      "life": "warm golden sunlight glints off distant skyscraper glass across the open deck"
+    },
+    {
+      "id": "plate_paris_cafe_terrace_morning",
+      "label": "🏛️ Realistic Plate: Sunlit Paris Café Corner Terrace (Rattan Chairs & Haussmann Stone)",
+      "group": "Urban",
+      "character": "sunlit Paris café terrace",
+      "domain": "general",
+      "rule": "a classic Parisian corner café terrace with woven rattan bistro chairs and small marble-topped tables in the foreground, cream Haussmann limestone facades and striped awning in the midground, and tree-lined cobblestone street receding into soft morning sunlight",
+      "sound": "gentle espresso cup clink, soft French street murmur, and morning breeze",
+      "life": "warm morning sunlight filters through plane-tree leaves across marble café tables"
+    },
+    {
+      "id": "plate_private_wine_cellar_candlelight",
+      "label": "🏛️ Realistic Plate: Luxury Stone Wine Cellar & Candlelit Oak Tasting Table",
+      "group": "Contemporary",
+      "character": "candlelit stone wine cellar",
+      "domain": "sofa_lounge",
+      "rule": "an intimate arched stone wine cellar lined floor-to-ceiling with illuminated oak bottle racks, a long dark timber tasting table with flickering pillar candles and crystal stemware in the foreground, and warm amber recessed floor sconces",
+      "sound": "hushed stone cellar acoustics and subtle crystal glass chime",
+      "life": "candle flames flicker softly across crystal glasses and dark oak barrels"
+    },
+    {
+      "id": "plate_seoul_hongdae_rooftop_bar",
+      "label": "🏛️ Realistic Plate: Seoul Hongdae Neon Rooftop Bar (String Lights & Night Skyline)",
+      "group": "Urban",
+      "character": "Seoul Hongdae neon rooftop bar",
+      "domain": "general",
+      "rule": "a lively modern Seoul rooftop lounge terrace with warm Edison string lights overhead, sleek dark metal bar tables in the foreground, and glowing pink-and-cyan Hangul neon signs across neighboring Hongdae buildings in the background",
+      "sound": "distant city night hum, soft glass clink, and warm rooftop breeze",
+      "life": "warm string-light bulbs sway gently against glowing Seoul neon signage"
+    },
+    {
+      "id": "plate_marble_hotel_lobby_mezzanine",
+      "label": "🏛️ Realistic Plate: Grand Marble Hotel Lobby Mezzanine & Brass Elevator",
+      "group": "Contemporary",
+      "character": "grand marble hotel lobby",
+      "domain": "general",
+      "rule": "an opulent five-star hotel lobby with polished veined Calacatta marble floors, a sweeping brass-railed mezzanine staircase in the midground, warm Art-Deco wall sconces, and gleaming bronze elevator doors reflecting chandelier light",
+      "sound": "hushed luxury lobby acoustics, soft heels on marble, and distant piano note",
+      "life": "warm chandelier reflections shimmer across polished marble and brass trim"
+    },
+    {
+      "id": "plate_london_soho_rain_brick_street",
+      "label": "🏛️ Realistic Plate: Rain-Slicked London Soho Brick Street & Glowing Phone Booth",
+      "group": "Urban",
+      "character": "rain-slicked London Soho street at night",
+      "domain": "general",
+      "rule": "a moody historic London Soho side street glistening with evening rain, a classic illuminated red telephone box on the corner pavement in the midground, warm pub window glow spilling onto wet cobblestones, and mist drifting down the lane",
+      "sound": "steady light London rain, distant cab tires on wet asphalt, and muffled pub warmth",
+      "life": "warm pub amber and crimson phone-booth light ripple in wet street puddles"
+    },
+    {
+      "id": "plate_california_palm_convertible_overlook",
+      "label": "🏛️ Realistic Plate: Sun-Drenched California Palm-Lined Coastal Overlook",
+      "group": "Contemporary",
+      "character": "sunlit California palm coastal overlook",
+      "domain": "car_cabin",
+      "rule": "a scenic Pacific coast highway turnout framed by tall silhouetted fan palms against a warm golden-peach sunset sky, a classic open-top leather convertible parked cleanly at the foreground curb, and hazy ocean cliffs below",
+      "sound": "warm coastal breeze through palm fronds and distant ocean surf",
+      "life": "tall palm fronds sway lazily against golden California sunset haze"
+    },
+    {
+      "id": "plate_cedar_sauna_frosted_steam",
+      "label": "🏛️ Realistic Plate: Warm Cedar Wood Sauna & Rising Soft Steam",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "warm cedar wood sauna",
+      "domain": "wet_shower",
+      "rule": "a tranquil Nordic-style sauna lined with warm honey-toned red cedar slats, tiered wooden benches in the foreground, glowing hot river stones in a corner brazier releasing wisps of soft steam, and warm amber under-bench LED lighting",
+      "sound": "gentle hiss of steam off hot stones and quiet warm wood creak",
+      "life": "delicate white steam drifts lazily through warm amber cedar light"
+    },
+    {
+      "id": "plate_vinyl_record_shop_aisles",
+      "label": "🏛️ Realistic Plate: Cozy Indie Vinyl Record Shop Aisles & Warm Lamp Glow",
+      "group": "Contemporary",
+      "character": "cozy indie vinyl record shop",
+      "domain": "general",
+      "rule": "an atmospheric independent record store with wooden flip-bins packed with colorful vinyl sleeves in the foreground, vintage posters and warm brass clamp lamps along brick walls, and glowing neon OPEN sign in the front window",
+      "sound": "soft vinyl crackle over warm speakers and quiet wooden floorboard creak",
+      "life": "warm tungsten lamp glow bathes colorful vinyl sleeves and dusty sunbeams"
+    },
+    {
+      "id": "plate_midnight_bowling_alley_neon",
+      "label": "🏛️ Realistic Plate: Midnight Retro Bowling Alley (Polished Neon Lanes)",
+      "group": "Contemporary",
+      "character": "midnight neon bowling alley",
+      "domain": "general",
+      "rule": "a glowing retro bowling alley with glossy lacquered maple lanes reflecting overhead magenta-and-blue UV strip lights, curved vinyl seating and ball-return rack in the foreground, and illuminated pin decks receding down the hall",
+      "sound": "rolling bowling ball rumble, crisp pin crash, and upbeat retro hall hum",
+      "life": "neon lane reflections shimmer down polished wood alleys"
+    },
+    {
+      "id": "plate_desert_villa_infinity_courtyard",
+      "label": "🏛️ Realistic Plate: Desert Luxury Villa Courtyard & Terracotta Infinity Pool",
+      "group": "Contemporary",
+      "character": "desert luxury villa infinity pool",
+      "domain": "wet_pool",
+      "rule": "a serene architectural desert villa courtyard with smooth terracotta plaster walls, a mirror-still turquoise infinity pool flanked by travertine loungers in the foreground, and dramatic red-rock desert mesas glowing under late-afternoon golden light",
+      "sound": "gentle pool water lap against stone edge and warm quiet desert breeze",
+      "life": "rippling turquoise water reflects golden desert light onto terracotta walls"
+    },
+    {
+      "id": "plate_kyoto_bamboo_shrine_stone_steps",
+      "label": "🏛️ Realistic Plate: Kyoto Vermilion Torii Gate & Mossy Stone Steps at Dawn",
+      "group": "Historical & Adventure",
+      "character": "Kyoto shrine stone steps at dawn",
+      "domain": "general",
+      "rule": "a tranquil Kyoto hillside shrine path with weathered mossy stone steps in the foreground, towering vermilion torii gates receding in rhythm through cool dawn mist, and soft amber stone lanterns glowing along cedar trunks",
+      "sound": "soft footsteps on damp stone, rustling cedar leaves, and distant temple chime",
+      "life": "cool dawn mist drifts gently between vermilion torii pillars"
+    },
+    {
+      "id": "plate_amalfi_lemon_terrace_pergola",
+      "label": "🏛️ Realistic Plate: Sunlit Amalfi Lemon-Trellis Pergola Overlooking Coast",
+      "group": "Contemporary",
+      "character": "Amalfi lemon-trellis terrace",
+      "domain": "general",
+      "rule": "a sun-drenched Italian Amalfi cliffside terrace shaded by a timber pergola heavy with bright yellow lemons and green leaves, hand-painted ceramic tiles underfoot, and sparkling cobalt sea glittering below",
+      "sound": "gentle warm Mediterranean breeze through lemon leaves and distant coastal surf",
+      "life": "dappled golden sunlight dances across ceramic tiles as sea wind stirs leaves"
+    },
+    {
+      "id": "plate_nyc_soho_cast_iron_loft_window",
+      "label": "🏛️ Realistic Plate: NYC SoHo Cast-Iron Loft (Brick Wall & Tall Grid Windows)",
+      "group": "Contemporary",
+      "character": "NYC SoHo cast-iron loft",
+      "domain": "sofa_lounge",
+      "rule": "a spacious Manhattan SoHo loft with distressed exposed red brick walls, wide plank walnut floors, a cognac leather Chesterfield sofa in the foreground, and towering black steel-grid factory windows flooding the space with crisp late-afternoon light",
+      "sound": "warm hardwood room tone and muffled distant Manhattan street hum",
+      "life": "warm golden afternoon light slants diagonally across brick and leather"
+    },
+    {
+      "id": "plate_neon_cyber_ramen_shop_rain",
+      "label": "🏛️ Realistic Plate: Steamy Late-Night Tokyo Ramen Counter & Noren Curtain",
+      "group": "Urban",
+      "character": "steamy late-night Tokyo ramen counter",
+      "domain": "general",
+      "rule": "an authentic narrow Japanese ramen counter at midnight with glossy cedar bar stools in the foreground, rising clouds of savory broth steam under warm hanging bulb lamps, and a rain-beaded vinyl curtain opening onto glowing neon Tokyo asphalt",
+      "sound": "simmering broth kettle hiss, wooden chopsticks clack, and gentle outside rain",
+      "life": "dense savory steam curls upward into warm amber pendant lamps"
+    },
+    {
+      "id": "plate_luxury_champagne_private_elevator",
+      "label": "🏛️ Realistic Plate: Warm Brass & Smoked-Mirror Luxury Hotel Lift",
+      "group": "00 · Intimate, Boudoir & Nightlife",
+      "character": "brass and smoked-mirror hotel elevator",
+      "domain": "mirror_vanity",
+      "rule": "an intimate luxury penthouse elevator cabin lined with fluted dark walnut panels, warm recessed amber ceiling cove lighting, and full-height bronze-tinted mirror walls catching crisp dual reflections",
+      "sound": "silky hushed hydraulic hum and soft chime",
+      "life": "warm amber cove light shimmers subtly across smoked mirror panels"
+    },
+    {
+      "id": "plate_marble_museum_rotunda_skylight",
+      "label": "🏛️ Realistic Plate: Grand Neoclassical Marble Museum Rotunda & Skylight",
+      "group": "Contemporary",
+      "character": "grand neoclassical marble museum rotunda",
+      "domain": "general",
+      "rule": "a soaring neoclassical gallery rotunda with inlaid checkered marble floors, fluted limestone Corinthian columns framing left and right depth, classical marble sculptures on pedestals, and bright diffused dome skylight pouring down center frame",
+      "sound": "airy cathedral-like gallery acoustics and crisp measured footsteps on marble",
+      "life": "soft high-dome daylight washes smoothly down fluted marble columns"
+    },
+    {
+      "id": "plate_rooftop_greenhouse_botanical_night",
+      "label": "🏛️ Realistic Plate: Glass Botanical Greenhouse Conservatory at Night (Ferns & Lights)",
+      "group": "Contemporary",
+      "character": "nighttime glass botanical conservatory",
+      "domain": "general",
+      "rule": "a lush glass-and-iron rooftop conservatory at night filled with tropical palm fronds and hanging Boston ferns, warm fairy string lights woven through steel arches, and misted glass panes reflecting blurred city lights outside",
+      "sound": "soft tropical mist spritz, rustling broad palm leaves, and quiet night rain on glass",
+      "life": "warm string lights glow softly through misted glass and swaying fern fronds"
+    },
+    {
+      "id": "plate_desert_highway_dusk_convertible",
+      "label": "🏛️ Realistic Plate: Open Desert Two-Lane Highway at Pink-Amber Dusk",
+      "group": "Urban",
+      "character": "open desert highway at dusk",
+      "domain": "car_cabin",
+      "rule": "a straight endless desert highway stretching toward distant red-rock silhouettes under a vibrant violet-to-amber sunset sky, dotted yellow centerlines blurring smoothly beneath a moving open-top car cabin",
+      "sound": "steady wind rushing over windshield, low V8 engine purr, and distant desert quiet",
+      "life": "warm pink-amber dusk light glides smoothly across desert scrub and car hood"
+    },
+    {
+      "id": "plate_ballet_rehearsal_sunlit_atelier",
+      "label": "🏛️ Realistic Plate: Parisian Dance Atelier (Tall Arched Mirrors & Parquet Floor)",
+      "group": "Performance",
+      "character": "sunlit Parisian dance atelier",
+      "domain": "mirror_vanity",
+      "rule": "a classic sunlit Parisian ballet studio featuring honey-toned herringbone parquet floors, tall French arched mirrors bordered by warm brass handrails, and soft afternoon sunbeams streaming through high paned windows",
+      "sound": "crisp shoe taps on hollow wooden parquet and airy sunlit room acoustics",
+      "life": "warm sunbeams stretch across polished parquet and arched mirror glass"
+    },
+    {
+      "id": "plate_rainy_backstage_concert_tunnel",
+      "label": "🏛️ Realistic Plate: Arena Backstage Concrete Tunnel (Flight Cases & Stage Haze)",
+      "group": "Performance",
+      "character": "arena backstage concert tunnel",
+      "domain": "combat_action",
+      "rule": "a gritty concrete concert-arena backstage tunnel lined with stenciled black roadie flight cases, coiled power cables along the floor, cool blue work lights contrasting with warm amber arena spill at the far exit, and drifting stage haze",
+      "sound": "muffled crowd roar and sub-bass throb from the arena ahead plus echoing boots",
+      "life": "volumetric stage haze curls slowly out of the bright arena doorway ahead"
     }
   ]
 }

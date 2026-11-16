@@ -286,6 +286,48 @@
       "group": "Stylized, Neon & Monochrome",
       "rule": "bold high-saturation color palette popping luminous reds, electric blues, and warm skin tones against deep glossy darks",
       "domain": "general"
+    },
+    {
+      "id": "colour_douyin_porcelain_neon_cyan",
+      "label": "📱 Douyin Porcelain Skin + Luminous Neon Cyan/Rose",
+      "group": "Stylized, Neon & Monochrome",
+      "domain": "general",
+      "rule": "Clean high-clarity Douyin beauty grade with luminous porcelain skin midtones, crisp neutral whites, and vibrant rose-pink and cyan-blue background accents."
+    },
+    {
+      "id": "colour_kpop_pastel_milk_highlights",
+      "label": "💖 K-Pop Pastel Milk & Airy Cream Highlights",
+      "group": "Warm & Golden",
+      "domain": "general",
+      "rule": "Airy Korean idol music-video color grade with creamy rolled-off highlights, soft peach-milk skin tones, and clean pastel shadow lift."
+    },
+    {
+      "id": "colour_kodak_portra_400_warm",
+      "label": "🎞️ Kodak Portra 400 — Natural Warm Skin & Soft Greens",
+      "group": "Natural & Film Stocks",
+      "domain": "general",
+      "rule": "Authentic Kodak Portra 400 analog color palette with flattering warm-golden skin tones, gentle sage greens, and smooth highlight transition."
+    },
+    {
+      "id": "colour_cinestill_800t_halation",
+      "label": "🌃 CineStill 800T — Tungsten Night Cool & Red Halation",
+      "group": "Cool & Night",
+      "domain": "general",
+      "rule": "Classic CineStill 800T night film stock grade with cool tungsten-balanced shadows, crisp cyan-blue night ambience, and signature warm red halation around bright bulbs."
+    },
+    {
+      "id": "colour_wong_kar_wai_emerald_amber",
+      "label": "🎞️ Hong Kong 90s — Deep Emerald Shadows & Sodium Amber",
+      "group": "Stylized, Neon & Monochrome",
+      "domain": "general",
+      "rule": "Lush 1990s Hong Kong cinema color palette pairing deep emerald-teal shadows with rich sodium-amber highlights and warm saturated reds."
+    },
+    {
+      "id": "colour_golden_hour_bronze_glow",
+      "label": "🌅 Golden-Hour Sun-Kissed Bronze & Honey Highlights",
+      "group": "Warm & Golden",
+      "domain": "general",
+      "rule": "Warm late-afternoon sun-kissed color grade with rich honey-bronze skin highlights, warm amber midtones, and soft violet-blue shadow depth."
     }
   ]
 }

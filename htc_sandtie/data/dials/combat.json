@@ -1329,6 +1329,533 @@
       "domain": "combat_action",
       "duration_best": "10-14 s",
       "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Gives opening stance, impact VFX, and heroic finish clean breathing room."
+    },
+    {
+      "id": "action_parkour_rooftop_kong_vault",
+      "label": "🏃 Parkour Chase: Rooftop Sprint -> Kong Vault Over HVAC -> Tuck-and-Roll Landing",
+      "group": "Environmental, Prop & Parkour Combat Interactions",
+      "domain": "combat_action",
+      "duration_best": "8-12 s",
+      "duration_tip": "⏱ BEST LENGTH: 8–12 s (193–290f) — Clean sprint build-up, mid-air vault apex, and roll recovery.",
+      "rule": "Track alongside <Subject 1> in a brisk lateral follow shot: in Beat 1, <Subject 1> sprints full-tilt across sunlit concrete rooftop gravel toward a waist-high galvanized HVAC unit; in Beat 2, plants both palms squarely on top of the metal unit, tucking knees cleanly between arms in a fluid kong vault; in Beat 3, drops into a forward shoulder roll across the roof and springs immediately back into a sprint."
+    },
+    {
+      "id": "action_alley_chase_bin_slide_wallkick",
+      "label": "🏙️ Urban Chase: Narrow Alley Sprint -> Bin Slide -> Wall-Kick Corner Turn",
+      "group": "Environmental, Prop & Parkour Combat Interactions",
+      "domain": "combat_action",
+      "duration_best": "8-12 s",
+      "rule": "Track tight behind <Subject 1> weaving through a damp urban service alley: in Beat 1, <Subject 1> slides feet-first under a steel loading barrier sending cardboard and puddles spraying; in Beat 2, plants one sneaker high against the brick corner wall to kick off at a 90-degree angle; in Beat 3, glances sharply back over shoulder while accelerating down the next street."
+    },
+    {
+      "id": "action_car_jturn_handbrake_drift",
+      "label": "🚘 Driving Stunt: Hard Handbrake Drift -> Counter-Steer Crank & Gear Slam",
+      "group": "Environmental, Prop & Parkour Combat Interactions",
+      "domain": "car_cabin",
+      "aspect_best": "16:9",
+      "duration_best": "8-12 s",
+      "rule": "Frame from the dashboard-corner looking across <Subject 1> in the driver's seat as city streetlights whip past outside: in Beat 1, <Subject 1> yanks the handbrake lever upward while cranking the steering wheel hard left, torso bracing against lateral G-force as tires squeal; in Beat 2, snaps the wheel back in a crisp counter-steer while eyes stay locked ahead; in Beat 3, slams the shifter forward and floors the throttle."
+    },
+    {
+      "id": "action_motorcycle_lane_weave_visor",
+      "label": "🏍️ Moto Action: Visor Snap Down -> Lean-Angle Lane Weave & Throttle Tuck",
+      "group": "Environmental, Prop & Parkour Combat Interactions",
+      "domain": "combat_action",
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "Frame a tight chest-mount / front-three-quarter tracking shot on a speeding sportbike: in Beat 1, <Subject 1> snaps the tinted helmet visor shut with one gloved hand; in Beat 2, leans body and bike steeply left-then-right weaving cleanly between glowing car headlights; in Beat 3, tucks chest low behind the windscreen twisting the right throttle grip."
+    },
+    {
+      "id": "action_gym_heavy_bag_combo_sweat",
+      "label": "🥊 Sports Training: Heavy Bag Jab-Cross-Hook-Roundhouse & Chain Recoil",
+      "group": "Martial Arts & Hand-to-Hand",
+      "domain": "gym_sport",
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "Frame a gritty three-quarter medium shot beside a suspended leather heavy bag: in Beat 1, <Subject 1> snaps a crisp 1-2 jab-cross that dents the leather with flying sweat mist; in Beat 2, pivots hips violently into a liver hook and thundering rear roundhouse kick that swings the heavy bag upward on rattling steel chains; in Beat 3, catches the swinging bag with both forearms and breathes steadily."
+    },
+    {
+      "id": "action_pool_sprint_dive_underwater",
+      "label": "🏊 Sports Action: Poolside Block Sprint -> Clean Arc Dive -> Underwater Glide",
+      "group": "Environmental, Prop & Parkour Combat Interactions",
+      "domain": "wet_pool",
+      "aspect_best": "16:9",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> launches off the pool edge in a taut streamlined dive arc with arms locked overhead; in Beat 2, slices cleanly beneath the surface in a burst of sunlit silver air bubbles; in Beat 3, executes two powerful dolphin kicks gliding horizontally through shimmering turquoise water."
+    },
+    {
+      "id": "action_heist_laser_grid_limbo_weave",
+      "label": "🕶️ Espionage Heist: Laser-Grid Limbo Weave -> Vault Spin & Briefcase Grab",
+      "group": "Environmental, Prop & Parkour Combat Interactions",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> arches backward in a slow-motion gymnast limbo gliding inches beneath crisscrossing crimson security laser beams; in Beat 2, rolls silently onto one knee beside the open steel vault shelf; in Beat 3, unlatches and snatches a sleek aluminum case while glancing sharply toward the doorway."
+    },
+    {
+      "id": "action_bartender_flair_shaker_pour",
+      "label": "🍸 Prop Flair: Cocktail Shaker Behind-Back Toss -> Crisp Coupe Strain",
+      "group": "Environmental, Prop & Parkour Combat Interactions",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> shakes a frosted steel Boston shaker briskly at shoulder height under warm bar pendants; in Beat 2, flips the tin in a crisp spinning arc behind the back and catches it smoothly in one palm; in Beat 3, fits the Hawthorne strainer and pours a chilled amber stream cleanly into a waiting coupe glass."
+    },
+    {
+      "id": "action_detective_flashlight_evidence_sweep",
+      "label": "🔦 Thriller Action: Detective Flashlight Sweep -> Crouch Pick-Up & Shadow Turn",
+      "group": "Environmental, Prop & Parkour Combat Interactions",
+      "domain": "general",
+      "aspect_best": "16:9",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> sweeps a bright tactical flashlight beam across rain-damp concrete and scattered debris; in Beat 2, drops smoothly to one knee to lift a glinting brass shell casing with gloved fingers; in Beat 3, freezes at a metallic footstep behind and whips the flashlight beam sharply toward the rear shadow."
+    },
+    {
+      "id": "action_s1_s2_sword_vs_staff_parry",
+      "label": "⚔️ S1 vs S2: Katana vs Bo-Staff Spinning Parry -> Sweep Dodge & Tip Freeze",
+      "group": "00 · Partner / Two-Subject Combat Interactions (S1 vs S2 & Tag-Team)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "10-14 s",
+      "rule": "Frame a crisp wide-medium two-shot: in Beat 1, <Subject 1> lunges forward with a gleaming katana while <Subject 2> whips a hardwood bo-staff in a two-handed diagonal parry sending sparks flying; in Beat 2, <Subject 1> ducks smoothly beneath <Subject 2>'s sweeping horizontal staff spin; in Beat 3, <Subject 1> steps inside guard stopping the katana edge cleanly an inch from <Subject 2>'s collar."
+    },
+    {
+      "id": "action_s1_s2_back_to_back_reload_sweep",
+      "label": "🔫 S1 + S2 Tag-Team: Back-to-Back Synchronized Mag-Swap & Crossfire Sweep",
+      "group": "00 · Partner / Two-Subject Combat Interactions (S1 vs S2 & Tag-Team)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "8-12 s",
+      "rule": "Orbit smoothly 180 degrees around <Subject 1> and <Subject 2> standing shoulder-to-shoulder back-to-back: in Beat 1, both drop spent pistol magazines simultaneously with crisp metallic clatter; in Beat 2, slap fresh mags home in unison and rack slides; in Beat 3, step outward into mirrored two-handed firing stances sweeping opposing corridors."
+    },
+    {
+      "id": "action_parkour_stairwell_railing_drop",
+      "label": "🪜 Vertical Escape: Multi-Tier Stairwell Banister Vault & Drop Landing",
+      "group": "Environmental, Prop & Parkour Combat Interactions",
+      "domain": "combat_action",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "Tilt downward smoothly along a concrete stairwell shaft: in Beat 1, <Subject 1> leaps cleanly over the iron banister from the upper landing gripping the rail with one hand to swing inward; in Beat 2, drops one full flight cleanly onto the lower concrete landing; in Beat 3, absorbs the landing in a deep springy crouch and sprints out the lower door."
+    },
+    {
+      "id": "uber_fight_wick_hallway_gunfu_knife",
+      "label": "⚔️🔥 UBER FIGHT (ms): John Wick Hallway Gun-Fu, Empty-Slide Parry & Knife Disarm",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Millisecond-paced multi-beat choreography needs 12–15 s for clean impact & reload.",
+      "rule": "Millisecond-paced continuous gun-fu choreography: At 00:00.000-00:01.800, <Subject 1> advances down a narrow corridor in tight Center-Axis Relock pistol stance, firing two crisp double-taps as muzzle flashes strobe across walls and brass casings ping onto marble; At 00:01.800-00:04.400, an attacker lunges from a side doorway swinging a combat knife—<Subject 1> blocks the wrist with the locked-back empty pistol slide, pivots inward with a brutal hip throw, and drives two close-range shots into the flank; At 00:04.400-00:08.200, <Subject 1> snatches the dropped knife mid-spin, deflects a second attacker's baton, executes a rapid chest-slash into a collar-pull knee strike, and drops the empty magazine; At 00:08.200-00:12.000, <Subject 1> slaps a fresh magazine home, racks the slide with one sharp metallic clack, and pivots smoothly down the hall in steady tactical aim."
+    },
+    {
+      "id": "uber_fight_raid_corridor_silat_1v5",
+      "label": "⚔️🔥 UBER FIGHT (ms): The Raid Narrow-Hallway Silat 1-vs-5 Bone-Crunch Blitz",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Rapid Silat trapping, wall slams, and 1-vs-5 flow.",
+      "rule": "Millisecond-paced close-quarters Pencak Silat hallway brawl: At 00:00.000-00:02.100, five thugs rush <Subject 1> inside a cramped fluorescent corridor; <Subject 1> ducks a lead haymaker, traps the arm, and snaps two lightning elbow strikes into the jaw; At 00:02.100-00:05.500, <Subject 1> redirects attacker #2 headfirst into the plaster wall with flying dust, vaults off attacker #3's bent knee, and lands a spinning heel-kick across #4's chest; At 00:05.500-00:09.200, <Subject 1> drops low into a sweeping Silat leg-scissors takedown, follows up with a crisp palm-heel throat check, and slams the final attacker into a steel doorframe; At 00:09.200-00:12.500, <Subject 1> rises slowly in bruised, sweat-sheened exhaustion, fists raised in tight guard with chest heaving."
+    },
+    {
+      "id": "uber_fight_matrix_lobby_pillar_shatter",
+      "label": "⚔️🔥 UBER FIGHT (ms): Matrix Marble-Lobby Pillar Shatter & Bullet-Time Dodge",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Bullet-time ramp, marble debris, and wall-run flip.",
+      "rule": "Millisecond-paced blockbuster gunfight with speed-ramp bullet-time: At 00:00.000-00:02.500, <Subject 1> strides past towering marble lobby columns as twin submachine guns erupt, blasting pulverized white stone dust and cascading brass shells across the polished floor; At 00:02.500-00:05.800, time ramps smoothly into slow-motion bullet-time as <Subject 1> arches spine 90 degrees backward while shimmering silver bullet ripples streak inches above chest and face; At 00:05.800-00:09.400, time snaps back to full speed—<Subject 1> springs up, sprints three vertical steps up a shattered marble pillar, and launches into a full layout backflip firing downward; At 00:09.400-00:12.500, <Subject 1> lands in a crisp three-point crouch amidst drifting marble dust and settling shell casings."
+    },
+    {
+      "id": "uber_fight_wuxia_bamboo_canopy_duel",
+      "label": "⚔️🔥 UBER FIGHT (ms): Wuxia Bamboo-Canopy Weightless Jian Sword Duel (S1 vs S2)",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Weightless canopy balance and sword exchanges.",
+      "rule": "Millisecond-paced wire-fu wuxia sword duel high in swaying green bamboo: At 00:00.000-00:02.600, <Subject 1> and <Subject 2> balance effortlessly atop slender bending bamboo stalks in mist, flowing silk robes rippling in wind; At 00:02.600-00:06.000, both spring simultaneously across empty air, clashing slender jian blades mid-flight in a shower of metallic rings and severed bamboo leaves; At 00:06.000-00:09.500, <Subject 1> twists gracefully around a downward slash, kicks off a flexing trunk to reverse momentum, and locks cross-hilts with <Subject 2> inches from each other's eyes; At 00:09.500-00:12.500, both push apart cleanly onto opposite bamboo crowns and settle into poised stillness."
+    },
+    {
+      "id": "uber_fight_ipman_wingchun_chain_blitz",
+      "label": "⚔️🔥 UBER FIGHT (ms): Wing Chun Center-Line Chain-Punch Blitz & One-Inch Blast",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "10-14 s",
+      "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Rapid Wing Chun trapping and chain-punch burst.",
+      "rule": "Millisecond-paced Wing Chun martial arts showcase: At 00:00.000-00:02.000, <Subject 1> stands rooted in calm center-line Wing Chun stance as two opponents rush in with wide hooks; At 00:02.000-00:05.200, <Subject 1> executes razor-fast pak-sao and tan-sao forearm traps, redirecting both strikes inward while firing a blinding 12-hit vertical-fist chain-punch barrage into the lead opponent's chest; At 00:05.200-00:08.500, <Subject 1> pivots into opponent #2, placing one open palm flush against the sternum and snapping hips into a devastating one-inch explosive punch that launches him backward; At 00:08.500-00:11.000, <Subject 1> exhales calmly and lowers hands smoothly back to relaxed center guard."
+    },
+    {
+      "id": "uber_fight_jackie_prop_ladder_brawl",
+      "label": "⚔️🔥 UBER FIGHT (ms): Prop-Fu Folding Ladder & Kitchen Skillet Acrobatic Brawl",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Rhythmic prop-fu timing and playful recovery.",
+      "rule": "Millisecond-paced acrobatic prop-fu fight sequence: At 00:00.000-00:02.400, <Subject 1> snatches an aluminum folding ladder as three attackers charge, whipping it horizontally to block two incoming kicks with loud metallic clangs; At 00:02.400-00:06.000, <Subject 1> slides smoothly through the open A-frame rungs, hooks one boot through a step to spin-kick attacker #2, and vaults cleanly over a wooden prep table; At 00:06.000-00:09.200, <Subject 1> grabs a heavy cast-iron skillet to parry a crowbar with a ringing bong, counters with a crisp pan-flat slap, and trips attacker #3 with a broom sweep; At 00:09.200-00:12.000, <Subject 1> shakes stinging knuckles with a quick wince-grin before snapping back into alert stance."
+    },
+    {
+      "id": "uber_fight_bourne_bathroom_cqc",
+      "label": "⚔️🔥 UBER FIGHT (ms): Bourne Tiled-Bathroom Brutal CQC & Towel Disarm",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "either",
+      "duration_best": "10-14 s",
+      "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Tight handheld CQC rhythm.",
+      "rule": "Millisecond-paced gritty handheld close-quarters bathroom fight: At 00:00.000-00:02.000, an assassin bursts through the door lunging with a blade; <Subject 1> snatches a thick hand towel from the rack and whips it around the knife wrist; At 00:02.000-00:05.500, both crash violently against the porcelain sink and tiled wall as <Subject 1> drives rapid short-range ribs-to-jaw elbows cracking the vanity mirror; At 00:05.500-00:09.000, <Subject 1> twists the towel-wrapped arm into a sharp wrist-lock disarm, hears the knife clatter onto wet tile, and hooks a tight rear-naked sleeper hold; At 00:09.000-00:11.500, <Subject 1> lowers the unconscious attacker silently to the tile and steps smoothly out the doorway."
+    },
+    {
+      "id": "uber_fight_anime2real_flashstep_katana",
+      "label": "⚔️🔥 UBER FIGHT (ms): Anime2Real Flash-Step Katana & 7-Angle Spark-Grid Clash",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Iaido charge, flash-step, and delayed shockwave.",
+      "rule": "Millisecond-paced Anime2Real live-action VFX sword clash: At 00:00.000-00:02.200, <Subject 1> drops into a low iaido draw stance with thumb clicking the katana guard as glowing kinetic air ripples around boots; At 00:02.200-00:05.400, <Subject 1> vanishes in a sonic-boom flash-step leaving a brief dust ring, colliding mid-air with <Subject 2> across seven rapid-fire spark-grid blade parries; At 00:05.400-00:09.200, both land opposite each other sliding boots across cracked pavement as delayed luminous slash-ribbons tear through the air behind; At 00:09.200-00:12.500, <Subject 1> snaps a crisp chiburi blade flick and slides the steel smoothly home until the tsuba clicks shut."
+    },
+    {
+      "id": "uber_fight_kingsman_bar_360_onetake",
+      "label": "⚔️🔥 UBER FIGHT (ms): Kingsman Single-Take 360° Whip-Pan Pub/Lounge Brawl",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Continuous 360° camera whip-pan choreography.",
+      "rule": "Millisecond-paced unbroken single-take 360-degree camera brawl: At 00:00.000-00:02.200, <Subject 1> sets a pint glass down calmly on mahogany, then whips a tailored umbrella handle into an approaching bruiser's jaw; At 00:02.200-00:06.000, the camera whips continuously in a tight 360-degree arc as <Subject 1> vaults across the bar counter, smashes a bottle over attacker #2, and snaps a wooden pool cue across #3's ribs; At 00:06.000-00:09.500, <Subject 1> hooks an attacker's ankle with the curved umbrella crook, flips him onto a splintering booth table, and delivers a crisp spinning back-kick; At 00:09.500-00:12.500, <Subject 1> straightens suit cuffs and tie calmly amidst shattered glass while stepping over the threshold."
+    },
+    {
+      "id": "uber_fight_hallway_onetake_exhaustion",
+      "label": "⚔️🔥 UBER FIGHT (ms): Oldboy / Daredevil 2D-Plane One-Take Exhaustion Brawl",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Lateral tracking exhaustion brawl.",
+      "rule": "Millisecond-paced lateral side-scrolling one-take hallway brawl: At 00:00.000-00:02.800, camera tracks sideways down a dim concrete corridor as <Subject 1> absorbs a heavy body blow, counters with a raw haymaker, and slams an attacker into cinderblock; At 00:02.800-00:06.800, <Subject 1> trades exhausting heavy punches with three advancing brawlers—ducking a pipe swing, throwing a messy collar-drag takedown, and stumbling against the wall; At 00:06.800-00:10.500, visibly winded with bruised knuckles, <Subject 1> catches a second wind, blocks a wild hook, and drives a final heavy knee-and-cross combo dropping the last fighter; At 00:10.500-00:13.500, <Subject 1> leans one shoulder heavily against the concrete wall catching breath in silence."
+    },
+    {
+      "id": "uber_fight_cyberpunk_mantis_sandevistan",
+      "label": "⚔️🔥 UBER FIGHT (ms): Cyberpunk Mantis-Blade & Sandevistan Rooftop Ambush",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "either",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Cyber-blade deploy, afterimage dash, and slide.",
+      "rule": "Millisecond-paced cyberpunk neon rooftop cyber-combat: At 00:00.000-00:02.200, rain pours across a neon-lit rooftop as <Subject 1>'s forearms split open mechanically deploying twin glowing orange mantis blades; At 00:02.200-00:05.800, Sandevistan reflex boost ignites—<Subject 1> streaks forward leaving chromatic cyan-magenta afterimages, weaving cleanly past incoming gunfire trails; At 00:05.800-00:09.500, <Subject 1> leaps upward crossing both mantis blades in a blinding spark-shower X-slash across two armored drones and slicing an incoming katana in half; At 00:09.500-00:12.500, <Subject 1> drops into a rain-spraying knee slide as cyber-blades retract smoothly back into forearms."
+    },
+    {
+      "id": "uber_fight_mma_counter_headkick_ko",
+      "label": "⚔️🔥 UBER FIGHT (ms): Championship MMA Cage Counter-Hook to High Headkick KO",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "10-14 s",
+      "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Footwork read, counter-hook, and headkick KO.",
+      "rule": "Millisecond-paced championship MMA octagon exchange: At 00:00.000-00:02.200, <Subject 1> and <Subject 2> circle crisply under overhead arena spotlights, feinting jabs and checking low calf kicks; At 00:02.200-00:05.400, <Subject 2> lunges with an overhand right—<Subject 1> slips outside the punch and fires a razor-sharp counter check-hook that snaps <Subject 2>'s head sideways with flying sweat mist; At 00:05.400-00:08.800, <Subject 1> follows immediately with a feinted body-cross into a whipping rear high headkick landing flush on the jawline with thunderous impact; At 00:08.800-00:11.500, <Subject 2> drops to the canvas as the referee sprints in waving arms while <Subject 1> backs smoothly toward the cage."
+    },
+    {
+      "id": "uber_fight_subway_car_pole_swing_brawl",
+      "label": "⚔️🔥 UBER FIGHT (ms): Swaying Night Subway Car Pole-Swing Double-Kick & Slam",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Swaying train physics and pole-swing kicks.",
+      "rule": "Millisecond-paced swaying metro train car brawl: At 00:00.000-00:02.400, fluorescent tunnel lights strobe past windows as three thugs corner <Subject 1> beside brushed-steel grab poles; <Subject 1> sidesteps a wild pipe swing that sparks off the pole; At 00:02.400-00:06.000, <Subject 1> grips the vertical steel pole overhead, swings both boots cleanly in a 360-degree double dropkick launching two attackers into vinyl seats; At 00:06.000-00:09.500, <Subject 1> lands smoothly as the train lurches, traps attacker #3's collar, and slams his shoulder into a sliding steel door with a sharp metallic thud; At 00:09.500-00:12.500, <Subject 1> steadies one hand on the overhead strap breathing calmly as tunnel lights streak past."
+    },
+    {
+      "id": "uber_fight_bullet_train_aisle_briefcase",
+      "label": "⚔️🔥 UBER FIGHT (ms): Bullet Train Aisle Briefcase Parry & Seat-Back Vault",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Tight aisle prop-fu and high-speed window blur.",
+      "rule": "Millisecond-paced high-speed Shinkansen aisle fight: At 00:00.000-00:02.200, neon city lights blur past bullet-train windows as an assassin draws a silenced pistol down the narrow carpeted aisle; <Subject 1> snaps a hard-shell aluminum briefcase upward deflecting the wrist; At 00:02.200-00:05.800, <Subject 1> drives the briefcase corner into the assassin's ribs, vaults cleanly across two headrests, and blocks a second attacker's knife slash against the case latch; At 00:05.800-00:09.400, <Subject 1> whips a spinning back-elbow snapping the attacker's head against the overhead luggage rack and pins him across a folding tray table; At 00:09.400-00:12.000, <Subject 1> clicks the briefcase handle upright and walks smoothly toward the sliding vestibule door."
+    },
+    {
+      "id": "uber_fight_glass_elevator_skyline_cqc",
+      "label": "⚔️🔥 UBER FIGHT (ms): Ascending Glass Elevator 1-vs-4 Cramped Elbow & Panel Slam",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "9:16",
+      "duration_best": "10-14 s",
+      "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Vertical 9:16 cramped elevator CQC.",
+      "rule": "Millisecond-paced vertical glass elevator brawl: At 00:00.000-00:02.000, city skyline towers drop rapidly outside panoramic glass as four bodyguards crowd <Subject 1>; <Subject 1> explodes first with a sudden chin-butt and tight rib elbow; At 00:02.000-00:05.600, <Subject 1> deflects a taser baton, drives guard #2 into the brass handrail, and uses guard #3's chest as a springboard for a cramped jumping knee; At 00:05.600-00:09.000, <Subject 1> hip-throws the final guard crashing against the illuminated floor-button panel, triggering a chime as sparks pop; At 00:09.000-00:11.500, <Subject 1> adjusts collar calmly in the glass reflection as the elevator dings at the penthouse."
+    },
+    {
+      "id": "uber_fight_rain_neon_rooftop_katana_duel",
+      "label": "⚔️🔥 UBER FIGHT (ms): Rain-Slicked Neon Rooftop Katana Duel & Puddle Slash (S1 vs S2)",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Rain-spray blade arcs and reflection duel.",
+      "rule": "Millisecond-paced rain-soaked rooftop katana duel: At 00:00.000-00:02.400, <Subject 1> and <Subject 2> face off across neon-reflecting rooftop puddles in driving rain, water dripping from poised katana tips; At 00:02.400-00:06.000, both dash forward sending twin sheets of rainwater spraying sideways, blades colliding in three blinding spark-bursting parries; At 00:06.000-00:09.600, <Subject 1> ducks beneath a horizontal slash that slices a rooftop vent, counters with a sweeping upward arc that knocks <Subject 2>'s guard wide; At 00:09.600-00:12.500, <Subject 1> halts the wet steel edge inches from <Subject 2>'s collarbone while rain streams down both blades."
+    },
+    {
+      "id": "uber_fight_library_ladder_stair_parkour",
+      "label": "⚔️🔥 UBER FIGHT (ms): Gothic Library Rolling-Ladder Swing & Shelf Collapse",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Rolling ladder physics and flying paper.",
+      "rule": "Millisecond-paced mahogany library action sequence: At 00:00.000-00:02.500, <Subject 1> leaps onto a tall brass-rail rolling ladder as two pursuers fire, kicking off a mahogany shelf to send the ladder gliding rapidly along the track; At 00:02.500-00:06.200, <Subject 1> swings around the ladder rail delivering a flying double-boot kick to attacker #1, sending leather-bound books and torn pages fluttering through warm fireplace light; At 00:06.200-00:09.500, <Subject 1> drops cleanly onto a Chesterfield sofa, flips a heavy brass candlestick into attacker #2's jaw, and rolls over the oak table; At 00:09.500-00:12.000, <Subject 1> lands poised beside the roaring hearth amidst drifting paper pages."
+    },
+    {
+      "id": "uber_fight_casino_baccarat_table_gunfu",
+      "label": "⚔️🔥 UBER FIGHT (ms): Monte Carlo Casino Table Slide, Chip-Scatter & Gun-Fu",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Felt table slide, crystal shatter, and gun-fu.",
+      "rule": "Millisecond-paced luxury casino gun-fu firefight: At 00:00.000-00:02.200, <Subject 1> flips a green-felt baccarat table upright as cover while incoming gunfire shatters crystal champagne flutes overhead; At 00:02.200-00:05.800, <Subject 1> slides chest-first across the adjacent felt table scattering clay poker chips everywhere while firing crisp double-taps left and right; At 00:05.800-00:09.400, <Subject 1> rolls off the far table edge, disarms a flanking guard with a sharp wrist-twist, and fires a clean point-blank shot into a chandelier chain; At 00:09.400-00:12.500, <Subject 1> rises smoothly amidst raining crystal shards and settling poker chips."
+    },
+    {
+      "id": "uber_fight_kitchen_freezer_cleaver_parry",
+      "label": "⚔️🔥 UBER FIGHT (ms): Restaurant Kitchen Steel-Counter Slide & Cleaver Disarm",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Stainless kitchen props and steam bursts.",
+      "rule": "Millisecond-paced commercial kitchen CQC brawl: At 00:00.000-00:02.400, steam billows off stainless-steel prep counters as a butcher swings a heavy cleaver; <Subject 1> ducks low, driving a shoulder tackle into his ribs; At 00:02.400-00:06.000, <Subject 1> grabs a heavy steel stockpot lid to deflect two rapid cleaver chops with loud ringing clangs, then slides across a wet oiled prep table kicking attacker #2's chin; At 00:06.000-00:09.400, <Subject 1> traps the cleaver wrist against a walk-in freezer door, snaps a sharp elbow strike, and slams the heavy steel door shut; At 00:09.400-00:12.000, <Subject 1> sets the steel lid down cleanly and steps back into steady guard."
+    },
+    {
+      "id": "uber_fight_snowy_bamboo_spear_vs_sword",
+      "label": "⚔️🔥 UBER FIGHT (ms): Moonlit Snowy Bamboo Spear-vs-Katana Sweep (S1 vs S2)",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Snow-spray footwork and polearm sweeps.",
+      "rule": "Millisecond-paced moonlit snowy bamboo weapon duel: At 00:00.000-00:02.400, <Subject 1> holds a gleaming katana low while <Subject 2> spins a long tasseled steel-tipped spear, kicking up fresh white powder snow; At 00:02.400-00:06.000, <Subject 2> fires three rapid spear thrusts that <Subject 1> deflects with circular blade parries, slicing snow-laden bamboo stalks in half; At 00:06.000-00:09.600, <Subject 1> leaps over a sweeping low shaft strike, runs two steps along the flexing spear shaft itself, and snaps a spinning kick to <Subject 2>'s shoulder; At 00:09.600-00:12.500, both slide apart in crisp snow spray settling into opposite stances."
+    },
+    {
+      "id": "uber_fight_viking_shieldwall_axe_clash",
+      "label": "⚔️🔥 UBER FIGHT (ms): Muddy Battlefield Viking Shield-Wall Break & Battleaxe Hook",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Heavy medieval shield impacts and mud spray.",
+      "rule": "Millisecond-paced gritty medieval shield-and-axe clash: At 00:00.000-00:02.500, <Subject 1> charges across churned mud and drifting embers, slamming a round iron-rimmed wooden shield directly into an enemy shield-wall with splintering wood crack; At 00:02.500-00:06.200, <Subject 1> hooks an opponent's shield rim downward with a bearded battleaxe, steps inside, and drives a thunderous steel-bossed shield bash into his helmet; At 00:06.200-00:09.600, <Subject 1> pivots smoothly blocking an overhead broadsword with sparks flying, sweeps the legs in mud, and finishes with a decisive downward axe strike; At 00:09.600-00:12.500, <Subject 1> plants the axe handle upright breathing heavy mist in cold air."
+    },
+    {
+      "id": "uber_fight_gladiator_colosseum_trident_net",
+      "label": "⚔️🔥 UBER FIGHT (ms): Sun-Baked Colosseum Trident-vs-Gladius Dust-Cloud Finish",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Arena sand spray and weapon clash.",
+      "rule": "Millisecond-paced Roman Colosseum arena duel: At 00:00.000-00:02.400, golden dust swirls across sunlit sand as <Subject 1> spins a bronze trident while <Subject 2> advances behind a curved scutum shield and gladius; At 00:02.400-00:06.000, <Subject 1> whips a weighted net entangling <Subject 2>'s sword arm, yanks him off-balance, and sparks trident prongs across the iron shield rim; At 00:06.000-00:09.600, <Subject 2> slices free and lunges—<Subject 1> vaults sideways in swirling sand, sweeps <Subject 2>'s ankle with the trident butt, and pins his chest; At 00:09.600-00:12.500, <Subject 1> stands tall in golden sunlight raising the trident toward the roaring stone tiers."
+    },
+    {
+      "id": "uber_fight_pirate_ship_rigging_cutlass_swing",
+      "label": "⚔️🔥 UBER FIGHT (ms): Storm-Tossed Ship Deck Rope-Swing Cutlass Clash & Mast Kick",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Rolling deck water spray and rope swing.",
+      "rule": "Millisecond-paced swashbuckling storm-deck swordfight: At 00:00.000-00:02.500, ocean spray crashes across pitching oak planks as <Subject 1> grips a thick hemp rigging rope and swings high above two charging deckhands; At 00:02.500-00:06.200, <Subject 1> drops onto the main deck with steel cutlass ringing in rapid four-hit parries, kicking a wooden barrel rolling into attacker #1's knees; At 00:06.200-00:09.600, <Subject 1> braces one boot against the wet mainmast, locks hilts with attacker #2, and snaps a crisp pommel strike followed by a clean disarm; At 00:09.600-00:12.500, <Subject 1> sheaths the cutlass smoothly as lightning illuminates billowing wet sails."
+    },
+    {
+      "id": "uber_fight_western_saloon_quickdraw_brawl",
+      "label": "⚔️🔥 UBER FIGHT (ms): Frontier Saloon Quickdraw -> Banister Toss & Chair Smash",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Quickdraw timing and saloon wood smash.",
+      "rule": "Millisecond-paced dusty Western saloon brawl: At 00:00.000-00:02.200, swinging batwing doors creak as <Subject 1> whips a revolver from a low leather holster in a blinding quickdraw, blasting a chandelier rope above; At 00:02.200-00:05.800, <Subject 1> ducks a bottle thrown from the balcony, vaults over the polished oak bar, and delivers a heavy haymaker launching a brawler through a wooden poker table; At 00:05.800-00:09.400, <Subject 1> blocks a swinging wooden chair with one forearm, splinters it with a clean front kick, and flips an attacker over the second-floor banister onto straw; At 00:09.400-00:12.000, <Subject 1> spins the revolver cleanly back into holster amidst drifting gunsmoke."
+    },
+    {
+      "id": "uber_fight_cyber_mech_exosuit_warehouse",
+      "label": "⚔️🔥 UBER FIGHT (ms): Exosuit Hydraulic Punch, Steel-Beam Parry & Arc-Shield",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Heavy mechanical servo recoil and sparks.",
+      "rule": "Millisecond-paced industrial exosuit clash: At 00:00.000-00:02.400, hydraulic pistons hiss as <Subject 1> activates forearm exo-bracers, sliding boots across concrete to dodge a massive steel-beam swing; At 00:02.400-00:06.000, <Subject 1> raises a crackling cyan forearm arc-shield catching the heavy impact in a fountain of orange welding sparks, then drives a piston-boosted uppercut; At 00:06.000-00:09.500, <Subject 1> leaps onto a stacked cargo crate, fires dual thrusters into a meteoric diving knee-slam that cracks the concrete slab beneath; At 00:09.500-00:12.500, <Subject 1> vents hot white steam from shoulder exhausts while locking eyes on the target."
+    },
+    {
+      "id": "uber_fight_telekinesis_corridor_gravity_flip",
+      "label": "⚔️🔥 UBER FIGHT (ms): Gravity-Flip Corridor Wall-Walk & Telekinetic Force-Slam",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Rotating corridor camera and floating debris.",
+      "rule": "Millisecond-paced telekinetic gravity-bending corridor fight: At 00:00.000-00:02.400, <Subject 1> clenches one fist as loose ceiling tiles, glass shards, and dropped weapons rise weightlessly into mid-air around advancing guards; At 00:02.400-00:06.000, the corridor camera rotates 90 degrees—<Subject 1> sprints effortlessly sideways along the vertical wall delivering a flying kick while floating debris rockets forward; At 00:06.000-00:09.500, <Subject 1> snaps both palms outward unleashing a visible rippling air-shockwave that pins three guards cleanly against the far ceiling; At 00:09.500-00:12.500, gravity snaps back to normal as <Subject 1> lands upright amidst softly clattering debris."
+    },
+    {
+      "id": "uber_fight_speedster_lightning_pinball_blitz",
+      "label": "⚔️🔥 UBER FIGHT (ms): Speedster Lightning Pinball Blitz Across 6 Frozen Guards",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "10-14 s",
+      "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — High-speed lightning trail and frozen-time snap.",
+      "rule": "Millisecond-paced super-speedster blitz: At 00:00.000-00:02.000, <Subject 1> drops into a sprinter's crouch as golden-blue lightning arcs crackle across sneakers and fingertips while six armed guards raise rifles; At 00:02.000-00:05.800, <Subject 1> erupts into a continuous lightning-ribbon blur ricocheting pinball-style off walls, tapping each guard's helmet and redirecting mid-air bullets; At 00:05.800-00:09.000, <Subject 1> skids to a halt at the far end of the room snapping fingers—all six guards drop simultaneously in delayed unison with clattering rifles; At 00:09.000-00:11.500, lingering static sparks fade smoothly off <Subject 1>'s jacket."
+    },
+    {
+      "id": "uber_fight_fire_vs_ice_elemental_clash",
+      "label": "⚔️🔥 UBER FIGHT (ms): Pyrokinetic Flame-Whip vs Cryo Ice-Lance Shatter (S1 vs S2)",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Fire vs ice volumetric steam explosion.",
+      "rule": "Millisecond-paced elemental Fire vs Ice duel: At 00:00.000-00:02.400, <Subject 1> ignites a roaring spiral of liquid-gold fire around both forearms while <Subject 2> crystallizes a jagged translucent ice lance across frost-rimed stone; At 00:02.400-00:06.000, <Subject 1> lashes a glowing flame-whip that <Subject 2> shatters with a sweeping frost-wall eruption, filling the center with hissing white steam; At 00:06.000-00:09.600, both burst straight through the steam cloud clashing flaming fist directly against frozen lance tip in a dazzling orange-and-cyan shockwave ring; At 00:09.600-00:12.500, both skid backward across steaming stone holding poised elemental stances."
+    },
+    {
+      "id": "uber_fight_shadow_dagger_assassin_mirror_hall",
+      "label": "⚔️🔥 UBER FIGHT (ms): Mirror-Maze Shadow-Dagger Ambush & Glass-Shatter Counter",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Multi-reflection tension and shattering glass.",
+      "rule": "Millisecond-paced hall-of-mirrors assassin duel: At 00:00.000-00:02.500, <Subject 1> advances cautiously holding twin reverse-grip daggers as dozens of reflections shift inside a neon-lit glass mirror maze; At 00:02.500-00:06.200, an assassin bursts through a mirror panel in a cascade of sparkling glass—<Subject 1> spins smoothly catching the wrist and driving a rapid X-slash flurry; At 00:06.200-00:09.600, both weave between intact and shattered frames trading lightning knife parries that chip edges off neon-rimmed mirrors; At 00:09.600-00:12.500, <Subject 1> pins the assassin against a cracked mirror with blade edge at collar amidst settling glass."
+    },
+    {
+      "id": "uber_fight_samurai_iaido_bridge_draw_1v6",
+      "label": "⚔️🔥 UBER FIGHT (ms): Mist-Shrouded Wooden Bridge 1-vs-6 Single-Draw Iaido Finish",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Stillness tension into blinding single-draw arc.",
+      "rule": "Millisecond-paced samurai bridge iaido showdown: At 00:00.000-00:03.200, six armed Ronin surround <Subject 1> on a mist-shrouded cedar bridge; <Subject 1> stands completely still with left thumb resting silently on the katana guard; At 00:03.200-00:06.000, the Ronin charge—<Subject 1> explodes into a blinding low-draw horizontal arc, stepping seamlessly past three blades and slicing bamboo hats cleanly in mid-air; At 00:06.000-00:09.400, <Subject 1> pivots into a crisp overhead deflection, sweeps the fourth attacker's legs off wet planks, and halts at the bridge crest; At 00:09.400-00:12.500, <Subject 1> flicks mist droplets off steel and sheaths the katana smoothly with a crisp click."
+    },
+    {
+      "id": "uber_fight_ninja_kunai_smoke_bomb_rooftop",
+      "label": "⚔️🔥 UBER FIGHT (ms): Moonlit Shoji Rooftop Kunai Wire-Trap & Smoke Dropkick",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Smoke puff, wire-trap, and tiled rooftop acrobatics.",
+      "rule": "Millisecond-paced shinobi tiled-rooftop ambush: At 00:00.000-00:02.200, <Subject 1> sprints silently across moonlit clay roof tiles, throwing two glinting kunai trailing thin steel wire around a chimney; At 00:02.200-00:05.800, pursuing ninjas trip the taut wire—<Subject 1> slams a smoke pellet onto the tiles, bursting thick silver-white smoke that swallows the frame; At 00:05.800-00:09.400, <Subject 1> bursts upward out of the smoke in a soaring tornado kick, deflects a shuriken with a forearm bracer, and rolls down the eaves; At 00:09.400-00:12.000, <Subject 1> lands silently crouching on the ridgepole silhouetted against the full moon."
+    },
+    {
+      "id": "uber_fight_muay_thai_alley_clinch_elbows",
+      "label": "⚔️🔥 UBER FIGHT (ms): Bangkok Neon Alley Muay Thai Double-Collar Clinch & Knee",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "either",
+      "duration_best": "10-14 s",
+      "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Brutal clinch elbows and flying knee.",
+      "rule": "Millisecond-paced gritty Muay Thai alley fight: At 00:00.000-00:02.200, <Subject 1> checks a heavy low leg kick in a damp neon-lit Bangkok alley and steps inside locking both hands tightly behind the opponent's neck; At 00:02.200-00:05.800, <Subject 1> whips three thunderous alternating knees into the ribs, then snaps a razor-sharp horizontal elbow slicing sweat mist across the streetlight; At 00:05.800-00:09.200, <Subject 1> spins a second attacker off balance, launches off a parked scooter, and lands a soaring flying knee to the sternum; At 00:09.200-00:11.800, <Subject 1> shakes taped knuckles and settles back into high Muay Thai guard."
+    },
+    {
+      "id": "uber_fight_taekwondo_360_tornado_boardroom",
+      "label": "⚔️🔥 UBER FIGHT (ms): High-Rise Boardroom Taekwondo 540° Tornado Kick & Glass Shatter",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "10-14 s",
+      "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — High-elevation spinning kicks and glass shatter.",
+      "rule": "Millisecond-paced high-altitude boardroom martial arts sequence: At 00:00.000-00:02.200, <Subject 1> vaults atop the long glass conference table overlooking night skyscrapers, snapping twin rapid side-kicks against two charging suits; At 00:02.200-00:05.600, <Subject 1> whips a soaring 540-degree spinning tornado kick whose heel connects squarely, launching attacker #2 crashing onto the tempered glass tabletop; At 00:05.600-00:09.000, the tabletop spiderwebs and shatters into sparkling cubes as <Subject 1> lands smoothly on leather chair arms and drops attacker #3 with a crisp axe-kick; At 00:09.000-00:11.500, <Subject 1> steps cleanly off the frame onto marble floor."
+    },
+    {
+      "id": "uber_fight_jiujitsu_armbar_escape_slam",
+      "label": "⚔️🔥 UBER FIGHT (ms): Underground Mat Scramble — Guard Pass, Triangle & Slam (S1 vs S2)",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Ground grappling transitions and slam.",
+      "rule": "Millisecond-paced technical MMA/BJJ grappling scramble: At 00:00.000-00:02.600, <Subject 1> shoots a lightning double-leg takedown driving <Subject 2> onto the padded octagon mat with a heavy thud; At 00:02.600-00:06.200, <Subject 2> hooks legs upward locking a tight triangle choke around <Subject 1>'s neck and shoulder—<Subject 1> postures upright fighting the wrist grip; At 00:06.200-00:09.800, <Subject 1> hoists <Subject 2> chest-high, slams him cleanly back to the canvas to break the lock, passes side-control, and snaps into a crisp spinning armbar; At 00:09.800-00:12.500, <Subject 2> taps rapidly on <Subject 1>'s hip as <Subject 1> releases immediately."
+    },
+    {
+      "id": "uber_fight_parkour_crane_girder_fistfight",
+      "label": "⚔️🔥 UBER FIGHT (ms): Skyscraper Construction Girder High-Altitude Fistfight & Slide",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Dizzying height parallax and steel girder balance.",
+      "rule": "Millisecond-paced high-altitude construction girder fight: At 00:00.000-00:02.500, wind whips across an exposed red steel I-beam high above the city skyline as <Subject 1> and <Subject 2> trade tight balanced punches; At 00:02.500-00:06.200, <Subject 2> swings a wrench—<Subject 1> ducks, hooks one arm around a dangling steel crane cable, and swings around to deliver a chest-height kick; At 00:06.200-00:09.600, <Subject 1> drops onto a lower girder, sprints past sparks from a welder's torch, and slides smoothly down a taut diagonal tension wire; At 00:09.600-00:12.500, <Subject 1> lands cleanly on the concrete floor deck looking up at the skyline."
+    },
+    {
+      "id": "uber_fight_parking_garage_car_door_cqc",
+      "label": "⚔️🔥 UBER FIGHT (ms): Underground Garage Sedan-Door Shield Slam & Hood Vault",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Vehicle prop CQC and headlight silhouettes.",
+      "rule": "Millisecond-paced concrete parking garage car-CQC brawl: At 00:00.000-00:02.400, idling sedan headlights slice through damp garage mist as <Subject 1> yanks the driver's door open just as two thugs charge, slamming the steel door into #1; At 00:02.400-00:06.000, <Subject 1> slams attacker #2's head onto the car roof denting metal, vaults cleanly across the warm hood, and blocks a crowbar swing with a forearm; At 00:06.000-00:09.500, <Subject 1> drops into an asphalt knee-slide beneath a swung pipe, sweeps the legs, and finishes with a crisp rear-naked takedown beside spinning tires; At 00:09.500-00:12.000, <Subject 1> steps into the driver's seat and pulls the door shut cleanly."
+    },
+    {
+      "id": "uber_fight_arcade_cabinet_neon_shatter",
+      "label": "⚔️🔥 UBER FIGHT (ms): Midnight Retro Arcade CRT-Cabinet Smash & Neon Parry",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Glowing CRT sparks and synth-arcade colors.",
+      "rule": "Millisecond-paced midnight retro arcade brawl: At 00:00.000-00:02.400, glowing arcade cabinets cast magenta and cyan light across <Subject 1> as three brawlers close in between rows of joysticks; At 00:02.400-00:06.000, <Subject 1> ducks a punch that shatters a glass CRT screen in a shower of blue sparks, then counters with a rapid side-kick slamming attacker #1 into a pinball machine; At 00:06.000-00:09.500, <Subject 1> vaults atop an arcade cabinet, drops with a spinning heel-kick across #2, and pins #3 against a glowing claw machine; At 00:09.500-00:12.000, <Subject 1> steps back smoothly as arcade screens glitch and chime."
+    },
+    {
+      "id": "uber_fight_sniper_overwatch_to_cqc_breach",
+      "label": "⚔️🔥 UBER FIGHT (ms): Sniper Overwatch Bolt-Cycle -> Zipline Glass Breach & Pistol",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Long-range shot into zipline breach transition.",
+      "rule": "Millisecond-paced sniper-to-breach action sequence: At 00:00.000-00:02.800, <Subject 1> exhales steadily behind a scoped bolt-action rifle on a windy rooftop, fires a crisp shot, and cycles the steel bolt ejecting a spinning brass casing; At 00:02.800-00:06.600, <Subject 1> slings the rifle, clips onto a taut rooftop zipline, and rockets across the neon abyss crashing both combat boots straight through an office window; At 00:06.600-00:10.000, <Subject 1> rolls cleanly across shimmering glass shards, draws a sidearm in one fluid motion, and fires two rapid shots clearing the room; At 00:10.000-00:12.500, <Subject 1> sweeps the room smoothly in steady tactical aim."
+    },
+    {
+      "id": "uber_fight_heavy_gauntlet_juggernaut_parry",
+      "label": "⚔️🔥 UBER FIGHT (ms): Juggernaut Hammer-Swing Dodge -> Under-Guard Liver Blow & Vault",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — David-vs-Goliath speed contrast.",
+      "rule": "Millisecond-paced agile fighter vs towering armored juggernaut: At 00:00.000-00:02.400, a massive armored juggernaut swings a heavy warhammer that smashes concrete into flying gravel just inches from <Subject 1>'s boots; At 00:02.400-00:06.000, <Subject 1> dashes directly inside the hammer's backswing arc, firing three rapid liver hooks and a twisting elbow strike into the chest armor; At 00:06.000-00:09.500, <Subject 1> steps cleanly onto the lowered hammer head, vaults high over the juggernaut's helmet, and lands a devastating spinning heel-kick to the nape; At 00:09.500-00:12.500, the giant drops heavily to one knee as <Subject 1> lands poised behind."
+    },
+    {
+      "id": "uber_fight_vampire_hunter_silver_whip_crypt",
+      "label": "⚔️🔥 UBER FIGHT (ms): Gothic Torchlit Crypt Silver Chain-Whip & Crossbow Finisher",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Chain-whip arcs and torchlit shadows.",
+      "rule": "Millisecond-paced gothic hunter crypt battle: At 00:00.000-00:02.500, flickering wall torches cast long shadows across stone pillars as <Subject 1> cracks a gleaming silver chain-whip slicing through drifting dust; At 00:02.500-00:06.200, <Subject 1> lashes the whip wrapping cleanly around a leaping shadow creature's ankle, yanks it crashing into a stone sarcophagus, and leaps over a swipe; At 00:06.200-00:09.600, <Subject 1> snaps a wrist-mounted repeating crossbow firing silver bolts in rapid succession that burst into golden ember sparks on impact; At 00:09.600-00:12.500, <Subject 1> recoils the silver chain smoothly around forearm as embers settle."
+    },
+    {
+      "id": "uber_fight_tag_team_elevator_to_lobby_relay",
+      "label": "⚔️🔥 UBER FIGHT (ms): S1 + S2 Tag-Team Relay — Elevator Open to Lobby Sweep",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Two-subject synchronized tag-team relay.",
+      "rule": "Millisecond-paced S1 + S2 synchronized tag-team action: At 00:00.000-00:02.400, brass elevator doors slide open revealing armed guards—<Subject 1> slides low sweeping two guards' ankles while <Subject 2> vaults over <Subject 1>'s back; At 00:02.400-00:06.000, <Subject 2> lands firing twin pistol shots left and right while <Subject 1> pops up disarming a rifleman and tossing him into <Subject 2>'s spinning elbow; At 00:06.000-00:09.500, both stand back-to-back in the marble lobby reloading in crisp unison before launching synchronized finishing kicks at the final two guards; At 00:09.500-00:12.500, both nod briefly and stride briskly toward the glass exit."
+    },
+    {
+      "id": "uber_fight_boss_phase2_aura_eruption_clash",
+      "label": "⚔️🔥 UBER FIGHT (ms): Boss Phase-2 Crimson Aura Eruption & Sky-Drop Shockwave",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Anime2Real boss phase transformation and clash.",
+      "rule": "Millisecond-paced Boss Phase-2 escalation clash: At 00:00.000-00:02.600, <Subject 2> rises slowly from a shattered throne as a towering pillar of crimson-and-black lightning erupts, lifting loose stone chunks into orbit; At 00:02.600-00:06.200, <Subject 1> charges forward ducking a ground-splitting shockwave, leaping cleanly off floating boulders to close the distance; At 00:06.200-00:09.800, <Subject 1> and <Subject 2> collide mid-air fist-to-blade in a blinding golden-and-crimson energy sphere that blows dust and sparks outward across the arena; At 00:09.800-00:13.000, both skid backward onto opposite ends of the cracked floor breathing fiercely through clearing smoke."
     }
   ]
 }

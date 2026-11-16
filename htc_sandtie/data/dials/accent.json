@@ -223,6 +223,80 @@
       "words": "warm sun-drenched Australian inflection with relaxed rising terminals",
       "small": "mate, no worries, reckon",
       "domain": "general"
+    },
+    {
+      "id": "cantonese_native_hk",
+      "label": "🇭🇰 Native Cantonese (Hong Kong Cinema Cadence)",
+      "group": "Asia & Africa",
+      "accent": "native Cantonese",
+      "words": "expressive six-tone Hong Kong Cantonese cadence, crisp final particles, and natural urban rhythm",
+      "small": "唔該, 好正呀, 等陣先, 係咪呀",
+      "lang": "Cantonese",
+      "domain": "general"
+    },
+    {
+      "id": "german_native_berlin",
+      "label": "🇩🇪 Native German (Crisp Berlin / Modern)",
+      "group": "Europe",
+      "accent": "native German",
+      "words": "clean modern Berlin German articulation, crisp consonants, and cool grounded cadence",
+      "small": "Warte mal, komm her, genau so, unglaublich",
+      "lang": "German",
+      "domain": "general"
+    },
+    {
+      "id": "arabic_levantine_warm",
+      "label": "🇱🇧 Arabic / Levantine Accent (Warm & Melodic)",
+      "group": "Asia & Africa",
+      "accent": "Levantine Arabic",
+      "words": "warm melodic Levantine cadence, expressive vowel flow, and poised rhythmic emphasis",
+      "lang": "Arabic",
+      "domain": "general"
+    },
+    {
+      "id": "hindi_mumbai_cinema",
+      "label": "🇮🇳 Hindi / Mumbai Cinema Cadence (Expressive & Warm)",
+      "group": "Asia & Africa",
+      "accent": "Mumbai Hindi-inflected",
+      "words": "warm expressive Mumbai cadence, melodic pitch rises, and crisp dental consonants",
+      "lang": "Hindi",
+      "domain": "general"
+    },
+    {
+      "id": "jamaican_patois_caribbean",
+      "label": "🇯🇲 Caribbean / Jamaican Patois Rhythm (Musical & Bold)",
+      "group": "Americas",
+      "accent": "Jamaican Caribbean",
+      "words": "musical rhythmic Caribbean cadence, crisp percussive consonants, and warm expressive flow",
+      "lang": "English",
+      "domain": "general"
+    },
+    {
+      "id": "southern_us_texas_drawl",
+      "label": "🤠 Southern US / Warm Texas Drawl (Sultry & Unhurried)",
+      "group": "North America",
+      "accent": "warm Southern American",
+      "words": "unhurried honeyed Southern drawl, soft elongated vowels, and warm conversational charm",
+      "lang": "English",
+      "domain": "general"
+    },
+    {
+      "id": "new_york_brooklyn_crisp",
+      "label": "🗽 New York / Brooklyn Cadence (Quick & Confident)",
+      "group": "North America",
+      "accent": "New York Brooklyn",
+      "words": "quick confident New York cadence, punchy streetwise rhythm, and sharp comedic timing",
+      "lang": "English",
+      "domain": "general"
+    },
+    {
+      "id": "nordic_scandinavian_melodic",
+      "label": "🇸🇪 Nordic / Scandinavian English (Clean & Melodic)",
+      "group": "Europe",
+      "accent": "Scandinavian",
+      "words": "clean airy Scandinavian English lilt, gentle sing-song pitch rise, and calm clarity",
+      "lang": "English",
+      "domain": "general"
     }
   ]
 }

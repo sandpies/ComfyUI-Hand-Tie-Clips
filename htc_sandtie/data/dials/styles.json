@@ -605,6 +605,62 @@
       "group": "00 · Classic Genre Cinema",
       "rule": "authentic unvarnished cinéma vérité realism shot strictly under mixed practical room bulbs with spontaneous reactive handheld zooms catching honest unguarded gestures",
       "domain": "general"
+    },
+    {
+      "id": "style_douyin_highgloss_neon_beauty",
+      "label": "📱 Douyin High-Gloss Neon Beauty (Ring-Catchlights & Crisp Street Bokeh)",
+      "group": "00 · Viral & Experimental Looks",
+      "domain": "general",
+      "rule": "Modern high-definition vertical Douyin beauty cinema: crisp facial catchlights, luminous smooth-textured skin with natural pores, vibrant neon-magenta and cyan background bokeh, and razor-sharp motion clarity on fast hand and hip snaps."
+    },
+    {
+      "id": "style_kpop_music_bank_4k_stage",
+      "label": "🎤 K-Pop 4K Broadcast Stage (Multi-Spot Rim, Confetti Sparkle & Idol Polish)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "domain": "general",
+      "rule": "Ultra-clean 4K Korean live broadcast stage photography: bright multi-angle volumetric spotlights, crisp specular sparkle on fabric and jewelry, balanced warm-cool idol skin tones, and high-shutter clarity on sharp choreography."
+    },
+    {
+      "id": "style_wong_kar_wai_neon_stepprint",
+      "label": "🎞️ Wong Kar-wai Neon Melancholy (Emerald/Amber Tungsten & Dreamy Motion)",
+      "group": "00 · Classic Genre Cinema",
+      "domain": "general",
+      "rule": "90s Hong Kong arthouse cinema photography on 35mm film: rich emerald-green and sodium-amber practical tungsten cast, dreamy subtle motion trail on gestures, shallow anamorphic focus, and humid atmospheric haze."
+    },
+    {
+      "id": "style_y2k_digicam_direct_flash",
+      "label": "📸 Y2K Digicam Direct-Flash Nightlife (Crisp Hard Flash & Cool Shadows)",
+      "group": "00 · Viral & Experimental Looks",
+      "domain": "general",
+      "rule": "Authentic early-2000s compact digital camera aesthetic: punchy direct on-camera flash illuminating foreground skin and glossy fabrics against deep dark nightlife shadows, subtle digital sensor texture, and candid party energy."
+    },
+    {
+      "id": "style_70s_16mm_indie_sunfaded",
+      "label": "📽️ 1970s 16mm Indie Film (Warm Sun-Faded Halation & Organic Grain)",
+      "group": "Film looks",
+      "domain": "general",
+      "rule": "Tactile 1970s 16mm Kodak Ektachrome cinema look: warm sun-drenched highlights with soft golden halation, rich earthy shadows, gentle vintage lens softness at edges, and authentic organic 16mm film grain."
+    },
+    {
+      "id": "style_commercial_beauty_skincare_reel",
+      "label": "💎 Commercial Beauty & Fashion Reel (Soft Wrap Key & Dewy Specular)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "domain": "general",
+      "rule": "High-end luxury beauty commercial photography: huge soft-wrap octabox key light, clean dewy specular highlights on cheekbones and collarbones, creamy neutral backdrop separation, and silky 24fps glide."
+    },
+    {
+      "id": "style_90s_hi8_camcorder_night",
+      "label": "📼 Late-Night 90s Hi8 Camcorder (Warm Practicals & Analog Tape Texture)",
+      "group": "Camera looks",
+      "domain": "general",
+      "rule": "Candid 1990s handheld Hi8 analog camcorder look: warm practical lamp bloom, soft magnetic-tape chroma warmth, gentle handheld operator breathing, and intimate home-video immediacy."
+    },
+    {
+      "id": "style_monochrome_silver_gelatin_noir",
+      "label": "🖤 High-Fashion Monochrome Silver-Gelatin (Deep Blacks & Luminous Skin)",
+      "group": "Film looks",
+      "domain": "general",
+      "rule": "Classic black-and-white 35mm silver-gelatin editorial cinema: rich velvet blacks, luminous silvery skin midtones, crisp sculpted rim-light separation, and fine classic film grain."
     }
   ]
 }

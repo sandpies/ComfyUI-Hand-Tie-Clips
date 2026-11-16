@@ -1340,6 +1340,583 @@
       "duration_best": "8-12 s",
       "aspect_best": "either",
       "people": 2
+    },
+    {
+      "id": "pose_confident_catwalk_halt_pivot",
+      "label": "🚶 Standing: Brisk Catwalk Stride -> Sharp Heel-Pivot Halt & Chin-Down Gaze",
+      "group": "Standing",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "6-10 s",
+      "rule": "In Beat 1, <Subject 1> strides briskly forward toward the camera with natural arm swing and weight transfer; in Beat 2, plants the lead heel firmly into a crisp 45-degree pivot halt, shifting weight onto the back hip with one hand resting lightly on waist; in Beat 3, tilts chin slightly down while holding calm, locked eye contact with the lens."
+    },
+    {
+      "id": "pose_balcony_railing_lean_breeze",
+      "label": "🌅 Standing: Balcony Railing Lean -> Slow Head Turn & Hair Tuck",
+      "group": "Standing",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> rests both forearms lightly along a balcony railing gazing out toward the horizon; in Beat 2, pushes softly off one elbow and turns head smoothly over the shoulder toward the camera; in Beat 3, lifts one hand to tuck windblown hair behind an ear with a warm relaxed smile."
+    },
+    {
+      "id": "pose_doorframe_shoulder_lean_pushoff",
+      "label": "🚪 Standing: Doorframe Shoulder Lean -> Slow Push-Off Step Forward",
+      "group": "Standing",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "6-10 s",
+      "rule": "In Beat 1, <Subject 1> leans one shoulder casually against a vertical doorframe with ankles crossed and hands tucked lightly into pockets or waist; in Beat 2, uncrosses ankles and pushes smoothly off the frame; in Beat 3, takes two unhurried steps into the room while maintaining steady eye contact."
+    },
+    {
+      "id": "pose_armchair_slouch_glass_swirl",
+      "label": "🥃 Sitting: Angled Armchair Lounge -> Glass Swirl & Forward Lean",
+      "group": "Sitting",
+      "domain": "sofa_lounge",
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> reclines angled across a deep armchair with one arm draped over the armrest and legs crossed at the knee; in Beat 2, swirls a glass gently in one hand while listening; in Beat 3, leans torso forward resting elbows on knees to deliver a quiet, pointed look."
+    },
+    {
+      "id": "pose_cafe_table_chin_prop_smile",
+      "label": "☕ Sitting: Café Table Chin-Prop Listen -> Attentive Nod & Cup Lift",
+      "group": "Sitting",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> sits leaning forward at a small café table with one elbow planted and chin resting lightly in palm; in Beat 2, gives a slow attentive nod with softened eyes; in Beat 3, lowers the hand to lift a warm ceramic cup with both fingers while smiling gently."
+    },
+    {
+      "id": "pose_car_passenger_window_turn",
+      "label": "🚘 Sitting: Car Cabin Window Gaze -> Slow Turn & Collar Adjust",
+      "group": "Sitting",
+      "domain": "car_cabin",
+      "aspect_best": "16:9",
+      "duration_best": "6-10 s",
+      "rule": "In Beat 1, <Subject 1> sits angled in the passenger seat gazing out the side window as streetlights pass; in Beat 2, turns head and shoulders smoothly inward toward the driver and camera; in Beat 3, adjusts a lapel or collar smoothly while holding steady eye contact."
+    },
+    {
+      "id": "pose_lying_stomach_chin_prop_kicks",
+      "label": "🛏️ Lying: Prone Chin-in-Hands Lounge -> Playful Slow Ankle Cross",
+      "group": "Lying",
+      "domain": "bedroom",
+      "aspect_best": "16:9",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> lies comfortably on stomach propped on both elbows with chin cradled lightly in palms; in Beat 2, tilts head playfully while crossing ankles in the air behind; in Beat 3, lowers one cheek toward a forearm with a soft, relaxed breath."
+    },
+    {
+      "id": "pose_two_shot_walk_and_talk_stop",
+      "label": "🗣️ Two-Subject: Side-by-Side Walk & Talk -> Pivot Stop & Eye Lock",
+      "group": "Two-Subject",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "16:9",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> walk side by side at an easy conversational pace in a balanced two-shot; in Beat 2, <Subject 1> slows and pivots inward toward <Subject 2>, prompting <Subject 2> to stop a half-pace away; in Beat 3, both face each other at arm's length with natural hand gestures and focused eye contact."
+    },
+    {
+      "id": "pose_two_shot_forehead_embrace_breath",
+      "label": "💞 Two-Subject: Close Chest-to-Chest -> Jawline Cup & Forehead Rest",
+      "group": "Two-Subject",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> stand chest-to-chest in an intimate two-shot; in Beat 2, <Subject 2> lifts one hand slowly to cup <Subject 1>'s jawline while <Subject 1>'s fingers rest lightly on <Subject 2>'s chest; in Beat 3, both lean gently until foreheads touch with eyes softly closed."
+    },
+    {
+      "id": "pose_two_shot_back_to_back_turn",
+      "label": "🎬 Two-Subject: Back-to-Back Standoff -> Simultaneous 180° Shoulder Turn",
+      "group": "Two-Subject",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "16:9",
+      "duration_best": "6-10 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> stand back-to-back in crisp silhouette or medium two-shot; in Beat 2, both pivot smoothly 180 degrees in opposite directions; in Beat 3, both settle face-to-face two paces apart in sharp dramatic tension."
+    },
+    {
+      "id": "pose_yoga_warrior_flow_stretch",
+      "label": "🧘 Athletic: Yoga Overhead Reach -> Smooth Fold -> Warrior II Hold",
+      "group": "Standing",
+      "domain": "gym_sport",
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> stands tall with feet grounded and sweeps both arms upward in a slow inhale; in Beat 2, steps one foot smoothly back into a deep controlled lunge while extending arms horizontally into Warrior II; in Beat 3, steadies breathing with gaze locked over the lead fingertips."
+    },
+    {
+      "id": "pose_ballet_barre_arabesque_arch",
+      "label": "🩰 Athletic: Ballet Barre Arabesque Extension -> Graceful Release",
+      "group": "Standing",
+      "domain": "mirror_vanity",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> rests one hand lightly on a wooden studio barre with tall aligned posture; in Beat 2, extends the outer leg backward smoothly into a poised arabesque while sweeping the free arm forward; in Beat 3, lowers the leg softly to a clean fifth position with poised chin lift."
+    },
+    {
+      "id": "dance_latin_bachata_sensual_sway",
+      "label": "💃 Latin Bachata: Side-Step Hip Pop -> Ribcage Circle -> Hair Sweep",
+      "group": "00 · Dance — Latin, Ballroom & Contemporary",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> glides through a crisp three-step Bachata side travel ending in a sharp lifted hip tap; in Beat 2, rolls the ribcage through a smooth circular isolation into a slow waist dip; in Beat 3, rises smoothly while sweeping one hand through hair with a warm over-shoulder glance."
+    },
+    {
+      "id": "dance_latin_salsa_crossbody_spin",
+      "label": "💃 Latin Salsa: Crisp Crossbody Groove -> Rapid Spot Turn & Skirt Flare",
+      "group": "00 · Dance — Latin, Ballroom & Contemporary",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> steps briskly on beat with lively Cuban hip motion and bent-elbow arm styling; in Beat 2, whips into a tight high-speed spot turn sending hem and hair flaring outward; in Beat 3, lands squarely on beat with one hip popped and playful smile."
+    },
+    {
+      "id": "dance_tango_duet_ocho_leg_hook",
+      "label": "🌹 Ballroom Tango Duet: Close Frame Pivot -> Sharp Ocho & Leg Hook",
+      "group": "00 · Dance — Latin, Ballroom & Contemporary",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "16:9",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> glide across the floor locked in a crisp Argentine tango embrace with chests lifted; in Beat 2, <Subject 2> leads a rapid figure-eight ocho pivot as <Subject 1>'s heel sweeps sharply around <Subject 2>'s calf in a gancho leg hook; in Beat 3, both freeze nose-to-nose in dramatic stillness."
+    },
+    {
+      "id": "dance_contemporary_floor_spiral_rise",
+      "label": "🩰 Contemporary Lyrical: Floor Spiral Roll -> Sweeping Arm Reach & Rise",
+      "group": "00 · Dance — Latin, Ballroom & Contemporary",
+      "domain": "general",
+      "aspect_best": "16:9",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> spirals smoothly from a low seated floor curve onto one shoulder and knee; in Beat 2, sweeps one extended arm in a wide fluid arc across the space while rising seamlessly onto the balls of the feet; in Beat 3, suspends in an expressive chest-open balance before exhaling down."
+    },
+    {
+      "id": "dance_street_shuffle_cutting_shapes",
+      "label": "👟 Street Shuffle / Cutting Shapes: Crisp Heel-Toe Glide -> 180° Spin",
+      "group": "00 · Dance — Street, Shuffle & House",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> launches into fast rhythmic heel-toe T-step and running-man footwork gliding effortlessly across the floor; in Beat 2, snaps knees inward and outward through crisp cutting-shapes crossovers; in Beat 3, whips a 180-degree spin into a clean sneaker heel-tap freeze."
+    },
+    {
+      "id": "dance_street_popping_arm_wave_hit",
+      "label": "⚡ Street Popping & Waving: Fingertip-to-Chest Liquid Wave -> Dime-Stop Hit",
+      "group": "00 · Dance — Street, Shuffle & House",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> sends a continuous liquid wave from left fingertips through wrist, elbow, shoulders, and out the right hand; in Beat 2, snaps chest and shoulders into three razor-sharp dime-stop muscle hits on the snare beat; in Beat 3, glides backward on heels into a cool tilted freeze."
+    },
+    {
+      "id": "dance_street_house_jack_footwork",
+      "label": "🎧 Street House Dance: Loose Torso Jack -> Fast Farmer Footwork Groove",
+      "group": "00 · Dance — Street, Shuffle & House",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> rides a fluid undulating torso jack groove bouncing lightly in the knees; in Beat 2, fires rapid rhythmic house footwork shuffles and heel-swivels while arms stay relaxed; in Beat 3, pivots into a joyful sideways glide with shoulder bounce."
+    },
+    {
+      "id": "dance_pole_invert_to_slow_slide",
+      "label": "🪩 Pole Dance: Hand-Grip Climb -> Graceful Leg-Hook Invert & Slow Floor Slide",
+      "group": "00 · Dance — Club, Twerk, Pole & Heels",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> grips the vertical brass pole high with both hands and swings into a smooth orbiting spin; in Beat 2, hooks one knee high around the pole while arching back gracefully with pointed toes; in Beat 3, releases smoothly into a controlled vertical floor slide ending in a poised crouch."
+    },
+    {
+      "id": "dance_douyin_sweet_cheek_poke_hip_pop",
+      "label": "🌸 Douyin Girl Trend: Cheek-Poke Wink -> Double Hip Pop & Ribbon Sway",
+      "group": "00 · Douyin & TikTok Trending Dances",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> taps one fingertip playfully against her cheek with a bright camera wink while bouncing lightly on her heels; in Beat 2, drops hands to her waist firing two crisp left-right hip pops with a hair toss; in Beat 3, glides through a smooth figure-eight waist roll ending in a sweet chin-tilt smile."
+    },
+    {
+      "id": "dance_douyin_jacket_zip_drop_body_roll",
+      "label": "✨ Douyin Girl Trend: Slow Jacket Shoulder-Drop -> Beat-Synced Body Roll",
+      "group": "00 · Douyin & TikTok Trending Dances",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> slides one jacket lapel slowly off a bare shoulder while maintaining cool locked eye contact; in Beat 2, snaps into a crisp chest pop followed by a smooth head-to-hip body wave; in Beat 3, pivots 45 degrees tossing hair back over her shoulder with a sly smirk."
+    },
+    {
+      "id": "dance_tiktok_amapiano_hip_bounce_step",
+      "label": "🔥 TikTok Girl Trend: Amapiano Knee-Dip Bounce -> Smooth Waist Wine & Clap",
+      "group": "00 · TikTok Viral & Sexy Moveset Flows",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> rides a rhythmic Amapiano knee-dip groove with loose shoulders and alternating heel-taps; in Beat 2, sinks into a smooth circular waist wine with hands framing her hips; in Beat 3, pops upright with a crisp clap and playful glance toward the lens."
+    },
+    {
+      "id": "dance_tiktok_tate_step_hair_whip_drop",
+      "label": "⚡ TikTok Girl Trend: Sharp Chest-Snap Stride -> Low Knee Drop & Hair Whip",
+      "group": "00 · TikTok Viral & Sexy Moveset Flows",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> strides forward two crisp steps snapping her shoulders and chest on every snare hit; in Beat 2, drops smoothly into a low wide-knee squat pulse with palms gliding down her thighs; in Beat 3, rises with an explosive hair whip and poised hand-on-hip freeze."
+    },
+    {
+      "id": "dance_tiktok_pretty_girl_walk_camera_spin",
+      "label": "💋 TikTok Girl Trend: Camera-Walk Sway -> 180° Skirt Flare & Look-Back Kiss",
+      "group": "00 · TikTok Viral & Sexy Moveset Flows",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> walks smoothly toward the lens with rhythmic hip sway and relaxed swinging arms; in Beat 2, pivots into a crisp 180-degree spin letting hair and hem flare outward; in Beat 3, pauses facing three-quarter away and glances back over her shoulder blowing a soft kiss."
+    },
+    {
+      "id": "dance_douyin_neon_finger_heart_waist_wave",
+      "label": "💖 Douyin Girl Trend: Finger-Heart Beat Lock -> Side-Step Waist Wave",
+      "group": "00 · Douyin & TikTok Trending Dances",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> snaps crisp finger-heart and wrist-frame gestures cleanly on beat near her face; in Beat 2, glides sideways through a smooth ribcage-to-hip wave with bent knees; in Beat 3, leans slightly toward the lens with a glowing smile and hair tuck."
+    },
+    {
+      "id": "dance_duet_girls_tiktok_sync_hip_clap",
+      "label": "👯 TikTok Girl Duet: Twin Synchronized Hip-Pop, Cross-Clap & Lens Lean",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> stand side by side in tight sync firing twin left-right hip pops and shoulder bounces; in Beat 2, turn inward briefly for a crisp cross-hand clap before snapping back toward the camera into a smooth body wave; in Beat 3, both lean shoulder-to-shoulder toward the lens with matching winks."
+    },
+    {
+      "id": "dance_duet_girls_douyin_fan_sleeve_mirror",
+      "label": "👯 Douyin Girl Duet: Mirrored Guofeng Sleeve Wave -> Synchronized Spin & Pose",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> stand angled in mirrored symmetry sweeping arms through graceful overlapping wrist-circles; in Beat 2, execute a synchronized 360-degree pivot turn with flowing sleeves and hair trailing; in Beat 3, land in contrasting high-low beauty poses holding poised eye contact."
+    },
+    {
+      "id": "dance_duet_girls_tiktok_relay_walkin_pop",
+      "label": "👯 TikTok Girl Duet: S1 Front Chest-Pop Exit -> S2 Steps In With Hair Flip",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> owns center frame with crisp chest pops and a playful hip sway while <Subject 2> grooves softly behind; in Beat 2, <Subject 1> steps smoothly aside as <Subject 2> surges forward into center frame with a sleek hair flip; in Beat 3, both reunite side by side for a synchronized final hip drop."
+    },
+    {
+      "id": "dance_duet_girls_bestie_back_to_front_wave",
+      "label": "👯 TikTok Girl Duet: Staggered Diagonal Body-Wave Canon & Twin Peace Sign",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> stands slightly ahead of <Subject 2> in a tight diagonal frame as both roll through a staggered canon body wave; in Beat 2, both step-touch together snapping crisp hip isolations on beat; in Beat 3, lean cheeks close together flashing matching peace signs and bright smiles."
+    },
+    {
+      "id": "dance_kpop_sensual_slow_neck_collar_wave",
+      "label": "💋 Sensual K-Pop: Slow Jaw-to-Collarbone Trace -> Melting Vertical Body Wave",
+      "group": "00 · Dance — K-Pop Idol Sexy Choreo & Point Moves",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> tilts chin up gliding fingertips slowly along her jawline down to her collarbone with half-lidded eyes; in Beat 2, melts downward through an unhurried, deeply articulated vertical body wave from chest through ribs to hips; in Beat 3, rises smoothly sliding one hand up her waist into a poised idol stare."
+    },
+    {
+      "id": "dance_kpop_sensual_rear_figure8_glance",
+      "label": "💋 Sensual K-Pop: Three-Quarter Rear Figure-Eight Hip Sway & Slow Look-Back",
+      "group": "00 · Dance — K-Pop Idol Sexy Choreo & Point Moves",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> stands angled three-quarter rear to the camera tracing slow, hypnotic figure-eight hip circles while fingers brush lightly along her thigh; in Beat 2, arches her lower back deeply with a crisp double hip-accent on the bass; in Beat 3, turns only her chin smoothly over her shoulder locking sultry eye contact."
+    },
+    {
+      "id": "dance_kpop_sensual_floor_kneel_hair_sweep",
+      "label": "💋 Sensual K-Pop: Slow Knee-Drop Floor Arch -> Sweeping Hair Toss & Rise",
+      "group": "00 · Dance — K-Pop Idol Sexy Choreo & Point Moves",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> lowers smoothly onto both knees with palms braced lightly on the floor in front; in Beat 2, ripples her spine forward into a low sensual arch sweeping her hair up in a slow arc; in Beat 3, glides one knee upright rising fluidly with hands sliding up her sides."
+    },
+    {
+      "id": "dance_kpop_sensual_chair_leg_extension_glide",
+      "label": "💋 Sensual K-Pop: Stage Chair Seated Chest-Wave -> Slow Heel Extension",
+      "group": "00 · Dance — K-Pop Idol Sexy Choreo & Point Moves",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> sits perched on the front edge of a stage chair rolling her shoulders and ribcage in a slow chest wave; in Beat 2, leans back gripping the seat edge while extending one long leg smoothly forward with pointed toe; in Beat 3, draws the ankle back slowly and stands into a poised hip-cocked finish."
+    },
+    {
+      "id": "dance_kpop_sensual_duet_mirror_back_arch",
+      "label": "💋 Sensual K-Pop Duet: Synced Slow-Mo Ribcage Isolation & Synchronized Turn",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "16:9",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> stand side by side executing razor-synchronized slow-motion ribcage circles and hip sways; in Beat 2, sweep one arm overhead in unison while pivoting smoothly into a three-quarter arch; in Beat 3, turn chins together toward the lens in a poised, breathless ending-fairy hold."
+    },
+    {
+      "id": "dance_kpop_sensual_mic_stand_hip_circle",
+      "label": "🎤 Sensual K-Pop: Mic-Stand Slow Hip Circle -> Collarbone Breath & Wink",
+      "group": "00 · Dance — K-Pop Idol Sexy Choreo & Point Moves",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> wraps one hand loosely around a sleek chrome mic stand rolling her hips in a slow, continuous circle; in Beat 2, leans torso forward toward the mic capsule with parted lips and steady eye contact; in Beat 3, traces fingers down the stand and finishes with a slow, knowing idol wink."
+    },
+    {
+      "id": "dance_douyin_cyber_catwalk_slowmo_turn",
+      "label": "✨ Douyin Girl Trend: Confident Catwalk Stride -> Slow-Mo Hair-Sweep 180° Turn",
+      "group": "00 · Douyin & TikTok Trending Dances",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> strides smoothly down the frame with crisp hip sway and cool composed gaze; in Beat 2, snaps into a slow-motion 180-degree shoulder turn letting her hair fan out across the air; in Beat 3, pauses three-quarter rear looking back over her shoulder with a sleek wink."
+    },
+    {
+      "id": "dance_douyin_outfit_snap_clap_transition",
+      "label": "👏 Douyin Girl Trend: Beat-Snap Clap -> 360° Spin & Cute Peace-Sign Freeze",
+      "group": "00 · Douyin & TikTok Trending Dances",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> bounces lightly on the balls of her feet clapping sharply once in front of the lens; in Beat 2, whips through a clean 360-degree spin letting skirt hem and sleeves flare wide; in Beat 3, lands cleanly in a hip-popped stance flashing a cheerful peace sign beside her cheek."
+    },
+    {
+      "id": "dance_tiktok_perreo_reggaeton_hip_snap",
+      "label": "🌴 TikTok Girl Trend: Reggaeton Perreo Waist-Wine -> Low Squat Pulse & Hair Toss",
+      "group": "00 · TikTok Viral & Sexy Moveset Flows",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> rolls her hips through a deep rhythmic Latin perreo circle with knees softly bent; in Beat 2, sinks into a low rhythmic squat pulse gliding fingertips along her thighs; in Beat 3, pops upright into a sharp hip snap tossing her hair over one shoulder."
+    },
+    {
+      "id": "dance_tiktok_afrobeats_shoulder_waist_groove",
+      "label": "☀️ TikTok Girl Trend: Afrobeats Loose Shoulder Bounce -> Fluid Waist-Roll Glide",
+      "group": "00 · TikTok Viral & Sexy Moveset Flows",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> grooves effortlessly with alternating relaxed shoulder bounces and crisp rhythmic footwork; in Beat 2, links arms smoothly into a fluid circular waist roll stepping side-to-side; in Beat 3, flashes a radiant laugh while leaning playfully toward the camera."
+    },
+    {
+      "id": "dance_tiktok_heels_floor_tap_thigh_rise",
+      "label": "👠 TikTok Sexy Trend: Kneeling Heel-Tap Groove -> Slow Thigh-Slide Stand",
+      "group": "00 · TikTok Viral & Sexy Moveset Flows",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> kneels poised on one knee with hands resting on her hips rolling her chest in a slow wave; in Beat 2, places both palms on her thighs rising smoothly upward through a deep body roll; in Beat 3, plants her heels in a tall S-curve stance with a confident smirk."
+    },
+    {
+      "id": "dance_tiktok_mirror_fit_check_spin_wink",
+      "label": "🪞 TikTok Girl Trend: Mirror Fit-Check Sway -> Skirt/Hem Adjust & Lens Wink",
+      "group": "00 · TikTok Viral & Sexy Moveset Flows",
+      "domain": "mirror_vanity",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> steps smoothly in front of a full-length mirror adjusting her collar with a rhythmic hip sway; in Beat 2, pivots 90 degrees checking her side silhouette with a subtle chest pop; in Beat 3, turns back toward the reflection blowing a playful wink."
+    },
+    {
+      "id": "dance_duet_girls_douyin_heart_bridge_sync",
+      "label": "💞 Douyin Girl Duet: Twin Step-Touch -> Joined Two-Hand Heart & Cheek Lean",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> bounce side-by-side through crisp synchronized step-touches and shoulder shimmies; in Beat 2, curve one arm each overhead joining fingertips to form a shared heart above their heads; in Beat 3, lean cheeks together beaming warmly at the lens."
+    },
+    {
+      "id": "dance_duet_girls_tiktok_perreo_mirror_grind",
+      "label": "🔥 TikTok Girl Duet: Back-to-Back Hip Sway -> Synced Squat Bounce & Look-Back",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> groove close together angled three-quarter toward the camera rolling hips in tight sync; in Beat 2, drop smoothly into a twin rhythmic squat pulse with hands on knees; in Beat 3, rise together snapping a sharp hip-pop and over-shoulder smirk."
+    },
+    {
+      "id": "dance_duet_girls_kpop_center_swap_pop",
+      "label": "👯 K-Pop Girl Duet: Synchronized Chest-Pop -> Cross-Over Center Swap & Pose",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "16:9",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> leads in front with crisp chest pops while <Subject 2> mirrors cleanly behind on the diagonal; in Beat 2, both execute a smooth cross-over step swapping front and back positions seamlessly; in Beat 3, <Subject 2> hits a sharp point-choreo frame while <Subject 1> flanks with a poised hip lock."
+    },
+    {
+      "id": "dance_kpop_sensual_satin_glove_lip_trace",
+      "label": "💋 Sensual K-Pop: Fingertip Lip-to-Neck Trace -> Slow Shoulder Drop & Hip Roll",
+      "group": "00 · Dance — K-Pop Idol Sexy Choreo & Point Moves",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> draws one gloved fingertip lightly across her lower lip down her throat while tilting her head slowly back; in Beat 2, rolls one shoulder forward then back into an unhurried circular hip glide; in Beat 3, holds steady half-lidded eye contact with a slow exhale."
+    },
+    {
+      "id": "dance_kpop_sensual_side_profile_s_curve",
+      "label": "💋 Sensual K-Pop: Side-Profile S-Curve Wave -> Slow Head Turn & Hair Tuck",
+      "group": "00 · Dance — K-Pop Idol Sexy Choreo & Point Moves",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> stands in crisp side-profile arching her chest forward then rippling down through her lower spine; in Beat 2, slides one palm slowly from hip up to her ribs as her knees bend softly; in Beat 3, turns her face smoothly toward the camera tucking hair behind her ear."
+    },
+    {
+      "id": "dance_kpop_sensual_back_to_back_duet_turn",
+      "label": "💋 Sensual K-Pop Duet: Back-to-Back Shoulder Brush -> Slow 180° Pivot & Gaze",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "16:9",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> stand back-to-back gliding through slow synchronized ribcage waves with shoulders lightly brushing; in Beat 2, pivot 180 degrees smoothly in opposite directions tracing fingertips along each other's arms; in Beat 3, settle face-to-face inches apart before turning chins together toward the lens."
+    },
+    {
+      "id": "dance_kpop_sensual_floor_elbow_prop_wave",
+      "label": "💋 Sensual K-Pop: Side-Reclined Floor Wave -> Leg Sweep & Kneeling Rise",
+      "group": "00 · Dance — K-Pop Idol Sexy Choreo & Point Moves",
+      "domain": "general",
+      "aspect_best": "16:9",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> reclines on one forearm along the glossy stage floor rolling her waist in a slow sinuous curve; in Beat 2, sweeps her top leg in a graceful extended arc pulling seamlessly onto one knee; in Beat 3, rises with one hand sweeping up through her hair into a poised finish."
+    },
+    {
+      "id": "dance_tiktok_duet_bestie_mirror_laugh_groove",
+      "label": "👯 TikTok Bestie Duet: Candid Laugh -> Synced Shoulder-Rock & Finger-Gun",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> share a quick candid laugh looking at each other before snapping into beat; in Beat 2, lock into synchronized loose shoulder rocks and alternating hip taps; in Beat 3, point playful finger-guns cleanly toward the lens in unison."
+    },
+    {
+      "id": "dance_douyin_moonlight_hair_wave_snap",
+      "label": "🌙 Douyin Girl Trend: Moonlight Hair-Wave -> Cheek-Frame & Crisp Hip Snap",
+      "group": "00 · Douyin & TikTok Trending Dances",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> sweeps both wrists gracefully beside her jawline framing her face with a luminous smile; in Beat 2, snaps her hips sharply left-then-right while letting loose hair cascade across her shoulders; in Beat 3, glides into a smooth chest-to-hip body wave ending in a playful wink."
+    },
+    {
+      "id": "dance_douyin_cupid_arrow_bounce_wink",
+      "label": "💘 Douyin Girl Trend: Cupid Bow-Aim -> Cute Double Bounce & Peace Wink",
+      "group": "00 · Douyin & TikTok Trending Dances",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> pulls an imaginary bowstring back beside her cheek and releases cleanly toward the lens with a bright wink; in Beat 2, hops lightly through two crisp side-step heel bounces with rhythmic hip pops; in Beat 3, tilts head flashing a sweet two-finger peace sign."
+    },
+    {
+      "id": "dance_tiktok_latina_salsa_hip_pop_turn",
+      "label": "🔥 TikTok Girl Trend: Latina Hip-Pop -> Quick Double Spin & Hair Toss",
+      "group": "00 · TikTok Viral & Sexy Moveset Flows",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> fires fast energetic side-to-side hip pops with knees slightly bent and lively shoulder shimmy; in Beat 2, whips into a tight high-speed double spot turn sending skirt and hair flaring outward; in Beat 3, stops cleanly on beat with one hand on hip and radiant grin."
+    },
+    {
+      "id": "dance_tiktok_clean_girl_fit_walk_pivot",
+      "label": "✨ TikTok Fit-Check: Confident Walk-Up -> Jacket Flip & Over-Shoulder Smile",
+      "group": "00 · TikTok Viral & Sexy Moveset Flows",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> struts effortlessly toward the camera with natural rhythm and subtle hip sway showing off her outfit silhouette; in Beat 2, flips her jacket hem smoothly while pivoting 180 degrees; in Beat 3, glances back over her shoulder with a bright, confident laugh."
+    },
+    {
+      "id": "dance_kpop_sensual_blindfold_neck_arch",
+      "label": "💋 Sensual K-Pop: Slow Neck-Arch & Collarbone Glide -> Sharp Bass Chest-Hit",
+      "group": "00 · Dance — K-Pop Idol Sexy Choreo & Point Moves",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> arches her neck back slowly trailing one open palm from collarbone down her sternum; in Beat 2, hits two razor-sharp bass chest isolations before melting into a fluid hip roll; in Beat 3, drops chin slowly forward locking intense sultry eye contact."
+    },
+    {
+      "id": "dance_kpop_sensual_kneeling_hip_figure8",
+      "label": "💋 Sensual K-Pop: Kneeling Upright Figure-8 Hip Sway -> Overhead Hair Sweep",
+      "group": "00 · Dance — K-Pop Idol Sexy Choreo & Point Moves",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> kneels upright with thighs slightly apart gliding her waist in slow figure-eight circles; in Beat 2, sweeps both arms slowly up through her hair lifting her ribcage in a deep arch; in Beat 3, lowers hands lightly to her hips with parted lips and steady gaze."
+    },
+    {
+      "id": "dance_kpop_sensual_heels_wall_slide_arch",
+      "label": "💋 Sensual K-Pop: Back-to-Wall Slow Slide Down -> Heel Lift & Arch",
+      "group": "00 · Dance — K-Pop Idol Sexy Choreo & Point Moves",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> braces her upper back lightly against a textured wall rolling hips in an unhurried circle; in Beat 2, slides smoothly partway down the wall bending knees while gliding palms upward along her waist; in Beat 3, rises tall lifting one heel slightly in a poised idol stare."
+    },
+    {
+      "id": "dance_duet_girls_kpop_mirror_ending_fairy",
+      "label": "👯 K-Pop Girl Duet: Twin Point-Choreo -> Back-to-Back Chin Turn Ending Fairy",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> hit crisp synchronized K-Pop point-choreo hand frames and hip pops side by side; in Beat 2, step smoothly into a tight back-to-back stance catching breath in unison; in Beat 3, both turn their chins sharply toward the camera into twin glowing ending-fairy winks."
+    },
+    {
+      "id": "dance_duet_couple_slow_bachata_close_hold",
+      "label": "🌹 Two-Subject Duet: Close-Waist Bachata Sway & Smooth Under-Arm Spin",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "either",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> stand chest-to-chest in close Bachata hold swaying hips smoothly in unison; in Beat 2, <Subject 2> raises one joined hand guiding <Subject 1> through a graceful under-arm spin; in Beat 3, <Subject 1> lands smoothly back into <Subject 2>'s waist hold with shared eye contact."
+    },
+    {
+      "id": "dance_duet_couple_idol_stage_back_embrace",
+      "label": "🎤 Two-Subject Stage Duet: Behind-Waist Hold Body-Wave -> Synchronized Step",
+      "group": "00 · Dance — TikTok & K-Pop Duets (2-Subject)",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "either",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 2> stands closely behind <Subject 1> resting hands lightly at her waist as both ripple through a synced slow body wave; in Beat 2, <Subject 1> slides smoothly sideways out to <Subject 2>'s flank; in Beat 3, both execute crisp mirrored chest-pops facing the lens."
+    },
+    {
+      "id": "pose_two_shot_split_wardrobe_walkup",
+      "label": "🚶‍♀️🚶 Two-Subject Fashion Walk-Up: Side-by-Side Stride -> Coordinated Pivot Stop",
+      "group": "Two-Subject",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "16:9",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> stride briskly side by side toward the camera showcasing contrasting outfits with natural arm swing; in Beat 2, both hit a synchronized half-turn halt facing three-quarter toward the lens; in Beat 3, <Subject 1> adjusts collar while <Subject 2> pockets one hand with cool composure."
+    },
+    {
+      "id": "pose_two_shot_cafe_across_table_lean",
+      "label": "☕ Two-Subject Dialogue: Seated Across Table -> Shared Laugh & Subtle Lean-In",
+      "group": "Two-Subject",
+      "domain": "general",
+      "people": 2,
+      "aspect_best": "16:9",
+      "duration_best": "8-12 s",
+      "rule": "In Beat 1, <Subject 1> and <Subject 2> sit opposite each other at a small bistro table gesturing lightly over drinks; in Beat 2, <Subject 1> shares an amused smile while <Subject 2> leans forward resting forearms near the table center; in Beat 3, both hold warm, unbroken eye contact across the table."
     }
   ]
 }

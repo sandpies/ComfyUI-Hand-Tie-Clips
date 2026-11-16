@@ -1592,6 +1592,78 @@
       "aspect_best": "either",
       "domain": "general",
       "duration_best": "8-12 s"
+    },
+    {
+      "id": "cam_beat_snap_micro_push",
+      "label": "🎵 Beat-Snap Micro Push-In (Syncs Zoom/Dolly Pulses to Dance/Action Hits)",
+      "group": "00 · Multi-Angle, Action-Follow & Coverage",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "6-12 s",
+      "rule": "Execute a smooth forward dolly push-in accented by crisp, subtle micro-pushes timed directly to major dance pops or beat drops, keeping subject centered from medium-full into tight chest-up framing."
+    },
+    {
+      "id": "cam_idol_low_angle_pedestal_rise",
+      "label": "💃 Low-Angle Idol Pedestal Rise (Boots-to-Eyes Glamour Sweep)",
+      "group": "00 · Multi-Angle, Action-Follow & Coverage",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "Open low near floor level framing footwear and lower silhouette, then pedestal smoothly upward at steady speed tracing legs, waist, and torso before settling cleanly at eye-level medium close-up."
+    },
+    {
+      "id": "cam_handheld_vertical_dance_follow",
+      "label": "📱 Handheld Vertical Dance Follow (Natural Operator Groove & Micro-Sway)",
+      "group": "Handheld",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "Track fluidly with an agile handheld gimbal/camera that breathes gently with the performer's footwork, stepping subtly forward on choruses and easing back on wide spins."
+    },
+    {
+      "id": "cam_360_slowmo_duet_orbit",
+      "label": "🌀 360° Slow-Motion Two-Subject Orbit (Full Circle Around Duo)",
+      "group": "Orbit",
+      "domain": "general",
+      "aspect_best": "16:9",
+      "duration_best": "10-14 s",
+      "rule": "Glide smoothly in a continuous 360-degree circular orbit around both subjects at waist-to-chest height with steady speed, revealing foreground-to-background parallax and shifting rim light."
+    },
+    {
+      "id": "cam_mirror_rack_focus_pull",
+      "label": "🪞 Mirror-Reflection Rack-Focus Pull (Real Foreground -> Crisp Glass Reflection)",
+      "group": "Mirror & Optical",
+      "domain": "mirror_vanity",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "Open with crisp focus on the subject's real shoulder and silhouette in the near foreground while the mirror reflection glows softly out of focus, then pull focus smoothly into the mirror plane to reveal sharp facial expression."
+    },
+    {
+      "id": "cam_whip_pan_beat_snap_cut",
+      "label": "⚡ Whip-Pan Beat-Snap Transition (Fast Horizontal Blur -> Locked Reveal)",
+      "group": "00 · Vehicle, Rig & Kinetic Transitions",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "6-10 s",
+      "rule": "Hold steady medium framing for the opening beat, fire a rapid horizontal whip-pan blur left-to-right on the midpoint transition, and lock instantaneously onto the new angle or pose."
+    },
+    {
+      "id": "cam_contour_shoulder_hip_glide",
+      "label": "🔥 Sensual Contour Glide (Slow Tight Arc Tracing Shoulder, Waist & Hip)",
+      "group": "Tracking",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "8-12 s",
+      "rule": "Arc slowly and closely along a three-quarter front-to-side path at moderate amplitude, keeping shallow depth of field focused cleanly across collarbone, waist curve, and hip movement."
+    },
+    {
+      "id": "cam_car_window_driveby_reveal",
+      "label": "🚘 Car-Window Exterior-to-Cabin Glide (Passing Glass Reflections -> Interior)",
+      "group": "Through",
+      "domain": "car_cabin",
+      "aspect_best": "16:9",
+      "duration_best": "8-12 s",
+      "rule": "Open tracking beside the rain-beaded car side window catching passing neon reflections, then glide smoothly inward through the open window frame into a tight intimate cabin two-shot."
     }
   ]
 }

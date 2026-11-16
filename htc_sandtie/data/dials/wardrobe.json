@@ -794,6 +794,258 @@
       "group": "Street",
       "domain": "combat_action",
       "rule": "a fitted cropped matte leather moto jacket over a ribbed tank top, dark utility cargos, and chunky combat boots"
+    },
+    {
+      "id": "everyday_ribbed_cardigan_pleated_trousers",
+      "label": "Everyday — Cropped Ribbed Cardigan, Tank & High-Waist Pleated Trousers",
+      "group": "Everyday",
+      "domain": "general",
+      "rule": "Wearing a soft ivory cropped ribbed knit cardigan unbuttoned over a fitted white tank top, high-waist charcoal pleated tailored trousers with a thin leather belt, and clean white leather sneakers"
+    },
+    {
+      "id": "everyday_linen_shirt_denim_shorts",
+      "label": "Everyday — Breezy Oversized Linen Shirt & High-Rise Denim Shorts",
+      "group": "Everyday",
+      "domain": "general",
+      "rule": "Wearing an airy unbuttoned sky-blue linen button-down shirt knotted loosely at the waist over a fitted white bralette, frayed high-rise light-wash denim shorts, and minimalist leather slides"
+    },
+    {
+      "id": "everyday_turtleneck_midi_skirt_boots",
+      "label": "Everyday — Fitted Black Turtleneck, Slit Midi Skirt & Knee-High Boots",
+      "group": "Everyday",
+      "domain": "general",
+      "rule": "Wearing a sleek fitted black ribbed turtleneck tucked into a caramel wool-blend midi skirt with a clean side walking slit, paired with tall espresso leather knee-high boots"
+    },
+    {
+      "id": "everyday_flowing_chiffon_sundress",
+      "label": "Everyday — Tie-Shoulder Floral Chiffon Sundress & Strappy Sandals",
+      "group": "Everyday",
+      "domain": "general",
+      "rule": "Wearing a sunlit cream-and-terracotta chiffon sundress with delicate tie-shoulder straps, a fitted smocked bodice, and a flowing A-line skirt that flares smoothly during turns, paired with tan leather heeled sandals"
+    },
+    {
+      "id": "street_varsity_bomber_parachute_pants",
+      "label": "Street — Oversized Varsity Bomber, Baby Tee & Parachute Cargo Pants",
+      "group": "Street",
+      "domain": "general",
+      "rule": "Wearing a two-tone satin-and-wool varsity bomber jacket worn open over a cropped fitted baby tee, wide-leg olive nylon parachute pants cinched at the ankles, and chunky retro court sneakers"
+    },
+    {
+      "id": "street_belted_trench_monochrome_knit",
+      "label": "Street — Belted Gabardine Trench Coat Over Sleek Monochrome Knit Dress",
+      "group": "Street",
+      "domain": "general",
+      "rule": "Wearing a tailored camel waterproof gabardine trench coat belted cleanly at the waist over a fitted black rib-knit dress, sheer dark tights, and pointed ankle boots"
+    },
+    {
+      "id": "street_idol_stage_coord_blazer_mini",
+      "label": "Street — Idol Stage Coord (Cropped Asymmetric Blazer, Pleated Mini & Boots)",
+      "group": "Street",
+      "domain": "general",
+      "rule": "Wearing a sharp cropped metallic-trimmed stage blazer over a structured corset top, a crisp pleated mini-skirt with silver chain hardware, and lace-up platform combat boots"
+    },
+    {
+      "id": "athletic_clean_tennis_pleated_dress",
+      "label": "Athletic — Match-Ready White Pleated Tennis Dress & Court Sneakers",
+      "group": "Everyday",
+      "domain": "gym_sport",
+      "rule": "Wearing a crisp athletic white racerback tennis dress with a knife-pleated skirt and built-in compression shorts, white crew socks, and clean court sneakers"
+    },
+    {
+      "id": "athletic_boxer_satin_robe_ring_kit",
+      "label": "Athletic — Hooded Satin Boxing Robe Over Sports Bra & Ring Trunks",
+      "group": "Street",
+      "domain": "gym_sport",
+      "rule": "Wearing a glossy black-and-gold satin boxing ring robe worn open with belt trailing over a fitted athletic sports bra, high-waist satin boxing trunks, and taped hand wraps"
+    },
+    {
+      "id": "athletic_zip_track_jacket_flared_yoga",
+      "label": "Athletic — Sleek Zip-Front Track Jacket & Flared Studio Leggings",
+      "group": "Everyday",
+      "domain": "gym_sport",
+      "rule": "Wearing a sculpted slate-blue zip-front compression track jacket paired with matching high-waist flared yoga leggings and low-profile training shoes"
+    },
+    {
+      "id": "tailored_three_piece_charcoal_suit",
+      "label": "Tailored — Sharp Three-Piece Charcoal Wool Suit & Silk Tie (S1/S2 Lead)",
+      "group": "Tailored",
+      "domain": "office_desk",
+      "rule": "Wearing a razor-tailored charcoal pinstripe three-piece wool suit, crisp white spread-collar dress shirt, dark silk necktie, polished Oxford shoes, and steel dress watch"
+    },
+    {
+      "id": "tailored_silk_wrap_blouse_pencil_skirt",
+      "label": "Tailored — Ivory Silk Wrap Blouse, High-Waist Pencil Skirt & Stilettos",
+      "group": "Tailored",
+      "domain": "office_desk",
+      "rule": "Wearing an ivory mulberry silk wrap blouse tucked neatly into a tailored charcoal high-waist pencil skirt with a modest back vent, paired with pointed black suede stilettos"
+    },
+    {
+      "id": "swim_terracotta_ribbed_bikini_sarong",
+      "label": "Swim — Ribbed Terracotta Bikini & Sheer Flowing Beach Sarong",
+      "group": "Swim",
+      "domain": "wet_pool",
+      "rule": "Wearing a sunlit terracotta ribbed triangle bikini paired with a translucent ivory chiffon sarong knotted loosely at one hip that flutters in the coastal breeze"
+    },
+    {
+      "id": "swim_neoprene_surf_rashguard_kit",
+      "label": "Swim — Sleek Zip-Front Neoprene Surf Rashguard & Bikini Bottoms",
+      "group": "Swim",
+      "domain": "wet_pool",
+      "rule": "Wearing a fitted matte-black and cobalt long-sleeve neoprene zip-front surf rashguard paired with matching athletic bikini bottoms"
+    },
+    {
+      "id": "glam_sequined_champagne_fringe_mini",
+      "label": "Glamour — Sequined Champagne Fringe Stage Mini Dress & Strappy Heels",
+      "group": "Glamour",
+      "domain": "general",
+      "rule": "Wearing a dazzling champagne-gold beaded and tiered-fringe sleeveless mini dress that catches specular highlights and whips dynamically with every hip snap and spin, paired with metallic stiletto heels"
+    },
+    {
+      "id": "action_stealth_infiltration_turtleneck_harness",
+      "label": "🥊 ACTION — Matte Black Stealth Turtleneck, Shoulder Holster & Combat Boots",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "domain": "combat_action",
+      "rule": "Wearing a fitted matte-black tactical mock-neck compression top, dark reinforced cargo trousers, leather twin shoulder-holster rig, fingerless tactical gloves, and silent-sole combat boots"
+    },
+    {
+      "id": "street_y2k_velour_tracksuit_babytee",
+      "label": "Street — Y2K Low-Rise Velour Tracksuit & Cropped Baby Tee",
+      "group": "Street",
+      "domain": "general",
+      "rule": "Wearing a plush rose-pink Y2K zip-up velour hoodie worn half-open over a fitted white baby tee, matching low-rise flared velour track pants, hoop earrings, and retro white sneakers"
+    },
+    {
+      "id": "street_kpop_velvet_crop_asymmetric_mini",
+      "label": "Street — K-Pop Velvet Off-Shoulder Crop Top & Asymmetric Pleated Mini",
+      "group": "Street",
+      "domain": "general",
+      "rule": "Wearing a sleek black velvet off-shoulder long-sleeve crop top with silver buckle strap detail, a sharp asymmetric pleated mini-skirt with subtle metallic chain, and black heeled ankle boots"
+    },
+    {
+      "id": "everyday_cable_knit_sweater_thigh_socks",
+      "label": "Everyday — Cozy Off-Shoulder Cable-Knit Sweater & Over-Knee Socks",
+      "group": "Everyday",
+      "domain": "bedroom",
+      "rule": "Wearing a soft cream oversized cable-knit sweater slipping effortlessly off one shoulder, fitted ribbed lounge shorts underneath, and cozy heather-grey over-the-knee knit socks"
+    },
+    {
+      "id": "glam_champagne_bias_slip_dress",
+      "label": "Glamour — Champagne Bias-Cut Silk Slip Dress & Minimalist Strappy Heels",
+      "group": "Glamour",
+      "domain": "general",
+      "rule": "Wearing a liquid champagne-gold bias-cut silk satin slip dress with delicate spaghetti straps and fluid thigh-drape movement, paired with thin metallic strappy sandals"
+    },
+    {
+      "id": "street_cargo_miniskirt_zip_hoodie_platforms",
+      "label": "Street — Cropped Zip Hoodie, Utility Cargo Mini-Skirt & Platform Sneakers",
+      "group": "Street",
+      "domain": "general",
+      "rule": "Wearing a cropped heather-charcoal zip-up hoodie over a fitted ribbed tank, a khaki utility cargo mini-skirt with pocket flaps, and chunky white platform sneakers"
+    },
+    {
+      "id": "tailored_menswear_linen_blazer_open_collar",
+      "label": "Tailored — Relaxed Sand Linen Blazer, Open Shirt & Pleated Trousers (S1/S2)",
+      "group": "Tailored",
+      "domain": "general",
+      "rule": "Wearing an unlined sand-colored tailored linen blazer over a crisp white open-collar shirt, relaxed pleated ivory trousers, and suede loafers"
+    },
+    {
+      "id": "swim_emerald_one_shoulder_cutout",
+      "label": "Swim — Emerald One-Shoulder Cutout Swimsuit & Delicate Gold Anklet",
+      "group": "Swim",
+      "domain": "wet_pool",
+      "rule": "Wearing a sleek emerald-green ribbed one-shoulder cutout one-piece swimsuit with high-cut leg line and a delicate gold chain anklet"
+    },
+    {
+      "id": "lingerie_pearl_mesh_teddy_sheer_robe",
+      "label": "🤍 LINGERIE — Ivory Pearl-Embroidered Sheer Mesh Teddy & Silk Robe",
+      "group": "Lingerie",
+      "domain": "bedroom",
+      "rule": "Wearing an ivory sheer tulle teddy delicately embroidered with tiny pearls over bare curves, draped with a sheer floor-length silk chiffon robe"
+    },
+    {
+      "id": "action_cyber_idol_metallic_corset_boots",
+      "label": "⚡ CYBER — Metallic Silver Idol Corset, Pleated Tech Skirt & Knee Boots",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "domain": "general",
+      "rule": "Wearing a sculpted liquid-silver metallic corset top, a crisp black pleated techwear mini-skirt with buckle straps, and sleek silver-accented knee-high boots"
+    },
+    {
+      "id": "everyday_90s_denim_jacket_straight_jeans",
+      "label": "Everyday — 90s Vintage Cropped Denim Jacket, White Tank & Straight Jeans",
+      "group": "Everyday",
+      "domain": "general",
+      "rule": "Wearing a classic mid-wash 90s cropped denim jacket worn open over a crisp white ribbed tank top, vintage high-rise straight-leg jeans, and clean low-top sneakers"
+    },
+    {
+      "id": "split_partner_black_turtleneck_tailored_trousers",
+      "label": "Partner / S2 — Sleek Black Turtleneck, Gold Chain & Tailored Wool Trousers",
+      "group": "Tailored",
+      "domain": "general",
+      "rule": "Wearing a fitted fine-knit black merino turtleneck layered with a subtle thin gold neck chain, crisp dark pleated wool trousers, and sleek black Chelsea boots"
+    },
+    {
+      "id": "split_partner_street_oversized_leather_jacket",
+      "label": "Partner / S2 — Distressed Black Leather Jacket, White Tee & Baggy Denim",
+      "group": "Street",
+      "domain": "general",
+      "rule": "Wearing a heavy distressed black leather biker jacket worn open over a crisp heavyweight white crew-neck tee, relaxed wide-leg faded indigo jeans, and worn leather boots"
+    },
+    {
+      "id": "split_partner_kpop_stage_harness_shirt",
+      "label": "Partner / S2 — K-Pop Idol Open-Collar Silk Shirt, Leather Strap & Slacks",
+      "group": "Street",
+      "domain": "general",
+      "rule": "Wearing a tailored black silk dress shirt unbuttoned two buttons at the collar with a sleek minimalist leather chest strap, high-waist tailored slacks, and polished platform dress boots"
+    },
+    {
+      "id": "split_partner_samurai_dark_haori_hakama",
+      "label": "Partner / S2 — Dark Indigo Samurai Haori Coat, Split Hakama & Scabbard",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "domain": "combat_action",
+      "rule": "Wearing a deep indigo linen kimono and flowing open haori coat over wide pleated black hakama trousers cinched with a woven sash holding a lacquered katana scabbard"
+    },
+    {
+      "id": "street_coquette_ribbon_cardigan_pleated_mini",
+      "label": "Street — Coquette Ribbon-Tie Cardigan, Pleated Mini & Knee-High Boots",
+      "group": "Street",
+      "domain": "general",
+      "rule": "Wearing a soft blush-pink cropped tie-front cardigan with delicate satin ribbon bows over a white lace camisole, a crisp micro-pleated tennis skirt, and tall ivory leather boots"
+    },
+    {
+      "id": "street_balletcore_wrap_bolero_legwarmers",
+      "label": "Street — Balletcore Ribbed Wrap Bolero, Micro Skirt & Knit Legwarmers",
+      "group": "Everyday",
+      "domain": "general",
+      "rule": "Wearing a fitted ivory wrap-tie ballet bolero over a scoop-neck leotard top, a flowing sheer-layered wrap micro-skirt, ribbed cream knit legwarmers, and satin ballet flats"
+    },
+    {
+      "id": "glam_backless_crystal_chain_cowl_dress",
+      "label": "Glamour — Liquid-Silver Crystal Chainmail Backless Cowl Mini Dress",
+      "group": "Glamour",
+      "domain": "general",
+      "rule": "Wearing a shimmering liquid-silver crystal mesh cowl-neck mini dress with delicate draped chain straps across an open bare back, catching sharp specular highlights on every movement"
+    },
+    {
+      "id": "everyday_oversized_poplin_shirt_bike_shorts",
+      "label": "Everyday — Crisp Oversized White Poplin Shirt & Sleek Bike Shorts",
+      "group": "Everyday",
+      "domain": "general",
+      "rule": "Wearing an airy oversized crisp white cotton poplin button-down half-tucked over fitted charcoal high-waist bike shorts, gold hoop earrings, and minimalist retro sneakers"
+    },
+    {
+      "id": "swim_cutout_white_monokini_gold_rings",
+      "label": "Swim — White Ring-Linked Cutout Monokini & Delicate Body Chain",
+      "group": "Swim",
+      "domain": "wet_pool",
+      "rule": "Wearing a sculpted sunlit-white cutout one-piece monokini linked at the waist with brushed gold rings, accentuating bare shoulders and waist in wet poolside light"
+    },
+    {
+      "id": "action_neon_mecha_pilot_plugsuit",
+      "label": "⚡ SCI-FI — Glossy White-and-Crimson Tactical Pilot Plugsuit",
+      "group": "00 · Action, Combat & Sci-Fi Gear",
+      "domain": "combat_action",
+      "rule": "Wearing a form-fitting high-gloss white-and-crimson articulated tactical pilot suit with matte carbon shoulder plates, glowing cyan chest telemetry seams, and sleek armored boots"
     }
   ]
 }

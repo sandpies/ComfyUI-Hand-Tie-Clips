@@ -448,6 +448,14 @@ def finish_block(
             return tag_map.get(k, m.group(1))
         t = _clean_outside_d(t, lambda s: re.sub(r"(?<![\w<])@(\w+)", _rep_at, s))
 
+    # In T2VA, replace any stray <Subject N> / <Picture N> / <Audio N> tags cleanly
+    if mode == "T2VA":
+        t = _clean_outside_d(t, lambda s: re.sub(r"<Subject\s+1>'s\b", "the lead's", s))
+        t = _clean_outside_d(t, lambda s: re.sub(r"<Subject\s+1>", "the lead", s))
+        t = _clean_outside_d(t, lambda s: re.sub(r"<Subject\s+[2-9]>'s\b", "the other person's", s))
+        t = _clean_outside_d(t, lambda s: re.sub(r"<Subject\s+[2-9]>", "the other person", s))
+        t = _clean_outside_d(t, lambda s: re.sub(r"\s*<(?:Picture|Audio|Video)\s+\d+>", "", s))
+
     # Bind bare character names in Ref2VA (and fix any nested `<Subject N> (<Subject N> Name)` artifacts)
     if mode == "Ref2VA":
         for s_n, s_meta in sorted((lab.get("subjects") or {}).items()):
@@ -613,7 +621,9 @@ def finish_block(
             pic_cite = f" from {', '.join(p['label'] for p in s_pics)}" if s_pics else ""
             eth_s = next((_refs.extract_ethnicity_phrase(sp.get("desc") or "", brief=brief) for sp in s_pics if _refs.extract_ethnicity_phrase(sp.get("desc") or "", brief=brief)), "")
             eth_note = f" ({eth_s})" if eth_s else ""
-            use_partial = bool((anal_nude and s_n in (1, 2)) or (ward_ids_fin and (s_n == 1 or "nude_both_partners" in ward_ids_fin or (s_n == 2 and len(ward_ids_fin) >= 2 and wmode_fin == "split"))) or (sex_scene_fin and s_n == 2))
+            all_nude_fin = bool({"nude_both_partners", "nude_all_cast_subjects_s1_s9"} & set(ward_ids_fin))
+            split_assigned = bool(wmode_fin == "split" and len(ward_ids_fin) >= s_n)
+            use_partial = bool((anal_nude and s_n in (1, 2)) or (ward_ids_fin and (s_n == 1 or all_nude_fin or split_assigned)) or (sex_scene_fin and s_n == 2))
             if not re.search(rf"^\s*<Subject {s_n}>", ret, re.M):
                 pres = (
                     f"partially_preserved -{cname_str} keeping facial bone structure{eth_note}, hair, and body identity{pic_cite} while completely nude from Frame 0"
@@ -636,8 +646,11 @@ def finish_block(
             t = _replace_section_body(t, "retention_analysis:", new_ret, ("detailed_description:", "overall_soundscape:"))
         if anal_nude or ward_ids_fin:
             t = re.sub(r"(<Subject 1>[^\n:]*:\s*)fully_preserved", r"\1partially_preserved", t, count=1)
-        if anal_nude or "nude_both_partners" in ward_ids_fin or sex_scene_fin or (len(ward_ids_fin) >= 2 and wmode_fin == "split"):
+        if anal_nude or "nude_both_partners" in ward_ids_fin or "nude_all_cast_subjects_s1_s9" in ward_ids_fin or sex_scene_fin or (len(ward_ids_fin) >= 2 and wmode_fin == "split"):
             t = re.sub(r"(<Subject 2>[^\n:]*:\s*)fully_preserved", r"\1partially_preserved", t, count=1)
+        if "nude_all_cast_subjects_s1_s9" in ward_ids_fin or wmode_fin == "split":
+            for s_n_idx in range(3, len(ward_ids_fin) + 1 if wmode_fin == "split" else 10):
+                t = re.sub(rf"(<Subject {s_n_idx}>[^\n:]*:\s*)fully_preserved", r"\1partially_preserved", t, count=1)
 
         sdefs = _std._field(t, "subject_definitions:")
         if sdefs:
@@ -918,15 +931,14 @@ def adapt_preset_script(
 
 
 PASS2_REFINE_SYSTEM_PROMPT = """You are the Pass-2 Double-Knot Continuity Refiner for MiniMax H3 (SandTie Engine).
-You receive a Pass-1 draft (`plan` storyboard or complete `block` prompt) and a mandatory Audit Checklist for this clip.
+You receive a Pass-1 draft (`plan` storyboard or complete `block` prompt) and a concise Audit Checklist for this clip.
 Your task:
-1. Satisfy EVERY item in the Audit Checklist while keeping Pass 1's valid labels, timestamps, `[Shot N]` cut headers, and field structure intact.
-2. Lock any character sheet's racial/ethnic identity and bone structure across `subject_definitions:`, `summary:`, `retention_analysis:`, and `[Shot 1]`, writing `<Subject 1> Name` without parentheses or UI emojis.
-3. Enforce strict wardrobe, set, and transition continuity across EVERY beat (keep the active outfit and set unified, keep removed/bunched garments displaced, and bridge movements smoothly across timestamps).
-4. Write plain, concrete visual wording without literary filler or abstract jargon; in explicit/NSFW scenes name anatomy directly (`cock`, `erect penis`, `pussy`, `bare breasts`, `asshole`, `cum`) and replace euphemisms (`partner's shaft`, `her partner`) with literal phrasing (`his erect cock`, `the man`).
-5. Correct any biomechanical or POV flaw into concrete physical positioning and hand placement.
-6. Keep ZERO negative words (`no`, `not`, `never`, `without`, `avoid`, `don't`, `doesn't`, `isn't`, `aren't`, `can't`, `won't`) outside `<d>...</d>`, ZERO semicolons `;` inside `overall_soundscape:` or `non_diegetic_music:`, and ZERO meta-scaffolding labels (`embodying the ... staging`).
-7. Reply with ONLY the JSON object `{ "block": "<the refined prompt block>" }` (or `{ "plan": "<the refined storyboard>" }` when Stage is `plan`)."""
+1. Satisfy EVERY item in the Audit Checklist while keeping Pass 1's valid labels, timestamps, `[Shot N]` cut headers, single-thought unity, and field structure intact.
+2. Lock any character sheet's racial/ethnic identity and bone structure across `subject_definitions:`, `summary:`, `retention_analysis:`, and `[Shot 1]`, writing `<Subject 1> Name` smoothly (omitting parentheses and UI emojis).
+3. Enforce strict wardrobe, screen-left/right spatial axis, set, and transition continuity across EVERY beat—keep active outfits locked per assigned subject, keep displaced/removed garments in that displaced state, and bridge every movement with concrete cause-and-effect motion (`action -> contact -> secondary reaction`).
+4. Write direct literal visual prose free of literary filler; in explicit/NSFW scenes name anatomy directly (`cock`, `erect penis`, `pussy`, `bare breasts`, `asshole`, `cum`) and use `his erect cock` / `the man` rather than euphemisms.
+5. Keep every sentence outside `<d>...</d>` 100% affirmative (describing what IS visible and moving), keep `overall_soundscape:` and `non_diegetic_music:` free of semicolons and spoken words, and keep each beat to one clear foreground audio focus.
+6. Reply with ONLY the JSON object `{ "block": "<the refined prompt block>" }` (or `{ "plan": "<the refined storyboard>" }` when Stage is `plan`)."""
 
 
 def build_pass2_audit_checklist(
@@ -959,7 +971,7 @@ def build_pass2_audit_checklist(
             if eth:
                 if s_n == 1 and rear_scene and not mirror_p2:
                     eth_r = _refs.strip_front_facial_features_for_rear(eth)
-                    checks.append(f"RACIAL LOCK (<Subject {s_n}>): Name as `{eth}` in headers; in `[Shot 1]` use rear-visible `{eth_r}` only without front facial features.")
+                    checks.append(f"RACIAL LOCK (<Subject {s_n}>): Name as `{eth}` in headers; in `[Shot 1]` use rear-visible `{eth_r}` only while keeping face turned forward away from the camera.")
                 else:
                     checks.append(f"RACIAL LOCK (<Subject {s_n}>): Name explicitly as `{eth}` in `subject_definitions:`, `summary:`, `retention_analysis:`, and `[Shot 1]`.")
             elif s_desc:
@@ -967,41 +979,55 @@ def build_pass2_audit_checklist(
 
     ward_opts = _cat.resolve_dial_opts("wardrobe", ward_p2_str)
     if ward_opts:
-        w_clean = re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]+", "", ward_opts[0]["label"]).strip()
-        checks.append(f"WARDROBE LOCK: Keep the selected attire ({w_clean}) consistent across EVERY beat — never replace or vanish garments mid-scene unless explicitly displaced aside.")
+        wmode_p2 = _bg.get_dial_mode(flavors, "wardrobe", "sequence")
+        if len(ward_opts) >= 2 and wmode_p2 == "split":
+            subj_keys = sorted((lab.get("subjects") or {}).keys())
+            pairs = []
+            for idx, wo in enumerate(ward_opts):
+                sn = subj_keys[idx] if idx < len(subj_keys) else (idx + 1)
+                wl = re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]+", "", wo["label"]).strip()
+                pairs.append(f"<Subject {sn}>={wl}")
+            checks.append(f"SPLIT WARDROBE LOCK: Keep assigned outfits ({', '.join(pairs)}) consistent on their assigned subjects across every beat.")
+        else:
+            w_clean = re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]+", "", ward_opts[0]["label"]).strip()
+            checks.append(f"WARDROBE LOCK: Keep the selected attire ({w_clean}) consistent across EVERY beat, preserving any explicit displacement state.")
 
     place_opts = _cat.resolve_dial_opts("place", flavors.get("place"))
     if place_opts:
-        p_clean = re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]+", "", place_opts[0]["label"]).strip()
-        checks.append(f"ENVIRONMENT DOMAIN LOCK: Keep all props and surfaces strictly faithful to {p_clean} — eliminate contradictory furniture/props.")
+        if len(place_opts) >= 2 and _bg.get_dial_mode(flavors, "place", "sequence") == "sequence":
+            p_names = " -> ".join(re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]+", "", po["label"]).strip() for po in place_opts)
+            checks.append(f"ENVIRONMENT SEQUENCE LOCK: Transition cleanly across `{p_names}` keeping props and lighting faithful to each active room.")
+        else:
+            p_clean = re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]+", "", place_opts[0]["label"]).strip()
+            checks.append(f"ENVIRONMENT DOMAIN LOCK: Keep all props and surfaces strictly faithful to {p_clean}.")
 
     if is_pov:
         pov_lbl = "male POV" if pov_val == "male" else ("female POV" if pov_val == "female" else "first-person POV")
-        checks.append(f"POV CHECK ({pov_lbl}): Describe camera through first-person `my`/`I` without third-person observer pronouns.")
+        checks.append(f"POV CHECK ({pov_lbl}): Write camera perspective strictly in first-person `my`/`I` with the partner centered ahead.")
     if rear_scene and not anal_scene and not mirror_p2:
-        checks.append("REAR-POSE LOCK: Keep torso, chest, shoulders, and head facing away from the lens throughout.")
+        checks.append("REAR-POSE LOCK: Keep torso, chest, shoulders, and head facing forward away from the lens throughout.")
     if over_shoulder:
-        checks.append("OVER-SHOULDER LOCK: Keep hips/shoulders facing away while only her chin turns over one shoulder.")
+        checks.append("OVER-SHOULDER LOCK: Keep hips and shoulders angled away while only the chin turns back over one shoulder.")
     if mouth_occupied:
-        checks.append("ORAL SEAL LOCK: Keep lips sealed around the shaft/object with hollowed cheeks whenever occupied.")
+        checks.append("ORAL SEAL LOCK: Keep lips sealed tightly around the shaft/object with hollowed cheeks during sucking beats.")
     if no_dialogue:
         is_sex_p2 = _dir.is_sexual(brief, exp_p2_str, ward_p2_str, fetish_id=str(flavors.get("fetish") or ""))
         if is_sex_p2:
-            checks.append("WORDLESS AUDIO LOCK: Zero `<d>` spoken lines; put natural breaths, moans, and wet oral/skin contact foley in `overall_soundscape:`.")
+            checks.append("WORDLESS AUDIO LOCK: Keep all beats free of `<d>` speech; place natural breaths, moans, and wet foley inside `overall_soundscape:`.")
         else:
-            checks.append("SILENT LIPS LOCK: Zero `<d>` lines; use `with lips gently closed` and narrowband acoustic foley in `overall_soundscape:`.")
+            checks.append("SILENT LIPS LOCK: Keep `<d>` dialogue omitted; describe poised closed lips and tactile room foley inside `overall_soundscape:`.")
     else:
-        checks.append("AUDIO DISCIPLINE: Keep `overall_soundscape:` strictly free of speech/voices and semicolons `;`.")
+        checks.append("AUDIO DISCIPLINE: Keep `overall_soundscape:` strictly free of spoken words and semicolons, using comma-separated foley.")
         acc_opts_p2 = _cat.resolve_dial_opts("accent", flavors.get("accent"))
         tgt_lang_p2 = _dlg.detect_target_language(brief, acc_opts_p2[0] if acc_opts_p2 else None)
         if tgt_lang_p2 != "English":
             checks.append(
-                f"NATIVE SCRIPT LOCK (<d>...</d>): Translate/rewrite EVERY spoken word inside `<d>[{tgt_lang_p2}, ...] ...</d>` strictly into authentic native {tgt_lang_p2} characters "
-                f"(sample: `{_dlg.native_sample_for(tgt_lang_p2)}`) — zero English or romanization inside `<d>...</d>`, while keeping all descriptions outside `<d>...</d>` in English."
+                f"NATIVE SCRIPT LOCK (<d>...</d>): Write EVERY spoken word inside `<d>[{tgt_lang_p2}, ...] ...</d>` strictly in authentic native {tgt_lang_p2} characters "
+                f"(sample: `{_dlg.native_sample_for(tgt_lang_p2)}`), keeping all surrounding descriptions in English."
             )
     for fl in flavor_lines:
-        if any(tag in fl for tag in ("LAW:", "COMBAT", "ANIME-TO-REAL-LIFE", "ORBIT", "ELEVATOR", "TOP-DOWN", "OPEN-END", "HOP-JOIN CONTINUITY", "HOP TRANSITION")):
+        if any(tag in fl for tag in ("LAW:", "COMBAT", "ANIME-TO-REAL-LIFE", "ORBIT", "ELEVATOR", "TOP-DOWN", "OPEN-END", "HOP-JOIN CONTINUITY", "HOP TRANSITION", "SCREEN-AXIS")):
             checks.append(fl)
     if str(prev_hop_context or "").strip() and not any("HOP" in c for c in checks):
-        checks.append(f"HOP CONTINUITY CHECK: Ensure [Shot 1] smoothly continues the previous hop ending (`{str(prev_hop_context).strip()[:160]}`) without resetting posture or camera.")
+        checks.append(f"HOP CONTINUITY CHECK: Ensure [Shot 1] smoothly continues the previous hop ending (`{str(prev_hop_context).strip()[:160]}`) with continuous posture and camera axis.")
     return checks[:12]

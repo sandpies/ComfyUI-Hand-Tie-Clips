@@ -299,6 +299,54 @@
       "group": "Venues",
       "rule": "deep muffled dance-floor sub-bass pulsing gently beneath close leather booth rustle",
       "domain": "general"
+    },
+    {
+      "id": "amb_paris_cafe_bistro_morning",
+      "label": "☕ Paris Bistro Terrace (Porcelain Clinks, Murmur & Street Breeze)",
+      "group": "Outside",
+      "domain": "general",
+      "rule": "gentle espresso saucer clinks, soft distant European street murmur, rustling plane-tree leaves, and light cobblestone footsteps",
+      "world": "gentle espresso saucer clinks, soft distant European street murmur, rustling plane-tree leaves, and light cobblestone footsteps"
+    },
+    {
+      "id": "amb_dance_studio_sneaker_squeak",
+      "label": "🩰 Dance Rehearsal Studio (Sneaker Squeak, Cloth Rustle & Breath)",
+      "group": "Interiors",
+      "domain": "general",
+      "rule": "crisp rubber sneaker squeaks on polished hardwood floor, clean rhythmic cloth whip on quick turns, and focused performer breathing",
+      "world": "crisp rubber sneaker squeaks on polished hardwood floor, clean rhythmic cloth whip on quick turns, and focused performer breathing"
+    },
+    {
+      "id": "amb_boxing_gym_heavy_bag_chains",
+      "label": "🥊 Boxing Gym (Heavy Leather Thud, Steel Chains & Jump-Rope Snap)",
+      "group": "Interiors",
+      "domain": "gym_sport",
+      "rule": "heavy leather bag punch impacts, rattling steel suspension chains, brisk jump-rope floor snaps, and sharp exhaled boxer breaths",
+      "world": "heavy leather bag punch impacts, rattling steel suspension chains, brisk jump-rope floor snaps, and sharp exhaled boxer breaths"
+    },
+    {
+      "id": "amb_subway_platform_rail_hum",
+      "label": "🚇 Metro Subway Platform (Tunnel Air Draft, Rail Rumble & Chime)",
+      "group": "Transport",
+      "domain": "general",
+      "rule": "deep echoing underground ventilation hum, rising steel-rail train rumble from the tunnel, crisp pneumatic door chime, and tiled footsteps",
+      "world": "deep echoing underground ventilation hum, rising steel-rail train rumble from the tunnel, crisp pneumatic door chime, and tiled footsteps"
+    },
+    {
+      "id": "amb_cedar_sauna_hot_stones",
+      "label": "♨️ Cedar Steam Sauna (Water Hiss on Hot Stones & Quiet Drip)",
+      "group": "Venues",
+      "domain": "wet_shower",
+      "rule": "soft sizzling steam burst off hot river stones, warm wooden slat creaks, and steady slow water droplets on tiled floor",
+      "world": "soft sizzling steam burst off hot river stones, warm wooden slat creaks, and steady slow water droplets on tiled floor"
+    },
+    {
+      "id": "amb_ocean_cliff_surf_breeze",
+      "label": "🌊 Coastal Cliff Promenade (Rolling Surf, Sea Wind & Distant Gulls)",
+      "group": "Nature",
+      "domain": "general",
+      "rule": "steady rhythmic ocean waves breaking softly against rocks below, warm coastal wind across fabric, and faint distant gulls",
+      "world": "steady rhythmic ocean waves breaking softly against rocks below, warm coastal wind across fabric, and faint distant gulls"
     }
   ]
 }

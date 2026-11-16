@@ -174,11 +174,28 @@ def build_beat_grid(
         and (has_rear_pick or has_front_pick)
         and (has_rear_pick != has_front_pick or len(non_climax_eids) >= 2)
     )
+    exp_has_cuts = any(re.search(r"\[\s*Shot\s+2\s*\]", str(o.get("rule") or ""), re.I) for o in _cat.resolve_dial_opts("explicit", explicit_id))
     is_multi_pos = (
         any(e.startswith("multi_pos_") for e in eids)
+        or exp_has_cuts
         or has_multi_pos_picks
         or _dir.is_multi_position_scene(brief, explicit_id=explicit_id)
     )
+
+    # Check if an active single rule carries explicit millisecond `At MM:SS.mmm-MM:SS.mmm` spans
+    ms_spans: list[tuple[float, float]] = []
+    if max_seq_picks <= 1 and asked_shots == 0:
+        for dk in ("explicit", "combat", "pose"):
+            opts = _cat.resolve_dial_opts(dk, flavors.get(dk))
+            if len(opts) == 1:
+                rtxt = str(opts[0].get("rule") or "")
+                found = [
+                    (int(m.group(1)) * 60 + float(m.group(2)), int(m.group(3)) * 60 + float(m.group(4)))
+                    for m in re.finditer(r"\bAt\s+(\d+):(\d+(?:\.\d+)?)\s*[-–—]\s*(\d+):(\d+(?:\.\d+)?)", rtxt, re.I)
+                ]
+                if len(found) >= 2:
+                    ms_spans = found
+                    break
 
     # Check if brief / preset naturally expects hard cuts
     multi_cut_cam = (
@@ -188,37 +205,49 @@ def build_beat_grid(
         or asked_shots >= 2
     )
 
-    if T < 6.4:
-        n_beats = 2 if max_seq_picks <= 2 else min(3, max_seq_picks)
-    elif T <= 11.4:
-        # 10-11s sweet spot: 3 cohesive beats (slightly shorter Beat 1 so Beat 2-3 never rush!)
-        n_beats = max(3, min(4, max_seq_picks if max_seq_picks <= 4 else 3))
-    else:
-        n_beats = max(3, min(4, max_seq_picks if max_seq_picks <= 4 else 4))
-
-    if asked_shots >= 2 and asked_shots <= 6 and T >= asked_shots * 2.0:
-        n_beats = asked_shots
-
-    # Weighted spans for 10-12s continuous vs climax pacing (fixes rushed Beat 2-3 transitions)
-    if n_beats == 3 and 8.5 <= T <= 11.4 and not multi_cut_cam:
-        t1 = round(T * 0.28, 2)
-        t2 = round(T * 0.66, 2)
-        spans = [(0.0, t1), (t1, t2), (t2, T)]
-    elif n_beats == 2:
-        t1 = round(T * 0.45, 2)
-        spans = [(0.0, t1), (t1, T)]
-    else:
-        step = T / n_beats
+    if ms_spans:
+        raw_durs = [max(0.4, b - a) for a, b in ms_spans]
+        tot = sum(raw_durs) or 1.0
         spans = []
         cur = 0.0
-        for i in range(n_beats):
-            nxt = T if i == n_beats - 1 else round((i + 1) * step, 2)
+        for i, d_seg in enumerate(raw_durs):
+            nxt = T if i == len(raw_durs) - 1 else round(min(T - 0.4 * (len(raw_durs) - 1 - i), cur + (d_seg / tot) * T), 3)
+            if nxt <= cur:
+                nxt = round(min(T, cur + 0.4), 3)
             spans.append((cur, nxt))
             cur = nxt
+    else:
+        if T < 6.4:
+            n_beats = 2 if max_seq_picks <= 2 else min(3, max_seq_picks)
+        elif T <= 11.4:
+            # 10-11s sweet spot: 3 cohesive beats (slightly shorter Beat 1 so Beat 2-3 never rush!)
+            n_beats = max(3, min(4, max_seq_picks if max_seq_picks <= 4 else 3))
+        else:
+            n_beats = max(3, min(4, max_seq_picks if max_seq_picks <= 4 else 4))
+
+        if asked_shots >= 2 and asked_shots <= 6 and T >= asked_shots * 2.0:
+            n_beats = asked_shots
+
+        # Weighted spans for 10-12s continuous vs climax pacing (fixes rushed Beat 2-3 transitions)
+        if n_beats == 3 and 8.5 <= T <= 11.4 and not multi_cut_cam:
+            t1 = round(T * 0.28, 2)
+            t2 = round(T * 0.66, 2)
+            spans = [(0.0, t1), (t1, t2), (t2, T)]
+        elif n_beats == 2:
+            t1 = round(T * 0.45, 2)
+            spans = [(0.0, t1), (t1, T)]
+        else:
+            step = T / n_beats
+            spans = []
+            cur = 0.0
+            for i in range(n_beats):
+                nxt = T if i == n_beats - 1 else round((i + 1) * step, 2)
+                spans.append((cur, nxt))
+                cur = nxt
 
     cuts: list[int] = []
     if not is_single_continuous_ask and multi_cut_cam:
-        if any(e.startswith("multi_pos_") for e in eids) and len(spans) >= 3:
+        if (any(e.startswith("multi_pos_") for e in eids) or exp_has_cuts) and len(spans) >= 2:
             cuts = list(range(1, len(spans)))
         elif len(cids) >= 2 and get_dial_mode(flavors, "camera", "sequence") == "sequence":
             alloc = allocate_stages_to_spans([{"id": x} for x in cids], spans)

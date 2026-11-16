@@ -292,6 +292,70 @@
       "group": "Cinematic & Acoustic",
       "rule": "propulsive 110 BPM taiko and hybrid electronic percussion rising beneath broad low brass swells",
       "domain": "general"
+    },
+    {
+      "id": "amapiano_logdrum_groove_112",
+      "label": "112 BPM · Amapiano Log-Drum Bounce, Shakers & Silky Rhodes",
+      "group": "Club, Dance & Pop",
+      "domain": "general",
+      "rule": "Infectious 112 BPM South African Amapiano dance groove with deep woody log-drum basslines, crisp rhythmic shakers, and warm silky Rhodes chords",
+      "world": "Infectious 112 BPM South African Amapiano dance groove with deep woody log-drum basslines, crisp rhythmic shakers, and warm silky Rhodes chords"
+    },
+    {
+      "id": "afrobeats_warm_pluck_106",
+      "label": "106 BPM · Afrobeats Warm Guitar Pluck & Syncopated Bounce",
+      "group": "Latin, Afro & World",
+      "domain": "general",
+      "rule": "Sunlit 106 BPM Afrobeats groove with clean muted electric guitar plucks, syncopated rimshot percussion, and warm rolling sub-bass",
+      "world": "Sunlit 106 BPM Afrobeats groove with clean muted electric guitar plucks, syncopated rimshot percussion, and warm rolling sub-bass"
+    },
+    {
+      "id": "reggaeton_perreo_dembow_96",
+      "label": "96 BPM · Latin Reggaeton Perreo Dembow & Heavy Sub",
+      "group": "Latin, Afro & World",
+      "domain": "general",
+      "rule": "Driving 96 BPM Latin Reggaeton perreo beat with punchy dembow snare bounce, dark brass stabs, and deep chest-rattling sub-bass",
+      "world": "Driving 96 BPM Latin Reggaeton perreo beat with punchy dembow snare bounce, dark brass stabs, and deep chest-rattling sub-bass"
+    },
+    {
+      "id": "jersey_club_bounce_140",
+      "label": "140 BPM · Jersey Club Staccato Kick Bounce & Vocal Chops",
+      "group": "Club, Dance & Pop",
+      "domain": "general",
+      "rule": "High-energy 140 BPM Jersey Club dance beat with signature triplet kick-drum bounces, crisp bed-squeak percussion accents, and bright pitched vocal chops",
+      "world": "High-energy 140 BPM Jersey Club dance beat with signature triplet kick-drum bounces, crisp bed-squeak percussion accents, and bright pitched vocal chops"
+    },
+    {
+      "id": "baile_funk_tambor_130",
+      "label": "130 BPM · Rio Baile Funk Tambor & Distorted 808",
+      "group": "Latin, Afro & World",
+      "domain": "general",
+      "rule": "Hard-hitting 130 BPM Brazilian Baile Funk beat with hypnotic tambor percussion patterns, crisp handclaps, and heavy distorted 808 sub drops",
+      "world": "Hard-hitting 130 BPM Brazilian Baile Funk beat with hypnotic tambor percussion patterns, crisp handclaps, and heavy distorted 808 sub drops"
+    },
+    {
+      "id": "douyin_guofeng_guzheng_trap_92",
+      "label": "92 BPM · Douyin Guofeng Guzheng Plucks & 808 Trap",
+      "group": "Latin, Afro & World",
+      "domain": "general",
+      "rule": "Cinematic 92 BPM Chinese Guofeng fusion beat blending cascading traditional guzheng zither plucks and bamboo flute with crisp 808 trap hi-hats",
+      "world": "Cinematic 92 BPM Chinese Guofeng fusion beat blending cascading traditional guzheng zither plucks and bamboo flute with crisp 808 trap hi-hats"
+    },
+    {
+      "id": "kpop_sensual_velvet_rnb_98",
+      "label": "98 BPM · Sensual K-Pop Velvet Synth-R&B & Finger Snaps",
+      "group": "Sensual & R&B",
+      "domain": "general",
+      "rule": "Sleek 98 BPM sensual K-Pop R&B groove with crisp finger snaps, warm analog synth plucks, airy vocal-pad harmonies, and deep velvety sub-bass",
+      "world": "Sleek 98 BPM sensual K-Pop R&B groove with crisp finger snaps, warm analog synth plucks, airy vocal-pad harmonies, and deep velvety sub-bass"
+    },
+    {
+      "id": "melodic_afterlife_techno_126",
+      "label": "126 BPM · Melodic After-Hours Techno Arp & Rolling Sub",
+      "group": "Club, Dance & Pop",
+      "domain": "general",
+      "rule": "Hypnotic 126 BPM melodic after-hours techno with a dark evolving synth arpeggio, crisp four-on-the-floor kick, and cavernous reverb swells",
+      "world": "Hypnotic 126 BPM melodic after-hours techno with a dark evolving synth arpeggio, crisp four-on-the-floor kick, and cavernous reverb swells"
     }
   ]
 }
