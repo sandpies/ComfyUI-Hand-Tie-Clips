@@ -7081,7 +7081,7 @@ class HandTieClips:
             blocks, unique = _expand_shots(
                 _parse_shots(prompt), int(chains), hop_script=str(hop_script))
         n = len(blocks)
-        if not swap and not any(shots) and not previs_only and str(pin_mech) not in ("auto", "addguide"):
+        if not swap and not any(shots) and not previs_only and str(pin_mech) in ("hand_tie", "hand_tie_mc"):
             print(f"[{TAG}] Simple mode (no shot_plan): pin_mech={pin_mech} -> auto", flush=True)
             pin_mech = "auto"
             ht_mc = False
