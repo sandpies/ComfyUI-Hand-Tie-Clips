@@ -217,7 +217,7 @@ def _normalize_multishot_timeline(desc_body: str, duration_s: float) -> str:
 
 
 def clean_plan_output(raw_plan: str, duration_s: float, silent: bool = False) -> str:
-    t = str(raw_plan or "").strip()
+    t = str(raw_plan or "").replace("\r\n", "\n").replace("\r", "\n").strip()
     if not t:
         return t
     t = re.sub(r"^```[a-zA-Z]*\s*|\s*```$", "", t.strip())
@@ -294,6 +294,78 @@ def _restore_missing_shot_cut_headers(desc_body: str) -> str:
     return _CUT_WITHOUT_SHOT_RX.sub(_add_shot_hdr, desc_body)
 
 
+def _replace_section_body(text: str, field: str, body: str, next_fields: tuple[str, ...]) -> str:
+    """Replace the body under `field` cleanly whether separated by 1 or 2 newlines (or inline)."""
+    body_clean = str(body or "").strip()
+    if next_fields:
+        next_alt = "|".join(re.escape(nf) for nf in next_fields)
+        pat = rf"(?ms)^({re.escape(field)})[ \t]*(?:\n|$)(.*?)(?=^(?:{next_alt})[ \t]*(?:\n|$)|\Z)"
+    else:
+        pat = rf"(?ms)^({re.escape(field)})[ \t]*(?:\n|$)(.*)\Z"
+    if re.search(pat, text):
+        return re.sub(pat, lambda m: f"{m.group(1)}\n{body_clean}\n\n" if next_fields else f"{m.group(1)}\n{body_clean}", text, count=1)
+    return text
+
+
+def _ensure_ref2va_headers(text: str) -> str:
+    """Ensure canonical 6-field Ref2VA section headers exist on their own lines."""
+    t = str(text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not t:
+        return t
+    if "detailed_description:" not in t and "integrated_multimodal_description:" in t:
+        t = re.sub(r"(?m)^integrated_multimodal_description:", "detailed_description:", t, count=1)
+    all_hdrs = (
+        "subject_definitions:", "summary:", "retention_analysis:",
+        "detailed_description:", "overall_soundscape:", "non_diegetic_music:",
+    )
+    for hdr in all_hdrs:
+        t = re.sub(rf"(?mi)^({re.escape(hdr)})[ \t]+([^\n]+)", lambda m: f"{hdr}\n{m.group(2).strip()}", t)
+        t = re.sub(rf"(?mi)^{re.escape(hdr)}(?=[ \t]*(?:\n|$))", hdr, t)
+    if "detailed_description:" not in t:
+        first_body_pos = 0
+        m_shot = re.search(r"(?m)^\[\s*Shot\s+1\s*\]", t)
+        if m_shot:
+            first_body_pos = m_shot.start()
+        t = (t[:first_body_pos].rstrip() + "\n\ndetailed_description:\n" + t[first_body_pos:].lstrip()).strip()
+    if "retention_analysis:" not in t:
+        t = re.sub(r"(?m)^detailed_description:", "retention_analysis:\n\ndetailed_description:", t, count=1)
+    if "summary:" not in t:
+        t = re.sub(r"(?m)^retention_analysis:", "summary:\n\nretention_analysis:", t, count=1)
+    if "subject_definitions:" not in t:
+        t = "subject_definitions:\n\n" + t.lstrip()
+    if "overall_soundscape:" not in t:
+        t = re.sub(r"(?m)^non_diegetic_music:", "overall_soundscape:\nNatural room tone.\n\nnon_diegetic_music:", t, count=1)
+        if "overall_soundscape:" not in t:
+            t = t.rstrip() + "\n\noverall_soundscape:\nNatural room tone."
+    if "non_diegetic_music:" not in t:
+        t = t.rstrip() + "\n\nnon_diegetic_music:\nN/A"
+    return t
+
+
+def _ensure_t2va_headers(text: str) -> str:
+    """Ensure canonical 3-field T2VA section headers exist on their own lines."""
+    t = str(text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not t:
+        return t
+    if "integrated_multimodal_description:" not in t and "detailed_description:" in t:
+        t = re.sub(r"(?m)^detailed_description:", "integrated_multimodal_description:", t, count=1)
+    all_hdrs = ("integrated_multimodal_description:", "overall_soundscape:", "non_diegetic_music:")
+    for hdr in all_hdrs:
+        t = re.sub(rf"(?mi)^({re.escape(hdr)})[ \t]+([^\n]+)", lambda m: f"{hdr}\n{m.group(2).strip()}", t)
+        t = re.sub(rf"(?mi)^{re.escape(hdr)}(?=[ \t]*(?:\n|$))", hdr, t)
+    if "integrated_multimodal_description:" not in t:
+        m_shot = re.search(r"(?m)^\[\s*Shot\s+1\s*\]", t)
+        pos = m_shot.start() if m_shot else 0
+        t = (t[:pos].rstrip() + "\n\nintegrated_multimodal_description:\n" + t[pos:].lstrip()).strip()
+    if "overall_soundscape:" not in t:
+        t = re.sub(r"(?m)^non_diegetic_music:", "overall_soundscape:\nNatural room tone.\n\nnon_diegetic_music:", t, count=1)
+        if "overall_soundscape:" not in t:
+            t = t.rstrip() + "\n\noverall_soundscape:\nNatural room tone."
+    if "non_diegetic_music:" not in t:
+        t = t.rstrip() + "\n\nnon_diegetic_music:\nN/A"
+    return t
+
+
 def finish_block(
     raw_block: str,
     *,
@@ -307,7 +379,7 @@ def finish_block(
 ) -> str:
     """Deterministic post-write cleanup so the block passes `standard.contract_errors` & H3 community laws."""
     flavors = flavors or {}
-    t = str(raw_block or "").strip()
+    t = str(raw_block or "").replace("\r\n", "\n").replace("\r", "\n").strip()
     if not t:
         return t
     t = re.sub(r"^```[a-zA-Z]*\s*|\s*```$", "", t.strip())
@@ -322,6 +394,10 @@ def finish_block(
     first_pos = t.find(fields[0])
     if first_pos > 0:
         t = t[first_pos:]
+    if mode == "Ref2VA":
+        t = _ensure_ref2va_headers(t)
+    else:
+        t = _ensure_t2va_headers(t)
 
     if silent:
         t = _strip_all_dialogue(t)
@@ -335,6 +411,8 @@ def finish_block(
     raw_desc_body = _std._field(t, desc_field)
     if raw_desc_body:
         raw_desc_body = _restore_missing_shot_cut_headers(raw_desc_body)
+        if not re.search(r"\[\s*Shot\s+1\s*\]", raw_desc_body, re.I):
+            raw_desc_body = "[Shot 1] " + raw_desc_body.lstrip()
         norm_desc_body = _normalize_multishot_timeline(raw_desc_body, duration_s)
         if not bool(flavors.get("time_tied", flavors.get("fast_engine", True))) and not re.search(r"\[\s*Shot\s+[2-9]\d*\s*\]", norm_desc_body, flags=re.I):
             body_lines = [ln.strip() for ln in norm_desc_body.strip().splitlines() if ln.strip()]
@@ -354,13 +432,7 @@ def finish_block(
                         flow_sents.append(cleaned_ln[0].upper() + cleaned_ln[1:])
             if shot1_lines and flow_sents:
                 norm_desc_body = "\n".join(shot1_lines) + "\n\n" + " ".join(flow_sents)
-        t = re.sub(
-            rf"({re.escape(desc_field)}[ \t]*\n)(.*?)(?=\noverall_soundscape:)",
-            lambda m: m.group(1) + norm_desc_body.strip() + "\n\n",
-            t,
-            count=1,
-            flags=re.S,
-        )
+        t = _replace_section_body(t, desc_field, norm_desc_body, ("overall_soundscape:", "non_diegetic_music:"))
 
     # Replace @tags with proper <Picture N> / <Subject N> / <Audio N>
     tag_map = {}
@@ -482,8 +554,13 @@ def finish_block(
     if mode == "Ref2VA":
         has_aud = bool(lab.get("audios"))
         default_tag = "[reference generation + audio reference]" if has_aud else "[reference generation]"
-        summ = _std._field(t, "summary:")
-        if summ:
+        summ = (_std._field(t, "summary:") or "").strip()
+        if not summ:
+            sub_keys = sorted((lab.get("subjects") or {}).keys())
+            sub_hint = ", ".join(f"<Subject {sn}>" for sn in sub_keys) if sub_keys else ""
+            brief_clean_s = sanitize_additive_rule(brief or "").strip() or "Staged scene."
+            summ = f"{default_tag} {sub_hint + ' ' if sub_hint else ''}{brief_clean_s}".strip()
+        else:
             if not has_aud:
                 summ = re.sub(r"\s*\+\s*audio\s+(?:reference|reuse)", "", summ, flags=re.I)
             for s_n in sorted((lab.get("subjects") or {}).keys()):
@@ -492,7 +569,7 @@ def finish_block(
                     summ = re.sub(rf"(<Subject {s_n}>[^.;\n]*?\bfrom\s+)<Picture\s+\d+>", lambda m, ow=owned[0]: f"{m.group(1)}{ow}", summ, flags=re.I)
             if not re.match(r"\s*\[[^\]]+\]", summ):
                 summ = default_tag + " " + summ.lstrip()
-            t = re.sub(r"(summary:[ \t]*\n)(.*?)(?=\nretention_analysis:)", lambda m: m.group(1) + summ.strip() + "\n\n", t, count=1, flags=re.S)
+        t = _replace_section_body(t, "summary:", summ, ("retention_analysis:", "detailed_description:", "overall_soundscape:"))
 
         def _sort_ref_lines(lines_list: list[str]) -> list[str]:
             def _key(ln: str):
@@ -556,7 +633,7 @@ def finish_block(
                 missing_ret.append(f"<Audio {a['n']}>: full_reference")
         new_ret = "\n".join(_sort_ref_lines((ret.splitlines() if ret else []) + missing_ret)).strip()
         if new_ret:
-            t = re.sub(r"(retention_analysis:[ \t]*\n)(.*?)(?=\ndetailed_description:)", lambda m: m.group(1) + new_ret + "\n\n", t, count=1, flags=re.S)
+            t = _replace_section_body(t, "retention_analysis:", new_ret, ("detailed_description:", "overall_soundscape:"))
         if anal_nude or ward_ids_fin:
             t = re.sub(r"(<Subject 1>[^\n:]*:\s*)fully_preserved", r"\1partially_preserved", t, count=1)
         if anal_nude or "nude_both_partners" in ward_ids_fin or sex_scene_fin or (len(ward_ids_fin) >= 2 and wmode_fin == "split"):
@@ -620,7 +697,7 @@ def finish_block(
                 missing_defs.append(f"{a['label']} is the audio reference.")
         new_defs = "\n".join(_sort_ref_lines((sdefs.splitlines() if sdefs else []) + missing_defs)).strip()
         if new_defs:
-            t = re.sub(r"(subject_definitions:[ \t]*\n)(.*?)(?=\nsummary:)", lambda m: m.group(1) + new_defs + "\n\n", t, count=1, flags=re.S)
+            t = _replace_section_body(t, "subject_definitions:", new_defs, ("summary:", "retention_analysis:", "detailed_description:"))
 
     # Scrub studio void leaks unless studio requested
     place_opts_fin = _cat.resolve_dial_opts("place", flavors.get("place"))
@@ -651,7 +728,7 @@ def finish_block(
                     light_clause = f" under {sanitize_additive_rule(light_opt_fin['rule'])}" if (light_opt_fin and light_opt_fin.get("rule")) else ""
                     new_s1_line = re.sub(r"^(\[Shot 1\][ \t]*)", lambda m: f"{m.group(1)}Inside {p_name_fin.lower()} ({p_rule_fin}){light_clause}: ", s1_line, count=1)
                     cur_desc = cur_desc.replace(s1_line, new_s1_line, 1)
-                    t = re.sub(rf"({re.escape(desc_field)}[ \t]*\n)(.*?)(?=\noverall_soundscape:)", lambda m: m.group(1) + cur_desc.strip() + "\n\n", t, count=1, flags=re.S)
+                    t = _replace_section_body(t, desc_field, cur_desc, ("overall_soundscape:", "non_diegetic_music:"))
 
     # Enforce ambience & music (with commas, zero semicolons!)
     amb_opts_fin = [o for o in _cat.resolve_dial_opts("ambience", flavors.get("ambience")) if (o.get("rule") or o.get("world"))]
@@ -660,7 +737,7 @@ def finish_block(
         if not cur_snd or len(cur_snd) < 20 or cur_snd.lower() in ("room tone.", "natural room tone.", "steady room tone."):
             amb_text = ", ".join(sanitize_additive_rule((o.get("rule") or o.get("world") or "").strip()) for o in amb_opts_fin)
             if amb_text and "overall_soundscape:" in t:
-                t = re.sub(r"(overall_soundscape:[ \t]*\r?\n)(.*?)(?=\nnon_diegetic_music:)", lambda m: m.group(1) + amb_text.rstrip(".") + ".\n\n", t, count=1, flags=re.S)
+                t = _replace_section_body(t, "overall_soundscape:", amb_text.rstrip(".") + ".", ("non_diegetic_music:",))
 
     raw_music_fin = _cat.parse_multi_ids(flavors.get("music"))
     music_opts_fin = _cat.resolve_dial_opts("music", flavors.get("music"))

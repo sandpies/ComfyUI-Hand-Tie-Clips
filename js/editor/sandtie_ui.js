@@ -2761,7 +2761,41 @@ function createSandTieCore(node, {
             if (!j.ok) {
                 say(((j.errors || []).join("; ") || j.error || "Contract issue") + (warns ? "\n" + warns : ""), "error");
             } else {
-                say(`${stage.toUpperCase()} ready (${j.mode || "H3"}).` + (warns ? `\n${warns}` : ""), "hint");
+                let extraNote = "";
+                if (!standalone && j.block && (stage === "fast" || stage === "write" || stage === "cpu" || stage === "dialogue")) {
+                    const swRaw = String(widgetByName(node, "swap_script")?.value || "").trim();
+                    const spRaw = String(widgetByName(node, "shot_plan")?.value || "").trim();
+                    let hasShots = false;
+                    if (spRaw) {
+                        try {
+                            const spParsed = JSON.parse(spRaw);
+                            const arr = Array.isArray(spParsed) ? spParsed : spParsed?.shots;
+                            hasShots = Array.isArray(arr) && arr.length > 0;
+                        } catch {
+                            hasShots = true;
+                        }
+                    }
+                    if (swRaw) {
+                        extraNote = "\n• SWAP script is active — click Accept to clear Swap and queue Standard (Simple).";
+                    } else if (hasShots) {
+                        extraNote = "\n• Shots are active on SCRIPT — click Accept to switch to Standard (Simple), or → Script Hop.";
+                    } else if (node?.properties?.h3_editor_mode === "shots") {
+                        extraNote = "\n• SCRIPT is in Shots mode with 0 shots — click Accept (Standard) or → Script Hop.";
+                    } else {
+                        const pw = widgetByName(node, "prompt");
+                        if (pw) {
+                            pw.value = j.block;
+                            try { pw.callback?.(pw.value, node.graph?.canvas, node); } catch (_) {}
+                            try { node._h3R2?.script?.refresh?.(); } catch (_) {}
+                            node.graph?.setDirtyCanvas?.(true, true);
+                            const chN = Math.max(1, parseInt(widgetByName(node, "chains")?.value, 10) || 1);
+                            extraNote = chN > 1
+                                ? `\n• Synced to prompt, but chains=${chN} on RUN will run ${chN} clips — click Accept to set chains = 1.`
+                                : " (synced to Simple prompt — ready to Queue)";
+                        }
+                    }
+                }
+                say(`${stage.toUpperCase()} ready (${j.mode || "H3"}).${extraNote}` + (warns ? `\n${warns}` : ""), "hint");
             }
         } catch (err) {
             if (err?.name !== "AbortError") say(String(err), "error");

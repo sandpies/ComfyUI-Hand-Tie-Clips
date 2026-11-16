@@ -544,6 +544,9 @@ export function createScriptPane(node, { onChange, onSelect } = {}) {
         shots.splice(active, 1);
         active = Math.max(0, Math.min(active, shots.length - 1));
         writePlan(node, shots);
+        if (!shots.length && readPrompt(node).trim()) {
+            mode = "simple";
+        }
         persistActive();
         render();
         onSelect?.(active);
@@ -687,7 +690,7 @@ export function createScriptPane(node, { onChange, onSelect } = {}) {
 
         if (mode === "simple") {
             const ch = Math.max(1, parseInt(widgetByName(node, "chains")?.value, 10) || 1);
-            count.textContent = `${ch} hop${ch === 1 ? "" : "s"} (Simple)`;
+            count.textContent = ch === 1 ? "Standard (1 clip)" : `${ch} hops (Simple)`;
         } else {
             count.textContent = `${shots.length} shot${shots.length === 1 ? "" : "s"}`;
         }

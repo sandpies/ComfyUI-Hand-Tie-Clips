@@ -7036,7 +7036,7 @@ class HandTieClips:
             blocks = _plan.compile_blocks(shots, establish, _rp_for_check)
             if swap:
                 blocks = [swap]
-            if str(pin_mech) == "hand_tie" and not swap:
+            if str(pin_mech) == "hand_tie" and not swap and (len(shots) > 1 or previs_only):
                 # Every hop is tied to the previs, not to the hop before it, so
                 # every hop is a start: its own refs, its own subject prose, no
                 # continuation airlock and no `join` sentence.
@@ -7057,7 +7057,7 @@ class HandTieClips:
                                        else _ht.LINE_START_S)))]
                 for _w in _ht.crossing_lints(shots):
                     print(f"[{TAG}] note: {_w}", flush=True)
-            if str(pin_mech) == "sand_tie" and not swap and WT_TAKE_SHOT:
+            if str(pin_mech) == "sand_tie" and not swap and WT_TAKE_SHOT and len(shots) > 1:
                 # take = shot: every window of a take gets the take's shot layer word for
                 # word and its slice of ONE action timeline (take.py); every window is
                 # assembled as a start, so none is told it continues or begins anew.
@@ -7081,6 +7081,10 @@ class HandTieClips:
             blocks, unique = _expand_shots(
                 _parse_shots(prompt), int(chains), hop_script=str(hop_script))
         n = len(blocks)
+        if not swap and not any(shots) and not previs_only and str(pin_mech) not in ("auto", "addguide"):
+            print(f"[{TAG}] Simple mode (no shot_plan): pin_mech={pin_mech} -> auto", flush=True)
+            pin_mech = "auto"
+            ht_mc = False
 
         # render_through truncates the RENDER, never the plan: the shots that
         # survive keep their own indices, seeds and cache keys, so extending the
@@ -7220,7 +7224,8 @@ class HandTieClips:
         # hops in. The per-hop one (no sampler latent) cannot be known here and
         # is raised by _pin_mech_for at the hop it affects.
         if str(pin_mech) == "hand_tie" and not swap:
-            if not shots:
+            _ht_one_hop = len(lengths) <= 1 and not previs_only
+            if not any(shots) and not _ht_one_hop:
                 raise ValueError(
                     f"{TAG}: pin_mech=hand_tie needs a shot plan: its previs is "
                     "compiled from the shots (their beats, or `moment` where set). "
@@ -7228,10 +7233,14 @@ class HandTieClips:
             # master_audio_file (10-26): every hop's sound is the song, locked as on
             # motion_context; the previs is silent except for the song at its
             # windows, which tie picture only (hand_tie.song_windows).
-            _ht_errors = _ht.settings_errors(overlap_n, last_frame_guide, shots, lengths)
+            _ht_errors = _ht.settings_errors(
+                _ht.WINDOW if _ht_one_hop else overlap_n,
+                "off" if _ht_one_hop else last_frame_guide,
+                shots, lengths,
+            )
             if _ht_errors:
                 raise ValueError(f"{TAG}: " + " ".join(_ht_errors))
-        if str(pin_mech) == "motion_context" and not swap:
+        if str(pin_mech) == "motion_context" and not swap and len(lengths) > 1:
             if _motion_context_cls() is None:
                 raise ValueError(
                     f"{TAG}: pin_mech=motion_context but ComfyUI-H3-Motion-Context "
@@ -8212,8 +8221,10 @@ class HandTieClips:
         # the section's first hop (it needs that hop's refs and assembly), cut
         # into 22-frame windows that guide every hop of the section at both ends.
         # See hand_tie.py. Off for a swap, which is a single guided generate.
-        ht = (str(pin_mech) == "hand_tie") and not swap
-        windowed = str(pin_mech) == "sand_tie" and not swap and not dry
+        ht = (str(pin_mech) == "hand_tie") and not swap and (len(_shots_full) > 1 or previs_only)
+        if str(pin_mech) == "hand_tie" and not swap and not ht:
+            print(f"[{TAG}] single-clip run: pin_mech=hand_tie inactive (no joins)", flush=True)
+        windowed = str(pin_mech) == "sand_tie" and not swap and not dry and len(_shots_full) > 1
         win_hops = []
         if not dry and not swap and not windowed and n > 1 and locked is None:
             _off3_ov = (int(overlap_n) % 3) != 0
@@ -8283,12 +8294,13 @@ class HandTieClips:
             pv_cap = _canvas(_ht.PREVIS_RESOLUTION, aspect)
             sound_first = bool(_ht.SOUND_FIRST) and locked is None and boost_model is None
             sd_w, sd_h = _canvas(_ht.SOUND_DRAFT_RESOLUTION, aspect)
-            print(f"[{TAG}] hand-tie: previs no bigger than one hop"
-                  + (", muted where no window speaks" if _ht.PREVIS_MUTE else "")
-                  + (f"; each hop drafts its sound at {sd_w}x{sd_h} first ("
-                     + (f"checked by {_hear.available()})" if _hear.available()
-                        else "unchecked: no Whisper model in the local cache)")
-                     if sound_first else "; hops render their own sound"), flush=True)
+            if previs_only or len(_shots_full) > 1:
+                print(f"[{TAG}] hand-tie: previs no bigger than one hop"
+                      + (", muted where no window speaks" if _ht.PREVIS_MUTE else "")
+                      + (f"; each hop drafts its sound at {sd_w}x{sd_h} first ("
+                         + (f"checked by {_hear.available()})" if _hear.available()
+                            else "unchecked: no Whisper model in the local cache)")
+                         if sound_first else "; hops render their own sound"), flush=True)
         if ht:
             # Full plan, not the render range (see _shots_full).
             _pshots, _plens = _shots_full, _lengths_full
@@ -8343,7 +8355,7 @@ class HandTieClips:
                 # never re-states a size its pinned frames may have drifted from (10-28).
                 _text = _ht.with_framing(_text, [_pshots[j] for j in _sec],
                                          chained=bool(ht_chained[-1]))
-                if not _ht.previs_framing([_pshots[j] for j in _sec])[1]:
+                if (previs_only or len(_shots_full) > 1) and not _ht.previs_framing([_pshots[j] for j in _sec])[1]:
                     print(f"[{TAG}] WARNING: hand-tie section {_si + 1}: no beat names a shot size "
                           "(medium shot, close shot, wide shot ...); the previs is free to drift "
                           "closer or wider and its windows carry that into the hops. Name it in "
@@ -8381,14 +8393,15 @@ class HandTieClips:
                                  _ht.window_speaks([_pshots[j] for j in _sec], len(_lay["windows"])))
                 for _k, _j in enumerate(_sec):
                     ht_pos[_j] = (_si, _k)
-                print(f"[{TAG}] hand-tie section {_si + 1}: hops {_sec[0] + 1}-{_sec[-1] + 1}, "
-                      f"previs {_lay['previs']}f at {ht_pv[-1][0]}x{ht_pv[-1][1]}, "
-                      f"windows at {_lay['windows']}"
-                      + (f", continuing hop {_sec[0]}'s last frames" if ht_chained[-1] else "")
-                      + (f", sampled in {len(_wpl['windows'])} context windows of "
-                         + "/".join(str(w["f1"] - w["f0"]) for w in _wpl["windows"]) + "f"
-                         if _wpl else ""),
-                      flush=True)
+                if previs_only or len(_shots_full) > 1:
+                    print(f"[{TAG}] hand-tie section {_si + 1}: hops {_sec[0] + 1}-{_sec[-1] + 1}, "
+                          f"previs {_lay['previs']}f at {ht_pv[-1][0]}x{ht_pv[-1][1]}, "
+                          f"windows at {_lay['windows']}"
+                          + (f", continuing hop {_sec[0]}'s last frames" if ht_chained[-1] else "")
+                          + (f", sampled in {len(_wpl['windows'])} context windows of "
+                             + "/".join(str(w["f1"] - w["f0"]) for w in _wpl["windows"]) + "f"
+                             if _wpl else ""),
+                          flush=True)
             if tone_on or anchor_on:
                 print(f"[{TAG}] hand-tie: tone_compensate={tone_mode} is replaced by the "
                       f"hand-tie tone match (each hop pulled onto its windows)", flush=True)
@@ -8894,6 +8907,7 @@ class HandTieClips:
         # previs from the cache. Only when every continuing section is muted (its
         # previs reads no hop sound) and the hop cache is on, so nothing renders twice.
         if (ht and _HT_PREVIS_FIRST and not previs_only and not dry and hop_store is not None
+                and len(_shots_full) > 1
                 and not getattr(self, "_htc_previs_pass", False)
                 and all(not ht_chained[_s] or (bool(_ht.PREVIS_MUTE) and not any(ht_speaks[_s]))
                         or locked is not None for _s in range(len(ht_sections)))):
@@ -8942,6 +8956,8 @@ class HandTieClips:
             # predecessor by one window and is cut inside it.
             hop_trims = i > 0 and not hop_restart
             _wt_window = str(pin_mech) == "sand_tie" and not swap and WT_TAKE_SHOT
+            if len(_shots_full) <= 1:
+                _wt_window = False
             if ht or _wt_window:
                 hop_is_start = True
             if hop_restart:
@@ -10262,6 +10278,16 @@ class HandTieClips:
                         + ([(-(_ht.WINDOW + _xtra), _k + 1)] if _k + 1 < len(_wp) else [])
                     # A skipped previs (one-hop chain) has no windows to tie to.
                     _ties = [(_fi, _w) for _fi, _w in _ties if _wp[_w] is not None]
+                    if (len(_shots_full) <= 1 and not previs_only
+                            and not _ties and (i == 0 or hop_restart)
+                            and start_image is not None):
+                        cond = _result(_core_call(
+                            MiniMaxH3AddGuide,
+                            "the restart anchor" if hop_restart else "the hop-1 start image",
+                            positive=cond, latent=latent, frame_idx=0,
+                            vae=vae, audio_vae=None,
+                            image=start_image[:1], audio=None,
+                        ))[0]
                     # dialogue_lock leaves every tied window to the previs.
                     _dlg_open = [((0.0, _ht.WINDOW / float(FPS)) if _fi >= 0 else
                                   ((render_length + _fi) / float(FPS),

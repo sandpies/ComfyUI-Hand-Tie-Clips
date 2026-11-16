@@ -269,6 +269,7 @@ ANAL_EXPLICIT_IDS = {
     "cont_anal_beads_lubed_insertion_to_slow_pop_out_climax",
     "multi_pos_anal_doggy_to_thighs_to_pullout", "pegging_doggy_strapon",
     "pegging_missionary_legs_up", "cont_strapon_harness_buckle_to_pegging_doggy",
+    "rough_strapon_femdom_hairpull_pegging",
     "butt_plug_insertion_wink", "anal_beads_slow_pullout",
 }
 
@@ -361,6 +362,7 @@ MIRROR_EXPLICIT_IDS = {
     "undress_elevator_coat_flash_lingerie", "mirror_narcissist_admire_self_touch",
     "titfuck_standing_mirror_cleavage_squeeze", "doggy_mirror_couch_knee_up_look",
     "cont_elevator_coat_flash_to_mirror_rear_entry", "multi_pos_3cut_morning_bed_shower_vanity",
+    "playful_mirror_stocking_peel_to_lap_ride", "cont_yoga_mat_splits_stretch_to_prone_entry",
 }
 
 MIRROR_CAMERA_IDS = {
@@ -519,7 +521,6 @@ NON_VOCAL_DEFAULT_EXPLICIT_IDS = (
         "oral_kneeling_two_hand_base_stroke_upward_gaze",
         "oral_side_profile_throat_bulge_drool", "oral_two_girls_alternating_lick_suck",
         "titfuck_slow_massage", "titfuck_oiled_squeeze_upward_lick",
-        "climax_pullout_creampie",
         "climax_internal_creampie_drip_closeup", "climax_back_and_glutes_arch_cumshot",
         "climax_belly_and_navel_missionary_finish", "climax_glasses_and_tongue_facial",
         "footjob_unison_soles", "cunnilingus_calm",
@@ -757,7 +758,7 @@ def is_rear_facing(brief: str, explicit_id: str = "", plan: str = "", plan_hint:
         has_front_climax = any(e in ("climax_facial_f04", "climax_titjob_to_face", "climax_footjob_toes") for e in eids)
         if has_rear_pick and len(non_climax_eids) == len([e for e in non_climax_eids if e in REAR_EXPLICIT_IDS]) and not has_front_climax:
             return True
-        if len(eids) > 1 and not all(e in REAR_EXPLICIT_IDS or e == "climax_pullout_creampie" for e in eids):
+        if len(eids) > 1 and not all(e in REAR_EXPLICIT_IDS or e in ("climax_doggy_pullout_pussy_and_ass_drip", "climax_internal_creampie_drip_closeup", "climax_creampie_gravity_drip_spread") for e in eids):
             return False
     if pids and all(p in REAR_POSE_IDS for p in pids) and not any(e not in REAR_EXPLICIT_IDS for e in eids):
         return True
