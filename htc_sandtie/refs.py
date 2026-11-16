@@ -51,11 +51,33 @@ def _slugify_tag(raw: str) -> str:
     return s or "ref"
 
 
+_NON_NAME_WORD_RX = re.compile(
+    r"^(?:comfy(?:ui)?|ui|sandtie|handtie|htc|screenshot|snapshot|capture|download|"
+    r"untitled|output|input|generated|render|temp|tmp|flux|sdxl|qwen|wan|minimax|hailuo|h3|"
+    r"ref|pic|picture|img|image|sub|subj|subject|char|character|person|woman|man|girl|guy|"
+    r"face|body|sheet|look|outfit|plate|scene|place|set|bg|prop|photo|still|frame|clip|"
+    r"video|audio|reference)(?:_?\d+)?$",
+    re.I,
+)
+
+
+def _is_non_name_label(text: str) -> bool:
+    tokens = [t for t in re.split(r"[\s_\-]+", str(text or "").strip()) if t]
+    if not tokens:
+        return True
+    non_num = [t for t in tokens if not t.isdigit()]
+    if not non_num:
+        return True
+    return all(_NON_NAME_WORD_RX.match(t) for t in non_num)
+
+
 def _human_name_from_filename(fname: str) -> str:
-    stem = os.path.splitext(os.path.basename(str(fname or "")))[0]
+    stem = os.path.splitext(os.path.basename(str(fname or "")))[0].strip("_- ")
     stem = re.sub(r"^(?:char|sub|ref|fg|img)_+", "", stem, flags=re.I)
-    stem = re.sub(r"_+(?:sheet|turnaround|lookbook|face|body|portrait|ref|\d+)$", "", stem, flags=re.I)
+    stem = re.sub(r"_+(?:sheet|turnaround|lookbook|face|body|portrait|ref|\d+)$", "", stem, flags=re.I).strip("_- ")
     parts = [p.capitalize() for p in re.split(r"[_\-\s]+", stem) if p]
+    if not parts or _is_non_name_label(" ".join(parts)):
+        return "Reference"
     return " ".join(parts[:3]) or "Reference"
 
 
@@ -317,8 +339,14 @@ def load_ref_bank() -> list[dict]:
                     entry["refmod_has_looks"] = bool(rm_info.get("has_looks"))
                     entry["refmod_members"] = int(rm_info.get("members_count") or 1)
                     entry["refmod_has_audio"] = bool(rm_info.get("has_audio_latent"))
+            if entry["char_name"] and not entry["user_edited"] and _is_non_name_label(entry["char_name"]):
+                entry["char_name"] = ""
+                changed = True
             if not entry["char_name"] and role == "subject":
-                entry["char_name"] = extract_char_name_from_tag(tag, entry["name"]) or entry["name"].split()[0]
+                cand_cn = extract_char_name_from_tag(tag, entry["name"])
+                if not cand_cn and entry["name"]:
+                    cand_cn = extract_char_name_from_tag(entry["name"].split()[0])
+                entry["char_name"] = cand_cn
             fk = (source, fname.lower())
             if fk in by_key:
                 changed = True
@@ -502,7 +530,7 @@ def upsert_ref_bank_item(item: dict, *, user_edited: bool = True) -> dict:
         name = str(item.get("name") or old.get("name") or _human_name_from_filename(base_label)).strip()
         char_name = str(item.get("char_name") if item.get("char_name") is not None else (old.get("char_name") or "")).strip()
         if role == "subject" and not char_name:
-            char_name = extract_char_name_from_tag(tag, name) or name.split()[0]
+            char_name = extract_char_name_from_tag(tag, name) or extract_char_name_from_tag(name.split()[0])
         entry = {
             "id": rid,
             "name": name,
@@ -727,10 +755,10 @@ def extract_char_name_from_tag(tag: str, box_name: str = "") -> str:
     raw = re.sub(r"^(?:fg|ep\d+|ch|char|sub|ref)_+", "", raw, flags=re.I)
     raw = re.sub(r"_+(?:sheet|dress|casual|suit|gown|nude|face|body|look|ref|\d+).*$", "", raw, flags=re.I)
     raw = raw.replace("_", " ").strip()
-    if raw and not _GENERIC_TAG_RX.match(raw) and re.fullmatch(r"[A-Za-z]{2,18}", raw):
+    if raw and not _GENERIC_TAG_RX.match(raw) and not _is_non_name_label(raw) and re.fullmatch(r"[A-Za-z]{2,18}", raw):
         return raw.capitalize()
     bn = str(box_name or "").strip()
-    if bn and re.fullmatch(r"[A-Z][a-z]{1,18}(?:\s+[A-Z][a-z]{1,18})?", bn) and not re.search(r"\b(?:the|woman|man|girl|boy|person)\b", bn, re.I):
+    if bn and not _is_non_name_label(bn) and re.fullmatch(r"[A-Z][a-z]{1,18}(?:\s+[A-Z][a-z]{1,18})?", bn) and not re.search(r"\b(?:the|woman|man|girl|boy|person)\b", bn, re.I):
         return bn
     return ""
 

@@ -606,6 +606,11 @@ class SandTiePromptRig(io.ComfyNode):
                     f"{TAG}: `positive` or `latent` is wired while wire_mode is '{WIRE_MODES[0]}'. "
                     f"Switch wire_mode to '{WIRE_MODES[1]}' and connect `clip` (or connect only `prompt`)."
                 )
+            try:
+                from . import llm as _llm  # noqa: PLC0415
+                _llm.free_for_render()
+            except Exception:
+                pass
             return io.NodeOutput(out_prompt, None, None)
 
         clip = wm_dict.get("clip")

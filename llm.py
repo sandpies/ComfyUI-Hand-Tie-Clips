@@ -623,6 +623,11 @@ def start_process(model_file=None, name=None, already_checked=False, ctx_size=No
         _flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         subprocess.Popen([exe] + args, cwd=logdir, stdout=out, stderr=err,  # noqa: S603
                          creationflags=_flags)
+        try:
+            if not os.path.isfile(_conn_path()) or backend_name(CONN.get("backend")) != n:
+                save_conn({"backend": n})
+        except Exception:
+            pass
         print(f"[{TAG}] started {backend_spec(n)['label']}: {os.path.basename(exe)}"
               + (f" (max-context {_server_ctx_size(n, ctx_size=ctx_size)})" if n == "ninfer" else ""),
               flush=True)
@@ -683,19 +688,21 @@ def stop_process(name=None):
     import os
     n = str(name or backend_name(CONN.get("backend")))
     exe = _server_exe(n)
-    if not exe:
+    spec_exe = dict(SERVER_EXES).get(n)
+    if not exe and not spec_exe:
         print(f"[{TAG}] no {n} binary found in the usual places; "
               f"leaving it alone", flush=True)
         return 0
     # Compare the IMAGE NAME, case-insensitively. Compare the full name with
     # the extension: tasklist reported "ninfer-serve.exe" and the first
     # version matched a bare stem, so it silently stopped nothing.
-    image = os.path.basename(exe).lower()
+    image = os.path.basename(exe or spec_exe).lower()
     try:
         import ctypes
         from ctypes import wintypes
 
         TH32CS_SNAPPROCESS = 0x00000002
+        SYNCHRONIZE = 0x00100000
         PROCESS_TERMINATE = 0x0001
         INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
 
@@ -723,15 +730,22 @@ def stop_process(name=None):
         try:
             ok = k32.Process32First(snap, ctypes.byref(pe))
             while ok:
-                name = (pe.szExeFile or b"").decode("latin-1").lower()
-                if name == image:
-                    h = k32.OpenProcess(PROCESS_TERMINATE, False,
+                proc_name = (pe.szExeFile or b"").decode("latin-1").lower()
+                if proc_name == image:
+                    h = k32.OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, False,
                                         pe.th32ProcessID)
+                    if not h:
+                        h = k32.OpenProcess(PROCESS_TERMINATE, False,
+                                            pe.th32ProcessID)
                     if h:
                         if k32.TerminateProcess(h, 0):
-                            print(f"[{TAG}] stopped {name} "
+                            print(f"[{TAG}] stopped {proc_name} "
                                   f"(pid {pe.th32ProcessID})", flush=True)
                             stopped += 1
+                            try:
+                                k32.WaitForSingleObject(h, 3000)
+                            except Exception:
+                                pass
                         k32.CloseHandle(h)
                 ok = k32.Process32Next(snap, ctypes.byref(pe))
         finally:
@@ -1961,7 +1975,10 @@ def configured():
     if not os.path.isfile(_conn_path()):
         return False
     try:
-        return bool((load_conn() or {}).get("model"))
+        conn = load_conn() or {}
+        if conn.get("model"):
+            return True
+        return not backend_spec(conn.get("backend")).get("evictable", True)
     except Exception:
         return False
 
@@ -2019,16 +2036,27 @@ def free_for_render(settle_sleep=None):
         # The card is held by a PROCESS, not by a loaded model, so the only
         # way to hand the VRAM back is to end it. This is not a courtesy: on
         # a 32 GB card a resident 27B leaves ~1.5 GB and the render OOMs.
-        stopped = stop_process()
+        if not shares_this_gpu(conn.get("server_url")):
+            return ""
+        stopped = stop_process(conn.get("backend"))
         if stopped:
+            settle = float(conn.get("vram_settle_s") or 0.0)
+            if settle > 0:
+                if settle_sleep is not None:
+                    settle_sleep(min(settle, 2.5))
+                else:
+                    try:
+                        import torch  # noqa: PLC0415
+                        if torch.cuda.is_available():
+                            time.sleep(min(settle, 0.5))
+                    except Exception:
+                        time.sleep(min(settle, 0.25))
             return (f"stopped {spec['label']} to free the card for the render. "
                     f"Start it again before writing -- that costs about 30 s "
                     f"of model load, and this pack will not start it for you: "
                     f"launching a server from a settings save is how a "
                     f"workflow file becomes a way to run something.")
-        return (f"{spec['label']} could not be stopped automatically "
-                f"(started outside this pack?). Close it by hand before "
-                f"rendering, or the render may run short of VRAM.")
+        return ""
     try:
         # ComfyUI's execute path is async: node.run() is reached from a
         # running event loop. asyncio.run() then raises RuntimeError and the

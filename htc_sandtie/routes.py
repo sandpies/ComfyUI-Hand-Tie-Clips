@@ -163,12 +163,11 @@ def register_sandtie_routes(instance, web) -> None:
             if conn.get("unload_on_run", True):
                 spec = _llm.backend_spec(conn.get("backend"))
                 if not spec.get("evictable", True):
-                    n_stopped = _llm.stop_process()
-                    n_waited = 0
-                    if n_stopped or not _llm._server_exe(conn.get("backend")):
+                    if _llm.shares_this_gpu(conn.get("server_url")):
+                        n_stopped = _llm.stop_process(conn.get("backend"))
                         n_waited = _wait_for_ninfer_exit(1500)
-                    if n_stopped or n_waited:
-                        print(f"[{TAG}] auto-stopped {spec['label']} before render", flush=True)
+                        if n_stopped or n_waited:
+                            print(f"[{TAG}] auto-stopped {spec['label']} before render", flush=True)
                 else:
                     # Never block ComfyUI's aiohttp event loop waiting on HTTP unload
                     # + VRAM settle; dispatch asynchronously when inside an active loop.
