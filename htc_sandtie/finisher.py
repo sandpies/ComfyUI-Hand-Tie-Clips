@@ -135,8 +135,12 @@ def _normalize_multishot_timeline(desc_body: str, duration_s: float) -> str:
                 break
             prev_max_end = max(prev_max_end, max(b for _, b in r_list))
 
-        weights = [max(1, len(r_list)) for r_list in shot_ranges]
-        total_w = float(sum(weights))
+        weights = [
+            sum(max(0.4, b - a) for a, b in r_list) if r_list else 1.5
+            for r_list in shot_ranges
+        ]
+        total_w = float(sum(weights)) or 1.0
+        min_shot_gap = 0.55 if len(chunks) >= 6 else 0.8
         slice_bounds = [0.0]
         acc = 0.0
         for w in weights[:-1]:
@@ -144,9 +148,9 @@ def _normalize_multishot_timeline(desc_body: str, duration_s: float) -> str:
             slice_bounds.append(round((acc / total_w) * dur, 2))
         slice_bounds.append(dur)
         for i in range(1, len(slice_bounds) - 1):
-            slice_bounds[i] = max(slice_bounds[i], round(slice_bounds[i - 1] + 0.8, 2))
+            slice_bounds[i] = max(slice_bounds[i], round(slice_bounds[i - 1] + min_shot_gap, 2))
         for i in range(len(slice_bounds) - 2, 0, -1):
-            slice_bounds[i] = min(slice_bounds[i], round(slice_bounds[i + 1] - 0.8, 2))
+            slice_bounds[i] = min(slice_bounds[i], round(slice_bounds[i + 1] - min_shot_gap, 2))
 
         new_chunks = []
         last_cut_t = 0.0
@@ -155,15 +159,21 @@ def _normalize_multishot_timeline(desc_body: str, duration_s: float) -> str:
             s_a, s_b = slice_bounds[idx], slice_bounds[idx + 1]
             r_list = shot_ranges[idx]
             if needs_rescale and r_list:
-                m_beats = len(r_list)
-                beat_step = (s_b - s_a) / float(m_beats)
+                beat_durs = [max(0.3, b - a) for a, b in r_list]
+                bd_tot = float(sum(beat_durs)) or 1.0
+                b_bounds = [s_a]
+                b_acc = 0.0
+                for bd in beat_durs[:-1]:
+                    b_acc += bd
+                    b_bounds.append(round(s_a + (b_acc / bd_tot) * (s_b - s_a), 2))
+                b_bounds.append(s_b)
                 cnt = [0]
 
-                def _rescale_range(_m, sa=s_a, sb=s_b, step=beat_step, mb=m_beats, c=cnt):
-                    bi = c[0]
+                def _rescale_range(_m, bb=b_bounds, c=cnt):
+                    bi = min(c[0], len(bb) - 2)
                     c[0] += 1
-                    t0 = round(sa + bi * step, 2) if bi > 0 else sa
-                    t1 = round(sa + (bi + 1) * step, 2) if bi < mb - 1 else sb
+                    t0 = bb[bi]
+                    t1 = bb[bi + 1]
                     return f"At {_bg.stamp(t0)}-{_bg.stamp(t1)}"
 
                 ch = range_rx.sub(_rescale_range, ch)
@@ -237,23 +247,79 @@ def clean_plan_output(raw_plan: str, duration_s: float, silent: bool = False) ->
     return t.strip()
 
 
+def is_pure_bgm_soundscape(
+    brief: str = "",
+    flavors: dict | None = None,
+    *,
+    sex_scene: bool | None = None,
+    combat_scene: bool | None = None,
+) -> bool:
+    """Return True when soundscape should stay N/A so BGM plays cleanly unobstructed."""
+    flavors = flavors or {}
+    raw_amb_str = str(flavors.get("ambience") or "").strip().lower()
+    raw_amb = _cat.parse_multi_ids(flavors.get("ambience"))
+    if raw_amb_str == "none" or "amb_none_na" in raw_amb:
+        return True
+    explicit_amb = [
+        o for o in _cat.resolve_dial_opts("ambience", flavors.get("ambience"))
+        if o.get("id") not in ("none", "amb_none_na") and (o.get("rule") or o.get("world"))
+    ]
+    if explicit_amb:
+        return False
+    raw_mus_str = str(flavors.get("music") or "").strip().lower()
+    raw_music = _cat.parse_multi_ids(flavors.get("music"))
+    if raw_mus_str == "none" or "none" in raw_music:
+        return False
+    if sex_scene is None:
+        sex_scene = _dir.is_sexual(brief, str(flavors.get("explicit") or ""), str(flavors.get("wardrobe") or ""), fetish_id=str(flavors.get("fetish") or ""))
+    if combat_scene is None:
+        combat_scene = _dir.is_combat(brief, str(flavors.get("combat") or ""), str(flavors.get("wardrobe") or ""), str(flavors.get("fx") or ""))
+    if sex_scene or combat_scene:
+        return False
+    pose_opts_d = _cat.resolve_dial_opts("pose", flavors.get("pose"))
+    has_dance = (
+        any(str(o.get("id") or "").startswith("dance_") or "dance" in str(o.get("group") or "").lower() for o in pose_opts_d)
+        or bool(re.search(r"(?:^|[\s_-])danc(?:e|ing|er)(?:$|[\s_-])", f"{flavors.get('pose') or ''} {brief or ''}", re.I))
+    )
+    wants_foley = bool(re.search(r"\b(?:foley|soundscape|footsteps?|heel\s*clicks?|surf|waves?|rain|thunder|crowd|cheers?|applause|wind\s*sound|room\s*tone)\b", brief or "", re.I))
+    return has_dance and not wants_foley
+
+
 def _sanitize_audio_sections(block: str, silent: bool = False) -> str:
-    """Enforce H3 audio laws: replace `;` with `, ` in soundscape & music, and keep vocal chatter out of soundscape."""
+    """Enforce H3 audio laws: replace `;` with `, ` in soundscape & music, keep music out of soundscape, and keep vocal chatter out."""
     out = block
-    for fld, next_rx in (("overall_soundscape:", r"(?=\nnon_diegetic_music:)"), ("non_diegetic_music:", r"$")):
+    mus_raw = (_std._field(out, "non_diegetic_music:") or "").strip()
+    mus_norm = re.sub(r"\s*;\s*", ", ", mus_raw).strip(" .") if mus_raw and mus_raw.upper() != "N/A" else ""
+    for fld, next_rx in (("overall_soundscape:", r"\n+(?=non_diegetic_music:)"), ("non_diegetic_music:", r"$")):
         val = _std._field(out, fld)
         if not val:
             continue
         cleaned = re.sub(r"\s*;\s*", ", ", val.strip())
         if fld == "overall_soundscape:":
-            # Keep soundscape free of speech/dialogue tokens so H3 doesn't hallucinate extra talking
-            cleaned = re.sub(r",?\s*\b(?:spoken\s+)?(?:dialogue|voice(?:s|lines?)?|speech|talking|whispered\s+words)\b[^,.\n]*", "", cleaned, flags=re.I)
-            if silent:
-                cleaned = re.sub(r",?\s*\b(?:moans?|gasps?|groans?|panting|cries|whispers?)\b[^,.\n]*", "", cleaned, flags=re.I)
-            cleaned = re.sub(r",\s*,+", ", ", cleaned).strip(" ,.")
-            if not cleaned or len(cleaned) < 12:
-                cleaned = "Quiet natural room tone and subtle tactile fabric movement foley"
-            cleaned = cleaned.rstrip(".") + "."
+            if cleaned.strip().upper() == "N/A":
+                cleaned = "N/A"
+            else:
+                if mus_norm and len(mus_norm) >= 12 and mus_norm.lower() in cleaned.lower():
+                    cleaned = re.sub(
+                        rf"{re.escape(mus_norm)}[.\s,]*(?:layered\s+over|mixed\s+with|underneath|over)?\s*",
+                        "",
+                        cleaned,
+                        flags=re.I,
+                    )
+                cleaned = re.sub(
+                    r"\b(?:high[- ]energy|upbeat|driving|sleek|moody|fierce|bright|bubbly|explosive|hyper[- ]?pop|industrial|viral)?\s*\d{2,3}\s*BPM\b[^.\n]*?(?:layered\s+over\b|mixed\s+with\b|synth\s+stabs?|bass\s+drops?|vocal\s+chops?|snare\s+(?:build|hits?|rolls?)|arpeggios?|four-on-the-floor\s+kick|house\s+banger|dance-pop\s+banger)[.,\s]*",
+                    "",
+                    cleaned,
+                    flags=re.I,
+                )
+                # Keep soundscape free of speech/dialogue tokens so H3 doesn't hallucinate extra talking
+                cleaned = re.sub(r",?\s*\b(?:spoken\s+)?(?:dialogue|voice(?:s|lines?)?|speech|talking|whispered\s+words)\b[^,.\n]*", "", cleaned, flags=re.I)
+                if silent:
+                    cleaned = re.sub(r",?\s*\b(?:moans?|gasps?|groans?|panting|cries|whispers?)\b[^,.\n]*", "", cleaned, flags=re.I)
+                cleaned = re.sub(r",\s*,+", ", ", cleaned).strip(" ,.")
+                if not cleaned or len(cleaned) < 12:
+                    cleaned = "Quiet natural room tone and subtle tactile fabric movement foley"
+                cleaned = cleaned[0].upper() + cleaned[1:].rstrip(".") + "."
         out = re.sub(
             rf"({re.escape(fld)}[ \t]*\r?\n)(.*?){next_rx}",
             lambda m, c=cleaned: m.group(1) + c + ("\n\n" if fld == "overall_soundscape:" else ""),
@@ -319,7 +385,8 @@ def _ensure_ref2va_headers(text: str) -> str:
         "detailed_description:", "overall_soundscape:", "non_diegetic_music:",
     )
     for hdr in all_hdrs:
-        t = re.sub(rf"(?mi)^({re.escape(hdr)})[ \t]+([^\n]+)", lambda m: f"{hdr}\n{m.group(2).strip()}", t)
+        t = re.sub(rf"(?mi)([^\n])[ \t]+({re.escape(hdr)})", lambda m, h=hdr: f"{m.group(1)}\n\n{h}", t)
+        t = re.sub(rf"(?mi)^({re.escape(hdr)})[ \t]+([^\n]+)", lambda m, h=hdr: f"{h}\n{m.group(2).strip()}", t)
         t = re.sub(rf"(?mi)^{re.escape(hdr)}(?=[ \t]*(?:\n|$))", hdr, t)
     if "detailed_description:" not in t:
         first_body_pos = 0
@@ -351,7 +418,8 @@ def _ensure_t2va_headers(text: str) -> str:
         t = re.sub(r"(?m)^detailed_description:", "integrated_multimodal_description:", t, count=1)
     all_hdrs = ("integrated_multimodal_description:", "overall_soundscape:", "non_diegetic_music:")
     for hdr in all_hdrs:
-        t = re.sub(rf"(?mi)^({re.escape(hdr)})[ \t]+([^\n]+)", lambda m: f"{hdr}\n{m.group(2).strip()}", t)
+        t = re.sub(rf"(?mi)([^\n])[ \t]+({re.escape(hdr)})", lambda m, h=hdr: f"{m.group(1)}\n\n{h}", t)
+        t = re.sub(rf"(?mi)^({re.escape(hdr)})[ \t]+([^\n]+)", lambda m, h=hdr: f"{h}\n{m.group(2).strip()}", t)
         t = re.sub(rf"(?mi)^{re.escape(hdr)}(?=[ \t]*(?:\n|$))", hdr, t)
     if "integrated_multimodal_description:" not in t:
         m_shot = re.search(r"(?m)^\[\s*Shot\s+1\s*\]", t)
@@ -594,6 +662,20 @@ def finish_block(
             return sorted([x for x in lines_list if x.strip()], key=_key)
 
         subj_pic_nums = {p["n"] for p in (lab.get("pictures") or []) if p.get("subject") is not None}
+        desc_body_ret = _std._field(t, "detailed_description:") or ""
+        shot_chunks_ret = list(re.finditer(r"\[\s*Shot\s+(\d+)\s*\]", desc_body_ret, re.I))
+        shot_spans_ret = [
+            (
+                int(m.group(1)),
+                desc_body_ret[m.start():(shot_chunks_ret[idx + 1].start() if idx + 1 < len(shot_chunks_ret) else len(desc_body_ret))],
+            )
+            for idx, m in enumerate(shot_chunks_ret)
+        ]
+
+        def _shots_for_subject(sn_val: int) -> str:
+            hits = [f"[Shot {k}]" for k, ch in shot_spans_ret if re.search(rf"<Subject\s+{sn_val}>", ch)]
+            return ", ".join(hits) if hits else "[Shot 1]"
+
         ret = _std._field(t, "retention_analysis:")
         if ret:
             ret_lines = []
@@ -603,6 +685,8 @@ def finish_block(
                     continue
                 ms = re.match(r"^\s*<Subject\s+(\d+)>", rl)
                 if ms:
+                    if not re.search(r"\b(?:fully_preserved|partially_preserved)\b", rl):
+                        continue
                     owned = [p["label"] for p in (lab.get("pictures") or []) if p.get("subject") == int(ms.group(1))]
                     if owned:
                         rl = re.sub(r"<Picture\s+\d+>", owned[0], rl)
@@ -624,7 +708,7 @@ def finish_block(
             all_nude_fin = bool({"nude_both_partners", "nude_all_cast_subjects_s1_s9"} & set(ward_ids_fin))
             split_assigned = bool(wmode_fin == "split" and len(ward_ids_fin) >= s_n)
             use_partial = bool((anal_nude and s_n in (1, 2)) or (ward_ids_fin and (s_n == 1 or all_nude_fin or split_assigned)) or (sex_scene_fin and s_n == 2))
-            if not re.search(rf"^\s*<Subject {s_n}>", ret, re.M):
+            if not re.search(rf"^\s*<Subject {s_n}>[^\n]*\b(?:fully_preserved|partially_preserved)\b", ret, re.M):
                 pres = (
                     f"partially_preserved -{cname_str} keeping facial bone structure{eth_note}, hair, and body identity{pic_cite} while completely nude from Frame 0"
                     if (anal_nude and s_n == 1)
@@ -634,13 +718,35 @@ def finish_block(
                         else f"fully_preserved -{cname_str} keeping facial bone structure{eth_note}, hair, and outfit identity{pic_cite}"
                     )
                 )
-                missing_ret.append(f"<Subject {s_n}> (appears in [Shot 1]): {pres}")
+                missing_ret.append(f"<Subject {s_n}> (appears in {_shots_for_subject(s_n)}): {pres}")
         for p in lab.get("pictures") or []:
             if p.get("subject") is None and not _refs.is_studio_backdrop_text(p.get("desc") or "") and not re.search(rf"^\s*<Picture {p['n']}>", ret, re.M):
                 missing_ret.append(f"<Picture {p['n']}> ([Shot 1] setting): fully_preserved - {p.get('desc') or 'scene environment'}")
+        snd_now_ret = (_std._field(t, "overall_soundscape:") or "").strip().upper()
+        mus_now_ret = (_std._field(t, "non_diegetic_music:") or "").strip().upper()
+        pure_bgm_fin = is_pure_bgm_soundscape(brief=brief, flavors=flavors) or (snd_now_ret == "N/A" and mus_now_ret not in ("", "N/A"))
+        quiet_voice_fin = (silent or ("<d>" not in desc_body_ret)) and pure_bgm_fin
+        def _is_voice_audio_ref(a_meta: dict) -> bool:
+            if a_meta.get("subject") is not None:
+                return True
+            blob_a = f"{a_meta.get('file') or ''} {a_meta.get('desc') or ''}"
+            return not bool(re.search(r"\b(?:bgm|music|song|track|beat|instrumental|score|soundtrack|sfx)\b", blob_a, re.I))
+
+        if quiet_voice_fin and ret:
+            for a in lab.get("audios") or []:
+                if _is_voice_audio_ref(a):
+                    ret = re.sub(
+                        rf"(^\s*<Audio {a['n']}>\s*:\s*)full_reference\b[^\n]*",
+                        r"\1timbre_reference (quiet during music-only dance)",
+                        ret,
+                        flags=re.M,
+                    )
         for a in lab.get("audios") or []:
             if not re.search(rf"^\s*<Audio {a['n']}>", ret, re.M):
-                missing_ret.append(f"<Audio {a['n']}>: full_reference")
+                if quiet_voice_fin and _is_voice_audio_ref(a):
+                    missing_ret.append(f"<Audio {a['n']}>: timbre_reference (quiet during music-only dance)")
+                else:
+                    missing_ret.append(f"<Audio {a['n']}>: full_reference")
         new_ret = "\n".join(_sort_ref_lines((ret.splitlines() if ret else []) + missing_ret)).strip()
         if new_ret:
             t = _replace_section_body(t, "retention_analysis:", new_ret, ("detailed_description:", "overall_soundscape:"))
@@ -665,6 +771,7 @@ def finish_block(
                     if owned:
                         sl = re.sub(r"<Picture\s+\d+>", owned[0], sl)
                     sl = _refs._STUDIO_BACKDROP_RX.sub(" ", sl)
+                    sl = re.sub(r"\(\s*Anchor\s*:\s*", "(", sl, flags=re.I)
                     sl = re.sub(r"\s{2,}", " ", sl).strip()
                 sdef_lines.append(sl)
             sdefs = "\n".join(sdef_lines).strip()
@@ -674,6 +781,7 @@ def finish_block(
             pics_for_s = [p for p in (lab.get("pictures") or []) if p.get("subject") == s_n]
             pic_labels = [p["label"] for p in pics_for_s]
             s_desc = next((str(p.get("desc") or "").strip() for p in pics_for_s if p.get("desc")), "")
+            s_desc = re.sub(r"^\s*Anchor\s*:\s*", "", s_desc, flags=re.I).strip()
             eth_s = _refs.extract_ethnicity_phrase(s_desc, brief=brief)
             cname = s_meta.get("char_name") or s_meta.get("name") or ""
             cname_str = f" {cname}," if cname else ""
@@ -744,17 +852,20 @@ def finish_block(
                     t = _replace_section_body(t, desc_field, cur_desc, ("overall_soundscape:", "non_diegetic_music:"))
 
     # Enforce ambience & music (with commas, zero semicolons!)
-    amb_opts_fin = [o for o in _cat.resolve_dial_opts("ambience", flavors.get("ambience")) if (o.get("rule") or o.get("world"))]
-    if amb_opts_fin:
+    amb_opts_fin = [o for o in _cat.resolve_dial_opts("ambience", flavors.get("ambience")) if o.get("id") not in ("none", "amb_none_na") and (o.get("rule") or o.get("world"))]
+    if is_pure_bgm_soundscape(brief=brief, flavors=flavors):
+        if "overall_soundscape:" in t:
+            t = _replace_section_body(t, "overall_soundscape:", "N/A", ("non_diegetic_music:",))
+    elif amb_opts_fin:
         cur_snd = (_std._field(t, "overall_soundscape:") or "").strip()
-        if not cur_snd or len(cur_snd) < 20 or cur_snd.lower() in ("room tone.", "natural room tone.", "steady room tone."):
+        if not cur_snd or len(cur_snd) < 20 or cur_snd.lower() in ("n/a", "room tone.", "natural room tone.", "steady room tone."):
             amb_text = ", ".join(sanitize_additive_rule((o.get("rule") or o.get("world") or "").strip()) for o in amb_opts_fin)
             if amb_text and "overall_soundscape:" in t:
                 t = _replace_section_body(t, "overall_soundscape:", amb_text.rstrip(".") + ".", ("non_diegetic_music:",))
 
     raw_music_fin = _cat.parse_multi_ids(flavors.get("music"))
     music_opts_fin = _cat.resolve_dial_opts("music", flavors.get("music"))
-    if "none" in raw_music_fin:
+    if str(flavors.get("music") or "").strip().lower() == "none" or "none" in raw_music_fin:
         t = re.sub(r"(non_diegetic_music:[ \t]*\r?\n?).*$", r"\1N/A", t, count=1, flags=re.S)
     elif len(music_opts_fin) == 1:
         m_opt = music_opts_fin[0]
@@ -856,8 +967,28 @@ def adapt_preset_script(
         if cand_n.lower() not in ("is", "appears", "and", "or", "with", "in", "on", "at"):
             old_names_by_s.setdefault(s_i, set()).add(cand_n)
 
-    adapted = raw
+    adapted = _ensure_ref2va_headers(raw) if mode == "Ref2VA" else raw
     wired_subs = lab.get("subjects") or {}
+    wired_pics = {p["n"] for p in (lab.get("pictures") or [])}
+    wired_auds = {a["n"] for a in (lab.get("audios") or [])}
+    for m_au in sorted({int(x) for x in re.findall(r"<Audio\s+(\d+)>", adapted)}, reverse=True):
+        if m_au not in wired_auds:
+            adapted = re.sub(rf"[ \t]*\busing\s+(?:the\s+)?(?:voice\s+timbre|timbre|audio)\s+(?:from|in)\s+<Audio\s+{m_au}>", "", adapted, flags=re.I)
+            adapted = re.sub(rf"(?m)^\s*<Audio\s+{m_au}>[^\n]*\n?", "", adapted)
+            adapted = re.sub(rf"[ \t]*<Audio\s+{m_au}>", "", adapted)
+    if mode == "Ref2VA":
+        ret_raw_a = _std._field(adapted, "retention_analysis:")
+        if ret_raw_a:
+            kept_ret_a = []
+            for rl_a in ret_raw_a.splitlines():
+                ms_a = re.match(r"^\s*<Subject\s+(\d+)>", rl_a)
+                if ms_a and int(ms_a.group(1)) not in wired_subs:
+                    continue
+                mp_a = re.search(r"<Picture\s+(\d+)>", rl_a)
+                if mp_a and int(mp_a.group(1)) not in wired_pics:
+                    rl_a = re.sub(r"\s*(?:from|in)\s+<Picture\s+\d+>", "", rl_a)
+                kept_ret_a.append(rl_a)
+            adapted = _replace_section_body(adapted, "retention_analysis:", "\n".join(kept_ret_a), ("detailed_description:", "overall_soundscape:"))
     for s_i in sorted(set(old_names_by_s.keys()) | set(wired_subs.keys())):
         s_meta = wired_subs.get(s_i) or {}
         s_cname = str(s_meta.get("char_name") or s_meta.get("name") or "").strip()
@@ -865,11 +996,17 @@ def adapt_preset_script(
             repl = f"<Subject {s_i}> {s_cname}" if s_cname else f"<Subject {s_i}>"
             for old_n in sorted(old_names_by_s.get(s_i, ()), key=len, reverse=True):
                 adapted = re.sub(rf"<Subject\s+{s_i}>\s+{re.escape(old_n)}\b", lambda _m, r=repl: r, adapted)
+                if s_cname:
+                    adapted = re.sub(
+                        rf"(?m)^(<Subject\s+{s_i}>[^\n]*?\b(?:fully_preserved|partially_preserved)\s*-\s*){re.escape(old_n)}\b",
+                        lambda m, cn=s_cname: f"{m.group(1)}{cn}",
+                        adapted,
+                    )
         elif mode == "Ref2VA" and s_i >= 2:
             fallback_noun = "her rival" if _dir.is_combat(raw) else "her partner"
             for old_n in sorted(old_names_by_s.get(s_i, ()), key=len, reverse=True):
                 adapted = re.sub(rf"<Subject\s+{s_i}>\s+{re.escape(old_n)}\b", fallback_noun, adapted)
-            adapted = re.sub(rf"<Subject\s+{s_i}>\b", fallback_noun, adapted)
+            adapted = re.sub(rf"<Subject\s+{s_i}>", fallback_noun, adapted)
 
     if mode == "Ref2VA":
         adapted = re.sub(r"(subject_definitions:[ \t]*\n)(.*?)(?=\nsummary:)", r"\1\n", adapted, count=1, flags=re.S)
@@ -883,23 +1020,37 @@ def adapt_preset_script(
         adapted = re.sub(r"in a clean minimalist dance studio with a smooth dark floor and warm studio lighting", f"inside {p_name_a} ({p_rule_a})", adapted, flags=re.I)
     elif setting_pics_a:
         sp0 = setting_pics_a[0]
-        adapted = re.sub(r"in a clean minimalist dance studio with a smooth dark floor and warm studio lighting", f"inside {sp0['label']} ({sp0.get('desc') or 'the referenced setting'})", adapted, flags=re.I)
+        if "in a clean minimalist dance studio with a smooth dark floor and warm studio lighting" in adapted.lower():
+            adapted = re.sub(r"in a clean minimalist dance studio with a smooth dark floor and warm studio lighting", f"inside {sp0['label']} ({sp0.get('desc') or 'the referenced setting'})", adapted, flags=re.I)
+        elif sp0["label"] not in (_std._field(adapted, "detailed_description:") or ""):
+            adapted = re.sub(
+                r"(\[Shot 1\][ \t]*)",
+                lambda m, sp=sp0: f"{m.group(1)}Inside {sp['label']} ({sp.get('desc') or 'the referenced setting'}), ",
+                adapted,
+                count=1,
+            )
 
     style_opts_a = _cat.resolve_dial_opts("style", flavors.get("style"))
     light_opts_a = _cat.resolve_dial_opts("cinema", flavors.get("light"))
     col_opts_a = _cat.resolve_dial_opts("colour", flavors.get("colour"))
     cam_opts_a = _cat.resolve_dial_opts("camera", flavors.get("camera"))
+    cur_desc_fld = "detailed_description:" if "detailed_description:" in adapted else "integrated_multimodal_description:"
+    cur_desc_val = _std._field(adapted, cur_desc_fld) or ""
+    has_preset_cuts = bool(re.search(r"\[\s*Shot\s+2\s*\]", cur_desc_val, re.I))
     dial_prefix_bits = []
-    for lst in (style_opts_a, cam_opts_a, light_opts_a, col_opts_a):
+    for lst in ((style_opts_a, light_opts_a, col_opts_a) if has_preset_cuts else (style_opts_a, cam_opts_a, light_opts_a, col_opts_a)):
         if lst and lst[0].get("rule"):
-            dial_prefix_bits.append(sanitize_additive_rule(lst[0]["rule"]))
-    if dial_prefix_bits:
-        cur_desc_fld = "detailed_description:" if "detailed_description:" in adapted else "integrated_multimodal_description:"
-        cur_desc_val = _std._field(adapted, cur_desc_fld) or ""
-        if cur_desc_val and "[Shot 1]" in cur_desc_val:
-            cue_str = ", ".join(dial_prefix_bits[:2])
-            if cue_str and cue_str[:24].lower() not in cur_desc_val.lower():
-                adapted = re.sub(r"(\[Shot 1\][ \t]*)", lambda m: f"{m.group(1)}{cue_str}, ", adapted, count=1)
+            bit_clean = sanitize_additive_rule(lst[0]["rule"]).rstrip(" .,;")
+            if bit_clean:
+                dial_prefix_bits.append(bit_clean)
+    if dial_prefix_bits and cur_desc_val and "[Shot 1]" in cur_desc_val:
+        bits2 = dial_prefix_bits[:2]
+        if len(bits2) == 2 and len(bits2[1]) >= 2 and bits2[1][0].isupper() and bits2[1][1].islower() and not re.match(r"^(?:Korean|Japanese|Chinese|Tokyo|Seoul|Douyin|TikTok|Hollywood|I\b)", bits2[1]):
+            bits2[1] = bits2[1][0].lower() + bits2[1][1:]
+        cue_str = ", ".join(bits2)
+        if cue_str and cue_str[:24].lower() not in cur_desc_val.lower():
+            new_desc_val = re.sub(r"(\[Shot 1\][ \t]*)", lambda m: f"{m.group(1)}{cue_str}, ", cur_desc_val, count=1)
+            adapted = _replace_section_body(adapted, cur_desc_fld, new_desc_val, ("overall_soundscape:", "non_diegetic_music:"))
 
     if mode == "T2VA" and "detailed_description:" in adapted and "integrated_multimodal_description:" not in adapted:
         desc_b = _std._field(adapted, "detailed_description:")
@@ -907,7 +1058,9 @@ def adapt_preset_script(
         mus_b = _std._field(adapted, "non_diegetic_music:") or "N/A"
         char_opts_a = _cat.resolve_dial_opts("character", flavors.get("character"))
         t2va_who = char_opts_a[0]["label"].split("—")[0].strip() if char_opts_a else "The lead"
-        desc_b = re.sub(r"<Subject\s+1>(?:\s+\w+)?", t2va_who, desc_b)
+        desc_b = re.sub(r"<Subject\s+1>(?:\s+[A-Z][a-zA-Z]+)?", t2va_who, desc_b)
+        desc_b = re.sub(r"<Subject\s+2>(?:\s+[A-Z][a-zA-Z]+)?", "her partner", desc_b)
+        desc_b = re.sub(r"<Subject\s+[3-9]>(?:\s+[A-Z][a-zA-Z]+)?", "the companion", desc_b)
         desc_b = re.sub(r"<(?:Picture|Subject|Audio)\s+\d+>", "", desc_b)
         adapted = f"integrated_multimodal_description:\n{desc_b.strip()}\n\noverall_soundscape:\n{snd_b.strip()}\n\nnon_diegetic_music:\n{mus_b.strip()}"
 
@@ -1014,6 +1167,8 @@ def build_pass2_audit_checklist(
         is_sex_p2 = _dir.is_sexual(brief, exp_p2_str, ward_p2_str, fetish_id=str(flavors.get("fetish") or ""))
         if is_sex_p2:
             checks.append("WORDLESS AUDIO LOCK: Keep all beats free of `<d>` speech; place natural breaths, moans, and wet foley inside `overall_soundscape:`.")
+        elif is_pure_bgm_soundscape(brief=brief, flavors=flavors, sex_scene=is_sex_p2):
+            checks.append("SOUNDSCAPE OFF: Keep `<d>` dialogue omitted and set `overall_soundscape:` strictly to `N/A` so the music track plays unobstructed.")
         else:
             checks.append("SILENT LIPS LOCK: Keep `<d>` dialogue omitted; describe poised closed lips and tactile room foley inside `overall_soundscape:`.")
     else:

@@ -53,7 +53,8 @@ def _slugify_tag(raw: str) -> str:
 
 _NON_NAME_WORD_RX = re.compile(
     r"^(?:comfy(?:ui)?|ui|sandtie|handtie|htc|screenshot|snapshot|capture|download|"
-    r"untitled|output|input|generated|render|temp|tmp|flux|sdxl|qwen|wan|minimax|hailuo|h3|"
+    r"untitled|output|input|generated|render|temp|tmp|flux|sdxl|qwen\d*|wan\d*|minimax|hailuo|h3|"
+    r"tile[ds]?|upscal(?:e|ed|er|ing)?|detail(?:er|ed)?|refine[dr]?|edit(?:ed)?|pass\d*|final|v\d+|copy|draft|test|"
     r"ref|pic|picture|img|image|sub|subj|subject|char|character|person|woman|man|girl|guy|"
     r"face|body|sheet|look|outfit|plate|scene|place|set|bg|prop|photo|still|frame|clip|"
     r"video|audio|reference)(?:_?\d+)?$",

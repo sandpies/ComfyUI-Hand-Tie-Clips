@@ -5,6 +5,36 @@
   "note": "Verified 3D scene plates, arenas, and atmospheric sets.",
   "options": [
     {
+      "id": "plate_simple_enclosed_soft_natural_bedroom",
+      "label": "🛏️ Plain Enclosed Bedroom (Soft Natural Ambient Light, Solid Walls)",
+      "group": "00 · Everyday Simple Plates",
+      "rule": "an enclosed plain everyday bedroom bounded by uninterrupted solid matte painted plaster walls under soft, even, natural ambient fill lighting: neat bed with neutral cotton bedding and white pillows against the wall, light wood nightstand, and plain flooring with gentle natural shadow rolloff",
+      "character": "plain enclosed softly lit everyday bedroom",
+      "life": "clean tranquil room stillness with subtle natural air softness across bedding and matte walls",
+      "sound": "quiet natural indoor bedroom stillness and soft cotton sheet rustle",
+      "domain": "bedroom"
+    },
+    {
+      "id": "plate_sterile_scifi_biolab_stainless_chamber",
+      "label": "🧪 3D Plate: Sterile Sci-Fi Bio-Lab (Stainless Exam Table, Monitor Walls & Glass Chamber)",
+      "group": "Combat & Action Arenas",
+      "rule": "a sterile clinical sci-fi research laboratory bathed in cool surgical cyan-white overhead light: brushed stainless-steel laboratory worktables centered across dark composite flooring, glowing telemetry screens and cylindrical cryo canisters lining white ribbed walls, and a wide glass bio-containment chamber doorway open at the back right",
+      "character": "sterile stainless-steel sci-fi bio-lab with glass containment chamber",
+      "life": "cool fluorescent ceiling light glints off brushed stainless tables while telemetry screens flicker softly",
+      "sound": "low laboratory ventilation hum, distant telemetry monitor chirps, and crisp boot echoes",
+      "domain": "combat_action"
+    },
+    {
+      "id": "plate_plain_soft_natural_bedroom",
+      "label": "🛏️ Plain Simple Bedroom (Soft Side-Window Daylight)",
+      "group": "00 · Everyday Simple Plates",
+      "rule": "a plain everyday bedroom filled solely with soft, diffused natural daylight from a single sheer-curtained side window: simple neat bed with neutral cotton bedding and white pillows against a clean matte painted wall, light wood nightstand, and plain flooring with gentle daylight falloff",
+      "character": "plain naturally lit everyday bedroom",
+      "life": "soft diffused window daylight shifts subtly across plain bedding and matte walls",
+      "sound": "quiet natural indoor bedroom stillness and soft cotton sheet rustle",
+      "domain": "bedroom"
+    },
+    {
       "id": "plate_luxury_rooftop_infinity_pool",
       "label": "🌃 Penthouse Rooftop Infinity Pool at Night (Skyline Bokeh & Steam)",
       "group": "00 · Intimate, Boudoir & Nightlife",

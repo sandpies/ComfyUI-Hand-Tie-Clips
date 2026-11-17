@@ -315,6 +315,33 @@ export const BUILTIN_DIAL_COMBOS = [
     { id: "__builtin_uber_matrix_lobby_bullet_169", label: "UBER FIGHT (ms): Matrix Marble Lobby Bullet-Time & Pillar Shatter (16:9)", values: { style: "h3_astro_cinema", combat: "uber_fight_matrix_lobby_pillar_shatter", place: "shattered_marble_lobby", wardrobe: "action_tactical_catsuit", fx: "fx_anamorphic_warm_lens_flare", fx_timing: "from_start", music: "john_wick_club_techno_132", motion: "max", energy: "peak", expression: "stoic", expr_read: "intense", life: "hyper", talk_mode: "silent" } },
     { id: "__builtin_nsfw_sauna_3stage_916", label: "NSFW 3-Stage: Cedar Sauna Steam Rub -> Oral -> Bench Doggy (9:16)", values: { explicit: "stage_sauna_3cut_steam_bench_to_glass", place: "plate_cedar_sauna_frosted_steam", wardrobe: "nude_wet_shower", ambience: "amb_cedar_sauna_hot_stones", motion: "natural", energy: "steady", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
     { id: "__builtin_nsfw_fitting_room_3stage_916", label: "NSFW 3-Stage: Boutique 3-Way Mirror Curtain Peel -> Oral -> Doggy (9:16)", values: { explicit: "stage_mirror_fitting_room_3cut_curtain_reveal", place: "plate_fitting_room_three_way_mirrors", wardrobe: "partial_dress_hiked_waist", motion: "natural", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
+    { id: "__builtin_duet_choochoo_beach_169", label: "🔥 Duet (15s Vision · 4:3/16:9): Stacked V-Lean, L-Guns, Backsteps & Hook-Kick Hang", values: { style: "style_douyin_highgloss_neon_beauty", pose: "dance_duet_choochoo_hype_train_cuts", camera: "cam_viral_dutch_90roll_wipe_cuts", place: "plate_pacific_wet_sand_sunset_beach", wardrobe: "gold_metallic_bikini_swim", light: "sunset_silhouette_halo_rim", music: "kpop_hyper_hype_train_134", motion: "max", energy: "peak", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_whiplash_runway_916", label: "⚡ K-Pop Duet: Whiplash Neck-Snap + Cyber Runway Drop (9:16)", values: { style: "style_kpop_music_bank_4k_stage", pose: "dance_duet_whiplash_necksnap_catwalk", camera: "cam_beat_drop_punch_wide_combo", place: "plate_rainy_backstage_concert_tunnel", wardrobe: "action_cyber_idol_metallic_corset_boots", light: "cyber_dual_gel", music: "kpop_whiplash_runway_electro_128", motion: "max", energy: "peak", expression: "vivid", expr_read: "intense", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_sticky_pool_squat_916", label: "🔥 Sexy/Energetic Duet: Sticky Summer Squat-Bounce + Infinity Pool (9:16)", values: { style: "style_commercial_beauty_skincare_reel", pose: "dance_duet_sticky_summer_squat_bounce", camera: "cam_low_hero_squat_to_highkick_boom", place: "plate_desert_villa_infinity_courtyard", wardrobe: "swim_emerald_one_shoulder_cutout", light: "sunset_silhouette_halo_rim", music: "amapiano_logdrum_groove_112", motion: "max", energy: "peak", expression: "vivid", expr_read: "sensual", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_addicted_velvet_club_916", label: "💋 Sexy/Fierce Duet: Velvet Club Claw-Reach + Finger-Lip Tease (9:16)", values: { style: "style_kpop_music_bank_4k_stage", pose: "dance_duet_addicted_velvet_claw_tease", camera: "cam_beat_snap_micro_push", place: "plate_proscenium_theater_stage_spotlight", wardrobe: "glam_backless_crystal_chain_cowl_dress", light: "light_kpop_concert_multi_spot_haze", music: "melodic_afterlife_techno_126", motion: "brisk", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "silent" } },
+    { id: "__builtin_duet_arrest_siren_arcade_916", label: "🚨 Cute/Cheeky Duet: Siren Hands + Finger-Gun Arrest Neon Bowling (9:16)", values: { style: "style_douyin_highgloss_neon_beauty", pose: "dance_duet_arrest_siren_fingergun", camera: "cam_beat_drop_punch_wide_combo", place: "plate_midnight_bowling_alley_neon", wardrobe: "street_coquette_ribbon_cardigan_pleated_mini", light: "light_ring_beauty_plus_neon_rim", colour: "colour_kpop_pastel_milk_highlights", music: "kpop_siren_hyperpop_jersey_136", motion: "max", energy: "peak", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_neon_spin_highkick_916", label: "🦵 K-Pop Duet: NEON Low Vogue -> Spin & Soaring High Kick (9:16)", values: { style: "style_kpop_music_bank_4k_stage", pose: "dance_duet_neon_spin_highkick_drop", camera: "cam_low_hero_squat_to_highkick_boom", place: "plate_marble_museum_rotunda_skylight", wardrobe: "street_idol_stage_coord_blazer_mini", fx: "fx_kpop_confetti_sparkle_cannon", fx_timing: "from_start", music: "kpop_hyper_hype_train_134", motion: "max", energy: "peak", expression: "vivid", expr_read: "intense", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_palm_wipe_hongdae_916", label: "✨ Douyin/TikTok Duet: Palm-Over-Lens Whip Reveal + Hongdae Glow (9:16)", values: { style: "style_douyin_highgloss_neon_beauty", pose: "dance_duet_palm_wipe_fit_glow_strut", camera: "cam_palm_cover_lens_reveal_snap", place: "plate_seoul_hongdae_rooftop_bar", wardrobe: "street_kpop_velvet_crop_asymmetric_mini", light: "neon_rain_window_caustics", colour: "colour_douyin_porcelain_neon_cyan", music: "jersey_club_bounce_140", motion: "max", energy: "peak", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_helicopter_latin_169", label: "💃 Sultry/Fiery Duet: Helicopter Hands + Latin K-Pop Sunset Terrace (16:9)", values: { style: "style_kpop_music_bank_4k_stage", pose: "dance_duet_helicopter_latin_shimmy", camera: "cam_360_slowmo_duet_orbit", place: "plate_amalfi_lemon_terrace_pergola", wardrobe: "glam_sequined_champagne_fringe_mini", light: "sunset_silhouette_halo_rim", music: "reggaeton_perreo_dembow_96", motion: "brisk", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "silent" } },
+    { id: "__builtin_duet_mirror_canon_party_169", label: "🎉 Party Duet: Mirror Staggered Train-Wave + Confetti Stage (16:9)", values: { style: "style_kpop_music_bank_4k_stage", pose: "dance_duet_mirror_canon_train_wave", camera: "cam_beat_drop_punch_wide_combo", place: "plate_mirror_dance_rehearsal_studio", wardrobe: "street_balletcore_wrap_bolero_legwarmers", light: "light_kpop_concert_multi_spot_haze", fx: "fx_kpop_confetti_sparkle_cannon", fx_timing: "from_start", music: "club_house_124", motion: "max", energy: "peak", expression: "vivid", expr_read: "warm", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_y2k_digicam_laundromat_916", label: "📸 Y2K Digicam Duet: Fork-Twirl Wink + Laundromat Flash Squat-Pop (9:16)", values: { style: "style_y2k_digicam_direct_flash", pose: "dance_duet_y2k_digicam_forktwirl_squat", camera: "cam_handheld_vertical_dance_follow", place: "plate_24h_neon_laundromat_midnight", wardrobe: "street_y2k_velour_tracksuit_babytee", music: "kpop_y2k_ukgarage_bounce_122", motion: "max", energy: "peak", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_choochoo_neon_stage_169", label: "🚂 Hype Train II (Neon Stage · 4:3/16:9): Laser Montage, Backsteps & Hook-Kick Hang", values: { style: "style_kpop_music_bank_4k_stage", pose: "dance_duet_choochoo_hype_train_cuts", camera: "cam_viral_dutch_90roll_wipe_cuts", place: "plate_proscenium_theater_stage_spotlight", wardrobe: "action_cyber_idol_metallic_corset_boots", light: "light_kpop_concert_multi_spot_haze", fx: "fx_kpop_confetti_sparkle_cannon", fx_timing: "from_start", music: "kpop_hyper_hype_train_134", motion: "max", energy: "peak", expression: "vivid", expr_read: "intense", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_guofeng_sakura_916", label: "🌸 Douyin Guofeng Duet: Bamboo Shrine Sleeve-Wave + Sakura Trap (9:16)", values: { style: "style_douyin_highgloss_neon_beauty", pose: "dance_duet_guofeng_sleeve_snap_trap", camera: "cam_beat_drop_punch_wide_combo", place: "plate_kyoto_bamboo_shrine_stone_steps", wardrobe: "street_coquette_ribbon_cardigan_pleated_mini", fx: "fx_sakura_petal_wind_drift", fx_timing: "from_start", music: "douyin_guofeng_guzheng_trap_92", motion: "brisk", energy: "charged", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_baile_funk_pool_916", label: "🌙 Baile Funk Duet: Night Skyline Infinity Pool Squat & Sway (9:16)", values: { style: "style_douyin_highgloss_neon_beauty", pose: "dance_duet_baile_funk_pool_squat_sizzle", camera: "cam_low_hero_squat_to_highkick_boom", place: "plate_rooftop_infinity_pool_skyline", wardrobe: "swim_cutout_white_monokini_gold_rings", light: "neon_rain_window_caustics", music: "baile_funk_tambor_130", motion: "max", energy: "peak", expression: "vivid", expr_read: "sensual", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_elevator_mirror_glam_916", label: "🥂 Luxury Lift Duet: Smoked-Mirror Rack-Focus + Chainmail Dress (9:16)", values: { style: "style_kpop_music_bank_4k_stage", pose: "dance_duet_elevator_mirror_door_sway", camera: "cam_mirror_rack_focus_pull", place: "plate_luxury_champagne_private_elevator", wardrobe: "glam_backless_crystal_chain_cowl_dress", light: "vip_amber_booth", music: "kpop_sensual_velvet_rnb_98", motion: "slow", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "silent" } },
+    { id: "__builtin_duet_tokyo_ramen_jersey_916", label: "🍜 Midnight Tokyo Rain Duet: Neon Ramen Jersey-Club Bounce (9:16)", values: { style: "style_douyin_highgloss_neon_beauty", pose: "dance_duet_jersey_triplet_hop_puddle", camera: "cam_handheld_vertical_dance_follow", place: "plate_neon_cyber_ramen_shop_rain", wardrobe: "street_cargo_miniskirt_zip_hoodie_platforms", fx: "fx_raindrop_on_camera_glass", fx_timing: "from_start", music: "jersey_club_bounce_140", motion: "max", energy: "peak", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_greenhouse_coquette_916", label: "🌿 Glasshouse Coquette Duet: Cheek-Poke + Fairy-Light Spin (9:16)", values: { style: "style_commercial_beauty_skincare_reel", pose: "dance_duet_coquette_cheekpoke_spin_flare", camera: "cam_beat_snap_micro_push", place: "plate_rooftop_greenhouse_botanical_night", wardrobe: "street_coquette_ribbon_cardigan_pleated_mini", colour: "colour_kpop_pastel_milk_highlights", music: "kpop_sensual_velvet_rnb_98", motion: "natural", energy: "charged", expression: "vivid", expr_read: "warm", life: "alive", talk_mode: "silent" } },
+    { id: "__builtin_duet_parking_afrobeats_169", label: "🌅 Golden Parking-Deck Duet: 360° Sunset Orbit Afrobeats (16:9)", values: { style: "style_commercial_beauty_skincare_reel", pose: "dance_duet_afrobeats_360_shoulder_groove", camera: "cam_360_slowmo_duet_orbit", place: "plate_concrete_rooftop_parking_golden", wardrobe: "everyday_oversized_poplin_shirt_bike_shorts", light: "sunset_silhouette_halo_rim", colour: "colour_golden_hour_bronze_glow", music: "afrobeats_warm_pluck_106", motion: "natural", energy: "steady", expression: "vivid", expr_read: "warm", life: "alive", talk_mode: "silent" } },
+    { id: "__builtin_duet_hi8_vinyl_916", label: "📼 90s Hi8 Vinyl Shop Duet: Crate-Peek Pop + UK Garage Two-Step (9:16)", values: { style: "style_90s_hi8_camcorder_night", pose: "dance_duet_vinyl_aisle_two_step_peek", camera: "cam_handheld_vertical_dance_follow", place: "plate_vinyl_record_shop_aisles", wardrobe: "everyday_90s_denim_jacket_straight_jeans", music: "kpop_y2k_ukgarage_bounce_122", motion: "brisk", energy: "charged", expression: "vivid", expr_read: "warm", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_simple_natural_bedroom_solo_916", label: "🛏️ Simple Enclosed Bedroom (Soft Natural Ambient, Solid Walls): Cozy Groove (9:16)", values: { place: "plate_simple_enclosed_soft_natural_bedroom", light: "soft_natural_light", pose: "dance_tiktok_cozy_bedroom_pajama_heart,dance_gravure_s_curve_hip_roll", wardrobe: "street_oversized_boyfriend_hoodie_bare_legs", music: "city_pop_80s_112", motion: "natural", energy: "steady", expression: "vivid", expr_read: "warm", life: "alive", talk_mode: "silent" } },
+    { id: "__builtin_solo_waacking_crunk_neon_916", label: "⚡ Energy Solo: Arm Waacking, Reverse Backsteps & Hook-Kick Hang (9:16)", values: { style: "style_douyin_highgloss_neon_beauty", pose: "dance_solo_waacking_crunk_hook_kick_12s", camera: "cam_distant_wide_master_to_hardcut_closeup", place: "plate_tokyo_izakaya_lantern_alley", wardrobe: "street_idol_stage_coord_blazer_mini", light: "neon_rain_window_caustics", music: "kpop_crunk_waacking_132", motion: "max", energy: "peak", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_house_jack_backstep_169", label: "🔥 Energy Duet: Stacked V-Lean -> Same-Dir Backsteps + House Jack (16:9)", values: { style: "style_commercial_beauty_skincare_reel", pose: "dance_duet_stacked_v_lean_popping_microfreeze,dance_duet_same_dir_backstep_waacking_crunk", camera: "cam_distant_wide_master_to_hardcut_closeup", place: "plate_concrete_rooftop_parking_golden", wardrobe: "everyday_oversized_poplin_shirt_bike_shorts", light: "sunset_silhouette_halo_rim", music: "house_jack_shuffle_126", motion: "max", energy: "peak", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_solo_kpop_dancebreak_43", label: "💥 K-Pop Solo Dance Break (15s 4:3): 5-Cut Popping, Waacking & Hook-Kick Hang", values: { style: "style_kpop_music_bank_4k_stage", pose: "dance_solo_hyper_dancebreak_5cut_montage", camera: "cam_viral_dutch_90roll_wipe_cuts", place: "plate_proscenium_theater_stage_spotlight", wardrobe: "action_cyber_idol_metallic_corset_boots", light: "light_kpop_concert_multi_spot_haze", fx: "fx_kpop_confetti_sparkle_cannon", fx_timing: "from_start", music: "kpop_hyper_hype_train_134", motion: "max", energy: "peak", expression: "vivid", expr_read: "intense", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_gym_crunk_hook_hang_916", label: "🥁 Energy Duet: Mirror Gym Crunk Lock, Body Wave & Hook-Kick Hang (9:16)", values: { style: "style_douyin_highgloss_neon_beauty", pose: "dance_duet_same_dir_backstep_waacking_crunk,dance_duet_hook_kick_hang_quickstep_break", camera: "cam_stacked_reveal_dutch_zoom_level", place: "plate_private_gym_mirror_weight_bench", wardrobe: "street_cargo_miniskirt_zip_hoodie_platforms", light: "soft_natural_light", music: "kpop_crunk_waacking_132", motion: "max", energy: "peak", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_simple_bedroom_nsfw_missionary_916", label: "🛏️ Simple Enclosed Bedroom: Casual Top Strip -> Bed Crawl -> Missionary (9:16)", values: { place: "plate_simple_enclosed_soft_natural_bedroom", light: "soft_natural_light", explicit: "cont_simple_bedroom_casual_strip_to_missionary", wardrobe: "street_oversized_boyfriend_hoodie_bare_legs", motion: "natural", energy: "steady", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
+    { id: "__builtin_uber_stairwell_railing_brawl_169", label: "UBER FIGHT (ms): Cramped Concrete Stairwell Railing Toss & Slam (16:9)", values: { style: "john_wick_neon_gunfu", combat: "uber_fight_stairwell_railing_brawl", place: "plate_rainy_backstage_concert_tunnel", wardrobe: "action_stealth_infiltration_turtleneck_harness", music: "john_wick_club_techno_132", motion: "max", energy: "peak", expression: "stoic", expr_read: "intense", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_uber_scifi_lab_onetake_brawl_169", label: "UBER FIGHT (ms): One-Take Sci-Fi Bio-Lab Table Vault, Spark Sweep & Penultimate Blast (16:9)", values: { style: "h3_astro_cinema", combat: "uber_fight_scifi_lab_table_vault_chamber_ko", camera: "cam_combat_kinetic_whip_zoom_ultimate", place: "plate_sterile_scifi_biolab_stainless_chamber", light: "cyber_dual_gel", fx: "vfx_kinetic_shockwave_dust_ring", fx_timing: "from_start", music: "john_wick_club_techno_132", motion: "max", energy: "peak", expression: "vivid", expr_read: "intense", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_uber_jedi_sith_force_clash_169", label: "UBER FIGHT (ms): Jump Kicks, Mid-Air Force Clash & Penultimate Force Push Zoom (16:9)", values: { style: "h3_astro_cinema", combat: "uber_fight_jedi_sith_midair_force_clash", camera: "cam_combat_kinetic_whip_zoom_ultimate", place: "shattered_marble_lobby", light: "cyber_dual_gel", fx: "vfx_kinetic_shockwave_dust_ring", fx_timing: "from_start", music: "taiko_war_drums_138", motion: "max", energy: "peak", expression: "vivid", expr_read: "intense", life: "hyper", talk_mode: "silent" } },
 ];
 
 const ALL_DIAL_KEYS = [
@@ -2105,8 +2132,12 @@ function createSandTieCore(node, {
         try { Object.assign(flavors, JSON.parse(prev.flavors)); } catch (_) {}
         syncAllWidgets();
         saveDraft();
+        syncBlockToSimplePrompt(blockBox.value);
         syncUndoBtn();
     });
+    if (!standalone) {
+        blockBox.addEventListener("input", () => syncBlockToSimplePrompt(blockBox.value));
+    }
     function syncUndoBtn() {
         undoBtn.disabled = undoStack.length === 0;
         undoBtn.textContent = undoStack.length ? `Undo (${undoStack.length})` : "Undo";
@@ -2703,6 +2734,44 @@ function createSandTieCore(node, {
         }
     }
 
+    function syncBlockToSimplePrompt(txt) {
+        const clean = String(txt || "").trim();
+        if (standalone || !clean) return "";
+        const swRaw = String(widgetByName(node, "swap_script")?.value || "").trim();
+        const spRaw = String(widgetByName(node, "shot_plan")?.value || "").trim();
+        let hasShots = false;
+        if (spRaw) {
+            try {
+                const spParsed = JSON.parse(spRaw);
+                const arr = Array.isArray(spParsed) ? spParsed : spParsed?.shots;
+                hasShots = Array.isArray(arr) && arr.length > 0;
+            } catch {
+                hasShots = true;
+            }
+        }
+        if (swRaw) {
+            return "\n• SWAP script is active — click Accept to clear Swap and queue Standard (Simple).";
+        }
+        if (hasShots) {
+            return "\n• Shots are active on SCRIPT — click Accept to switch to Standard (Simple), or → Script Hop.";
+        }
+        if (node?.properties?.h3_editor_mode === "shots") {
+            return "\n• SCRIPT is in Shots mode with 0 shots — click Accept (Standard) or → Script Hop.";
+        }
+        const pw = widgetByName(node, "prompt");
+        if (pw) {
+            pw.value = clean;
+            try { pw.callback?.(pw.value, node.graph?.canvas, node); } catch (_) {}
+            try { node._h3R2?.script?.refresh?.(); } catch (_) {}
+            node.graph?.setDirtyCanvas?.(true, true);
+            const chN = Math.max(1, parseInt(widgetByName(node, "chains")?.value, 10) || 1);
+            return chN > 1
+                ? `\n• Synced to prompt, but chains=${chN} on RUN will run ${chN} clips — click Accept to set chains = 1.`
+                : " (synced to Simple prompt — ready to Queue)";
+        }
+        return "";
+    }
+
     async function loadOrAdaptScript(adapt) {
         const pid = scriptSel.value;
         if (!pid) return say("Select a script first.", "hint");
@@ -2723,7 +2792,8 @@ function createSandTieCore(node, {
         if (j.updated_ref_plan) setRefPlan(j.updated_ref_plan);
         saveDraft();
         updateTelemetry();
-        say(adapt ? `Adapted script to wired refs & dials (${j.mode}).` : "Loaded raw script.", "hint");
+        const extraNote = j.script ? syncBlockToSimplePrompt(j.script) : "";
+        say((adapt ? `Adapted script to wired refs & dials (${j.mode}).` : "Loaded raw script.") + extraNote, "hint");
     }
 
     async function runVideoExtractor() {
@@ -2799,37 +2869,7 @@ function createSandTieCore(node, {
             } else {
                 let extraNote = "";
                 if (!standalone && j.block && (stage === "fast" || stage === "write" || stage === "cpu" || stage === "dialogue")) {
-                    const swRaw = String(widgetByName(node, "swap_script")?.value || "").trim();
-                    const spRaw = String(widgetByName(node, "shot_plan")?.value || "").trim();
-                    let hasShots = false;
-                    if (spRaw) {
-                        try {
-                            const spParsed = JSON.parse(spRaw);
-                            const arr = Array.isArray(spParsed) ? spParsed : spParsed?.shots;
-                            hasShots = Array.isArray(arr) && arr.length > 0;
-                        } catch {
-                            hasShots = true;
-                        }
-                    }
-                    if (swRaw) {
-                        extraNote = "\n• SWAP script is active — click Accept to clear Swap and queue Standard (Simple).";
-                    } else if (hasShots) {
-                        extraNote = "\n• Shots are active on SCRIPT — click Accept to switch to Standard (Simple), or → Script Hop.";
-                    } else if (node?.properties?.h3_editor_mode === "shots") {
-                        extraNote = "\n• SCRIPT is in Shots mode with 0 shots — click Accept (Standard) or → Script Hop.";
-                    } else {
-                        const pw = widgetByName(node, "prompt");
-                        if (pw) {
-                            pw.value = j.block;
-                            try { pw.callback?.(pw.value, node.graph?.canvas, node); } catch (_) {}
-                            try { node._h3R2?.script?.refresh?.(); } catch (_) {}
-                            node.graph?.setDirtyCanvas?.(true, true);
-                            const chN = Math.max(1, parseInt(widgetByName(node, "chains")?.value, 10) || 1);
-                            extraNote = chN > 1
-                                ? `\n• Synced to prompt, but chains=${chN} on RUN will run ${chN} clips — click Accept to set chains = 1.`
-                                : " (synced to Simple prompt — ready to Queue)";
-                        }
-                    }
+                    extraNote = syncBlockToSimplePrompt(j.block);
                 }
                 say(`${stage.toUpperCase()} ready (${j.mode || "H3"}).${extraNote}` + (warns ? `\n${warns}` : ""), "hint");
             }

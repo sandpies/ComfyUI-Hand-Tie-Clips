@@ -128,11 +128,11 @@ def build_beat_grid(
     """Compute [(t0, t1), ...] beat spans covering 0..duration_s, quote placements, and hard-cut indices."""
     T = round(max(2.0, float(duration_s or 10.0)), 3)
     qs = list(quotes if quotes is not None else _dlg.extract_quotes(brief))
-    cids = [x.lower() for x in parse_multi_ids(camera_id)]
-    eids = [x.lower() for x in parse_multi_ids(explicit_id)]
+    flavors = flavors or {}
+    cids = [x.lower() for x in parse_multi_ids(camera_id or flavors.get("camera"))]
+    eids = [x.lower() for x in parse_multi_ids(explicit_id or flavors.get("explicit"))]
     cid = cids[0] if cids else ""
     eid = eids[0] if eids else ""
-    flavors = flavors or {}
 
     max_seq_picks = max(len(cids), len(eids), 1)
     for k_dial in ("style", "combat", "place", "wardrobe", "character", "pose", "fetish", "era", "tv_show", "light", "colour", "lens", "fx", "talkstyle", "accent", "ambience", "music"):
@@ -184,23 +184,36 @@ def build_beat_grid(
 
     # Check if an active single rule carries explicit millisecond `At MM:SS.mmm-MM:SS.mmm` spans
     ms_spans: list[tuple[float, float]] = []
+    ms_cuts: list[int] = []
     if max_seq_picks <= 1 and asked_shots == 0:
         for dk in ("explicit", "combat", "pose"):
             opts = _cat.resolve_dial_opts(dk, flavors.get(dk))
             if len(opts) == 1:
                 rtxt = str(opts[0].get("rule") or "")
-                found = [
-                    (int(m.group(1)) * 60 + float(m.group(2)), int(m.group(3)) * 60 + float(m.group(4)))
-                    for m in re.finditer(r"\bAt\s+(\d+):(\d+(?:\.\d+)?)\s*[-–—]\s*(\d+):(\d+(?:\.\d+)?)", rtxt, re.I)
-                ]
-                if len(found) >= 2:
-                    ms_spans = found
+                matches_ms = list(re.finditer(r"\bAt\s+(\d+):(\d+(?:\.\d+)?)\s*[-–—]\s*(\d+):(\d+(?:\.\d+)?)", rtxt, re.I))
+                if len(matches_ms) >= 2:
+                    ms_spans = [
+                        (int(m.group(1)) * 60 + float(m.group(2)), int(m.group(3)) * 60 + float(m.group(4)))
+                        for m in matches_ms
+                    ]
+                    prev_pos = 0
+                    for idx_m, m in enumerate(matches_ms):
+                        seg_before = rtxt[prev_pos:m.start()]
+                        if idx_m > 0 and re.search(r"\[\s*Shot\s+[2-9]\d*\s*\]", seg_before, re.I):
+                            ms_cuts.append(idx_m)
+                        prev_pos = m.end()
                     break
 
     # Check if brief / preset naturally expects hard cuts
+    viral_cut_cams = {
+        "multi_angle_action_close", "shot_reverse", "whip_pan_transition", "match_cut_motion",
+        "cam_viral_dutch_90roll_wipe_cuts", "cam_beat_drop_punch_wide_combo", "cam_palm_cover_lens_reveal_snap",
+        "cam_whip_pan_beat_snap_cut", "graphic_match_cut", "smash_cut_contrast",
+        "cam_distant_wide_master_to_hardcut_closeup",
+    }
     multi_cut_cam = (
         len(cids) >= 2
-        or any(c in ("multi_angle_action_close", "shot_reverse", "whip_pan_transition", "match_cut_motion") for c in cids)
+        or any(c in viral_cut_cams for c in cids)
         or is_multi_pos
         or asked_shots >= 2
     )
@@ -246,14 +259,20 @@ def build_beat_grid(
                 cur = nxt
 
     cuts: list[int] = []
-    if not is_single_continuous_ask and multi_cut_cam:
-        if (any(e.startswith("multi_pos_") for e in eids) or exp_has_cuts) and len(spans) >= 2:
+    if not is_single_continuous_ask and (multi_cut_cam or ms_cuts):
+        if ms_cuts:
+            cuts = ms_cuts
+        elif (any(e.startswith("multi_pos_") for e in eids) or exp_has_cuts) and len(spans) >= 2:
             cuts = list(range(1, len(spans)))
         elif len(cids) >= 2 and get_dial_mode(flavors, "camera", "sequence") == "sequence":
             alloc = allocate_stages_to_spans([{"id": x} for x in cids], spans)
             cuts = [b_list[0][0] - 1 for _, b_list in alloc[1:] if b_list and b_list[0][0] > 1]
         elif asked_shots >= 2:
             cuts = list(range(1, len(spans)))
+        elif any(c in ("multi_angle_action_close", "shot_reverse", "cam_viral_dutch_90roll_wipe_cuts", "cam_beat_drop_punch_wide_combo", "cam_palm_cover_lens_reveal_snap") for c in cids) and len(spans) >= 2:
+            cuts = list(range(1, len(spans)))
+        elif any(c in ("graphic_match_cut", "smash_cut_contrast", "cam_whip_pan_beat_snap_cut", "whip_pan_transition", "match_cut_motion", "cam_distant_wide_master_to_hardcut_closeup") for c in cids) and len(spans) >= 2:
+            cuts = [1 if len(spans) == 2 else (len(spans) - 1 if any(c == "cam_distant_wide_master_to_hardcut_closeup" for c in cids) else (len(spans) // 2))]
 
     q_map: dict[int, list[str]] = {}
     if qs:
@@ -272,6 +291,7 @@ def camera_trajectory_plan(
     spans: list[tuple[float, float]],
     is_pov: bool = False,
     has_bg_plate: bool = False,
+    is_combat: bool = False,
 ) -> str:
     """Emit H3-grounded motion-primitive trajectory laws (Open-End Range, LoopForge, Zero Rig Hardware)."""
     if is_pov or not spans:
@@ -281,6 +301,8 @@ def camera_trajectory_plan(
     cids = parse_multi_ids(camera_id)
     cid = cids[0].lower() if cids else ""
     amp_boost = " with large amplitude across the full shot" if has_bg_plate else ""
+    pace_adv = "fast and briskly" if is_combat else "smoothly"
+    speed_word = "fast" if is_combat else "steady"
 
     asks_top_down = cid in ("pedestal_down", "tilt_down", "finger_follow_macro") or bool(
         re.search(r"\b(?:from\s+(?:her|his|their|the)?\s*(?:head|face|eyes|lips)\b.*?\b(?:down\s+)?to\s+(?:her|his|their|the)?\s*(?:hips|legs|feet|heels|ankles)|top[- ]to[- ]bottom)\b", brief or "", re.I)
@@ -314,7 +336,7 @@ def camera_trajectory_plan(
     if cid in ("pull_out", "super_dolly_out", "crash_zoom_out", "aerial_pullback", "detail_to_wide", "earth_zoom"):
         return (
             f"OPEN-END REVEAL LAW ({cid.upper()}): Open [Shot 1] and {ts_list[0]} tight on a close face, eye, or tactile detail; "
-            f"across {', '.join(ts_list[1:]) if n >= 2 else ts_list[0]}, continuously pull out / pedestal up with large amplitude at steady speed until the full architecture/skyline opens wide."
+            f"across {', '.join(ts_list[1:]) if n >= 2 else ts_list[0]}, continuously pull out / pedestal up with large amplitude at {speed_word} speed until the full architecture/skyline opens wide."
         )
 
     if cid in ("selfie_arm", "selfie_high_overhead") or bool(re.search(r"\b(?:selfie|arm'?s[- ]length\s+camera)\b", brief or "", re.I)):
@@ -325,7 +347,7 @@ def camera_trajectory_plan(
 
     if cid in ("orbit_360", "orbit_180_front_to_rear", "orbit_180_rear_to_front", "arc_left", "arc_right", "spiral_3axis", "overhead_swing"):
         return (
-            f"3D ARC / ORBIT PARALLAX LAW: Across {', '.join(ts_list)}, keep the subject's feet planted facing one consistent direction while the camera arcs smoothly around them{amp_boost} and background walls/lights rotate cleanly in 3D parallax."
+            f"3D ARC / ORBIT PARALLAX LAW: Across {', '.join(ts_list)}, keep the subject's feet grounded facing one clear direction while the camera arcs {pace_adv} around them{amp_boost} and background walls/lights rotate cleanly in 3D parallax."
         )
 
     if cid == "snorricam":

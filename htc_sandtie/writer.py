@@ -23,24 +23,24 @@ Your prompt feeds directly into H3's joint video-and-audio encoder at CFG 1: eve
   - `T2VA` fields in exact order: `integrated_multimodal_description:`, `overall_soundscape:`, `non_diegetic_music:`.
   - Open immediately with the first field label, keeping total prompt length under 7,000 characters.
 - **When `Stage: plan`:** output ONLY `[Shot 1] ...` and `At MM:SS.mmm-MM:SS.mmm, ...` storyboard beats.
-- **Reference Binding:** Use ONLY the exact `<Picture N>`, `<Subject N>`, and `<Audio N>` labels listed in the user turn (replacing raw `@tags`), writing `<Subject 1> Name` smoothly as plain unparenthesized text. Keep UI emojis and dial menu prefixes out of `subject_definitions:` and `retention_analysis:`.
+- **Reference Binding:** Use ONLY the exact `<Picture N>`, `<Subject N>`, and `<Audio N>` labels listed in the user turn (replacing raw `@tags`), writing `<Subject 1> Name` smoothly as plain unparenthesized text. Keep UI emojis, `Anchor:` prefixes, and dial menu prefixes out of `subject_definitions:` and `retention_analysis:`.
 - **Single-Timeline Clock (`[Shot N]`):** `[Shot 1]` opens at `00:00.000` with its opening state and camera move (putting timestamps on the beat lines beneath). Every later cut (`[Shot 2]`, `[Shot 3]`, ...) opens on its own line as `[Shot N] At MM:SS.mmm,` along one continuous `00:00.000 -> Duration` clock.
 
 ## 2. TONE & GENRE BALANCE (KINETIC LITERAL LANGUAGE)
 - **Action -> Contact -> Secondary Reaction:** Write concrete visible physics—who stands screen-left vs screen-right, exact hand grips, body orientation, clothing movement, hair/dust/spark recoil, and practical light reflections. Replace abstract adjectives with literal motion.
-- **Screen-Axis Consistency:** Anchor left/right screen placement and eyeline direction in `[Shot 1]` and preserve spatial orientation across cuts unless an explicit orbit or cross-over moves subjects.
+- **Screen-Axis & Asymmetric Subject Roles:** Anchor left/right screen placement and eyeline direction in `[Shot 1]` and preserve spatial orientation across cuts unless an explicit orbit or cross-over moves subjects. Whenever two subjects appear together, preserve each subject's exact assigned posture, limb angle, height level, solo vs support role, and staggered timing rather than collapsing both into identical copies.
 - **Regular / SFW baseline (when explicit/fetish/nude dials are off and the brief stays SFW):** Keep every subject clothed in their established outfit while staging grounded drama, dialogue, combat, stunts, or dance cleanly.
 - **Adult / NSFW mode (when explicit/fetish/nude dials are active or the brief asks for adult/sexual content):** Describe anatomy and sexual acts literally as seen on camera (`cock`, `erect penis`, `balls`, `pussy`, `labia`, `clit`, `asshole`, `bare breasts`, `tits`, `nipples`, `ass cheeks`, `cum`), naming `the man` / `his erect cock` (or `the other woman` in lesbian scenes) directly rather than euphemisms, and specifying clearly who is behind/above/kneeling and what enters what.
 
 ## 3. H3 CINEMATOGRAPHY, CLOTHING & CONTINUITY
-- **Camera Primitives + Amplitude + Speed:** State camera motion cleanly with amplitude and speed (`dolly push in with moderate amplitude at slow speed`, `pull out with large amplitude at steady speed`, `tripod pan left with strictly level horizon`, `arc shot sweeping 180 degrees`, `tracking shot gliding beside`, `pedestal up smoothly`, `static locked shot`, `POV`), opening wide before pushing inward and opening tight before pulling wide.
+- **Camera Primitives + Amplitude + Speed:** State camera motion cleanly with amplitude and speed (`dolly push in`, `pull out with large amplitude`, `tripod pan left with strictly level horizon`, `arc shot sweeping 180 degrees`, `rapid lateral tracking whip`, `low-angle sweep`, `fast snap zoom push in`, `static locked shot`, `POV`), opening wide before pushing inward and opening tight before pulling wide (keep action and fight cameras fast and urgent rather than dragging).
 - **Set & Sticky Garment Lock:** Keep props, walls, and clothing states unified across beats and cuts; once a dress, skirt, top, or underwear is bunched up, pulled aside, or removed, keep it in that displaced state through all later beats. Describe pure visual framing and motion directly.
 
 ## 4. AFFIRMATIVE WORDING & FOREGROUND AUDIO PRIORITY
 - **100% Affirmative English Outside `<d>`:** Phrase every visual and audio description outside `<d>...</d>` strictly in positive terms of what IS visible, moving, and sounding on camera.
 - **One Audio Foreground Per Beat:** Give each timestamp beat one clear primary audio driver—either crisp spoken `<d>[tone] ...</d>` (with ambient room tone and music tucked softly underneath) OR kinetic impacts, foley, and music peaks while mouths rest closed or express nonverbal breaths/moans in `overall_soundscape:`.
 - **Spoken Dialogue Format:** Write inline `(DIALOGUE) <Subject 1> Name (S1) ...: <d>[delivery tone] Spoken line.</d>` with straight ASCII apostrophes. When a non-English language / Accent dial is active (`Japanese`, `Korean`, `Mandarin`, `Cantonese`, `Spanish`, `French`, `Russian`, `Portuguese`, `Italian`, `German`, `Arabic`, `Hindi`), write ALL spoken words inside `<d>...</d>` strictly in that language's authentic native script (e.g. 日本語かな/漢字 for Japanese, 한국어 for Korean, 中文 for Mandarin, Русский for Russian), keeping all surrounding descriptions in English.
-- **Audio Fields:** Keep `overall_soundscape:` and `non_diegetic_music:` clean comma-separated prose (period-terminated, free of semicolons and spoken dialogue), setting `non_diegetic_music:` to `N/A` when diegetic-only.
+- **Audio Fields:** Keep `overall_soundscape:` strictly for diegetic environmental and physical foley (waves, wind, footsteps, cloth rustle) or `N/A` on pure-music dance clips, and keep BPM or music track prose exclusively inside `non_diegetic_music:`, using clean comma-separated prose (period-terminated, free of semicolons and spoken dialogue), setting `non_diegetic_music:` to `N/A` when diegetic-only.
 
 ## 5. OUTPUT FORMAT
 Reply with ONLY a valid JSON object matching:
@@ -68,8 +68,8 @@ def _sanitize_beat_clause(text: str) -> str:
     return _fin.sanitize_additive_rule(_dir.strip_d_examples(text or ""))
 
 
-def _extract_beat_clauses_from_rule(rule_text: str, lab: dict | None = None, *, brief: str = "", explicit_id: str = "") -> dict[int, str]:
-    txt = _adapt_rule_subjects(rule_text, lab, brief=brief, explicit_id=explicit_id)
+def _extract_beat_clauses_from_rule(rule_text: str, lab: dict | None = None, *, brief: str = "", explicit_id: str = "", flavors: dict | None = None) -> dict[int, str]:
+    txt = _adapt_rule_subjects(rule_text, lab, brief=brief, explicit_id=explicit_id, flavors=flavors)
     txt = _sanitize_beat_clause(txt)
     out: dict[int, str] = {}
     if not txt:
@@ -77,7 +77,7 @@ def _extract_beat_clauses_from_rule(rule_text: str, lab: dict | None = None, *, 
     ms_parts = re.split(r"\bAt\s+\d+:\d+(?:\.\d+)?\s*[-–—]\s*\d+:\d+(?:\.\d+)?\s*,?\s*", txt, flags=re.I)
     if len(ms_parts) >= 3:
         for b_idx, raw_c in enumerate(ms_parts[1:]):
-            clause = raw_c.strip(" .;,-")
+            clause = re.sub(r"\[\s*Shot\s+\d+\s*\](?:\s*,?\s*At\s+\d+:\d+(?:\.\d+)?\s*,?)?", "", raw_c, flags=re.I).strip(" .;,-")
             if clause:
                 out[b_idx] = clause
         if out:
@@ -143,9 +143,10 @@ def _infer_subject_pronouns(s_n: int, lab: dict | None = None, brief: str = "", 
     return ("her", "her", "she")
 
 
-def _genre_micro_example(*, sex_scene: bool, combat_scene: bool, has_dance: bool, mode: str) -> str:
+def _genre_micro_example(*, sex_scene: bool, combat_scene: bool, has_dance: bool, mode: str, duo: bool = False) -> str:
     """Return one concise 4-line structural rhythm hint matching the active genre without adding token bloat."""
     s_tok = "<Subject 1> Name" if mode == "Ref2VA" else "The lead"
+    s2_tok = "<Subject 2> Partner" if mode == "Ref2VA" else "her partner"
     if sex_scene:
         return (
             f"[Shot 1] Vertical framing inside the active setting as {s_tok} establishes eye-level closeness and concrete hand grips.\n"
@@ -155,12 +156,19 @@ def _genre_micro_example(*, sex_scene: bool, combat_scene: bool, has_dance: bool
         )
     if combat_scene:
         return (
-            f"[Shot 1] Wide tracking shot inside the arena as {s_tok} holds screen-left guard facing incoming threats.\n"
-            f"At 00:00.000-00:02.200, {s_tok} slips a swing and drives a crisp counter-strike sending sparks and dust flying.\n"
-            f"At 00:02.200-00:06.500, {s_tok} chains parry-to-vault momentum across the set while camera tracks tightly beside.\n"
-            f"At 00:06.500-00:10.000, {s_tok} lands the decisive strike and settles into calm alert guard."
+            f"[Shot 1] Fast wide lateral tracking shot inside the arena as {s_tok} already charges into combat from screen-left.\n"
+            f"At 00:00.000-00:02.500, {s_tok} throws a fast jab-cross, ducks under a hook punch, grabs the attacker's wrist, and sweeps his legs onto the floor while camera drops low.\n"
+            f"At 00:02.500-00:06.500, {s_tok} leaps over a low sweep, clashes forearms in mid-air, and camera zooms fast in during {s_tok}'s ultimate heavy kick blasting the attacker backward through sparks.\n"
+            f"At 00:06.500-00:10.000, the attacker crashes into debris as sparks fly while camera whips wide around {s_tok} landing ready."
         )
     if has_dance:
+        if duo:
+            return (
+                f"[Shot 1] Medium-full framing inside the venue with {s_tok} screen-left and {s2_tok} staggered screen-right in contrasting stance.\n"
+                f"At 00:00.000-00:03.000, {s_tok} snaps crisp upper-body accents left while {s2_tok} bends into a delayed low-knee groove right.\n"
+                f"At 00:03.000-00:07.000, {s2_tok} executes a fast 360-degree turn and sweep kick while {s_tok} stays crouched clapping on beat.\n"
+                f"At 00:07.000-00:10.000, {s_tok} frames her chin left while {s2_tok} raises both arms into a tall V hold right."
+            )
         return (
             f"[Shot 1] Medium-full framing inside the venue as {s_tok} locks eyes with the camera in poised opening stance.\n"
             f"At 00:00.000-00:03.000, {s_tok} snaps crisp upper-body accents on beat while hair and fabric flare smoothly.\n"
@@ -175,7 +183,7 @@ def _genre_micro_example(*, sex_scene: bool, combat_scene: bool, has_dance: bool
     )
 
 
-def _adapt_rule_subjects(rule_text: str, lab: dict | None = None, *, brief: str = "", explicit_id: str = "") -> str:
+def _adapt_rule_subjects(rule_text: str, lab: dict | None = None, *, brief: str = "", explicit_id: str = "", flavors: dict | None = None) -> str:
     if not rule_text:
         return ""
     lab = lab or {}
@@ -202,8 +210,12 @@ def _adapt_rule_subjects(rule_text: str, lab: dict | None = None, *, brief: str 
             out = re.sub(r"<Subject\s+2>'s\b", "the man's", out)
             out = re.sub(r"<Subject\s+2>", "the man", out)
         else:
-            out = re.sub(r"<Subject\s+2>'s\b", "the other person's", out)
-            out = re.sub(r"<Subject\s+2>", "the other person", out)
+            is_combat_s = _dir.is_combat(brief, out)
+            is_dance_s = bool(re.search(r"\b(?:dance|duet|choreograph|vogue|shimmy|backspin|hook\s*kick|cheek-heart|two-step|hip|squat)\b", comb_s))
+            s1_poss, _, _ = _infer_subject_pronouns(1, lab=lab, brief=brief, flavors=flavors)
+            s2_noun = "her rival" if is_combat_s else (f"{s1_poss} dance partner" if is_dance_s else "the other person")
+            out = re.sub(r"<Subject\s+2>'s\b", f"{s2_noun}'s", out)
+            out = re.sub(r"<Subject\s+2>", s2_noun, out)
     for sn_extra in range(3, 10):
         if sn_extra not in sub_meta and re.search(rf"<Subject\s+{sn_extra}>", out):
             extra_noun = "the second woman" if re.search(r"\b(?:ffm|lesbian|fff)\b", comb_s) else "the other companion"
@@ -346,7 +358,7 @@ def build_flavor_facts(
     talk_opt = talk_opts[0] if talk_opts else None
     acc_opts = _cat.resolve_dial_opts("accent", flavors.get("accent"))
     acc_opt = acc_opts[0] if acc_opts else None
-    amb_opts = _cat.resolve_dial_opts("ambience", flavors.get("ambience"))
+    amb_opts = [o for o in _cat.resolve_dial_opts("ambience", flavors.get("ambience")) if o.get("id") not in ("none", "amb_none_na")]
     music_opts = _cat.resolve_dial_opts("music", flavors.get("music"))
 
     # Domain conflict & strict wardrobe/set lock (prevents shower+tennis+pool+foam bugs!)
@@ -384,7 +396,8 @@ def build_flavor_facts(
         facts.append(f"ASPECT {canvas_asp} WIDESCREEN: Frame horizontal {canvas_asp} compositions with depth layers and lateral travel.")
 
     # Camera + trajectory
-    traj_law = _bg.camera_trajectory_plan(brief, cam_override or cam_id, spans, is_pov=is_pov, has_bg_plate=has_bg_plate)
+    prelim_combat = _dir.is_combat(brief, str(flavors.get("combat") or ""), ward_id, str(flavors.get("fx") or ""))
+    traj_law = _bg.camera_trajectory_plan(brief, cam_override or cam_id, spans, is_pov=is_pov, has_bg_plate=has_bg_plate, is_combat=prelim_combat)
     if len(cam_opts) == 1 and cam_opt and cam_opt.get("rule"):
         facts.append(f"CAMERA MOVEMENT ({cam_opt['label']}): {_fin.sanitize_additive_rule(cam_opt['rule'])}")
     elif len(cam_opts) >= 2:
@@ -456,18 +469,27 @@ def build_flavor_facts(
         else:
             facts.append("ANCHOR POSE: " + " + ".join(_fin.sanitize_additive_rule(o.get("rule") or _clean_ui_label(o["label"])) for o in pose_opts))
 
-    has_multi_shot = any(c in ("shot_reverse", "multi_angle_action_close", "whip_pan_transition") for c in _cat.parse_multi_ids(cam_id))
+    cam_ids_parsed = _cat.parse_multi_ids(cam_id)
+    has_multi_shot = len(cam_ids_parsed) >= 2 or any(
+        c in (
+            "shot_reverse", "multi_angle_action_close", "whip_pan_transition", "match_cut_motion",
+            "graphic_match_cut", "smash_cut_contrast", "cam_viral_dutch_90roll_wipe_cuts",
+            "cam_beat_drop_punch_wide_combo", "cam_palm_cover_lens_reveal_snap", "cam_whip_pan_beat_snap_cut",
+            "cam_distant_wide_master_to_hardcut_closeup",
+        )
+        for c in cam_ids_parsed
+    )
     for tok, _ref, kopt in _dir.knowledge_terms_in_brief(brief, picked_refs=picked_refs, is_multi_shot=has_multi_shot):
         facts.append(f"TERM DEFINITION ('{tok}' -> {_clean_ui_label(kopt['label'])}): {_fin.sanitize_additive_rule(kopt['rule'])}")
 
     # Ambience, Music, Speech, Accent
-    if amb_opts:
+    if amb_opts and not _fin.is_pure_bgm_soundscape(brief=brief, flavors=flavors):
         facts.append("AMBIENCE FOLEY (zero semicolons): " + ", ".join(_fin.sanitize_additive_rule(o.get("rule") or "") for o in amb_opts if o.get("rule")))
     raw_music = _cat.parse_multi_ids(flavors.get("music"))
     if "none" in raw_music:
         facts.append("MUSIC: N/A (diegetic room audio only)")
     elif music_opts:
-        facts.append("NON-DIEGETIC MUSIC (zero semicolons): " + ", ".join(_fin.sanitize_additive_rule(o.get("rule") or "") for o in music_opts if o.get("rule")))
+        facts.append("NON-DIEGETIC MUSIC (put ONLY in `non_diegetic_music:`, keep strictly separate from `overall_soundscape:`): " + ", ".join(_fin.sanitize_additive_rule(o.get("rule") or "") for o in music_opts if o.get("rule")))
 
     target_lang = _dlg.detect_target_language(brief, acc_opt)
     if talk_opt and not no_dialogue:
@@ -549,6 +571,24 @@ def build_flavor_facts(
     d_dir = _dir.dance_vocab_directive(brief, pose_id=pose_id)
     if d_dir:
         facts.append(d_dir)
+    is_dance_active = bool(
+        d_dir
+        or any(str(o.get("id") or "").startswith("dance_") or "dance" in str(o.get("group") or "").lower() for o in pose_opts)
+    )
+    if is_dance_active:
+        facts.append(
+            "COMPOUND MULTI-LAYER GROOVE (ZERO STIFF SINGLE-PART MOTION): Never animate just one isolated limb or joint — layer simultaneous footwork or bouncy hops, hip-and-pelvis drive, alternating shoulder pops and ribcage accents, active arm/elbow rhythm, and hair inertia on every beat so dancers stay fluid and alive."
+        )
+    if is_dance_active and music_opts:
+        m_bpm_hit = re.search(r"\b(\d{2,3})\s*BPM\b", " ".join(f"{o.get('label','')} {o.get('rule','')}" for o in music_opts), re.I)
+        if m_bpm_hit:
+            bpm_n = max(60, min(200, int(m_bpm_hit.group(1))))
+            spb = round(60.0 / bpm_n, 2)
+            bar4 = round(spb * 4.0, 2)
+            facts.append(
+                f"BEAT-GRID CHOREOGRAPHY SYNC ({bpm_n} BPM -> {spb:.2f}s/beat, {bar4:.2f}s/4-beat bar): "
+                f"Time crisp kinetic hits, shoulder pops, reverse steps, drops, and freezes directly onto the {spb:.2f}s kick-and-snare grid with sharp micro-holds on counts rather than muddy continuous drift."
+            )
 
     if combat_opts:
         if len(combat_opts) >= 2:
@@ -558,7 +598,9 @@ def build_flavor_facts(
             facts.append(f"COMBAT CHOREOGRAPHY ({_clean_ui_label(combat_opts[0]['label'])}): {_fin.sanitize_additive_rule(combat_opts[0].get('rule',''))}")
 
     if bool(flavors.get("kinetic_grip", True)) and not sex_scene:
-        if motion_val in ("freeze", "slow"):
+        if combat_scene:
+            facts.append("KINETIC FLOW (COMBAT): Keep constant high-speed forward momentum across every second with rapid blow-for-blow contact and zero static pauses.")
+        elif motion_val in ("freeze", "slow"):
             facts.append("GROUNDED POISE (Kinetic Flow yielded to calm Motion): Keep posture anchored and breathing natural without unnecessary hand fidgeting, bridging smoothly into the next beat.")
         else:
             facts.append("KINETIC FLOW: Ground active beats with concrete weight transfer, clear hand placement, and smooth momentum carry-through between timestamps.")
@@ -581,10 +623,18 @@ def build_flavor_facts(
                 + "."
             )
     if combat_scene:
-        facts.append("COMBAT PHYSICS: Write concrete strike-to-impact-to-recoil mechanics with physically lit sparks, dust, shell casings, or elemental VFX reflections.")
+        facts.append("COMBAT PHYSICS: Write concrete blow-for-blow strike-to-dodge-to-impact-to-recoil mechanics with physically lit sparks, dust, shell casings, or elemental/force shockwaves.")
+        facts.append(
+            "COMBAT EARLY-START & SIMPLE BLOW-FOR-BLOW LAW: Open intense fighting straight from 00:00.000 in crisp simple Subject-Verb-Object grammar (`X punches -> Y ducks -> Y kicks X into wall -> sparks fly`), packing maximum fast action into every beat while keeping every subject interacting continuously with opponents and surroundings."
+        )
+        facts.append(
+            "COMBAT DYNAMIC CAMERA & PENULTIMATE ULTIMATE LAW: Drive fast, energetic fighting camera motion across jump kicks, crouching sweeps, mid-air clashes, and Jedi/Sith force blasts, executing a tight push-in zoom during the ultimate attack strictly inside the next-to-last beat; dedicate the final beat solely to knockback crash, settling debris, and victor recovery so the ultimate attack completes fully before the clip ends (keep every camera and body move fast and urgent, free of slow or soft pacing)."
+        )
 
     if len((lab.get("subjects") or {}).keys()) >= 2 or (combat_scene and any(re.search(r"<Subject\s+2>|S1\s*(?:vs|\+)\s*S2", str(o.get("label") or "") + " " + str(o.get("rule") or ""), re.I) for o in combat_opts)):
         facts.append("SCREEN-AXIS GEOMETRY: Anchor each subject's screen-left / screen-right placement and eyeline direction in [Shot 1] and keep orientation consistent across cuts unless an orbit or cross-over moves them.")
+        if pose_opts or combat_opts:
+            facts.append("DUET ASYMMETRY & ROLE SPLIT: Preserve each subject's exact assigned screen depth, limb pose, solo vs crouched support role, and staggered timing rather than making both subjects perform identical mirrored gestures.")
 
     s1_poss, _, _ = _infer_subject_pronouns(1, lab=lab, brief=brief, flavors=flavors)
     if sex_scene:
@@ -613,6 +663,8 @@ def build_flavor_facts(
     else:
         if sex_scene:
             facts.append("WORDLESS PERFORMANCE (ZERO SPOKEN <d> LINES): Keep all beats free of spoken words; describe natural breaths, moans, and wet oral or skin contact sounds in `overall_soundscape:` (zero spoken dialogue there).")
+        elif _fin.is_pure_bgm_soundscape(brief=brief, flavors=flavors, sex_scene=sex_scene, combat_scene=combat_scene):
+            facts.append("SOUNDSCAPE OFF (PURE MUSIC PRIORITY): Characters perform with expressive posture and closed lips while `overall_soundscape:` stays `N/A` so environmental surf, footsteps, and foley stay off and `non_diegetic_music:` plays at full clarity.")
         else:
             facts.append("SILENT PERFORMANCE: Characters perform with expressive posture and closed lips while narrowband acoustic room tone and tactile foley fill `overall_soundscape:` (zero voices/speech there).")
 
@@ -671,14 +723,20 @@ def build_skeleton_text(
         s1_parts.append(_fin.sanitize_additive_rule(style_opts[0].get("rule") or style_opts[0]["label"]))
     if lens_opts:
         s1_parts.append(_fin.sanitize_additive_rule(lens_opts[0].get("rule") or lens_opts[0]["label"]))
+    def _lc_lead(txt_s: str) -> str:
+        s_t = str(txt_s or "").strip()
+        if len(s_t) >= 2 and s_t[0].isupper() and s_t[1].islower() and not re.match(r"^(?:Korean|Japanese|Chinese|Tokyo|Seoul|Douyin|TikTok|Hollywood|I\b)", s_t):
+            return s_t[0].lower() + s_t[1:]
+        return s_t
+
     if place_opts:
-        s1_parts.append("inside " + _fin.sanitize_additive_rule(place_opts[0].get("rule") or place_opts[0]["label"]))
+        s1_parts.append("inside " + _lc_lead(_fin.sanitize_additive_rule(place_opts[0].get("rule") or place_opts[0]["label"])))
     if light_opts:
-        s1_parts.append("lit by " + _fin.sanitize_additive_rule(light_opts[0].get("rule") or light_opts[0]["label"]))
+        s1_parts.append("lit by " + _lc_lead(_fin.sanitize_additive_rule(light_opts[0].get("rule") or light_opts[0]["label"])))
     if col_opts:
-        s1_parts.append(_fin.sanitize_additive_rule(col_opts[0].get("rule") or col_opts[0]["label"]))
+        s1_parts.append(_lc_lead(_fin.sanitize_additive_rule(col_opts[0].get("rule") or col_opts[0]["label"])))
     if cam_opts:
-        s1_parts.append(_fin.sanitize_additive_rule(cam_opts[0].get("rule") or cam_opts[0]["label"]))
+        s1_parts.append(_lc_lead(_fin.sanitize_additive_rule(cam_opts[0].get("rule") or cam_opts[0]["label"])))
     clean_s1 = [p.strip().rstrip(".") for p in s1_parts if p and p.strip().rstrip(".")]
     header_s1 = "[Shot 1] " + (", ".join(clean_s1) or f"{s1_who} inside the scene") + "."
 
@@ -699,17 +757,17 @@ def build_skeleton_text(
             return {}
         if len(opts) == 1:
             return _extract_beat_clauses_from_rule(
-                opts[0].get("rule") or "", lab=lab, brief=brief, explicit_id=opts[0]["id"] if is_explicit else "",
+                opts[0].get("rule") or "", lab=lab, brief=brief, explicit_id=opts[0]["id"] if is_explicit else "", flavors=flavors,
             )
         mapped: dict[int, str] = {}
         alloc = _bg.allocate_stages_to_spans(opts, spans)
         for opt, b_list in alloc:
             sub = _extract_beat_clauses_from_rule(
-                opt.get("rule") or "", lab=lab, brief=brief, explicit_id=opt["id"] if is_explicit else "",
+                opt.get("rule") or "", lab=lab, brief=brief, explicit_id=opt["id"] if is_explicit else "", flavors=flavors,
             )
             for k_idx, (b_num, _) in enumerate(b_list):
                 b_i = b_num - 1
-                clause_txt = sub.get(k_idx) or sub.get(0) or _sanitize_beat_clause(_adapt_rule_subjects(opt.get("rule") or "", lab, brief=brief, explicit_id=opt["id"] if is_explicit else ""))
+                clause_txt = sub.get(k_idx) or sub.get(0) or _sanitize_beat_clause(_adapt_rule_subjects(opt.get("rule") or "", lab, brief=brief, explicit_id=opt["id"] if is_explicit else "", flavors=flavors))
                 if clause_txt:
                     mapped[b_i] = clause_txt
         return mapped
@@ -723,20 +781,34 @@ def build_skeleton_text(
     shot_counter = 1
     exp_has_dlg = any("<d>" in str(o.get("rule") or "") for o in exp_opts)
     for i, (t0, t1) in enumerate(spans):
-        if i > 0 and i in cuts:
-            shot_counter += 1
-            pl_note = ""
-            if len(place_opts) >= 2 and _bg.get_dial_mode(flavors, "place", "sequence") == "sequence":
-                pl_idx = min(len(place_opts) - 1, shot_counter - 1)
-                pl_rule = _fin.sanitize_additive_rule(place_opts[pl_idx].get("rule") or "")
-                if pl_rule:
-                    pl_note = f" inside {pl_rule}"
-            lines.append(f"[Shot {shot_counter}] At {_bg.stamp(t0)}, camera cuts cleanly onto the next angle{pl_note}.")
+        cut_cam_override = ""
         if exp_clauses.get(i) or cb_clauses.get(i) or pose_clauses.get(i):
             if cb_clauses.get(i) and pose_clauses.get(i) and i == 0 and not exp_clauses.get(i):
                 clause = f"{pose_clauses[0].rstrip('.')} before {cb_clauses[0]}"
             else:
                 clause = exp_clauses.get(i) or cb_clauses.get(i) or pose_clauses.get(i)
+            if i > 0 and i in cuts:
+                m_cut_lead = re.match(
+                    r"^(?:((?:(?:hard|quick|smash|clean)[- ]+)?cutting(?:\s+(?:cleanly|tight|wide|in|out|to|onto))?)|(punching\s+(?:in(?:to)?|out))|(smash\s+cut(?:ting)?(?:\s+(?:wide|far|out|to|into))?))\b([^,\n]{2,160}),\s*(.+)$",
+                    clause,
+                    flags=re.I | re.S,
+                )
+                if m_cut_lead:
+                    verb_raw = (m_cut_lead.group(1) or m_cut_lead.group(2) or m_cut_lead.group(3) or "").lower()
+                    tail_cam = m_cut_lead.group(4).strip()
+                    rest_act = m_cut_lead.group(5).strip()
+                    if verb_raw.startswith("punch"):
+                        v_fin = "punches" + verb_raw[len("punching"):]
+                    elif "smash" in verb_raw:
+                        v_fin = re.sub(r"^(?:smash[- ]+cut(?:ting)?)", "smash-cuts", verb_raw)
+                    elif "quick" in verb_raw:
+                        v_fin = re.sub(r"^(?:quick[- ]+cutting)", "quick-cuts", verb_raw)
+                    elif "hard" in verb_raw:
+                        v_fin = re.sub(r"^(?:hard[- ]+cutting)", "hard-cuts", verb_raw)
+                    else:
+                        v_fin = re.sub(r"^(?:clean[- ]+)?cutting", "cuts", verb_raw)
+                    cut_cam_override = f"camera {v_fin} {tail_cam}".strip()
+                    clause = rest_act
             if clause and clause[0].islower() and "<Subject" not in clause and not re.match(
                 r"^(?:the|a|an|her|his|their|under|inside|in|at|on|beside|behind|against|through|from|frame|camera)\b",
                 clause,
@@ -749,11 +821,34 @@ def build_skeleton_text(
             else:
                 clause = brief_clean
         elif i == 0:
-            clause = f"{s1_who} opens the staged movement with clear posture and gaze"
+            clause = (
+                f"{s1_who} rushes straight into fast opening strikes and evades"
+                if _dir.is_combat(brief, str(flavors.get("combat") or ""), str(flavors.get("wardrobe") or ""), str(flavors.get("fx") or ""))
+                else f"{s1_who} opens the staged movement with clear posture and gaze"
+            )
         elif i < len(spans) - 1:
-            clause = f"{s1_who} carries the action forward smoothly with clear weight shift and gesture"
+            clause = (
+                f"{s1_who} drives rapid blow-for-blow strikes, dodges, and prop impacts across the room"
+                if _dir.is_combat(brief, str(flavors.get("combat") or ""), str(flavors.get("wardrobe") or ""), str(flavors.get("fx") or ""))
+                else f"{s1_who} carries the action forward smoothly with clear weight shift and gesture"
+            )
         else:
-            clause = f"{s1_who} completes the motion cleanly and settles into a steady closing hold"
+            clause = (
+                f"{s1_who} lands firmly through settling sparks and debris ready for the next clash"
+                if _dir.is_combat(brief, str(flavors.get("combat") or ""), str(flavors.get("wardrobe") or ""), str(flavors.get("fx") or ""))
+                else f"{s1_who} completes the motion cleanly and settles into a steady closing hold"
+            )
+
+        if i > 0 and i in cuts:
+            shot_counter += 1
+            pl_note = ""
+            if len(place_opts) >= 2 and _bg.get_dial_mode(flavors, "place", "sequence") == "sequence":
+                pl_idx = min(len(place_opts) - 1, shot_counter - 1)
+                pl_rule = _fin.sanitize_additive_rule(place_opts[pl_idx].get("rule") or "")
+                if pl_rule:
+                    pl_note = f" inside {pl_rule}"
+            shot_cam_line = cut_cam_override or "camera cuts cleanly onto the next angle"
+            lines.append(f"[Shot {shot_counter}] At {_bg.stamp(t0)}, {shot_cam_line}{pl_note}.")
 
         dlg_tail = ""
         want_beat_dlg = (not no_dlg) and (bool(q_map.get(i)) or tm == "talk_all" or bool(talk_opts) or bool(acc_opts) or has_speech_ask or exp_has_dlg)
@@ -828,11 +923,14 @@ def build_cpu_tie_block(
         explicit_id=str(flavors.get("explicit") or ""), flavors=flavors,
     )
     skel = build_skeleton_text(spans, q_map, cuts, lab, brief=brief, flavors=flavors, extracted_video=extracted_video)
-    amb_opts = _cat.resolve_dial_opts("ambience", flavors.get("ambience"))
+    amb_opts = [o for o in _cat.resolve_dial_opts("ambience", flavors.get("ambience")) if o.get("id") not in ("none", "amb_none_na")]
     music_opts = _cat.resolve_dial_opts("music", flavors.get("music"))
     raw_music = _cat.parse_multi_ids(flavors.get("music"))
-    snd = ", ".join(_fin.sanitize_additive_rule(o.get("rule") or "") for o in amb_opts if o.get("rule")) or "Natural quiet room tone and tactile contact foley."
-    mus = "N/A" if ("none" in raw_music or not music_opts) else (", ".join(_fin.sanitize_additive_rule(o.get("rule") or "") for o in music_opts if o.get("rule")) or "N/A")
+    if _fin.is_pure_bgm_soundscape(brief=brief, flavors=flavors):
+        snd = "N/A"
+    else:
+        snd = ", ".join(_fin.sanitize_additive_rule(o.get("rule") or "") for o in amb_opts if o.get("rule")) or "Natural quiet room tone and tactile contact foley."
+    mus = "N/A" if (str(flavors.get("music") or "").strip().lower() == "none" or "none" in raw_music or not music_opts) else (", ".join(_fin.sanitize_additive_rule(o.get("rule") or "") for o in music_opts if o.get("rule")) or "N/A")
 
     if mode == "Ref2VA":
         has_aud = bool(lab.get("audios"))
@@ -1026,9 +1124,10 @@ async def run_sandtie_write(
     lines += ["- " + fl for fl in flavor_lines]
     is_sex_rw = _dir.is_sexual(brief, str(flavors.get("explicit") or ""), str(flavors.get("wardrobe") or ""), fetish_id=str(flavors.get("fetish") or ""))
     is_combat_rw = _dir.is_combat(brief, str(flavors.get("combat") or ""), str(flavors.get("wardrobe") or ""), str(flavors.get("fx") or ""))
-    is_dance_rw = bool(re.search(r"\bdance\b", f"{flavors.get('pose') or ''} {brief or ''}", re.I))
+    is_dance_rw = bool(re.search(r"(?:^|[\s_-])danc(?:e|ing|er)(?:$|[\s_-])", f"{flavors.get('pose') or ''} {brief or ''}", re.I))
+    is_duo_rw = len((lab.get("subjects") or {}).keys()) >= 2
     lines.append("Single-Thought Rhythm Example (structure guide only — fill with your active brief, cast, and dials):")
-    lines.append(_pl.fence(_genre_micro_example(sex_scene=is_sex_rw, combat_scene=is_combat_rw, has_dance=is_dance_rw, mode=mode), "rhythm_example"))
+    lines.append(_pl.fence(_genre_micro_example(sex_scene=is_sex_rw, combat_scene=is_combat_rw, has_dance=is_dance_rw, mode=mode, duo=is_duo_rw), "rhythm_example"))
     if time_tied:
         lines.append("Time-Tied Continuity Flow (preserve timestamps cleanly as smooth momentum bridges so action flows continuously across beats):")
         lines.append(_pl.fence(skel, "beat_skeleton"))

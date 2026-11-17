@@ -96,8 +96,8 @@
       "id": "shamisen_taiko_battle_132",
       "label": "132 BPM · Samurai Shamisen & Thunderous Taiko Combat Score",
       "group": "Latin, Afro & World",
-      "rule": "Fierce 132 BPM Japanese combat score combining rapid, percussive tsugaru shamisen picking with thunderous taiko drum ensembles",
-      "world": "Fierce 132 BPM Japanese combat score combining rapid, percussive tsugaru shamisen picking with thunderous taiko drum ensembles",
+      "rule": "Fierce 132 BPM Japanese combat score combining rapid, bright percussive tsugaru shamisen string picking and crisp wooden hyoshigi clacks with tight punchy taiko drum ensembles",
+      "world": "Fierce 132 BPM Japanese combat score combining rapid, bright percussive tsugaru shamisen string picking and crisp wooden hyoshigi clacks with tight punchy taiko drum ensembles",
       "domain": "combat_action"
     },
     {
@@ -120,16 +120,16 @@
       "id": "ufotable_orchestral_taiko_choir_140",
       "label": "140 BPM · Anime2Real Taiko War Drums, Shamisen & Epic Choir",
       "group": "Cinematic & Acoustic",
-      "rule": "Explosive 140 BPM anime boss-battle score with thunderous Japanese taiko drums, rapid shamisen plucks, soaring soprano choir, and brass swells",
-      "world": "Explosive 140 BPM anime boss-battle score with thunderous Japanese taiko drums, rapid shamisen plucks, soaring soprano choir, and brass swells",
+      "rule": "Explosive 140 BPM anime boss-battle score driven by rapid shamisen plucks, soaring soprano choir, bright brass swells, crisp snare accents, and punchy taiko drums",
+      "world": "Explosive 140 BPM anime boss-battle score driven by rapid shamisen plucks, soaring soprano choir, bright brass swells, crisp snare accents, and punchy taiko drums",
       "domain": "combat_action"
     },
     {
       "id": "dark_velvet_weeknd_synth_rnb_75",
       "label": "75 BPM · Dark Velvet Late-Night Synth-R&B & Deep Sub-Bass",
       "group": "Sensual & R&B",
-      "rule": "Sultry 75 BPM dark-velvet R&B groove with lush analog synth pads, heavy 808 sub-bass glides, and crisp reverb-soaked finger snaps",
-      "world": "Sultry 75 BPM dark-velvet R&B groove with lush analog synth pads, heavy 808 sub-bass glides, and crisp reverb-soaked finger snaps",
+      "rule": "Sultry 75 BPM dark-velvet R&B groove with crisp reverb-soaked finger snaps, shimmering analog synth chords, bright vocal-harmony pads, and smooth punchy 808 bass glides",
+      "world": "Sultry 75 BPM dark-velvet R&B groove with crisp reverb-soaked finger snaps, shimmering analog synth chords, bright vocal-harmony pads, and smooth punchy 808 bass glides",
       "domain": "general"
     },
     {
@@ -184,8 +184,8 @@
       "id": "hyperpop_glitch_dance_145",
       "label": "145 BPM · High-Energy Hyperpop Crystal Bass Drop",
       "group": "Club, Dance & Pop",
-      "rule": "Hyper-kinetic 145 BPM hyperpop dance instrumental with bright metallic crystal synths, distorted sub-bass drops, rapid glitch percussion, and euphoric energy",
-      "world": "Hyper-kinetic 145 BPM hyperpop dance instrumental with bright metallic crystal synths, distorted sub-bass drops, rapid glitch percussion, and euphoric energy",
+      "rule": "Bright hyper-kinetic 145 BPM hyperpop dance instrumental with sparkling metallic crystal synths, rapid glitch percussion, crisp snapping snares, and tight punchy bass drops",
+      "world": "Bright hyper-kinetic 145 BPM hyperpop dance instrumental with sparkling metallic crystal synths, rapid glitch percussion, crisp snapping snares, and tight punchy bass drops",
       "domain": "general"
     },
     {
@@ -220,8 +220,9 @@
       "id": "dark_trap_phonk_135",
       "label": "135 BPM · Heavy Memphis Phonk Cowbell & Distorted 808 Sub",
       "group": "Hip-Hop & Retro",
-      "rule": "135 BPM hard-hitting drift phonk with crisp metallic cowbell groove, snappy snare rolls, and distorted 808 sub-bass",
-      "domain": "general"
+      "rule": "135 BPM crisp drift phonk driven by bright metallic cowbell melodies, snappy snare rolls, sharp hi-hat triplets, and tight punchy 808 bass",
+      "domain": "general",
+      "world": "135 BPM crisp drift phonk driven by bright metallic cowbell melodies, snappy snare rolls, sharp hi-hat triplets, and tight punchy 808 bass"
     },
     {
       "id": "ethereal_shoegaze_dream_95",
@@ -234,8 +235,9 @@
       "id": "taiko_war_drums_138",
       "label": "138 BPM · Japanese Taiko War Drums & Shamisen Combat Plucks",
       "group": "Latin, Afro & World",
-      "rule": "138 BPM thunderous resonant Japanese taiko war drums locking onto fierce rapid shamisen string plucks and shakuhachi wind",
-      "domain": "combat_action"
+      "rule": "138 BPM fierce rapid tsugaru shamisen string plucks and piercing shakuhachi wind locking onto crisp resonant Japanese taiko war drums",
+      "domain": "combat_action",
+      "world": "138 BPM fierce rapid tsugaru shamisen string plucks and piercing shakuhachi wind locking onto crisp resonant Japanese taiko war drums"
     },
     {
       "id": "french_house_velvet_118",
@@ -330,8 +332,8 @@
       "label": "130 BPM · Rio Baile Funk Tambor & Distorted 808",
       "group": "Latin, Afro & World",
       "domain": "general",
-      "rule": "Hard-hitting 130 BPM Brazilian Baile Funk beat with hypnotic tambor percussion patterns, crisp handclaps, and heavy distorted 808 sub drops",
-      "world": "Hard-hitting 130 BPM Brazilian Baile Funk beat with hypnotic tambor percussion patterns, crisp handclaps, and heavy distorted 808 sub drops"
+      "rule": "Bright full-mix 130 BPM Brazilian Baile Funk beat driven by crisp tambor percussion patterns, sharp snapping handclaps, bright rhythmic vocal chants, and tight punchy 808 bass hits",
+      "world": "Bright full-mix 130 BPM Brazilian Baile Funk beat driven by crisp tambor percussion patterns, sharp snapping handclaps, bright rhythmic vocal chants, and tight punchy 808 bass hits"
     },
     {
       "id": "douyin_guofeng_guzheng_trap_92",
@@ -356,6 +358,54 @@
       "domain": "general",
       "rule": "Hypnotic 126 BPM melodic after-hours techno with a dark evolving synth arpeggio, crisp four-on-the-floor kick, and cavernous reverb swells",
       "world": "Hypnotic 126 BPM melodic after-hours techno with a dark evolving synth arpeggio, crisp four-on-the-floor kick, and cavernous reverb swells"
+    },
+    {
+      "id": "kpop_hyper_hype_train_134",
+      "label": "130 BPM · Zalpha Electro-Pop Drop (Soft Harmony Intro -> Bright Lead Synth & Tight Offbeat Bass)",
+      "group": "Club, Dance & Pop",
+      "domain": "general",
+      "rule": "Soft airy 130 BPM electronic K-pop intro with delicate layered female vocal-harmony chords and light plucked synth arpeggios for the opening seven seconds that pauses briefly at seven seconds before unleashing a bright full-mix dance-pop drop driven by sparkling upper-register lead synth melody, crisp snapping handclaps on beats two and four, clean punchy kick drum, and tight offbeat electro bassline.",
+      "world": "Soft airy 130 BPM electronic K-pop intro with delicate layered female vocal-harmony chords and light plucked synth arpeggios for the opening seven seconds that pauses briefly at seven seconds before unleashing a bright full-mix dance-pop drop driven by sparkling upper-register lead synth melody, crisp snapping handclaps on beats two and four, clean punchy kick drum, and tight offbeat electro bassline."
+    },
+    {
+      "id": "kpop_whiplash_runway_electro_128",
+      "label": "128 BPM · Industrial Runway K-Pop House (Razor Snares, Metallic Bass & Lead Synth)",
+      "group": "Club, Dance & Pop",
+      "domain": "general",
+      "rule": "Bright full-mix 128 BPM K-pop runway house track driven by crisp four-on-the-floor kick, razor-sharp snare snaps, bright metallic lead synth riffs, rhythmic hi-hats, and tight punchy synth bass stabs",
+      "world": "Bright full-mix 128 BPM K-pop runway house track driven by crisp four-on-the-floor kick, razor-sharp snare snaps, bright metallic lead synth riffs, rhythmic hi-hats, and tight punchy synth bass stabs"
+    },
+    {
+      "id": "kpop_siren_hyperpop_jersey_136",
+      "label": "136 BPM · Siren Hyper-Pop & Jersey Club (Staccato Triple Kicks, Claps & Synth Arps)",
+      "group": "Club, Dance & Pop",
+      "domain": "general",
+      "rule": "Bright full-mix 136 BPM hyper-pop K-pop Jersey-club track driven by sparkling upper-register synth arpeggios, crisp electronic siren chirps, sharp snapping handclaps, rapid staccato triple kicks, and tight punchy bass",
+      "world": "Bright full-mix 136 BPM hyper-pop K-pop Jersey-club track driven by sparkling upper-register synth arpeggios, crisp electronic siren chirps, sharp snapping handclaps, rapid staccato triple kicks, and tight punchy bass"
+    },
+    {
+      "id": "kpop_y2k_ukgarage_bounce_122",
+      "label": "122 BPM · Y2K UK Garage & K-Pop Groove (Breakbeats, Synth Chords & Tight Bass)",
+      "group": "Club, Dance & Pop",
+      "domain": "general",
+      "rule": "Bright full-mix 122 BPM Y2K UK-garage K-pop track driven by snappy skippy breakbeat snares, crisp electric keyboard chord stabs, bright vocal-harmony accents, and a tight punchy bassline",
+      "world": "Bright full-mix 122 BPM Y2K UK-garage K-pop track driven by snappy skippy breakbeat snares, crisp electric keyboard chord stabs, bright vocal-harmony accents, and a tight punchy bassline"
+    },
+    {
+      "id": "kpop_crunk_waacking_132",
+      "label": "132 BPM · K-Pop Crunk & Waacking Drop (Soft Intro -> Brass Stabs, Claps & Snare Snap)",
+      "group": "Club, Dance & Pop",
+      "domain": "general",
+      "rule": "Soft airy 132 BPM K-pop intro with delicate vocal-harmony pads and light synth plucks for four seconds before pausing into a bright crunk-pop dance drop driven by punchy brass horn stabs, crisp snapping handclaps on beats two and four, sharp snare rolls, bright lead synth hooks, and tight electro bassline",
+      "world": "Soft airy 132 BPM K-pop intro with delicate vocal-harmony pads and light synth plucks for four seconds before pausing into a bright crunk-pop dance drop driven by punchy brass horn stabs, crisp snapping handclaps on beats two and four, sharp snare rolls, bright lead synth hooks, and tight electro bassline"
+    },
+    {
+      "id": "house_jack_shuffle_126",
+      "label": "126 BPM · House Jack & Shuffle Groove (Crisp Hats, Piano Chords & Punchy Kick)",
+      "group": "Club, Dance & Pop",
+      "domain": "general",
+      "rule": "Bright full-mix 126 BPM Chicago-style house dance track driven by upbeat piano chord riffs, crisp open hi-hat shuffles, sharp offbeat claps, bright vocal chops, and a tight punchy four-on-the-floor kick",
+      "world": "Bright full-mix 126 BPM Chicago-style house dance track driven by upbeat piano chord riffs, crisp open hi-hat shuffles, sharp offbeat claps, bright vocal chops, and a tight punchy four-on-the-floor kick"
     }
   ]
 }

@@ -1664,6 +1664,69 @@
       "aspect_best": "16:9",
       "duration_best": "8-12 s",
       "rule": "Open tracking beside the rain-beaded car side window catching passing neon reflections, then glide smoothly inward through the open window frame into a tight intimate cabin two-shot."
+    },
+    {
+      "id": "cam_viral_dutch_90roll_wipe_cuts",
+      "label": "🎬 Viral Dance Montage Cuts (Distant Dutch Zoom -> 90° Hand Wipe -> Solo -> L-Gun -> Wide Drop -> Punch-In)",
+      "group": "Dynamic Cuts",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "12-15 s",
+      "rule": "Open in a distant 15-degree Dutch-tilted wide shot zooming inward while rolling upright into a forward popping V-split, hard-cut to a 90-degree rolled diagonal reach, hard-cut onto an isolated bare diagonal hand highlight across background water, hard-cut to a quick solo close-up zoom, hard-cut onto tight cheek-to-cheek L-sign finger-guns, smash far out to a distant wide full-body master for synchronized hops and groove, and hard-cut cleanly into a thigh-up sensual finale."
+    },
+    {
+      "id": "cam_beat_drop_punch_wide_combo",
+      "label": "⚡ Beat-Drop Punch-Out Wide -> Medium Ending-Fairy Track",
+      "group": "Dynamic Cuts",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "10-12 s",
+      "rule": "Open tight waist-up building pre-drop tension with micro beat-synced push-ins, smash out instantaneously into a crisp wide full-body master frame on the bass drop for full footwork and kicks, then cut smoothly inward onto chest-up ending-fairy smiles."
+    },
+    {
+      "id": "cam_palm_cover_lens_reveal_snap",
+      "label": "🖐️ Palm-Over-Lens Wipe -> Instant Whip-Reveal Tracking",
+      "group": "Dynamic Cuts",
+      "domain": "general",
+      "aspect_best": "9:16",
+      "duration_best": "10-12 s",
+      "rule": "Begin handheld medium-close as a dancer sweeps her open palm directly across the lens glass, then snap cleanly away in a fast whip-pan reveal locking onto explosive full-body choreography and forward tracking struts."
+    },
+    {
+      "id": "cam_low_hero_squat_to_highkick_boom",
+      "label": "🦶 Low Floor Hero Track (Frames Deep Squats & Soaring High Kicks)",
+      "group": "Tracking",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "10-15 s",
+      "rule": "Ride low near shin height angled slightly upward with spacious headroom so deep synchronized squats read low and athletic while soaring overhead high kicks slice dramatically across the bright sky or ceiling lights."
+    },
+    {
+      "id": "cam_distant_wide_master_to_hardcut_closeup",
+      "label": "✂️ Distant Wide Master (Half-Height) -> Instant Hard Cut Thigh-Up",
+      "group": "Dynamic Cuts",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "10-15 s",
+      "rule": "Open in a distant wide establishing shot framing full figures at roughly half frame height with generous floor and sky headroom for explosive footwork and lateral travel, then fire an instant hard cut straight into a close medium thigh-up two-shot or solo payoff."
+    },
+    {
+      "id": "cam_stacked_reveal_dutch_zoom_level",
+      "label": "🌀 15° Dutch Wide Zoom-In -> Upright Level Reveal",
+      "group": "Motion & Zoom",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "10-15 s",
+      "rule": "Open in a distant 15-degree Dutch-tilted wide shot zooming briskly inward while rolling smoothly upright to dead-level horizon right as subjects reveal and snap onto the beat."
+    },
+    {
+      "id": "cam_combat_kinetic_whip_zoom_ultimate",
+      "label": "⚡ Fight Whip-Track -> Low Sweep -> Mid-Air Tilt -> Snap Zoom Ultimate",
+      "group": "Tracking",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "10-15 s",
+      "rule": "Keep camera motion fast, snappy, and urgent throughout: dart laterally with punches, drop low near floor height on crouching leg sweeps, tilt sharply upward following jump kicks and mid-air clashes, snap-zoom rapidly inward onto the ultimate attack in the next-to-last beat, and whip wide across crash debris in the final beat."
     }
   ]
 }

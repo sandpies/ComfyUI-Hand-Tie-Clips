@@ -343,6 +343,7 @@ FRONT_FACING_REAR_ENTRY_EXPLICIT_IDS = {
     "lesbian_mirror_behind_breast_cup_finger", "lesbian_sixty_nine_side_mutual_lick",
     "cont_kiss_strip_jacket_to_desk_bend_doggy",
     "pov_male_spooning_lookback_neck_kiss", "doggy_couch_armrest_draped_lookback",
+    "cont_simple_bedroom_waist_sway_to_doggy_arch",
 }
 
 OVER_SHOULDER_EXPLICIT_IDS = {

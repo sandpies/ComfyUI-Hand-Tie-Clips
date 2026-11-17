@@ -19,6 +19,7 @@ import { createTrimBar } from "../editor/trim_bar.js";
 import { IMAGE_MP_STOPS, previewImageDims, runForgeGraph, unloadWriterForGpu, viewUrl } from "../editor/forge_queue.js";
 import { readRefs, writeRefs } from "./r2_store.js";
 import { invalidateRefmods } from "../editor/ref_rail.js";
+import { createSheetMaker } from "./sheet_stitch.js";
 
 const PROP_KEY = "h3_refmod_studio";
 const FILES_URL = "/h3_ref_chain/files?folder=refmods";
@@ -148,6 +149,8 @@ function defaultState() {
         ext_preview: null,
         ext_kept_file: "",
         ext_preset: "front_portrait",
+        ext_mode: "extract",
+        sheet: {},
     };
 }
 
@@ -161,6 +164,7 @@ export function createRefModPane(node, { onChange } = {}) {
         if (raw && typeof raw === "object") {
             Object.assign(base, raw);
             if (!Array.isArray(base.stills)) base.stills = [];
+            if (!base.sheet || typeof base.sheet !== "object") base.sheet = {};
             base.description = cleanDesc(base.description);
         }
         return base;
@@ -354,14 +358,52 @@ export function createRefModPane(node, { onChange } = {}) {
     const extSec = el("details", "h3e-section r2-rm-extractor");
     extSec.open = true;
     const extSum = el("summary", "r2-rm-sum");
-    extSum.append(
-        el("span", "h3e-title", "✨ SHEET → SINGLE SHOT EXTRACTOR (QWEN / VIGGLE)"),
-        el("span", "h3e-count", "pull one clean angle from a turnaround sheet"),
-    );
+    const extSumTitle = el("span", "h3e-title");
+    const extSumCount = el("span", "h3e-count");
+    extSum.append(extSumTitle, extSumCount);
     extSec.appendChild(extSum);
+
+    /* Mode switch: Sheet -> Single Shot (Qwen extractor) | Shots -> Sheet (stitcher). */
+    const modeRow = el("div", "r2-sh-mode");
+    const modeBtns = {
+        extract: button("✨ Sheet → Single Shot", "Extract one clean angle out of a turnaround sheet (Qwen / Viggle)", () => setExtMode("extract"), "h3e-btn h3e-refmod-chip"),
+        sheet: button("▦ Shots → Sheet", "Stitch the Stills below into one high-res character sheet (no model; every still kept whole at its own pixels)", () => setExtMode("sheet"), "h3e-btn h3e-refmod-chip"),
+    };
+    modeRow.append(modeBtns.extract, modeBtns.sheet);
+    extSec.appendChild(modeRow);
 
     const extBody = el("div", "r2-rm-extbody");
     extSec.appendChild(extBody);
+
+    const sheetMaker = createSheetMaker({
+        getFiles: () => state.stills.filter(Boolean),
+        getState: () => state.sheet,
+        save: () => saveState(),
+        getSlug: () => slugOf(state.name || "char", "char"),
+        onSaved: (name) => {
+            state.ext_sheet = name;
+            saveState();
+            sheetPick.render();
+        },
+    });
+    const sheetBody = el("div", "r2-rm-extbody");
+    sheetBody.appendChild(sheetMaker.root);
+    extSec.appendChild(sheetBody);
+
+    function setExtMode(mode) {
+        state.ext_mode = mode === "sheet" ? "sheet" : "extract";
+        saveState();
+        paintExtMode();
+    }
+    function paintExtMode() {
+        const sheet = state.ext_mode === "sheet";
+        extBody.style.display = sheet ? "none" : "";
+        sheetBody.style.display = sheet ? "" : "none";
+        for (const [k, b] of Object.entries(modeBtns)) b.classList.toggle("h3e-refmod-chip-on", k === state.ext_mode);
+        extSumTitle.textContent = sheet ? "▦ SHOTS → SHEET STITCHER" : "✨ SHEET → SINGLE SHOT EXTRACTOR (QWEN / VIGGLE)";
+        extSumCount.textContent = sheet ? "lay the Stills out as one high-res character sheet" : "pull one clean angle from a turnaround sheet";
+        if (sheet) sheetMaker.refresh();
+    }
 
     const extPickRow = el("div", "r2-rm-extpicks");
     const sheetPick = createPicker({
@@ -707,6 +749,7 @@ export function createRefModPane(node, { onChange } = {}) {
             stillsGrid.appendChild(el("div", "h3e-note h3e-note-hint",
                 "No stills yet — extract a shot from a sheet above, or click + add still."));
         }
+        if (state.ext_mode === "sheet") sheetMaker.refresh();
     }
 
     const clipVoiceGrid = el("div", "r2-rm-cvgrid");
@@ -1620,6 +1663,7 @@ export function createRefModPane(node, { onChange } = {}) {
 
     function renderAll() {
         syncInputsFromState();
+        paintExtMode();
         sheetPick.render();
         ref2Pick.render();
         renderStills();

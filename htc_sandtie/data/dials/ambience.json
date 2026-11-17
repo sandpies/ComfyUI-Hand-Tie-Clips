@@ -5,6 +5,14 @@
   "note": "Room beds and environmental soundscapes (no semicolons).",
   "options": [
     {
+      "id": "amb_none_na",
+      "label": "None — Pure Music / Clean Track Only (N/A)",
+      "group": "00 · No Foley / Pure Music",
+      "rule": "",
+      "world": "",
+      "domain": "general"
+    },
+    {
       "id": "intimate_skin_foley",
       "label": "Intimate bedroom foley (wet skin-on-skin, breath & sofa/bed creaks)",
       "group": "Beds",
