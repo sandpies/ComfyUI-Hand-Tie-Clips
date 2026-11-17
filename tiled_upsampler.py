@@ -2995,6 +2995,8 @@ CHAIN_DEFAULTS = {
     "structure_lock": STRUCTURE_LOCK, "lock_sigma": LOCK_SIGMA,
     "attention": "sparse", "chunk_join": "stepped", "chunking": True, "tiling": True,
     "lock_anchor": "source", "tile_context": "none", "redraw_start": 0.6,
+    # small-face close-ups: auto = regen2k only (as before), on = ic too, off = never
+    "face_pass": "auto",
     # set by the chain node's upsample_sharpness widget, not the settings node
     "sharpness": SHARPNESS,
 }
@@ -3083,6 +3085,14 @@ class HTCUpsampleSettings:
                     "tooltip": "How much the re-draw is allowed to change. 0.6 (default) "
                                "keeps faces close to the chain's frames; 0.8 = the original "
                                "Regen2K recipe, sharper but faces drift more. Regen2K only."}),
+                # appended last: widgets_values are positional
+                "face_pass": (["auto", "on", "off"], {
+                    "default": d["face_pass"],
+                    "tooltip": "The small-face close-up re-draw after the upsample. auto = "
+                               "with Regen2K only, as before. on = also under "
+                               "upsample_redraw ic: there only faces under about 220 px, at "
+                               "most 2, drawn by Regen2K (ic keeps larger faces well and "
+                               "costs more). off = never, which saves its time."}),
             },
             "optional": {
                 "sampler": ("SAMPLER", {

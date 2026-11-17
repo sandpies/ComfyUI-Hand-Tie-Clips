@@ -74,6 +74,7 @@ from . import plan as _plan
 from . import refmod as _refmod
 from . import refs as _refs
 from . import store as _store
+from . import cond_store as _cond_store
 from . import media as _media
 from . import tone as _tone
 from . import sheet as _sheet
@@ -1309,7 +1310,77 @@ class _SkipRefModEncode:
 
 
 _QWEN_COND_CACHE = {}
-_QWEN_COND_CACHE_MAX = 2
+# Least recently used goes first: a hit moves its entry to the back. 4, not more:
+# each entry holds the encode plus the reference latents in system RAM, next to
+# two ~30 GB models that already compete for it.
+_QWEN_COND_CACHE_MAX = 4
+
+
+def _clip_fingerprint(clip):
+    """The text encoder as content: `_model_fingerprint` of its patcher (class,
+    dtype, LoRA keys and strengths) plus its parameter count and tokenizer
+    class, so a different Qwen build or a CLIP LoRA misses the disk cache."""
+    patcher = getattr(clip, "patcher", None)
+    if patcher is None:
+        return None
+    try:
+        n = sum(p.numel() for p in patcher.model.parameters())
+    except Exception:  # noqa: BLE001
+        n = "?"
+    return (f"{_model_fingerprint(patcher)}:{n}:"
+            f"{type(getattr(clip, 'cond_stage_model', None)).__name__}:"
+            f"{type(getattr(clip, 'tokenizer', None)).__name__}")
+
+
+def _qwen_disk_key(qk, node_cls, clip, ref_vae, ref_audio_vae):
+    """The memory key without its object ids (`_qwen_cond_key` elements 0-4),
+    plus content fingerprints for the encoder, both VAEs and core's node file."""
+    if qk is None or not _cond_store.DISK_COND_CACHE:
+        return None
+    try:
+        clip_fp = _clip_fingerprint(clip)
+        if clip_fp is None:
+            return None
+        vfp = (_vae_fingerprint(getattr(ref_vae, "_inner", ref_vae)) if qk[3] else "none")
+        afp = (_vae_fingerprint(getattr(ref_audio_vae, "_inner", ref_audio_vae))
+               if qk[4] else "none")
+        return _cond_store.disk_key(qk[5:], clip_fp, vfp, afp, _cond_store.core_hash(node_cls))
+    except Exception as e:  # noqa: BLE001 -- no key = no disk cache, never a failed run
+        print(f"[{TAG}] cond disk cache off for this hop ({e})", flush=True)
+        return None
+
+
+def _qwen_cache_lookup(qk, disk_key_fn):
+    """-> ((cond, latent), "memory"|"disk") or (None, None)."""
+    if qk is None:
+        return None, None
+    hit = _QWEN_COND_CACHE.get(qk)
+    if hit is not None:
+        _QWEN_COND_CACHE[qk] = _QWEN_COND_CACHE.pop(qk)   # most recently used
+        return hit, "memory"
+    dk = disk_key_fn()
+    if dk:
+        with _st.stage("cond disk cache read"):
+            got = _cond_store.get(dk)
+        if got is not None:
+            _qwen_cache_store(qk, got[0], got[1], None)
+            return _QWEN_COND_CACHE.get(qk, got), "disk"
+    return None, None
+
+
+def _qwen_cache_store(qk, c, lat, disk_key_fn):
+    """Keep an encode in memory (LRU) and, with a disk key, on disk."""
+    if qk is None:
+        return
+    entry = (_cond_cpu(c, keep_refs=True), _clone_lat_copy(lat))
+    if qk not in _QWEN_COND_CACHE and len(_QWEN_COND_CACHE) >= _QWEN_COND_CACHE_MAX:
+        _QWEN_COND_CACHE.pop(next(iter(_QWEN_COND_CACHE)), None)
+    _QWEN_COND_CACHE.pop(qk, None)
+    _QWEN_COND_CACHE[qk] = entry
+    dk = disk_key_fn() if disk_key_fn is not None else None
+    if dk:
+        with _st.stage("cond disk cache write"):
+            _cond_store.put(dk, entry[0], entry[1])
 
 
 def _clone_lat_copy(lat):
@@ -3656,6 +3727,32 @@ def _log_upsample_resources(total_frames, uw, uh, regen2k=False):
         pass
 
 
+def _regen2k_settings(settings, regen2k_seed):
+    """The upsample settings as Regen2K reads them (also the face close-ups' settings
+    under ic). -> a new dict."""
+    r2k_settings = dict(settings) if settings is not None else {}
+    # Upgrade untouched legacy recipe defaults from a pre-existing settings node on canvas
+    if (r2k_settings.get("steps") == 1
+            and float(r2k_settings.get("start_sigma", 0.0)) == 0.0
+            and r2k_settings.get("noise") == "per_chunk"
+            and r2k_settings.get("seed") == _tu.SEED):
+        r2k_settings["steps"] = len(_tu.REGEN2K_SIGMAS) - 1
+        r2k_settings["noise"] = "per_chunk"
+        r2k_settings["seed"] = int(regen2k_seed)
+    r2k_settings.setdefault("noise", "per_chunk")
+    r2k_settings.setdefault("seed", int(regen2k_seed))
+    r2k_settings.setdefault("steps", len(_tu.REGEN2K_SIGMAS) - 1)
+    if r2k_settings.get("chunk_frames") == _tu.CHUNK_FRAMES:
+        r2k_settings["chunk_frames"] = _tu._DEFAULT_CHUNK_FRAMES
+    return r2k_settings
+
+
+def _face_pass_mode(settings):
+    """The settings node's face_pass (auto / on / off); unwired = auto."""
+    v = str((settings or {}).get("face_pass", "auto"))
+    return v if v in ("auto", "on", "off") else "auto"
+
+
 def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels,
                           master=None, upscaler=_tu.UPSCALER_FILE, decode=None,
                           alloc=None, budget=_tu.TOKEN_BUDGET, settings=None,
@@ -3702,20 +3799,7 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
             print(f"[{TAG}] WARNING: could not load Regen2K LoRA {lora_name}: {_le}",
                   flush=True)
     r2k_hops = _prepare_regen2k_hops(upsample_hops, regen2k_cond=cond_mode)
-    r2k_settings = dict(settings) if settings is not None else {}
-    # Upgrade untouched legacy recipe defaults from a pre-existing settings node on canvas
-    if (r2k_settings.get("steps") == 1
-            and float(r2k_settings.get("start_sigma", 0.0)) == 0.0
-            and r2k_settings.get("noise") == "per_chunk"
-            and r2k_settings.get("seed") == _tu.SEED):
-        r2k_settings["steps"] = len(_tu.REGEN2K_SIGMAS) - 1
-        r2k_settings["noise"] = "per_chunk"
-        r2k_settings["seed"] = int(regen2k_seed)
-    r2k_settings.setdefault("noise", "per_chunk")
-    r2k_settings.setdefault("seed", int(regen2k_seed))
-    r2k_settings.setdefault("steps", len(_tu.REGEN2K_SIGMAS) - 1)
-    if r2k_settings.get("chunk_frames") == _tu.CHUNK_FRAMES:
-        r2k_settings["chunk_frames"] = _tu._DEFAULT_CHUNK_FRAMES
+    r2k_settings = _regen2k_settings(settings, regen2k_seed)
     r2k_sampler = sampler
     if r2k_settings.get("sampler") is None:
         try:
@@ -3787,7 +3871,8 @@ def _run_regen2k_upsample(regen2k_model, sampler, vae, upsample_hops, megapixels
     finally:
         _tu._free(work_model)
         _verify_model_unmutated(regen2k_model, snap)
-    if face_src is not None and r2k_sigmas is not None and _fp.FACE_PASS:
+    if (face_src is not None and r2k_sigmas is not None and _fp.FACE_PASS
+            and _face_pass_mode(r2k_settings) != "off"):
         note += _chain_face_pass(
             frames, face_src, regen2k_model, vae, audio_vae, face_audio, upscaler, budget,
             r2k_settings, lora_name, strength, strip_existing_loras)
@@ -3804,8 +3889,9 @@ def _run_ic_upsample(base_model, clip, vae, upsample_hops, megapixels, master=No
     with: the MODEL wire's DiT, hop LoRA weights stripped, HyperFlow + Sharp +
     IC patched on (upsample_ic.patch_model); each chunk's own hop latents ride
     as <Video 1> and Qwen sees them (ChunkConds, built before the DiT loads);
-    the audio rows are the film's own generated soundtrack. No face pass: IC
-    keeps faces from the draft."""
+    the audio rows are the film's own generated soundtrack. No face pass here:
+    IC keeps faces from the draft; the settings node's face_pass=on adds Regen2K
+    close-ups of the small faces afterwards (the chain's ic branch)."""
     snap = _snapshot_model_state(base_model)
     work = base_model.clone() if hasattr(base_model, "clone") else base_model
     if _tl.strip(work):
@@ -3849,9 +3935,11 @@ def _run_ic_upsample(base_model, clip, vae, upsample_hops, megapixels, master=No
 
 
 def _chain_face_pass(frames, face_src, regen2k_model, vae, audio_vae, face_audio, upscaler,
-                     budget, r2k_settings, lora_name, strength, strip_existing_loras):
+                     budget, r2k_settings, lora_name, strength, strip_existing_loras,
+                     small_only=False):
     """Small-face close-ups over the upsampled film `frames`, in place, with the
-    standalone upsampler's own code (video_upsampler.close_up_fn). -> note."""
+    standalone upsampler's own code (video_upsampler.close_up_fn). small_only (after
+    an ic upsample): only faces under ~220 px, at most 2 (face_pass.IC_*). -> note."""
     from . import video_upsampler as _vu  # noqa: PLC0415
     try:
         base = regen2k_model.clone() if hasattr(regen2k_model, "clone") else regen2k_model
@@ -3872,7 +3960,8 @@ def _chain_face_pass(frames, face_src, regen2k_model, vae, audio_vae, face_audio
             float(r2k_settings.get("redraw_start", _tu.CHAIN_DEFAULTS["redraw_start"])),
             str(int(r2k_settings.get("steps", len(_tu.REGEN2K_SIGMAS) - 1))),
             sharpness=int(r2k_settings.get("sharpness", _tu.SHARPNESS)))
-        _img, note = _fp.apply(frames[:n], face_src[:n], fn, float(_vu.H3_FPS))
+        _img, note = _fp.apply(frames[:n], face_src[:n], fn, float(_vu.H3_FPS),
+                               small_only=small_only)
         return note
     except mm.InterruptProcessingException:
         raise
@@ -9863,11 +9952,19 @@ class HandTieClips:
                     hop_images, hop_videos, hop_video_audios, hop_ref_audios,
                     _vis_flags, _aud_flags,
                 )
-                _qhit = _QWEN_COND_CACHE.get(_qk) if _qk is not None else None
+                _qdk = []   # disk key, built on the first memory miss only
+
+                def _qdisk_key(_qk=_qk):
+                    if not _qdk:
+                        _qdk.append(_qwen_disk_key(_qk, MiniMaxH3ReferenceToVideo, clip,
+                                                   ref_vae, ref_audio_vae))
+                    return _qdk[0]
+                _qhit, _qsrc = _qwen_cache_lookup(_qk, _qdisk_key)
                 if _qhit is not None:
                     c = _cond_cpu(_qhit[0], keep_refs=True)
                     lat = _clone_lat_copy(_qhit[1])
-                    print(f"[{TAG}] ref2va cond cache hit (skipped Qwen3-VL encode)", flush=True)
+                    print(f"[{TAG}] ref2va cond {'disk ' if _qsrc == 'disk' else ''}"
+                          f"cache hit (skipped Qwen3-VL encode)", flush=True)
                 else:
                     # Every argument by NAME, none by position. Passing the first
                     # seven positionally worked here and broke for a user on a
@@ -9894,10 +9991,7 @@ class HandTieClips:
                         ref_audios=hop_ref_audios,
                     )
                     c, lat = _result(packed)[0], _result(packed)[1]
-                    if _qk is not None:
-                        if len(_QWEN_COND_CACHE) >= _QWEN_COND_CACHE_MAX:
-                            _QWEN_COND_CACHE.pop(next(iter(_QWEN_COND_CACHE)), None)
-                        _QWEN_COND_CACHE[_qk] = (_cond_cpu(c, keep_refs=True), _clone_lat_copy(lat))
+                    _qwen_cache_store(_qk, c, lat, _qdisk_key)
                 if refmod_image_blocks or refmod_video_blocks or refmod_audio_blocks:
                     # ReferenceToVideo encoded the decode. Put the stored
                     # latent back in that slot before anything else copies it.
@@ -11628,6 +11722,21 @@ class HandTieClips:
                             upscaler=str(upsample_model), alloc=_alloc_master,
                             budget=_up_budget, settings=upsample_settings,
                             ic_lora=str(upsample_redraw), seed=int(regen2k_seed))
+                        if (_face_pass_mode(upsample_settings) == "on" and _fp.FACE_PASS
+                                and master_imgs is not None):
+                            # Regen2K close-ups of the small faces on a clean DiT: no hop
+                            # LoRA, the Regen2K LoRA at its own strength (upsample_denoise
+                            # is the IC strength here).
+                            _u_note += _chain_face_pass(
+                                _up_imgs, master_imgs,
+                                regen2k_model if regen2k_model is not None else _up_model,
+                                vae, audio_vae,
+                                ({"waveform": _batch_wav(master_wav), "sample_rate": int(sr)}
+                                 if master_wav is not None and sr else None),
+                                str(upsample_model), _up_budget,
+                                _regen2k_settings(upsample_settings, regen2k_seed),
+                                REGEN2K_DEFAULT_LORA, UPSAMPLE_DENOISE,
+                                regen2k_model is None, small_only=True)
                     elif regen2k_on:
                         _up_imgs, _u_note = _run_regen2k_upsample(
                             _up_model, sampler, vae, upsample_hops,
