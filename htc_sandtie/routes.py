@@ -323,10 +323,17 @@ def register_sandtie_routes(instance, web) -> None:
             **extra,
         }
 
+    async def _refbank_payload_async(**extra):
+        # load_ref_bank() reads refmod.listing(), which opens every RefMod and
+        # LoRA header. Run inline it froze websockets and /view until the walk
+        # finished (HTC issue #1), so it goes to the executor.
+        return await asyncio.get_running_loop().run_in_executor(
+            None, lambda: _refbank_payload(**extra))
+
     @instance.routes.get(SANDTIE_REFBANK_ROUTE)
     async def _sandtie_refbank_get(_request):
         try:
-            return web.json_response(_refbank_payload())
+            return web.json_response(await _refbank_payload_async())
         except Exception as exc:
             return web.json_response({"ok": False, "error": str(exc)}, status=500)
 
@@ -340,24 +347,25 @@ def register_sandtie_routes(instance, web) -> None:
         action = str(body.get("action") or "list").strip().lower()
         try:
             if action == "list":
-                return web.json_response(_refbank_payload())
+                return web.json_response(await _refbank_payload_async())
             if action == "sync_refmods":
                 return web.json_response({
                     "ok": True,
-                    "items": _refs.sync_refmods_to_bank(),
+                    "items": await asyncio.get_running_loop().run_in_executor(
+                        None, _refs.sync_refmods_to_bank),
                     "audio_files": [f["name"] for f in _media.listing({"audio"})],
                     "has_refmods": bool(_refs._refmod_module() is not None),
                 })
             if action == "save":
                 saved = _refs.upsert_ref_bank_item(body.get("item") if isinstance(body.get("item"), dict) else body, user_edited=True)
-                return web.json_response(_refbank_payload(item=saved))
+                return web.json_response(await _refbank_payload_async(item=saved))
             if action == "delete":
                 removed = _refs.delete_ref_bank_item(
                     str(body.get("id") or ""),
                     file_name=str(body.get("file") or ""),
                     source=str(body.get("source") or ""),
                 )
-                return web.json_response(_refbank_payload(removed=removed))
+                return web.json_response(await _refbank_payload_async(removed=removed))
             if action == "import_rail":
                 items = _refs.import_rail_to_ref_bank(str(body.get("ref_plan") or ""), voice_files=body.get("voice_files") or ())
                 return web.json_response({
@@ -433,7 +441,7 @@ def register_sandtie_routes(instance, web) -> None:
                     saved_payload["strength"] = body.get("strength") if "strength" in body else existing.get("strength", 1.0)
                     saved_payload["step_curve"] = body.get("step_curve") or existing.get("step_curve") or "full"
                 saved = _refs.upsert_ref_bank_item(saved_payload, user_edited=True)
-                return web.json_response(_refbank_payload(item=saved))
+                return web.json_response(await _refbank_payload_async(item=saved))
             return web.json_response({"ok": False, "error": f"Unknown ref_bank action: {action}"}, status=400)
         except Exception as exc:
             return web.json_response({"ok": False, "error": str(exc)})

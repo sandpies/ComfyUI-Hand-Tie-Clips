@@ -48,13 +48,23 @@ const _inspectCache = new Map();
 // learns about it until a browser refresh. Re-read after every finished
 // prompt and re-render only when a name or a caption actually moved, so a
 // queue that built nothing does not rebuild a rail being edited.
-const _refmodListeners = new Set();
+// Keyed by each rail's DOM root, so a finished prompt can tell whether any rail
+// is actually on screen. With none, the listing is not re-read: that route walks
+// every LoRA folder, and firing it after every unrelated workflow stalled the
+// server (issue #1). render() refetches lazily when `_refmods` is null.
+const _refmodListeners = new Map();
+function _liveRails() {
+    for (const root of _refmodListeners.keys()) {
+        if (root?.isConnected) return true;
+    }
+    return false;
+}
 export function invalidateRefmods(forceRender = true) {
     _refmods = null;
     _inspectCache.clear();
     return refmodRows().then((rows) => {
         if (forceRender) {
-            for (const fn of _refmodListeners) fn();
+            for (const fn of _refmodListeners.values()) fn();
         }
         return rows;
     });
@@ -63,9 +73,10 @@ api.addEventListener("execution_success", () => {
     const before = JSON.stringify(_refmods || []);
     _refmods = null;
     _inspectCache.clear();
+    if (!_liveRails()) return;
     refmodRows().then((rows) => {
         if (JSON.stringify(rows) === before) return;
-        for (const fn of _refmodListeners) fn();
+        for (const fn of _refmodListeners.values()) fn();
     });
 });
 if (typeof window !== "undefined") {
@@ -424,7 +435,7 @@ export function createRefRail(node, { getPlan, setPlan, onChange, hopCount,
         _refmods = null;
         vocab().then((v) => { V = v; render(); });
     });
-    _refmodListeners.add(() => render());
+    _refmodListeners.set(root, () => render());
 
     function commit() {
         setPlan(getPlan());

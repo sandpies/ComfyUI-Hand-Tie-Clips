@@ -354,14 +354,22 @@ def register():
     @instance.routes.get(FILES_ROUTE)
     async def _files(request):
         """What is already in the reference folder, for the editor's picker."""
+        import asyncio
+
         try:
             folder = request.rel_url.query.get("folder") or ""
             if folder == "refmods":
                 from . import refmod as _refmod
-                return web.json_response({"ok": True, "files": _refmod.listing()})
+                # Off the event loop: the walk opens every LoRA header, and run
+                # inline it froze websockets and /view until it finished (issue #1).
+                files = await asyncio.get_running_loop().run_in_executor(
+                    None, _refmod.listing)
+                return web.json_response({"ok": True, "files": files})
             kinds = request.rel_url.query.get("kinds") or ""
             want = {k.strip() for k in kinds.split(",") if k.strip()} or None
-            return web.json_response({"ok": True, "files": _media.listing(want)})
+            files = await asyncio.get_running_loop().run_in_executor(
+                None, _media.listing, want)
+            return web.json_response({"ok": True, "files": files})
         except Exception as exc:
             print(f"[{TAG}] files route failed: {exc!r}", flush=True)
             return web.json_response({"ok": False, "error": str(exc)}, status=500)

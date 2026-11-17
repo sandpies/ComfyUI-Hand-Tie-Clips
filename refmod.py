@@ -19,6 +19,7 @@ import os
 import re
 import tempfile
 import threading
+from collections import OrderedDict
 
 import torch
 import torch.nn.functional as F
@@ -298,9 +299,12 @@ def _member_tokens(member):
     return max(0, t * (h // 2) * (w // 2))
 
 
-_HEADER_CACHE = {}
+# LRU keyed by (path, mtime_ns, size). It used to clear() when full, which with
+# more than 512 LoRAs emptied it partway through every listing() walk, so each
+# walk reopened every header (issue #1). Entries are small; evict oldest only.
+_HEADER_CACHE = OrderedDict()
 _HEADER_CACHE_LOCK = threading.Lock()
-_HEADER_CACHE_MAX = 512
+_HEADER_CACHE_MAX = 8192
 
 
 def _stat_sig(path):
@@ -328,6 +332,8 @@ def _scan_safetensors_header(path):
         return (False, None, False, False)
     with _HEADER_CACHE_LOCK:
         hit = _HEADER_CACHE.get(sig)
+        if hit is not None:
+            _HEADER_CACHE.move_to_end(sig)
     if hit is not None:
         return hit
 
@@ -390,9 +396,10 @@ def _scan_safetensors_header(path):
 
     res = (is_reflora, meta, has_looks_key, has_audio_key)
     with _HEADER_CACHE_LOCK:
-        if len(_HEADER_CACHE) >= _HEADER_CACHE_MAX:
-            _HEADER_CACHE.clear()
         _HEADER_CACHE[sig] = res
+        _HEADER_CACHE.move_to_end(sig)
+        while len(_HEADER_CACHE) > _HEADER_CACHE_MAX:
+            _HEADER_CACHE.popitem(last=False)
     return res
 
 
