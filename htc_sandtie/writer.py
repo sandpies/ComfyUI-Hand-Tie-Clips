@@ -102,7 +102,7 @@ def _extract_beat_clauses_from_rule(rule_text: str, lab: dict | None = None, *, 
                 out[s_idx] = clause
         if out:
             return out
-    parts = re.split(r"\bBeat\s+([1-6])\b[:\-\s—]*", txt, flags=re.I)
+    parts = re.split(r"(?:[.;,\s]*\b(?:in|at)\s+)?\bBeat\s+([1-6])\b[:\-\s—]*", txt, flags=re.I)
     if len(parts) >= 3:
         for i in range(1, len(parts), 2):
             b_idx = int(parts[i]) - 1
@@ -111,6 +111,10 @@ def _extract_beat_clauses_from_rule(rule_text: str, lab: dict | None = None, *, 
                 out[b_idx] = clause
         return out
     sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", txt) if s.strip()]
+    if len(sents) == 1 and ";" in txt:
+        semi_parts = [p.strip(" .;,-") for p in txt.split(";") if p.strip(" .;,-")]
+        if len(semi_parts) >= 2:
+            sents = semi_parts
     if len(sents) >= 3:
         out[0] = " ".join(sents[:max(1, len(sents) // 3)])
         out[1] = " ".join(sents[max(1, len(sents) // 3):max(2, (2 * len(sents)) // 3)])
@@ -143,7 +147,25 @@ def _infer_subject_pronouns(s_n: int, lab: dict | None = None, brief: str = "", 
     return ("her", "her", "she")
 
 
-def _genre_micro_example(*, sex_scene: bool, combat_scene: bool, has_dance: bool, mode: str, duo: bool = False) -> str:
+def _is_nonfight_action_only(combat_opts: list[dict], brief: str = "") -> bool:
+    """True when active `combat` dial selections are non-fighting stunts, sports, chases, or prop flair."""
+    if not combat_opts:
+        return False
+    fight_rx = re.compile(
+        r"\b(?:fight\w*|combat|punch\w*|kick\w*|brawl\w*|slash\w*|sword|katana|blade|gun|pistol|rifle|"
+        r"shotgun|sniper|revolver|knife|dagger|goon\w*|guard\w*|thug\w*|assassin|opponent|rival|"
+        r"attacker|duel|parry|choke|suplex|tackle|disarm|blitz|blast|force\s*push|sith|jedi)\b",
+        re.I,
+    )
+    if fight_rx.search(brief or ""):
+        return False
+    return not any(
+        fight_rx.search(f"{o.get('id', '')} {o.get('label', '')} {o.get('rule', '')}")
+        for o in combat_opts
+    )
+
+
+def _genre_micro_example(*, sex_scene: bool, combat_scene: bool, has_dance: bool, mode: str, duo: bool = False, has_combat_preset: bool = False, nonfight_action: bool = False) -> str:
     """Return one concise 4-line structural rhythm hint matching the active genre without adding token bloat."""
     s_tok = "<Subject 1> Name" if mode == "Ref2VA" else "The lead"
     s2_tok = "<Subject 2> Partner" if mode == "Ref2VA" else "her partner"
@@ -154,7 +176,21 @@ def _genre_micro_example(*, sex_scene: bool, combat_scene: bool, has_dance: bool
             f"At 00:03.200-00:07.500, rhythm builds into full-depth strokes with concrete hand pressure and audible skin foley.\n"
             f"At 00:07.500-00:10.000, climax peaks cleanly through the final hold into a steady exhale."
         )
+    if nonfight_action:
+        return (
+            f"[Shot 1] Kinetic tracking framing inside the active set matching the selected stunt choreography as {s_tok} opens in full motion.\n"
+            f"At 00:00.000-00:02.800, {s_tok} initiates the opening speed, grip, or setup cleanly with reactive hair, clothes, and prop movement.\n"
+            f"At 00:02.800-00:06.800, momentum surges through the centerpiece stunt or maneuver while camera tracks briskly alongside.\n"
+            f"At 00:06.800-00:10.000, {s_tok} executes the crisp closing transition with live kinetic energy through the final frame."
+        )
     if combat_scene:
+        if has_combat_preset:
+            return (
+                f"[Shot 1] Kinetic framing inside the active setting matching the selected combat preset as {s_tok} anchors Beat 1 cleanly.\n"
+                f"At 00:00.000-00:02.500, {s_tok} opens Beat 1 of the active choreography cleanly with crisp physical staging and practical light.\n"
+                f"At 00:02.500-00:06.500, {s_tok} drives the escalating clash, blitz, or exchange with reactive camera tracking and sharp physical impacts.\n"
+                f"At 00:06.500-00:10.000, {s_tok} delivers the decisive climax and finish matching the preset's exact energy and velocity."
+            )
         return (
             f"[Shot 1] Fast wide lateral tracking shot inside the arena as {s_tok} already charges into combat from screen-left.\n"
             f"At 00:00.000-00:02.500, {s_tok} throws a fast jab-cross, ducks under a hook punch, grabs the attacker's wrist, and sweeps his legs onto the floor while camera drops low.\n"
@@ -211,11 +247,24 @@ def _adapt_rule_subjects(rule_text: str, lab: dict | None = None, *, brief: str 
             out = re.sub(r"<Subject\s+2>", "the man", out)
         else:
             is_combat_s = _dir.is_combat(brief, out)
+            is_tag_team_s = bool(re.search(r"\b(?:tag[- ]?team|back[- ]?to[- ]?back|squad|ally|assist)\b", comb_s))
             is_dance_s = bool(re.search(r"\b(?:dance|duet|choreograph|vogue|shimmy|backspin|hook\s*kick|cheek-heart|two-step|hip|squat)\b", comb_s))
             s1_poss, _, _ = _infer_subject_pronouns(1, lab=lab, brief=brief, flavors=flavors)
-            s2_noun = "her rival" if is_combat_s else (f"{s1_poss} dance partner" if is_dance_s else "the other person")
+            s2_noun = (f"{s1_poss} ally" if is_tag_team_s else f"{s1_poss} rival") if is_combat_s else (f"{s1_poss} dance partner" if is_dance_s else "the other person")
             out = re.sub(r"<Subject\s+2>'s\b", f"{s2_noun}'s", out)
             out = re.sub(r"<Subject\s+2>", s2_noun, out)
+    if re.search(r"<Subject\s+N>", out):
+        extra_keys = [sn for sn in sorted(sub_meta.keys()) if sn >= 3]
+        if extra_keys:
+            extra_list = ", ".join(
+                f"<Subject {sn}> {sub_meta[sn].get('char_name') or sub_meta[sn].get('name') or ''}".strip()
+                for sn in extra_keys
+            )
+            out = re.sub(r"<Subject\s+3>\s*\.\.\s*<Subject\s+N>", extra_list, out)
+            out = re.sub(r"<Subject\s+N>", extra_list.split(", ")[-1], out)
+        else:
+            out = re.sub(r"<Subject\s+3>\s*\.\.\s*<Subject\s+N>", "allied squad mates", out)
+            out = re.sub(r"<Subject\s+N>", "allied squad mates", out)
     for sn_extra in range(3, 10):
         if sn_extra not in sub_meta and re.search(rf"<Subject\s+{sn_extra}>", out):
             extra_noun = "the second woman" if re.search(r"\b(?:ffm|lesbian|fff)\b", comb_s) else "the other companion"
@@ -597,9 +646,12 @@ def build_flavor_facts(
         else:
             facts.append(f"COMBAT CHOREOGRAPHY ({_clean_ui_label(combat_opts[0]['label'])}): {_fin.sanitize_additive_rule(combat_opts[0].get('rule',''))}")
 
+    nonfight_action = _is_nonfight_action_only(combat_opts, brief=brief)
     if bool(flavors.get("kinetic_grip", True)) and not sex_scene:
-        if combat_scene:
-            facts.append("KINETIC FLOW (COMBAT): Keep constant high-speed forward momentum across every second with rapid blow-for-blow contact and zero static pauses.")
+        if combat_scene and not nonfight_action:
+            facts.append("KINETIC FLOW (COMBAT): Keep constant forward kinetic energy and sharp timing across every beat—follow the active preset's pacing without awkward static stalls or slow jogging.")
+        elif nonfight_action:
+            facts.append("KINETIC FLOW (ACTION STUNT): Maintain brisk athletic momentum, crisp prop handling, and continuous camera flow across every second.")
         elif motion_val in ("freeze", "slow"):
             facts.append("GROUNDED POISE (Kinetic Flow yielded to calm Motion): Keep posture anchored and breathing natural without unnecessary hand fidgeting, bridging smoothly into the next beat.")
         else:
@@ -622,14 +674,34 @@ def build_flavor_facts(
                 + (f" (previous hop tail: `{hop_ctx['beat'][:180]}`)" if hop_ctx.get("beat") else "")
                 + "."
             )
-    if combat_scene:
-        facts.append("COMBAT PHYSICS: Write concrete blow-for-blow strike-to-dodge-to-impact-to-recoil mechanics with physically lit sparks, dust, shell casings, or elemental/force shockwaves.")
-        facts.append(
-            "COMBAT EARLY-START & SIMPLE BLOW-FOR-BLOW LAW: Open intense fighting straight from 00:00.000 in crisp simple Subject-Verb-Object grammar (`X punches -> Y ducks -> Y kicks X into wall -> sparks fly`), packing maximum fast action into every beat while keeping every subject interacting continuously with opponents and surroundings."
-        )
-        facts.append(
-            "COMBAT DYNAMIC CAMERA & PENULTIMATE ULTIMATE LAW: Drive fast, energetic fighting camera motion across jump kicks, crouching sweeps, mid-air clashes, and Jedi/Sith force blasts, executing a tight push-in zoom during the ultimate attack strictly inside the next-to-last beat; dedicate the final beat solely to knockback crash, settling debris, and victor recovery so the ultimate attack completes fully before the clip ends (keep every camera and body move fast and urgent, free of slow or soft pacing)."
-        )
+    if combat_scene and not nonfight_action:
+        facts.append("COMBAT PHYSICS: Write concrete strike-to-dodge-to-impact-to-recoil mechanics with physically lit sparks, dust, shell casings, or elemental/force shockwaves.")
+        if combat_opts:
+            combat_blob = " ".join(f"{o.get('id', '')} {o.get('label', '')} {o.get('rule', '')}" for o in combat_opts)
+            is_speed_blitz = bool(re.search(r"\b(?:speedster|lightning|flash[- ]?step|sandevistan|thunder\s*breathing|thunder\s*clap|blitz)\b", combat_blob, re.I))
+            is_solo_charge_opener = bool(re.search(r"\b(?:crouch|charge|iaido|scope|breath|hand-seal|still|coiled)\b", combat_blob, re.I))
+            facts.append(
+                "COMBAT PRESET FIDELITY LAW: Follow the active COMBAT CHOREOGRAPHY framing, camera axis, opponent count, and beat sequence strictly in simple Subject-Verb-Object prose rather than substituting unrelated moves or lateral framing."
+            )
+            if is_speed_blitz:
+                facts.append(
+                    "SPEEDSTER CONTINUOUS-VELOCITY LAW: When Beat 1 is a solo charge-up, omit opponents completely from Beat 1 (mention only the hero charging alone in tight foreground framing), then reveal opponents downrange in Beat 2 as the hero bursts at lightspeed past them; carry full supersonic speed and crackling lightning/afterimage trails ALL THE WAY through the Beat 3/4 finisher into a dynamic sliding skid rather than stopping early, jogging normally, or standing motionless."
+                )
+            elif not is_solo_charge_opener:
+                facts.append(
+                    "COMBAT EARLY-START & DYNAMIC CAMERA LAW: Start intense action right from 00:00.000 with urgent camera tracking matched to the preset's moves, landing the climactic blow cleanly before the final beat settles."
+                )
+            else:
+                facts.append(
+                    "COMBAT DYNAMIC CAMERA LAW: Keep camera energy sharp and urgent—hold tight tension through the opening charge or draw, whip fast into the main clash, and complete the climax cleanly inside the final beats without stalling."
+                )
+        else:
+            facts.append(
+                "COMBAT EARLY-START & SIMPLE BLOW-FOR-BLOW LAW: Open intense fighting straight from 00:00.000 in crisp simple Subject-Verb-Object grammar (`X punches -> Y ducks -> Y kicks X into wall -> sparks fly`), packing maximum fast action into every beat while keeping every subject interacting continuously with opponents and surroundings."
+            )
+            facts.append(
+                "COMBAT DYNAMIC CAMERA & PENULTIMATE ULTIMATE LAW: Drive fast, energetic fighting camera motion across jump kicks, crouching sweeps, mid-air clashes, and force blasts, executing a tight push-in zoom during the ultimate attack strictly inside the next-to-last beat; dedicate the final beat solely to knockback crash, settling debris, and victor recovery so the ultimate attack completes fully before the clip ends (keep every camera and body move fast and urgent, free of slow or soft pacing)."
+            )
 
     if len((lab.get("subjects") or {}).keys()) >= 2 or (combat_scene and any(re.search(r"<Subject\s+2>|S1\s*(?:vs|\+)\s*S2", str(o.get("label") or "") + " " + str(o.get("rule") or ""), re.I) for o in combat_opts)):
         facts.append("SCREEN-AXIS GEOMETRY: Anchor each subject's screen-left / screen-right placement and eyeline direction in [Shot 1] and keep orientation consistent across cuts unless an orbit or cross-over moves them.")
@@ -1124,10 +1196,12 @@ async def run_sandtie_write(
     lines += ["- " + fl for fl in flavor_lines]
     is_sex_rw = _dir.is_sexual(brief, str(flavors.get("explicit") or ""), str(flavors.get("wardrobe") or ""), fetish_id=str(flavors.get("fetish") or ""))
     is_combat_rw = _dir.is_combat(brief, str(flavors.get("combat") or ""), str(flavors.get("wardrobe") or ""), str(flavors.get("fx") or ""))
+    combat_opts_rw = _cat.resolve_dial_opts("combat", flavors.get("combat"))
+    is_nonfight_rw = _is_nonfight_action_only(combat_opts_rw, brief=brief)
     is_dance_rw = bool(re.search(r"(?:^|[\s_-])danc(?:e|ing|er)(?:$|[\s_-])", f"{flavors.get('pose') or ''} {brief or ''}", re.I))
     is_duo_rw = len((lab.get("subjects") or {}).keys()) >= 2
     lines.append("Single-Thought Rhythm Example (structure guide only — fill with your active brief, cast, and dials):")
-    lines.append(_pl.fence(_genre_micro_example(sex_scene=is_sex_rw, combat_scene=is_combat_rw, has_dance=is_dance_rw, mode=mode, duo=is_duo_rw), "rhythm_example"))
+    lines.append(_pl.fence(_genre_micro_example(sex_scene=is_sex_rw, combat_scene=is_combat_rw, has_dance=is_dance_rw, mode=mode, duo=is_duo_rw, has_combat_preset=bool(combat_opts_rw), nonfight_action=is_nonfight_rw), "rhythm_example"))
     if time_tied:
         lines.append("Time-Tied Continuity Flow (preserve timestamps cleanly as smooth momentum bridges so action flows continuously across beats):")
         lines.append(_pl.fence(skel, "beat_skeleton"))

@@ -1003,7 +1003,10 @@ def adapt_preset_script(
                         adapted,
                     )
         elif mode == "Ref2VA" and s_i >= 2:
-            fallback_noun = "her rival" if _dir.is_combat(raw) else "her partner"
+            s1_blob = " ".join(str(p.get("desc") or "") for p in (lab.get("pictures") or []) if p.get("subject") == 1).lower()
+            s1_is_male = bool(re.search(r"\b(?:man|male|boy|guy|he|his)\b", s1_blob)) and not bool(re.search(r"\b(?:woman|female|girl|she|her)\b", s1_blob))
+            poss_p = "his" if s1_is_male else "her"
+            fallback_noun = f"{poss_p} rival" if _dir.is_combat(raw) else f"{poss_p} partner"
             for old_n in sorted(old_names_by_s.get(s_i, ()), key=len, reverse=True):
                 adapted = re.sub(rf"<Subject\s+{s_i}>\s+{re.escape(old_n)}\b", fallback_noun, adapted)
             adapted = re.sub(rf"<Subject\s+{s_i}>", fallback_noun, adapted)

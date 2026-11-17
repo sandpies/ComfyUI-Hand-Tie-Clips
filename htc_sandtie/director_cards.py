@@ -706,7 +706,7 @@ NON_VOCAL_DEFAULT_EXPLICIT_IDS = (
 
 
 def strip_d_examples(rule_text: str) -> str:
-    out = re.sub(r"\s*\(`?[^()]*?<d>.*?</d>`?\)", "", rule_text or "", flags=re.S)
+    out = re.sub(r"\s*\(`?(?:\(DIALOGUE\)[^<]*|[^()]*?)<d>.*?</d>`?\)", "", rule_text or "", flags=re.S | re.I)
     out = re.sub(r"\s*\(DIALOGUE\)\s*[^<]*<d>.*?</d>\s*\.?", "", out, flags=re.S | re.I)
     out = re.sub(r"\s*`?<d>.*?</d>`?", "", out, flags=re.S)
     out = re.sub(r"\s*Sample Dialogue Lines \(adapt to the scene\):.*$", "", out, flags=re.S)

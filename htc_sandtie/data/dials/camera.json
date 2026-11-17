@@ -222,7 +222,7 @@
       "aspect_best": "16:9",
       "aspect_badge": "🖥️ 16:9",
       "aspect_tip": "🖥️ BEST RESOLUTION: 16:9 Landscape (1344×768) — Horizontal lateral tracking/panning or two-shot widescreen blocking uses the 16:9 horizontal span for parallax and separation.",
-      "domain": "bdsm_dom",
+      "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
     },
@@ -378,7 +378,7 @@
       "aspect_best": "16:9",
       "aspect_badge": "🖥️ 16:9",
       "aspect_tip": "🖥️ BEST RESOLUTION: 16:9 Landscape (1344×768) — Widescreen arc showcases the suspended background debris and full 180-degree parallax.",
-      "domain": "bdsm_dom",
+      "domain": "combat_action",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
     },
@@ -438,7 +438,7 @@
       "label": "⚡ Whip-Pan Reaction Match (Snap Between Two Fighters / Lovers on Beat)",
       "group": "00 · Multi-Angle, Action-Follow & Coverage",
       "rule": "execute a lightning-fast blurred horizontal whip-pan swinging cleanly from Subject 1's face/strike straight across the room to lock sharp onto Subject 2's immediate reaction on the beat",
-      "domain": "bdsm_dom",
+      "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
     },
@@ -501,7 +501,7 @@
       "label": "📹 Verite Shoulder-Mount Breath Follow (Organic Human Micro-Sway)",
       "group": "Handheld",
       "rule": "ride intimately beside the action at shoulder height with organic breathing handheld float and crisp whip corrections keeping eyes and hands centered",
-      "domain": "bdsm_dom",
+      "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
     },
@@ -636,7 +636,7 @@
       "label": "⚡ Whip-Pan Streak Cut Between Two Scenes",
       "group": "Match-cut",
       "rule": "connect two contrasting locations with a matched high-speed whip pan: `[Shot 1]` whips rapidly sideways into horizontal streak blur, and `[Shot 2]` resolves seamlessly out of identical-direction motion blur onto the new room and subject.",
-      "domain": "bdsm_dom",
+      "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
     },
@@ -851,7 +851,7 @@
       "group": "Pan & tilt",
       "aspect_best": "16:9",
       "rule": "keep the pivot stationary and pan rapidly sideways with large amplitude at fast speed into crisp directional blur, settling sharply on the target reaction",
-      "domain": "bdsm_dom",
+      "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
     },
@@ -1323,7 +1323,7 @@
       "group": "Pan & tilt",
       "aspect_best": "9:16",
       "rule": "keep the camera planted and snap rapidly vertically from footwear up to face level with brief crisp motion blur",
-      "domain": "bdsm_dom",
+      "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
     },
@@ -1423,7 +1423,7 @@
       "group": "Tracking",
       "aspect_best": "16:9",
       "rule": "lightning-fast high-precision swoop snapping cleanly from wide pose into crisp macro impact and freezing smoothly",
-      "domain": "bdsm_dom",
+      "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
     },
