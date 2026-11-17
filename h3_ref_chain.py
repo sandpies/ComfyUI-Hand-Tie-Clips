@@ -79,6 +79,7 @@ from . import tone as _tone
 from . import sheet as _sheet
 from . import music as _music
 from . import latents as _latents
+from . import stage_timer as _st
 from . import audio_lock as _alock
 from . import dialogue_lock as _dlg
 from . import planner as _planner
@@ -1198,7 +1199,8 @@ def _core_call(node_cls, what, **kw):
             if callable(_w):
                 kw[_vk] = _w(kw)
     try:
-        return node_cls.execute(**kw)
+        with _st.stage(f"{getattr(node_cls, '__name__', 'node')}: {what}"):
+            return node_cls.execute(**kw)
     except TypeError as e:
         import inspect
         try:
@@ -1577,6 +1579,7 @@ def _open_self_deleting(path, nbytes):
     return fh
 
 
+@_st.timed("VAE decode (streamed to disk)")
 def _decode_take_streamed(vae, lat, label):
     """Decode a whole take's video into a disk-backed float32 buffer.
 
@@ -2348,6 +2351,7 @@ def _clip_on_device(patcher, target_dev):
     return False
 
 
+@_st.timed("text encoder offload")
 def _offload_text_encoder(clip, model):
     if clip is None or getattr(clip, "patcher", None) is None:
         return
@@ -2415,6 +2419,7 @@ def _offload_text_encoder(clip, model):
         print(f"[{TAG}] VRAM purge skipped: {e}", flush=True)
 
 
+@_st.timed("VAE offload")
 def _offload_vae(vae_obj):
     if vae_obj is None:
         return
@@ -2450,6 +2455,7 @@ def _offload_vae(vae_obj):
             pass
 
 
+@_st.timed("reference VAE prewarm")
 def _prewarm_ref2va_batch(specs, ref_vae, ref_audio_vae, *, clip=None, model=None,
                           skip_img_ids=(), skip_vid_ids=(), skip_aud_ids=()):
     """Stage 1 (VideoVAE once -> offload) + Stage 2 (AudioVAE once -> offload)
@@ -2626,6 +2632,7 @@ def _ram_room(nbytes, label, evict_active=False):
     return ok
 
 
+@_st.timed("VAE decode")
 def _decode_av(video_vae, audio_vae, latent, skip_audio=False):
     v_lat = latent
     drop_f = 0
@@ -11829,6 +11836,10 @@ class HandTieClips:
 # DEPRECATED gets both -- server.py publishes `deprecated: True`, and the
 # frontend's `Comfy.Node.ShowDeprecated` (off by default) hides it from search
 # while leaving it fully functional in workflows that name it.
+
+
+# One timing summary per run, printed when it ends (stage_timer.py).
+HandTieClips.run = _st.timed_run(HandTieClips.run, TAG)
 
 
 class _LegacyH3RefChain(HandTieClips):
