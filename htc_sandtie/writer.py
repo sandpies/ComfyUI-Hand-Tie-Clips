@@ -23,7 +23,7 @@ Your prompt feeds directly into H3's joint video-and-audio encoder at CFG 1: eve
   - `T2VA` fields in exact order: `integrated_multimodal_description:`, `overall_soundscape:`, `non_diegetic_music:`.
   - Open immediately with the first field label, keeping total prompt length under 7,000 characters.
 - **When `Stage: plan`:** output ONLY `[Shot 1] ...` and `At MM:SS.mmm-MM:SS.mmm, ...` storyboard beats.
-- **Reference Binding:** Use ONLY the exact `<Picture N>`, `<Subject N>`, and `<Audio N>` labels listed in the user turn (replacing raw `@tags`), writing `<Subject 1> Name` smoothly as plain unparenthesized text. Keep UI emojis, `Anchor:` prefixes, and dial menu prefixes out of `subject_definitions:` and `retention_analysis:`.
+- **Reference Binding:** Use ONLY the exact `<Picture N>`, `<Subject N>`, and `<Audio N>` labels listed in the user turn (replacing raw `@tags`), keeping `<Subject N>` whitespace-separated (`<Subject 1> Name` or `the shoulder of <Subject 1>`, rather than attaching `'s` directly onto `>`), keeping `subject_definitions:` strictly static without cross-subject positioning, and keeping UI emojis, `Anchor:` prefixes, and dial menu prefixes out of `subject_definitions:` and `retention_analysis:`.
 - **Single-Timeline Clock (`[Shot N]`):** `[Shot 1]` opens at `00:00.000` with its opening state and camera move (putting timestamps on the beat lines beneath). Every later cut (`[Shot 2]`, `[Shot 3]`, ...) opens on its own line as `[Shot N] At MM:SS.mmm,` along one continuous `00:00.000 -> Duration` clock.
 
 ## 2. TONE & GENRE BALANCE (KINETIC LITERAL LANGUAGE)
@@ -38,7 +38,7 @@ Your prompt feeds directly into H3's joint video-and-audio encoder at CFG 1: eve
 
 ## 4. AFFIRMATIVE WORDING & FOREGROUND AUDIO PRIORITY
 - **100% Affirmative English Outside `<d>`:** Phrase every visual and audio description outside `<d>...</d>` strictly in positive terms of what IS visible, moving, and sounding on camera.
-- **One Audio Foreground Per Beat:** Give each timestamp beat one clear primary audio driver—either crisp spoken `<d>[tone] ...</d>` (with ambient room tone and music tucked softly underneath) OR kinetic impacts, foley, and music peaks while mouths rest closed or express nonverbal breaths/moans in `overall_soundscape:`.
+- **One Audio Foreground Per Beat:** Give each timestamp beat one clear primary audio driver—either crisp spoken `<d>[tone] ...</d>` (with ambient room tone and music tucked softly underneath) OR kinetic impacts, foley, and music peaks while mouths rest closed or express nonverbal breaths/moans in `overall_soundscape:` (omit `<d>` completely on non-speaking beats; never place `no dialogue` or `silent` inside `<d>...</d>`).
 - **Spoken Dialogue Format:** Write inline `(DIALOGUE) <Subject 1> Name (S1) ...: <d>[delivery tone] Spoken line.</d>` with straight ASCII apostrophes. When a non-English language / Accent dial is active (`Japanese`, `Korean`, `Mandarin`, `Cantonese`, `Spanish`, `French`, `Russian`, `Portuguese`, `Italian`, `German`, `Arabic`, `Hindi`), write ALL spoken words inside `<d>...</d>` strictly in that language's authentic native script (e.g. 日本語かな/漢字 for Japanese, 한국어 for Korean, 中文 for Mandarin, Русский for Russian), keeping all surrounding descriptions in English.
 - **Audio Fields:** Keep `overall_soundscape:` strictly for diegetic environmental and physical foley (waves, wind, footsteps, cloth rustle) or `N/A` on pure-music dance clips, and keep BPM or music track prose exclusively inside `non_diegetic_music:`, using clean comma-separated prose (period-terminated, free of semicolons and spoken dialogue), setting `non_diegetic_music:` to `N/A` when diegetic-only.
 
@@ -678,22 +678,26 @@ def build_flavor_facts(
         facts.append("COMBAT PHYSICS: Write concrete strike-to-dodge-to-impact-to-recoil mechanics with physically lit sparks, dust, shell casings, or elemental/force shockwaves.")
         if combat_opts:
             combat_blob = " ".join(f"{o.get('id', '')} {o.get('label', '')} {o.get('rule', '')}" for o in combat_opts)
+            beat1_blob = re.split(r"(?:At\s+00:0[2-9]|\bin\s+Beat\s+2\b)", combat_blob, maxsplit=1, flags=re.I)[0]
             is_speed_blitz = bool(re.search(r"\b(?:speedster|lightning|flash[- ]?step|sandevistan|thunder\s*breathing|thunder\s*clap|blitz)\b", combat_blob, re.I))
-            is_solo_charge_opener = bool(re.search(r"\b(?:crouch|charge|iaido|scope|breath|hand-seal|still|coiled)\b", combat_blob, re.I))
+            is_solo_charge_opener = bool(
+                re.search(r"\b(?:coiled|iaido|scope|hand-seal|breath|raises\s+both\s+palms|sits\s+slouched)\b", beat1_blob, re.I)
+                and not re.search(r"\b(?:rushes?|lunges?|strikes?|punches?|kicks?|shoots?|slices?|ducks?|parries?)\b", beat1_blob, re.I)
+            )
             facts.append(
-                "COMBAT PRESET FIDELITY LAW: Follow the active COMBAT CHOREOGRAPHY framing, camera axis, opponent count, and beat sequence strictly in simple Subject-Verb-Object prose rather than substituting unrelated moves or lateral framing."
+                "COMBAT PRESET FIDELITY LAW: Follow the active COMBAT CHOREOGRAPHY framing, camera axis, opponent count, and beat sequence strictly in crisp simple Subject-Verb-Object prose (`X punches -> Y ducks -> Y kicks X into steel`) rather than substituting unrelated moves or lateral framing."
             )
             if is_speed_blitz:
                 facts.append(
                     "SPEEDSTER CONTINUOUS-VELOCITY LAW: When Beat 1 is a solo charge-up, omit opponents completely from Beat 1 (mention only the hero charging alone in tight foreground framing), then reveal opponents downrange in Beat 2 as the hero bursts at lightspeed past them; carry full supersonic speed and crackling lightning/afterimage trails ALL THE WAY through the Beat 3/4 finisher into a dynamic sliding skid rather than stopping early, jogging normally, or standing motionless."
                 )
-            elif not is_solo_charge_opener:
+            elif is_solo_charge_opener:
                 facts.append(
-                    "COMBAT EARLY-START & DYNAMIC CAMERA LAW: Start intense action right from 00:00.000 with urgent camera tracking matched to the preset's moves, landing the climactic blow cleanly before the final beat settles."
+                    "COMBAT DYNAMIC CAMERA & PENULTIMATE ULTIMATE LAW: Hold coiled tension tightly in Beat 1, whip fast into relentless blow-for-blow clash across mid-beats with snappy tracking, low-angle sweeps, and upward tilts, drive a fast snap-zoom onto the signature ultimate attack strictly inside the next-to-last beat, and resolve cleanly on knockback crash, settling sparks/debris, and victor recovery in the final beat."
                 )
             else:
                 facts.append(
-                    "COMBAT DYNAMIC CAMERA LAW: Keep camera energy sharp and urgent—hold tight tension through the opening charge or draw, whip fast into the main clash, and complete the climax cleanly inside the final beats without stalling."
+                    "COMBAT EARLY-START & PENULTIMATE ULTIMATE LAW: Erupt straight into fast blow-for-blow combat at 00:00.000 using urgent tracking, low crouching sweeps, upward jump-kick tilts, and whip pans, locking a tight push-in zoom onto the signature ultimate finisher strictly inside the next-to-last beat so the final beat cleanly finishes with crash recoil, settling debris, and victor readiness."
                 )
         else:
             facts.append(
@@ -755,8 +759,15 @@ def build_skeleton_text(
     plan: str = "",
 ) -> str:
     flavors = flavors or {}
-    if extracted_video and extracted_video.get("beats"):
-        return "\n".join([f"[Shot 1] {extracted_video.get('shot1') or '...'}"] + [str(b) for b in extracted_video["beats"]])
+    if extracted_video and extracted_video.get("beats") and not str(plan or "").strip():
+        s1_raw = str(extracted_video.get("shot1") or "...").strip()
+        s1_clean = re.sub(
+            r"^(?:The\s+)?\[\s*Shot\s+1\s*\](?:\s*At\s+\d+:\d+(?:\.\d+)?\s*,?)?\s*[,:\-]*\s*",
+            "",
+            s1_raw,
+            flags=re.I,
+        ).strip() or "..."
+        return "\n".join([f"[Shot 1] {s1_clean}"] + [str(b) for b in extracted_video["beats"]])
 
     subs = sorted((lab.get("subjects") or {}).keys())
     sub_meta = lab.get("subjects") or {}
@@ -1176,6 +1187,8 @@ async def run_sandtie_write(
     llm_stage = "write" if stage == "fast" else stage
     flavor_lines, resolved_cam = build_flavor_facts(brief, flavors, spans, plan=plan, lab=lab, prev_hop_context=prev_hop_context)
     time_tied = bool(flavors.get("time_tied", flavors.get("fast_engine", True)))
+    has_extracted = bool(extracted_video and extracted_video.get("beats"))
+    using_extracted_skel = bool(has_extracted and not str(plan or "").strip())
 
     lines = [
         f"Stage: {llm_stage}.",
@@ -1194,6 +1207,15 @@ async def run_sandtie_write(
         lines.append(_pl.fence(prev_hop_context, "previous_hop_end"))
     lines.append("Active SandTie Directives & Continuity Laws:")
     lines += ["- " + fl for fl in flavor_lines]
+    if has_extracted:
+        if extracted_video.get("cuts") and not str(flavors.get("camera") or "").strip():
+            lines.append("- EXTRACTED CUT & CAMERA LOCK: Preserve every `[Shot N]` hard cut boundary, camera move/roll/zoom, crop scale, and subject visibility from the extracted choreography verbatim rather than smoothing cuts into one take.")
+        if extracted_video.get("cast"):
+            lines.append(f"- Extracted Source Cast Layout: {extracted_video['cast']}")
+        if extracted_video.get("music") and not _cat.resolve_dial_opts("music", flavors.get("music")):
+            lines.append(f"- Extracted Clip Music Hint (use in `non_diegetic_music:` if suitable): {extracted_video['music']}")
+        if extracted_video.get("room") and not _cat.resolve_dial_opts("place", flavors.get("place")) and not any(p.get("subject") is None and not _refs.is_studio_backdrop_text(p.get("desc") or "") for p in (lab.get("pictures") or [])) and not brief:
+            lines.append(f"- Extracted Setting Baseline (when no place dial/plate overrides): {extracted_video['room']}")
     is_sex_rw = _dir.is_sexual(brief, str(flavors.get("explicit") or ""), str(flavors.get("wardrobe") or ""), fetish_id=str(flavors.get("fetish") or ""))
     is_combat_rw = _dir.is_combat(brief, str(flavors.get("combat") or ""), str(flavors.get("wardrobe") or ""), str(flavors.get("fx") or ""))
     combat_opts_rw = _cat.resolve_dial_opts("combat", flavors.get("combat"))
@@ -1202,11 +1224,15 @@ async def run_sandtie_write(
     is_duo_rw = len((lab.get("subjects") or {}).keys()) >= 2
     lines.append("Single-Thought Rhythm Example (structure guide only — fill with your active brief, cast, and dials):")
     lines.append(_pl.fence(_genre_micro_example(sex_scene=is_sex_rw, combat_scene=is_combat_rw, has_dance=is_dance_rw, mode=mode, duo=is_duo_rw, has_combat_preset=bool(combat_opts_rw), nonfight_action=is_nonfight_rw), "rhythm_example"))
-    if time_tied:
+    if using_extracted_skel:
+        lines.append("Extracted Reference Video Choreography (preserve EVERY `[Shot N]` cut boundary, camera framing/roll/zoom, visible subject slot, and chronological motion faithfully while binding wired cast, wardrobe, and place):")
+        lines.append(_pl.fence(skel, "extracted_choreography"))
+    elif time_tied:
         lines.append("Time-Tied Continuity Flow (preserve timestamps cleanly as smooth momentum bridges so action flows continuously across beats):")
         lines.append(_pl.fence(skel, "beat_skeleton"))
+    eff_brief = brief or (str(extracted_video.get("summary") or "").strip() if has_extracted else "") or "Perform the staged scene cleanly."
     lines.append("Scene Brief:")
-    lines.append(_pl.fence(brief or "Perform the staged scene cleanly.", "scene_brief"))
+    lines.append(_pl.fence(eff_brief, "scene_brief"))
     if llm_stage == "write" and plan:
         lines.append("Approved Storyboard (expand cleanly into full H3 prompt):")
         lines.append(_pl.fence(plan, "approved_plan"))

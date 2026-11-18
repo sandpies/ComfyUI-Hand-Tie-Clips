@@ -1426,9 +1426,64 @@ def register():
         conn = _llm.load_conn()
         return _llm, _planner, conn
 
+    _SWAP_LOOK_CACHE = {}
+
+    def _resolve_swap_sandtie_rules(body):
+        style_rule = str(body.get("style_rule") or "").strip()
+        talkstyle_rule = str(body.get("talkstyle_rule") or "").strip()
+        s_id = str(body.get("sandtie_style") or "").strip()
+        t_id = str(body.get("sandtie_talkstyle") or "").strip()
+        if (s_id and not style_rule) or (t_id and not talkstyle_rule):
+            try:
+                from .htc_sandtie import catalogs as _st_cat
+                if s_id and not style_rule:
+                    st = _st_cat.dial_option("style", s_id)
+                    if st:
+                        style_rule = str(st.get("rule") or st.get("prompt") or st.get("label") or "").strip()
+                if t_id and not talkstyle_rule:
+                    tk = _st_cat.dial_option("talkstyle", t_id)
+                    if tk:
+                        talkstyle_rule = str(tk.get("words") or tk.get("small") or tk.get("label") or "").strip()
+            except Exception:
+                pass
+        return style_rule, talkstyle_rule
+
+    def _swap_clip_vision(video_name, start_s, end_s, max_s=15.0):
+        """Build dense OpenCV timestamped strips + camera telemetry, falling back to 5 frames."""
+        try:
+            vpath = _media.resolve(video_name, kinds={"video"})
+            if vpath:
+                from .htc_sandtie import vision_cv as _vcv
+                bundle = _vcv.build_swap_vision_bundle(
+                    vpath, start=start_s, end=end_s, max_seconds=max(1.0, float(max_s or 15.0)))
+                urls = []
+                caps = []
+                if bundle.get("anchor_url"):
+                    urls.append(bundle["anchor_url"])
+                    caps.append(
+                        "Reference clip IN frame (0.00s, crisp starting frame). "
+                        "This is NOT a @tag. Do not write @reference_video."
+                    )
+                for su, sl in zip(bundle.get("strip_urls") or (), bundle.get("strip_labels") or ()):
+                    urls.append(su)
+                    caps.append(f"{sl} Not a @tag. Do not write @reference_video.")
+                if urls:
+                    return urls, caps, str(bundle.get("telemetry") or "")
+        except Exception as exc:
+            print(f"[{TAG}] SWAP OpenCV vision fallback ({exc!r})", flush=True)
+        raw = _media.video_frame_data_urls(video_name, start=start_s, end=end_s, count=5)
+        caps = [
+            (f"Reference clip, frame {k} of {len(raw)}, in time order"
+             f"{' (the trim IN point)' if k == 1 else ''}. Read them together to "
+             "see what the clip is DOING -- the movement between them is the action "
+             "to describe. These are NOT a @tag. Do not write @reference_video.")
+            for k in range(1, len(raw) + 1)
+        ]
+        return raw, caps, ""
+
     @instance.routes.post(SWAP_DESCRIBE_ROUTE)
     async def _swap_describe(request):
-        """Caption the clip frame at the trim IN point. No plan, no rail."""
+        """Caption the clip across its trimmed window. No plan, no rail."""
         try:
             body = await request.json()
         except Exception:
@@ -1467,15 +1522,11 @@ def register():
 
         import asyncio
 
-        # Five frames across the trimmed window, like the plan path. A caption
-        # written from one frame describes a pose, and this caption reaches the
-        # encoder as what <Video 1> IS.
         def encode():
-            return _media.video_frame_data_urls(
-                video, start=start, end=end, count=5)
+            return _swap_clip_vision(video, start, end, max_s=15.0)
 
         try:
-            frames = await asyncio.get_running_loop().run_in_executor(
+            frames, captions, telemetry = await asyncio.get_running_loop().run_in_executor(
                 None, encode)
         except Exception as exc:
             return web.json_response(
@@ -1488,11 +1539,12 @@ def register():
         async def complete_fn(messages, schema=None):
             return await _llm.complete(
                 conn["server_url"], conn["model"], messages,
-                schema=schema, temperature=conn["temperature"])
+                schema=schema, temperature=min(float(conn["temperature"]), 0.25))
 
         try:
             out = await _planner.describe_frame(
-                complete_fn=complete_fn, frames=frames)
+                complete_fn=complete_fn, frames=frames,
+                captions=captions, telemetry=telemetry)
         except _llm.LLMError as exc:
             return web.json_response({"ok": False, "error": str(exc)})
         except Exception as exc:
@@ -1547,7 +1599,7 @@ def register():
         pins = str(body.get("pins") or "").strip()
         place_rule = str(body.get("place_rule") or "").strip()
         light_rule = str(body.get("light_rule") or "").strip()
-        style_rule = str(body.get("style_rule") or "").strip()
+        style_rule, talkstyle_rule = _resolve_swap_sandtie_rules(body)
         colour_rule = str(body.get("colour_rule") or "").strip()
         # Optional look overrides arrive as finished text (a local add-on may
         # send them); a place override moves the setting off the clip.
@@ -1619,6 +1671,13 @@ def register():
         import asyncio
 
         clip = {}
+        vision_notes = []
+
+        try:
+            from .h3_ref_chain import DURATION_FRAMES as _DUR_F, FPS as _DUR_FPS
+            hop_s = _DUR_F.get(str(duration).strip(), 0) / float(_DUR_FPS or 24)
+        except Exception:
+            hop_s = 0.0
 
         rail_rows = body.get("rail_rows") if isinstance(body.get("rail_rows"), list) else []
         rail_by_tag = {
@@ -1642,7 +1701,13 @@ def register():
                 row = rail_by_tag.get(item.get("tag")) or item
                 url = _row_vision_url(row)
                 if url:
-                    images.append({"tag": item["tag"], "data_url": url})
+                    images.append({
+                        "tag": item["tag"],
+                        "file": row.get("file") or item.get("file") or "",
+                        "source": row.get("source") or "",
+                        "members": row.get("members"),
+                        "data_url": url,
+                    })
                     seen_tags.add(item["tag"])
             for extra_tag, role_label in (
                 (background_tag if background == "picture" else "", "background setting plate"),
@@ -1654,39 +1719,35 @@ def register():
                     if url:
                         images.append({
                             "tag": extra_tag,
+                            "file": (row_extra or {}).get("file") or "",
+                            "source": (row_extra or {}).get("source") or "",
+                            "members": (row_extra or {}).get("members"),
                             "caption": f"@{extra_tag} ({role_label}) is this picture:",
                             "data_url": url,
                         })
                         seen_tags.add(extra_tag)
-            # Five frames across the trimmed window, not one. A single frame
-            # is a POSE: the model described somebody standing with their hands
-            # on a bed and could not describe what the clip was DOING, because
-            # motion does not exist in one frame. The beat then fought the clip
-            # it was supposed to follow, since at cfg 1.0 a beat is additive.
-            #
-            # This is also what "video vision" is in practice: the VLMs that
-            # advertise it sample frames and present them in order. Saying the
-            # order out loud is what turns five pictures into a movement.
-            frames = _media.video_frame_data_urls(
-                video, start=start, end=end, count=5)
-            # Not the loop variable: `video_frame_data_urls` documents [] as
-            # its failure mode, and returning `frame` from an empty loop raised
-            # UnboundLocalError into the handler below -- which then blamed the
-            # identity stills and threw away the ones it had already encoded.
+
+            raw_clip_s, has_sound = _media.probe_clip(video, start=start, end=end)
+            clip["seconds"] = raw_clip_s
+            clip["sound"] = has_sound
+            eff_end = end
+            clip_window_s = None
+            if hop_s > 0 and raw_clip_s and raw_clip_s > hop_s + 0.35:
+                eff_end = start + hop_s
+                clip_window_s = hop_s
+                if end > start + 0.1 and (end - start) > hop_s + 0.5:
+                    vision_notes.append(
+                        f"Trimmed clip window ({end - start:.1f}s) exceeds the {duration} hop "
+                        f"({hop_s:.1f}s); <Video 1> ends at {hop_s:.1f}s."
+                    )
+            clip["window_s"] = clip_window_s
+
+            frames, caps, telemetry = _swap_clip_vision(
+                video, start, eff_end, max_s=(hop_s if hop_s > 0 else 15.0))
+            clip["telemetry"] = telemetry
             first = frames[0] if frames else None
-            clip.update(zip(("seconds", "sound"),
-                            _media.probe_clip(video, start=start, end=end)))
-            for k, frame in enumerate(frames, 1):
-                images.append({
-                    "caption": (
-                        f"Reference clip, frame {k} of {len(frames)}, in time "
-                        f"order{' (the trim IN point)' if k == 1 else ''}. "
-                        "Read them together to see what the clip is DOING -- "
-                        "the movement between them is the action to describe. "
-                        "These are NOT a @tag. Do not write @reference_video."
-                    ),
-                    "data_url": frame,
-                })
+            for frame_u, cap_txt in zip(frames, caps):
+                images.append({"caption": cap_txt, "data_url": frame_u})
             return images, first
 
         try:
@@ -1700,12 +1761,12 @@ def register():
                 {"ok": False, "error": "could not extract a frame at that "
                                        "IN point. Trim the clip on MEDIA."})
 
-        vision_notes = []
         _swap_calls = 0
 
         async def complete_fn(messages, schema=None):
             nonlocal _swap_calls
-            _temp = min(1.2, float(conn["temperature"]) + 0.1 * _swap_calls)
+            base_temp = min(float(conn["temperature"]), 0.25)
+            _temp = min(0.55, base_temp + 0.1 * _swap_calls)
             _swap_calls += 1
             try:
                 return await _llm.complete(
@@ -1725,14 +1786,13 @@ def register():
                 raise
 
         # Automatically describe each identity reference image (`@tag` -> `<Picture N>`)
-        # before writing the swap plan, mirroring BFS's `ref_details` VLM pass and
-        # scoping strictly to what `mode` transfers (head/hair only for `head_swap`,
-        # facial features only for `face_only`, full body + outfit for `replace_person`),
-        # while describing `background_tag` as a setting plate and `wardrobe_tag` as a garment plate!
+        # before writing the swap plan, caching by (file, mtime, mode, has_wardrobe) and
+        # scoping strictly to what `mode` transfers while stripping studio backdrop/pose prose.
         ident_looks = {}
         plate_notes = []
         ident_tag_set = set(ident_tags)
         pic_idx = 0
+        has_ward_override = bool(wardrobe_tag or wardrobe_text)
         for im in images:
             t_name = str(im.get("tag") or "").lstrip("@").strip()
             if not t_name or not im.get("data_url"):
@@ -1744,88 +1804,105 @@ def register():
                         "Describe ONLY the racial/ethnic descent (e.g. East Asian woman, Latina woman, Black woman, Caucasian woman, "
                         "judged strictly from facial bone structure and eye shape regardless of dyed/cosplay hair), skin tone, "
                         "facial bone structure, eye shape and color, hair color, and hairstyle of the person in this reference image "
-                        "in one compact noun phrase (18-28 words). State ONLY what is present using positive words (never write no, not, "
-                        "without, never, or pronouns he, she, they, their). Start with 'an East Asian woman', 'a Latina woman', 'a woman', or 'a man'."
+                        "in one compact noun phrase (18-28 words). NEVER mention background, walls, studio lighting, pose, or clothes/collar. "
+                        "State ONLY what is present using positive words (never write no, not, without, never, or pronouns he, she, they, their). "
+                        "Start with 'an East Asian woman', 'a Latina woman', 'a Black woman', 'a Caucasian woman', 'a woman', or 'a man'."
                     )
                 elif mode == "face_only":
                     look_sys = (
                         "Describe ONLY the racial/ethnic descent (judged strictly from facial bone structure and eye shape), "
                         "skin tone, facial bone structure, eye shape and color, nose, lips, and jawline of the person in this reference image "
-                        "in one compact noun phrase (15-25 words). State ONLY what is present using positive words (never write no, not, "
-                        "without, never, or pronouns he, she, they, their). Start with 'an East Asian woman', 'a Latina woman', 'a woman', or 'a man'."
+                        "in one compact noun phrase (15-25 words). NEVER mention hair, clothing, background, studio lighting, or pose. "
+                        "State ONLY what is present using positive words (never write no, not, without, never, or pronouns he, she, they, their). "
+                        "Start with 'an East Asian woman', 'a Latina woman', 'a woman', or 'a man'."
                     )
                 else:
                     cloth_clause = (
                         ""
-                        if (wardrobe_tag or wardrobe_text)
-                        else ", and exact clothing/outfit worn (colors, cut, fabric)"
+                        if has_ward_override
+                        else ", and exact visible clothing/outfit worn (colors, cut, fabric — if lower body is cropped out, describe ONLY visible upper garments without inventing lower clothes)"
                     )
                     look_sys = (
                         "Describe ONLY the physical appearance of the person in this reference image in one compact noun phrase (25-45 words): "
                         "explicit racial/ethnic descent (judged strictly from facial bone structure and eye shape regardless of dyed/cosplay hair), "
                         "skin tone, facial bone structure, eye shape and color, hair color and hairstyle, body build" + cloth_clause
-                        + ". State ONLY what is present using positive words (never write no, not, without, never, or pronouns he, she, they, their). "
+                        + ". NEVER mention the photo's background, studio walls, lighting, camera angle, or static pose. "
+                        "State ONLY what is present using positive words (never write no, not, without, never, or pronouns he, she, they, their). "
                         "Start with 'an East Asian woman', 'a Latina woman', 'a Black woman', 'a Caucasian woman', 'a woman', or 'a man'."
                     )
+                cache_scope = f"{mode}|ward={int(has_ward_override)}"
             elif t_name == background_tag and background == "picture":
                 look_sys = (
                     "Describe ONLY the room, architecture, key furniture, surface materials, and lighting of this background setting image "
                     "in one compact noun phrase (20-35 words). State ONLY what is present using positive words (never mention people, pronouns, or negations)."
                 )
+                cache_scope = "bg_plate"
             elif t_name == wardrobe_tag:
                 look_sys = (
                     "Describe ONLY the clothing, garment cut, fabric, colors, and footwear shown in this wardrobe reference image "
                     "in one compact noun phrase (15-30 words). State ONLY what is present using positive words (never mention face, hair, background, pronouns, or negations)."
                 )
+                cache_scope = "ward_plate"
             else:
                 continue
-            try:
-                look_msg = [
-                    {"role": "system", "content": look_sys},
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": f"Reference image @{t_name}:"},
-                            {"type": "image_url", "image_url": {"url": im["data_url"]}},
-                        ],
-                    },
-                ]
-                raw_look = await _llm.complete(
-                    conn["server_url"], conn["model"], look_msg, temperature=0.30
-                )
-                clean_look = _planner.scrub_swap_negations(
-                    _planner.scrub_swap_pronouns(
-                        " ".join(str(raw_look or "").split()).strip(" .\"'")
-                    )
-                )
-                if clean_look:
-                    if t_name in ident_tag_set:
-                        ident_looks[t_name] = clean_look
-                        print(f"[{TAG}] SWAP @{t_name} (<Picture {pic_idx}>, {mode}) look: {clean_look}",
-                              flush=True)
-                    elif t_name == background_tag:
-                        plate_notes.append(f"Background plate @{t_name} (<Picture {pic_idx}>): {clean_look}.")
-                    elif t_name == wardrobe_tag:
-                        plate_notes.append(f"Wardrobe plate @{t_name} (<Picture {pic_idx}>): {clean_look}.")
-            except Exception as _le:
-                print(f"[{TAG}] SWAP could not auto-describe @{t_name}: {_le!r}",
-                      flush=True)
 
-        enriched_brief = brief
-        extra_lines = [
-            f"Reference look for @{t} (<Subject {idx + 1}> in <Picture {idx + 1}>, {mode} only): {lk}."
-            for idx, (t, lk) in enumerate(ident_looks.items())
-        ] + plate_notes
-        if extra_lines:
-            enriched_brief = (
-                (brief + "\n" if brief else "")
-                + "\n".join(extra_lines)
-            ).strip()
+            ref_file = str(im.get("file") or "")
+            resolved_ref = _media.resolve(ref_file) if ref_file else None
+            mtime_ref = int(_os.path.getmtime(resolved_ref)) if (resolved_ref and _os.path.isfile(resolved_ref)) else 0
+            mem_key = (
+                resolved_ref or ref_file or t_name,
+                mtime_ref,
+                cache_scope,
+                str(im.get("source") or ""),
+                tuple(im.get("members") or ()) if isinstance(im.get("members"), list) else (),
+            )
+            clean_look = _SWAP_LOOK_CACHE.get(mem_key, "")
+            if not clean_look:
+                try:
+                    look_msg = [
+                        {"role": "system", "content": look_sys},
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": f"Reference image @{t_name}:"},
+                                {"type": "image_url", "image_url": {"url": im["data_url"]}},
+                            ],
+                        },
+                    ]
+                    raw_look = await _llm.complete(
+                        conn["server_url"], conn["model"], look_msg,
+                        temperature=0.12, max_tokens=160,
+                    )
+                    clean_look = " ".join(str(raw_look or "").split()).strip(" .\"'")
+                    try:
+                        from .htc_sandtie import vision_cv as _vcv
+                        clean_look = _vcv._clean_desc(clean_look, cap=260, strip_studio=(t_name in ident_tag_set))
+                    except Exception:
+                        pass
+                    clean_look = _planner.scrub_swap_negations(
+                        _planner.scrub_swap_pronouns(clean_look)
+                    ).strip(" .")
+                    if clean_look:
+                        if len(_SWAP_LOOK_CACHE) >= 256:
+                            _SWAP_LOOK_CACHE.clear()
+                        _SWAP_LOOK_CACHE[mem_key] = clean_look
+                except Exception as _le:
+                    print(f"[{TAG}] SWAP could not auto-describe @{t_name}: {_le!r}",
+                          flush=True)
+            if clean_look:
+                if t_name in ident_tag_set:
+                    ident_looks[t_name] = clean_look
+                    print(f"[{TAG}] SWAP @{t_name} (<Picture {pic_idx}>, {mode}) look: {clean_look}",
+                          flush=True)
+                elif t_name == background_tag:
+                    plate_notes.append(f"Background plate @{t_name} (<Picture {pic_idx}>): {clean_look}.")
+                elif t_name == wardrobe_tag:
+                    plate_notes.append(f"Wardrobe plate @{t_name} (<Picture {pic_idx}>): {clean_look}.")
 
         clean_wtext = _planner.scrub_swap_negations(_planner.scrub_swap_pronouns(wardrobe_text))
         try:
             out = await _planner.write_swap_plan(
-                enriched_brief, complete_fn=complete_fn, identity_tag=ident_tag,
+                brief, complete_fn=complete_fn, identity_tag=ident_tag,
                 identities=ident_tags,
                 rail_tags=rail_tags, images=images, duration=duration,
                 mode=mode, background=background,
@@ -1836,7 +1913,12 @@ def register():
                 place_rule=place_rule,
                 light_rule=light_rule,
                 style_rule=style_rule,
-                colour_rule=colour_rule)
+                colour_rule=colour_rule,
+                talkstyle_rule=talkstyle_rule,
+                ident_looks=ident_looks,
+                plate_looks=plate_notes,
+                video_telemetry=clip.get("telemetry") or "",
+                clip_window_s=clip.get("window_s"))
         except _llm.LLMError as exc:
             return web.json_response({"ok": False, "error": str(exc)})
         except Exception as exc:
@@ -1844,24 +1926,33 @@ def register():
             return web.json_response({"ok": False, "error": str(exc)})
         if ident_looks and out.get("swap_script") and "subject_definitions:" in out["swap_script"]:
             out["ident_looks"] = ident_looks
-            for idx, (t, lk) in enumerate(ident_looks.items()):
-                w_note = f", wearing {clean_wtext}" if clean_wtext else ""
-                if lk.lower()[:24] not in out["swap_script"].lower():
-                    out["swap_script"] = re.sub(
-                        r"(@" + re.escape(t) + r"\b)",
-                        lambda m, l_s=lk, wn=w_note: f"{m.group(1)} ({l_s}{wn})",
-                        out["swap_script"],
-                        count=1,
-                    )
-                elif clean_wtext and clean_wtext.lower() not in out["swap_script"].lower():
-                    out["swap_script"] = out["swap_script"].replace(
-                        "subject_definitions:\n",
-                        f"subject_definitions:\n<Subject {idx + 1}> wears {clean_wtext}.\n",
-                        1,
-                    )
-            out["swap_script"] = _planner.scrub_swap_negations(
-                _planner.scrub_swap_pronouns(out["swap_script"])
-            )
+            # Verify look details landed inside subject_definitions: ONLY (never inject
+            # static appearance paragraphs into detailed_description:!)
+            _sc = out["swap_script"]
+            if "summary:" in _sc:
+                _pre, _rest = _sc.split("summary:", 1)
+                for idx, (t, lk) in enumerate(ident_looks.items(), 1):
+                    _lk_head = lk.lower()[:20]
+                    _has_traits = bool(re.search(
+                        rf"<Subject\s*{idx}\s*>[^\n]*(?:woman|man|skin|hair|eyes|wearing|features)",
+                        _pre, re.I,
+                    ))
+                    if _lk_head not in _pre.lower() and not _has_traits:
+                        w_note = f", wearing {clean_wtext}" if clean_wtext else ""
+                        if re.search(r"@" + re.escape(t) + r"\b", _pre):
+                            _pre = re.sub(
+                                r"(@" + re.escape(t) + r"\b(?:\s*\(<Picture\s*\d+>\))?)",
+                                lambda m, l_s=lk, wn=w_note: f"{m.group(1)} ({l_s}{wn})",
+                                _pre,
+                                count=1,
+                            )
+                        else:
+                            _pre = _pre.rstrip() + f"\n<Subject {idx}> (@{t}) is {lk}{w_note}.\n\n"
+                    elif clean_wtext and clean_wtext.lower() not in _pre.lower():
+                        _pre = _pre.rstrip() + f"\n<Subject {idx}> wears {clean_wtext}.\n\n"
+                out["swap_script"] = _planner.scrub_swap_negations(
+                    _planner.scrub_swap_pronouns(_pre + "summary:" + _rest, subject_count=max(1, len(ident_tags)))
+                )
         if vision_notes:
             out["warnings"] = list(out.get("warnings") or []) + vision_notes
         if "ref_plan" in out:

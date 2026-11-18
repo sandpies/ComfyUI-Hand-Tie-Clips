@@ -118,11 +118,13 @@ person shown in `<Picture 1>` (`@identity_tag`): explicit racial/ethnic descent
 strictly from facial bone structure and eye shape so dyed, red, blonde, or
 cosplay hair never causes H3 to infer a generic/wrong ethnicity), skin tone,
 facial bone structure, eye shape and color, hair color and hairstyle, body
-build, and the exact clothing/outfit worn in `<Picture 1>` (unless the mode is
-`head_swap` or `face_only`, where clothing and body stay with `<Video 1>`, or a
-custom wardrobe override is specified). The Viggle Remake swap LoRA uses that
-explicit racial/ethnic and physical description in `subject_definitions:` to
-lock `<Subject 1>` onto `<Picture 1>` from frame 0.
+build, and the exact visible clothing/outfit worn in `<Picture 1>` (unless the
+mode is `head_swap` or `face_only`, where clothing and body stay with
+`<Video 1>`, or a custom wardrobe override is specified). If `<Picture 1>` is a
+close-up portrait crop, describe only visible upper garments without inventing
+unseen lower clothing. The Viggle Remake swap LoRA uses that explicit
+racial/ethnic and physical description in `subject_definitions:` to lock
+`<Subject 1>` onto `<Picture 1>` from frame 0.
 
 Leave out `<Picture 1>`'s own background, studio lighting and static pose so
 those never fight the scene and motion of `<Video 1>`.
@@ -130,6 +132,38 @@ those never fight the scene and motion of `<Video 1>`.
 Naming and describing `<Subject 1>` from `<Picture 1>` in `subject_definitions:`
 and citing `<Subject 1>` + `@identity_tag` in `detailed_description:` is what
 makes the identity transfer take hold immediately.
+
+## Keep the clip's person OUT of `detailed_description:`
+
+When reading the clip strips and frames, extract ONLY the setting, camera
+path, framing, lighting, and physical choreography. **Do not copy the original
+clip performer's face, hair color/style, glasses, headwear, or original
+clothing into `detailed_description:` when replacing them.**
+
+- In **replace_person** (or whenever a wardrobe override is set): weave
+  `<Subject 1>`'s target hair and target outfit (from `<Picture 1>` or the
+  wardrobe override) directly into the motion -- e.g. how that garment and
+  hair move as `<Subject 1>` turns, steps, or raises arms -- and never name the
+  clip person's replaced clothes or hair. At cfg 1.0, naming the clip's
+  replaced jacket, dress, cap, or hair color brings the clip person back.
+- In **head_swap**: describe the body's movement and `<Video 1>`'s clothing and
+  props accurately, while keeping `<Subject 1>`'s swapped face and hair
+  anchored to `@identity_tag` and never copying `<Picture 1>`'s clothes.
+- In **face_only**: keep `<Video 1>`'s hair, headwear, body, and clothing while
+  anchoring `<Subject 1>`'s facial features and expressions to `@identity_tag`.
+
+## Read the timeline, camera telemetry, and horizon honestly
+
+If `[CLIP TIMELINE & CAMERA MOTION]` telemetry and timestamped contact strips
+are provided, read them together from start to finish:
+- Match detected camera moves (`PUSH-IN`, `PULL-OUT`, `PAN`, `TILT`, `ROLL/SPIN`,
+  or `LOCKED`) and any shot cuts or angle switches in chronological order inside
+  `[Shot 1]` so the text never claims a static camera during a moving shot.
+- Judge tilt/roll honestly from the background horizon and floor: if the camera
+  tilts 90 degrees sideways, describe the tilted Dutch/90-degree framing rather
+  than pretending upright dancers are lying on the ground.
+- Write chronological beginning -> middle -> ending movement across `0 to N s`
+  within the hop's word budget rather than summarizing a single freeze-frame.
 
 ## Clean interaction points and zero anatomy conflicts
 

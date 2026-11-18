@@ -750,14 +750,14 @@
       "id": "tailored_black_blazer_trousers",
       "label": "Tailored Obsidian Blazer & Open Collar",
       "group": "Tailored",
-      "domain": "office_desk",
+      "domain": "general",
       "rule": "a sharp tailored black blazer worn over an unbuttoned crisp silk shirt and matching sleek trousers"
     },
     {
       "id": "crimson_satin_evening_gown",
       "label": "High-Slit Crimson Satin Gown",
       "group": "Glamour",
-      "domain": "bedroom",
+      "domain": "general",
       "rule": "a fluid floor-length crimson satin evening dress with plunging cowl neckline and high thigh slit"
     },
     {
@@ -792,7 +792,7 @@
       "id": "street_cropped_jacket_cargo",
       "label": "Cropped Moto Jacket & Utility Cargo",
       "group": "Street",
-      "domain": "combat_action",
+      "domain": "general",
       "rule": "a fitted cropped matte leather moto jacket over a ribbed tank top, dark utility cargos, and chunky combat boots"
     },
     {
@@ -869,14 +869,14 @@
       "id": "tailored_three_piece_charcoal_suit",
       "label": "Tailored — Sharp Three-Piece Charcoal Wool Suit & Silk Tie (S1/S2 Lead)",
       "group": "Tailored",
-      "domain": "office_desk",
+      "domain": "general",
       "rule": "Wearing a razor-tailored charcoal pinstripe three-piece wool suit, crisp white spread-collar dress shirt, dark silk necktie, polished Oxford shoes, and steel dress watch"
     },
     {
       "id": "tailored_silk_wrap_blouse_pencil_skirt",
       "label": "Tailored — Ivory Silk Wrap Blouse, High-Waist Pencil Skirt & Stilettos",
       "group": "Tailored",
-      "domain": "office_desk",
+      "domain": "general",
       "rule": "Wearing an ivory mulberry silk wrap blouse tucked neatly into a tailored charcoal high-waist pencil skirt with a modest back vent, paired with pointed black suede stilettos"
     },
     {
@@ -925,7 +925,7 @@
       "id": "everyday_cable_knit_sweater_thigh_socks",
       "label": "Everyday — Cozy Off-Shoulder Cable-Knit Sweater & Over-Knee Socks",
       "group": "Everyday",
-      "domain": "bedroom",
+      "domain": "general",
       "rule": "Wearing a soft cream oversized cable-knit sweater slipping effortlessly off one shoulder, fitted ribbed lounge shorts underneath, and cozy heather-grey over-the-knee knit socks"
     },
     {

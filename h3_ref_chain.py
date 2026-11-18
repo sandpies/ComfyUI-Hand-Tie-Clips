@@ -4395,7 +4395,38 @@ def _viggle_remake_conditioning(*, clip, vae, audio_vae, source, prompt,
     return positive, latent
 
 
-def _align_swap_prompt_for_guide(block, hop_pictures, hop_ords):
+def _swap_subject_bindings(block, hop_pictures):
+    """Derive ordered `<Subject N>` -> tag mapping for SWAP even when rail rows omit `subject`."""
+    raw = str(block or "")
+    # Explicit subject-bearing pictures on the hop always come first in order
+    explicit = [p for p in (hop_pictures or ()) if p.get("subject") is not None]
+    if explicit:
+        return {r["tag"]: idx + 1 for idx, r in enumerate(explicit)}
+    mode_kind = _remake_mode_kind(raw)
+    if mode_kind == "edit":
+        return {}
+    # Fallback: parse `<Subject N>` <-> `@tag` declarations in `subject_definitions:`
+    pic_tags = {r["tag"]: idx + 1 for idx, r in enumerate(hop_pictures or ()) if r.get("tag")}
+    defs = raw.split("summary:", 1)[0] if "summary:" in raw else raw
+    out = {}
+    for line in defs.splitlines():
+        m_sub = re.search(r"<Subject\s*(\d+)\s*>", line, re.I)
+        if not m_sub:
+            continue
+        s_num = int(m_sub.group(1))
+        for m_tag in re.finditer(r"@([A-Za-z0-9_]+)", line):
+            tg = m_tag.group(1)
+            if tg in pic_tags and tg not in out:
+                out[tg] = s_num
+    if out:
+        return out
+    # Last resort for 1-picture non-edit swap when user didn't assign Role on REFERENCES
+    if len(hop_pictures or ()) == 1 and hop_pictures[0].get("tag"):
+        return {hop_pictures[0]["tag"]: 1}
+    return {}
+
+
+def _align_swap_prompt_for_guide(block, hop_pictures, hop_ords, swap_subj_map=None):
     """Align a swap/edit prompt with Viggle Remake's six-section contract:
     1. `subject_definitions:` (<Video 1> source clip, <Picture N> frames, <Subject N> character)
     2. `summary:` ([video editing + character replacement] or [video editing + scene editing])
@@ -4407,6 +4438,7 @@ def _align_swap_prompt_for_guide(block, hop_pictures, hop_ords):
     text = str(block or "")
     mode_kind = _remake_mode_kind(text)
     is_head = text.lstrip().lower().startswith("head_swap:")
+    is_face_only = "facial features of <Subject" in text
     # Strip internal mode/pin headers before tokenizing for Qwen3-VL
     text = re.sub(
         r"^\s*(?:(?:remake_swap|remake_edit|body_swap|head_swap|edit_swap|keep_person)\s*:\s*\n?|"
@@ -4415,9 +4447,15 @@ def _align_swap_prompt_for_guide(block, hop_pictures, hop_ords):
         text,
         flags=re.I,
     )
+    # Collapse `(<Picture|Subject N>) (@tag)` cleanly without corrupting nested parens
     text = re.sub(
         r"(<(?:Picture|Subject)\s+\d+>)\s*\(\s*@[A-Za-z0-9_]+\s*\)",
         r"\1",
+        text,
+    )
+    text = re.sub(
+        r"@([A-Za-z0-9_]+)\s*\((<Picture\s+\d+>)\)",
+        lambda m: f"{m.group(2)}" if m.group(1) in (hop_ords or {}) else m.group(0),
         text,
     )
     for tag, ord_n in (hop_ords or {}).items():
@@ -4428,11 +4466,18 @@ def _align_swap_prompt_for_guide(block, hop_pictures, hop_ords):
             text,
             flags=re.I,
         )
-    id_pics = [r for r in (hop_pictures or []) if r.get("subject") is not None]
+    subj_map = dict(swap_subj_map) if swap_subj_map is not None else _swap_subject_bindings(text, hop_pictures)
+    id_pics = [r for r in (hop_pictures or []) if (r.get("subject") is not None or r.get("tag") in subj_map)]
+    bg_replaced = (mode_kind == "edit") or bool(re.search(
+        r"instead of (?:the clip|<Video 1>)|setting comes from|background plate",
+        text, re.I,
+    ))
     if "subject_definitions:" in text and "summary:" in text:
         pre, rest = text.split("summary:", 1)
         for tag, ord_n in (hop_ords or {}).items():
-            pre = re.sub(r"@" + re.escape(tag) + r"\b", f"<Picture {ord_n}>", pre)
+            pic_tok = f"<Picture {ord_n}>"
+            pre = re.sub(r"@" + re.escape(tag) + r"\b(?:\s*\(" + re.escape(pic_tok) + r"\))?", pic_tok, pre)
+            pre = re.sub(re.escape(pic_tok) + r"\s*\(\s*" + re.escape(pic_tok) + r"\s*\)", pic_tok, pre)
         if is_head:
             pre = re.sub(
                 r";\s*[^.\n]*?\bwearing\b[^.\n]*?(?=\s+shown\s+in\s+<Picture|\.)",
@@ -4443,10 +4488,16 @@ def _align_swap_prompt_for_guide(block, hop_pictures, hop_ords):
         defs_body = pre.split("subject_definitions:", 1)[-1].strip()
         prefix_lines = []
         if "<Video 1> is the source video" not in defs_body:
-            prefix_lines.append(
-                "<Video 1> is the source video for the editing task: one continuous shot "
-                "supplying the scene, camera movement, framing, timing and performance."
-            )
+            if bg_replaced:
+                prefix_lines.append(
+                    "<Video 1> is the source video for the editing task: one continuous shot "
+                    "supplying the camera movement, framing, timing and subject motion."
+                )
+            else:
+                prefix_lines.append(
+                    "<Video 1> is the source video for the editing task: one continuous shot "
+                    "supplying the scene, camera movement, framing, timing and performance."
+                )
         if hop_ords and not re.search(r"<Picture\s+1>\s+(?:is|and\s+<Picture)", defs_body):
             pic_labels = [f"<Picture {i + 1}>" for i in range(len(hop_ords))]
             if len(pic_labels) == 1:
@@ -4456,21 +4507,20 @@ def _align_swap_prompt_for_guide(block, hop_pictures, hop_ords):
                     ", ".join(pic_labels[:-1]) + f" and {pic_labels[-1]} are reference frames "
                     "of the target video from [Shot 1]."
                 )
+        has_ward_override = bool(re.search(r"\bwears\b", defs_body, re.I))
         for idx, r in enumerate(id_pics):
             p_ord = (hop_ords or {}).get(r["tag"], idx + 1)
+            s_ord = subj_map.get(r["tag"], idx + 1)
             desc = str(r.get("desc") or "").strip().rstrip(".")
-            if desc and desc.lower()[:20] not in defs_body.lower():
-                if is_head:
-                    prefix_lines.append(
-                        f"<Subject {idx + 1}> in <Picture {p_ord}> has {desc}; only the head, "
-                        f"face, hair and skin tone come from <Picture {p_ord}> while the body "
-                        "and clothing stay those of <Video 1>."
-                    )
-                else:
-                    prefix_lines.append(
-                        f"<Subject {idx + 1}> in <Picture {p_ord}> is {desc}, replacing the "
-                        "performer in <Video 1>."
-                    )
+            already_described = bool(re.search(
+                rf"<Subject\s*{s_ord}\s*>[^\n]*(?:woman|man|skin|hair|eyes|face|build|features|wearing)",
+                defs_body, re.I,
+            ))
+            if desc and not already_described and not is_head and not is_face_only and not has_ward_override and desc.lower()[:20] not in defs_body.lower():
+                prefix_lines.append(
+                    f"<Subject {s_ord}> in <Picture {p_ord}> is {desc}, replacing the "
+                    "performer in <Video 1>."
+                )
         combined_defs = ("\n".join(prefix_lines) + ("\n" + defs_body if defs_body else "")).strip()
         text = "subject_definitions:\n" + combined_defs + "\n\nsummary:" + rest
 
@@ -4490,16 +4540,29 @@ def _align_swap_prompt_for_guide(block, hop_pictures, hop_ords):
     # Inject retention_analysis: between summary: and detailed_description: if absent
     if "retention_analysis:" not in text and "detailed_description:" in text:
         ret_lines = [
-            "<Video 1> (source video editing): fully_preserved - the single continuous shot, "
-            "the camera framing and movement, the lighting, and the motion and timing of every "
-            "action are copied frame for frame."
+            (
+                "<Video 1> (source video editing): fully_preserved - the camera framing and "
+                "movement, and the motion and timing of every action are copied frame for frame."
+                if bg_replaced else
+                "<Video 1> (source video editing): fully_preserved - the single continuous shot, "
+                "the camera framing and movement, the lighting, and the motion and timing of every "
+                "action are copied frame for frame."
+            )
         ]
         for idx, r in enumerate(hop_pictures or []):
             p_ord = (hop_ords or {}).get(r["tag"], idx + 1)
-            if is_head and r.get("subject") is not None:
+            is_id = (r.get("subject") is not None) or (r.get("tag") in subj_map)
+            s_ord = subj_map.get(r["tag"], idx + 1)
+            if is_head and is_id:
                 ret_lines.append(
                     f"<Picture {p_ord}> (appears in [Shot 1]): reference - a frame of the target "
-                    f"video. The face, head, hair and skin tone of <Subject {idx + 1}> are taken "
+                    f"video. The face, head, hair and skin tone of <Subject {s_ord}> are taken "
+                    f"from <Picture {p_ord}>."
+                )
+            elif is_face_only and is_id:
+                ret_lines.append(
+                    f"<Picture {p_ord}> (appears in [Shot 1]): reference - a frame of the target "
+                    f"video. The facial features of <Subject {s_ord}> are taken "
                     f"from <Picture {p_ord}>."
                 )
             else:
@@ -4511,8 +4574,9 @@ def _align_swap_prompt_for_guide(block, hop_pictures, hop_ords):
         if id_pics:
             for idx, r in enumerate(id_pics):
                 p_ord = (hop_ords or {}).get(r["tag"], idx + 1)
+                s_ord = subj_map.get(r["tag"], idx + 1)
                 ret_lines.append(
-                    f"<Subject {idx + 1}> (appears in [Shot 1]): fully_preserved - the appearance "
+                    f"<Subject {s_ord}> (appears in [Shot 1]): fully_preserved - the appearance "
                     f"from <Picture {p_ord}> stays identical in every frame."
                 )
         else:
@@ -4524,7 +4588,12 @@ def _align_swap_prompt_for_guide(block, hop_pictures, hop_ords):
         text = text.replace("detailed_description:", ret_block + "detailed_description:", 1)
 
     # Clean internal (VISUAL) / (SOUND) markers into Viggle Remake timestamped Shot 1 format
-    text = re.sub(r"\[Shot 1\]\s*0\s*to\s*\d+(?:\.\d+)?\s*s\s*\n?\s*\(VISUAL\)\s*", "[Shot 1] At 00:00.000 ", text)
+    text = re.sub(
+        r"\[Shot 1\]\s*(?:\d+(?:\.\d+)?\s*(?:to|-)\s*\d+(?:\.\d+)?\s*s?\s*)?\n?\s*\(VISUAL\)\s*",
+        "[Shot 1] At 00:00.000 ",
+        text,
+        flags=re.I,
+    )
     text = re.sub(r"\(VISUAL\)\s*", "", text)
     text = re.sub(r"\n?\s*\(SOUND\)\s*[^\n]*", "", text)
     return text
@@ -9282,13 +9351,11 @@ class HandTieClips:
                 # bowl" into a steel one. `continuity_line` rides every
                 # continuation hop and is what the name binds to.
                 if swap:
+                    _subj_map = _swap_subject_bindings(block, hop_pictures)
                     block = _align_swap_prompt_for_guide(
-                        block, hop_pictures, hop_ords)
-                _subj_map = (
-                    {r["tag"]: idx + 1
-                     for idx, r in enumerate([p for p in hop_pictures if p.get("subject") is not None])}
-                    if swap else _refs.subjects(ref_plan_refs)
-                )
+                        block, hop_pictures, hop_ords, swap_subj_map=_subj_map)
+                else:
+                    _subj_map = _refs.subjects(ref_plan_refs)
                 block = _refs.resolve_tags(
                     block, hop_ords, _subj_map,
                     where=f"shot {i + 1}",

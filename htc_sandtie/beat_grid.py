@@ -47,6 +47,34 @@ def stamp(sec: float) -> str:
     return f"{m:02d}:{r:06.3f}"
 
 
+def h3_video_length_from_seconds(seconds: float, fps: int = 24) -> int:
+    """Return frame count rounded up onto MiniMax H3's 24 fps 5 + 17k grid."""
+    sec = max(0.0, float(seconds or 0.0))
+    frames = max(5, int(round(sec * int(fps or 24))))
+    return frames + (5 - frames % 17) % 17
+
+
+def snap_h3_duration(seconds: float, fps: int = 24) -> tuple[int, float]:
+    """Return `(frames, snapped_seconds_3dp)` on MiniMax H3's 24 fps 5 + 17k grid."""
+    frames = h3_video_length_from_seconds(seconds, fps=fps)
+    return frames, round(frames / float(fps or 24), 3)
+
+
+def h3_length_grid(min_k: int = 4, max_k: int = 22, fps: int = 24) -> list[dict]:
+    """Enumerate supported MiniMax H3 24 fps `5 + 17k` frame/second lengths."""
+    rows = []
+    for k in range(int(min_k), int(max_k) + 1):
+        frames = 5 + 17 * k
+        sec = frames / float(fps or 24)
+        rows.append({
+            "k": k,
+            "frames": frames,
+            "seconds_3dp": round(sec, 3),
+            "seconds_2dp": round(sec, 2),
+        })
+    return rows
+
+
 def aspect_bucket(aspect: str = "") -> str:
     s = str(aspect or "").strip()
     m = re.search(r"(\d+)\s*:\s*(\d+)", s)
@@ -389,6 +417,31 @@ def camera_trajectory_plan(
     if cid == "mirror_reveal" and n >= 2:
         return (
             f"MIRROR PAN-OFF REVEAL LAW: Open {ts_list[0]} framed inside a clear mirror reflection; across {', '.join(ts_list[1:])}, pan smoothly off the mirror frame directly onto the live person inside the room."
+        )
+
+    if cid == "cam_kpop_inkigayo_ronin_hand_drop" and n >= 3:
+        return (
+            f"K-POP HAND-MOTIVATED GIMBAL LAW: {ts_list[0]}, push tight toward outstretched fingertips; {ts_list[1]}, snap camera sharply downward with micro-shake on hand drop and whip laterally along pointed fingers; {ts_list[-1]}, rise smoothly to a hero wide chorus hold."
+        )
+
+    if cid == "cam_kpop_tutting_arm_window_frame" and n >= 3:
+        return (
+            f"K-POP ARM-WINDOW FRAME LAW: Open {ts_list[0]} looking cleanly through the foreground dancer's 90-degree forearm-and-finger box onto the partner's eyes; {ts_list[1]}, punch straight through the wrist window into crisp synchronized close-ups; {ts_list[-1]}, snap wide on matched fingertip locks."
+        )
+
+    if cid == "cam_kpop_through_wall_match_truck" and n >= 2:
+        return (
+            f"K-POP MATCH-TRUCK WIPE LAW: Track continuously horizontally across {ts_list[0]}, wipe briskly past a solid vertical wall or pillar edge on the cut beat, and emerge across {', '.join(ts_list[1:])} onto the matched dance pose under transformed lighting."
+        )
+
+    if cid == "cam_kpop_anti_drop_macro_to_crane" and n >= 3:
+        return (
+            f"K-POP ANTI-DROP MACRO-TO-CRANE LAW: Open {ts_list[0]} tightly on geometric finger-tutting locks beside one eye holding a crisp anti-drop freeze; across {', '.join(ts_list[1:])}, boom rapidly backward and high onto a sweeping crane wide revealing explosive footwork."
+        )
+
+    if cid == "cam_combat_kinetic_whip_zoom_ultimate" and n >= 3:
+        return (
+            f"COMBAT WHIP-TO-ULTIMATE ZOOM LAW: Dart fast laterally with punches ({ts_list[0]}), drop low on sweeps and tilt steeply up on mid-air clashes ({ts_list[1]}), snap-zoom tightly inward onto the signature ultimate attack ({ts_list[-2] if n >= 3 else ts_list[-1]}), and whip wide across crash debris ({ts_list[-1]})."
         )
 
     if has_bg_plate and cid:

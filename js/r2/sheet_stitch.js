@@ -23,6 +23,7 @@ export const ARRANGEMENTS = [
     { id: "hero_left", label: "Hero left", tip: "First still big on the left, the rest stacked beside it." },
     { id: "hero_right", label: "Hero right", tip: "First still big on the right, the rest stacked beside it." },
     { id: "hero_top", label: "Hero top", tip: "First still big on top, the rest underneath." },
+    { id: "lossless", label: "Lossless (1:1 pixels)", tip: "Every still at its own pixel size, nothing resized or cropped; the tightest rows-or-columns packing is picked automatically. With \"Fit for H3\" the short side is a ceiling, not a target." },
 ];
 
 export const SHEET_DEFAULTS = {
@@ -180,12 +181,117 @@ function layoutContent(items, opts, gap) {
 }
 
 /**
+ * Lossless packing: every still at its native pixel size, on integer pixels, in
+ * groups along `axis` ("rows": left to right, groups stacked down; "cols": top
+ * to bottom, groups side by side). Nothing is scaled, so the saved PNG holds
+ * each still byte-for-byte (drawImage at 1:1 on whole pixels is a plain copy).
+ */
+function packLossless(items, counts, axis, gap, align) {
+    const f = align === "start" ? 0 : align === "end" ? 1 : 0.5;
+    const along = (it) => (axis === "rows" ? it.w : it.h);
+    const across = (it) => (axis === "rows" ? it.h : it.w);
+    const groups = [];
+    let k = 0;
+    for (const c of counts) {
+        const g = items.slice(k, k + c).map((it, j) => ({ it, i: k + j }));
+        k += c;
+        groups.push({
+            g,
+            len: g.reduce((s, { it }) => s + along(it), 0) + gap * (c - 1),
+            thick: Math.max(...g.map(({ it }) => across(it))),
+        });
+    }
+    const LEN = Math.max(...groups.map((x) => x.len));
+    const THICK = groups.reduce((s, x) => s + x.thick, 0) + gap * (groups.length - 1);
+    const rects = [];
+    let a = 0;
+    for (const grp of groups) {
+        let p = Math.round((LEN - grp.len) * f);
+        for (const { it, i } of grp.g) {
+            const q = a + Math.round((grp.thick - across(it)) * f);
+            rects.push(axis === "rows" ? { i, x: p, y: q, w: it.w, h: it.h } : { i, x: q, y: p, w: it.w, h: it.h });
+            p += along(it) + gap;
+        }
+        a += grp.thick + gap;
+    }
+    return axis === "rows" ? { rects, w: LEN, h: THICK } : { rects, w: THICK, h: LEN };
+}
+
+/**
+ * "Lossless" arrangement: tries every row count and every column count (order
+ * kept) at 1:1 pixels and keeps the tightest one. With size_mode "short" the
+ * short side is a CEILING: only packings whose short side fits short_px are
+ * considered; when none can fit without resizing, the one with the smallest
+ * short side is used and `overLimit` says so. Stills are only ever shrunk when
+ * the sheet would pass the browser canvas limit (`clamped`).
+ */
+function layoutLossless(items, opts) {
+    const n = items.length;
+    const align = opts.align || "center";
+    const split = parseSplit(opts.split, n);
+    const fixed = split || (opts.rows > 0 ? balancedCounts(n, opts.rows) : null);
+    const countSets = fixed ? [fixed] : Array.from({ length: n }, (_, r) => balancedCounts(n, r + 1));
+    const axes = fixed ? ["rows"] : ["rows", "cols"];
+    const limit = opts.size_mode === "short"
+        ? Math.max(256, Math.min(MAX_SIDE, Math.round(Number(opts.short_px) || 2048)))
+        : Infinity;
+    const area = items.reduce((s, it) => s + it.w * it.h, 0);
+    const marginPct = Math.max(0, Number(opts.margin_pct) || 0);
+    const gapPct = opts.link_gap ? marginPct : Math.max(0, Number(opts.gap_pct) || 0);
+
+    const score = (c) => (1 - area / (c.W * c.H)) + 0.25 * Math.abs(Math.log((c.W / c.H) / AUTO_ASPECT));
+    function choose(gap, margin) {
+        const all = [];
+        for (const axis of axes) for (const counts of countSets) {
+            const b = packLossless(items, counts, axis, gap, align);
+            all.push({ ...b, W: b.w + 2 * margin, H: b.h + 2 * margin });
+        }
+        const canvasOk = all.filter((c) => c.W <= MAX_SIDE && c.H <= MAX_SIDE && c.W * c.H <= MAX_AREA);
+        const pool = canvasOk.length ? canvasOk : all;
+        const fits = pool.filter((c) => Math.min(c.W, c.H) <= limit);
+        const best = fits.length
+            ? fits.reduce((p, c) => (score(c) < score(p) - 1e-9 ? c : p))
+            : pool.reduce((p, c) => {
+                const d = Math.min(c.W, c.H) - Math.min(p.W, p.H);
+                return d < 0 || (d === 0 && score(c) < score(p)) ? c : p;
+            });
+        return { best, fits: fits.length > 0 };
+    }
+    // Margin / gap % refer to the side of a square holding all the stills, not to
+    // the packing's long side: a long strip would otherwise get huge gaps that
+    // push it over the short-side ceiling.
+    const S = Math.sqrt(area);
+    const gap = Math.round(gapPct / 100 * S);
+    const margin = Math.round(marginPct / 100 * S);
+    const { best, fits } = choose(gap, margin);
+
+    let K = Math.min(1, MAX_SIDE / best.W, MAX_SIDE / best.H, Math.sqrt(MAX_AREA / (best.W * best.H)));
+    const clamped = K < 1;
+    const rects = best.rects.map((r) => (clamped
+        ? { i: r.i, x: (r.x + margin) * K, y: (r.y + margin) * K, w: r.w * K, h: r.h * K }
+        : { i: r.i, x: r.x + margin, y: r.y + margin, w: r.w, h: r.h }));
+    return {
+        width: Math.max(1, Math.round(best.W * K)),
+        height: Math.max(1, Math.round(best.H * K)),
+        rects,
+        scale: K,
+        clamped,
+        maxUpscale: K,
+        minScale: K,
+        lossless: !clamped,
+        overLimit: Number.isFinite(limit) && !fits,
+        limit,
+    };
+}
+
+/**
  * items: [{w, h}] native pixel sizes, in sheet order (hero = first).
  * -> { width, height, rects: [{i, x, y, w, h}] in pixels, scale, clamped, maxUpscale }
  */
 export function layoutSheet(items, options = {}) {
     const opts = { ...SHEET_DEFAULTS, ...options };
     if (!items.length) return { width: 0, height: 0, rects: [], scale: 0, clamped: false, maxUpscale: 0, minScale: 0 };
+    if (opts.arrangement === "lossless") return layoutLossless(items, opts);
     // Pass 1 without gaps fixes the reference size the percentages refer to.
     const c0 = layoutContent(items, opts, 0);
     const S = Math.max(c0.w, c0.h);
@@ -241,6 +347,7 @@ function iconSvg(id) {
         hero_left: [[1, 1, 7, 10], [9, 1, 3, 3], [13, 1, 2, 3], [9, 5, 3, 3], [13, 5, 2, 3], [9, 9, 6, 2]],
         hero_right: [[1, 1, 3, 3], [5, 1, 2, 3], [1, 5, 3, 3], [5, 5, 2, 3], [1, 9, 6, 2], [8, 1, 7, 10]],
         hero_top: [[1, 1, 14, 6], [1, 8, 4, 3], [6, 8, 4, 3], [11, 8, 4, 3]],
+        lossless: [[1, 1, 4, 6], [6, 1, 5, 4], [12, 1, 3, 5], [1, 8, 6, 3], [8, 7, 3, 4], [12, 7, 3, 4]],
     }[id] || [];
     const ns = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(ns, "svg");
@@ -295,7 +402,7 @@ export function createSheetMaker({ getFiles, getState, save, getSlug, onSaved } 
     const arrGrid = el("div", "r2-sh-arr");
     const arrBtns = {};
     for (const a of ARRANGEMENTS) {
-        const b = el("button", "r2-sh-arrbtn");
+        const b = el("button", a.id === "lossless" ? "r2-sh-arrbtn r2-sh-arrwide" : "r2-sh-arrbtn");
         b.type = "button";
         b.title = a.tip;
         b.append(iconSvg(a.id), el("span", null, a.label));
@@ -367,7 +474,10 @@ export function createSheetMaker({ getFiles, getState, save, getSlug, onSaved } 
         save(); schedule();
     });
     shortHead.append(el("span", null, "Short side (px)"), shortIn);
-    shortWrap.append(shortHead, el("div", "r2-sh-hint", "2048 = the largest input H3 takes in well; the long side follows the layout."));
+    const SHORT_HINT = "2048 = the largest input H3 takes in well; the long side follows the layout.";
+    const SHORT_HINT_LOSSLESS = "Lossless: a ceiling. Stills stay 1:1, so the packing whose short side fits under this is picked; nothing is resized up or down.";
+    const shortHint = el("div", "r2-sh-hint", SHORT_HINT);
+    shortWrap.append(shortHead, shortHint);
     spSec.appendChild(shortWrap);
     const sizeS = slider(spSec, "Overall image size", "size_pct", 25, 200, 5, (v) => `${v} %`,
         "100 % = every still keeps all its pixels (the smallest-drawn one at 1:1; a hero is enlarged to fit). Lower it for a smaller file.");
@@ -435,6 +545,8 @@ export function createSheetMaker({ getFiles, getState, save, getSlug, onSaved } 
         paint(cv.getContext("2d"), L, p.imgs, st().background, k);
         const mp = (L.width * L.height / 1e6).toFixed(1);
         let txt = `${L.width}×${L.height} · ${mp} MP · ${n} still${n === 1 ? "" : "s"}`;
+        if (L.lossless) txt += " · lossless 1:1";
+        if (L.overLimit) txt += ` · short side ${Math.min(L.width, L.height)} > ${L.limit}: no 1:1 packing fits (use Native pixels, or fewer/smaller stills)`;
         if (L.minScale < 0.999) txt += ` · stills shrunk to ${Math.round(L.minScale * 100)} %`;
         if (L.maxUpscale > 1.001) txt += ` · largest enlarged ${L.maxUpscale.toFixed(2)}×`;
         if (L.clamped) txt += " · capped at canvas limit";
@@ -501,7 +613,9 @@ export function createSheetMaker({ getFiles, getState, save, getSlug, onSaved } 
         gapS.set(s.gap_pct);
         sizeS.set(s.size_pct);
         const shortMode = s.size_mode === "short";
-        sizeS.wrap.style.display = shortMode ? "none" : "";
+        const lossless = s.arrangement === "lossless";
+        sizeS.wrap.style.display = shortMode || lossless ? "none" : "";
+        shortHint.textContent = lossless ? SHORT_HINT_LOSSLESS : SHORT_HINT;
         shortWrap.style.display = shortMode ? "" : "none";
         if (document.activeElement !== shortIn) shortIn.value = String(s.short_px);
         for (const [k, b] of Object.entries(sizeModeBtns)) b.classList.toggle("h3e-refmod-chip-on", k === s.size_mode);

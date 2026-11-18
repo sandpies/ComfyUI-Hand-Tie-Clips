@@ -225,6 +225,10 @@ def build_user_turn(stage, brief, *, mode, lab, duration_s, start_image=False,
     if start_image:
         lines.append("The start picture is attached as the last image. It is the first "
                      "frame: describe [Shot 1] from it, in words, with no label.")
+    elif mode == "Ref2VA":
+        lines.append("Keep every <Subject N> whitespace-separated (write 'the coat of <Subject 1>', "
+                     "never '<Subject 1>\\'s coat'), keep subject_definitions static, and only "
+                     "use [keyframe completion] if a rail <Picture N> is explicitly a concrete first/last frame anchor.")
     if str(prev_hop_context or "").strip():
         lines += [
             "",
@@ -247,15 +251,30 @@ def build_user_turn(stage, brief, *, mode, lab, duration_s, start_image=False,
 _SHOT = re.compile(r"\[Shot (\d+)\]\s*(At (\d+):(\d+(?:\.\d+)?))?", re.I)
 _RANGE = re.compile(r"\bAt (\d+):(\d+(?:\.\d+)?)\s*-\s*(\d+):(\d+(?:\.\d+)?)", re.I)
 _NEG = re.compile(r"\b(no|not|never|without|avoid|don't|doesn't|isn't|can't|won't)\b", re.I)
-_DLG = re.compile(r"<d>.*?</d>", re.S | re.I)
+_DLG = re.compile(r"<d>(.*?)</d>", re.S | re.I)
 _LABEL = re.compile(r"<(Picture|Subject|Video|Audio) (\d+)>")
+_ALLOWED_TASK_TAGS = {
+    "keyframe completion",
+    "reference generation",
+    "video editing",
+    "video continuation",
+    "audio reuse",
+    "audio reference",
+}
+_TEMPLATE_LEAK = re.compile(r"\{[^{}\n]{2,60}\}")
+_MEDIA_RANGE = re.compile(r"<(Picture|Video|Audio)\s+\d+>\s*(?:-|to|through|\u2013|\u2014)\s*<\1\s+\d+>", re.I)
+_SPEECH_EMPTY_D = re.compile(
+    r"^(?:\[(?:English|Spanish|Japanese|Korean|Mandarin|Cantonese|Chinese|French|German|Italian|Portuguese|Russian|Arabic|Hindi|Lang)\]\s*)?"
+    r"(?:[\(\[]?(?:no\s+dialogue[^)\]]*|no\s+speech[^)\]]*|silent(?:\s+focus)?|silence|none|n/?a|\.{2,})[\)\]]?\.?)?$",
+    re.I,
+)
 
 
 def _secs(m, a, b):
     return int(m.group(a)) * 60 + float(m.group(b))
 
 
-def contract_errors(block, *, mode, lab, duration_s):
+def contract_errors(block, *, mode, lab, duration_s, start_image=None):
     """What would misparse or misdirect the encoder. -> [error strings]."""
     t = str(block or "")
     errs = []
@@ -263,6 +282,10 @@ def contract_errors(block, *, mode, lab, duration_s):
         return ["the block is empty"]
     if "```" in t:
         errs.append("remove the markdown fences: the block is pasted as is")
+    if _TEMPLATE_LEAK.search(t):
+        errs.append("remove any unreplaced {placeholder} template tokens")
+    if _MEDIA_RANGE.search(t):
+        errs.append("list each <Picture N> / <Audio N> individually; never write range shorthand")
     fields = REF2VA_FIELDS if mode == "Ref2VA" else T2VA_FIELDS
     pos = [t.find(f) for f in fields]
     missing = [f for f, p in zip(fields, pos) if p < 0]
@@ -306,8 +329,21 @@ def contract_errors(block, *, mode, lab, duration_s):
             if ("Audio", n) not in used:
                 errs.append(f"<Audio {n}> is on the rail but never cited")
         summ = _field(t, "summary:")
-        if summ and not re.match(r"\s*\[[^\]]+\]", summ):
-            errs.append("summary must open with its [task type], e.g. [reference generation]")
+        if summ:
+            m_sum = re.match(r"\s*\[([^\]]+)\]", summ)
+            if not m_sum:
+                errs.append("summary must open with its [task type], e.g. [reference generation]")
+            else:
+                sum_tags = [x.strip().lower() for x in m_sum.group(1).split("+") if x.strip()]
+                if not sum_tags or len(sum_tags) != len(set(sum_tags)):
+                    errs.append(f"summary task prefix `[{m_sum.group(1)}]` must not repeat or leave empty task types")
+                unknown_tags = [x for x in sum_tags if x not in _ALLOWED_TASK_TAGS]
+                if unknown_tags:
+                    errs.append("summary uses unsupported task type(s): " + ", ".join(unknown_tags))
+                if start_image is False and "keyframe completion" in sum_tags:
+                    pic_descs = " ".join(str(p.get("desc") or "") for p in (lab.get("pictures") or []))
+                    if not re.search(r"\b(?:first\s+frame|last\s+frame|final\s+frame|keyframe|frame\s*0|anchor\s+at)\b", pic_descs, re.I):
+                        errs.append("omit `keyframe completion` from summary when no start/keyframe anchor picture is wired")
         ret = _field(t, "retention_analysis:")
         for n in sorted(subs):
             if not re.search(rf"^\s*<Subject {n}>", ret, re.M):
@@ -328,8 +364,15 @@ def contract_errors(block, *, mode, lab, duration_s):
     else:
         if shots[0].group(1) != "1" or shots[0].group(2):
             errs.append("[Shot 1] comes first and has no timestamp")
+        expected_shot_n = 1
         last = 0.0
-        for m in shots[1:]:
+        for idx, m in enumerate(shots):
+            shot_n = int(m.group(1))
+            if shot_n != expected_shot_n:
+                errs.append(f"found [Shot {shot_n}], expected [Shot {expected_shot_n}] in sequence")
+            expected_shot_n = shot_n + 1
+            if idx == 0:
+                continue
             if not m.group(2):
                 errs.append(f"[Shot {m.group(1)}] needs `At MM:SS.mmm,`")
                 continue
@@ -342,13 +385,20 @@ def contract_errors(block, *, mode, lab, duration_s):
         if _secs(m, 3, 4) > float(duration_s) + 0.05:
             errs.append(f"the range ending at {_secs(m, 3, 4):.3f}s runs past the "
                         f"{float(duration_s):.2f}s clip")
+    for wf in ("overall_soundscape:", "non_diegetic_music:"):
+        wf_body = _field(t, wf)
+        if wf_body and ("<d>" in wf_body.lower() or "</d>" in wf_body.lower()):
+            errs.append(f"remove <d> dialogue tags from `{wf}`")
     outside = _DLG.sub(" ", t)
     neg = sorted({w.lower() for w in _NEG.findall(outside)})
     if neg:
         errs.append("the paste is additive: rewrite every negation as what IS there "
                     f"({', '.join(neg)})")
     for d in _DLG.findall(t):
-        if re.search(r"[‘’“” ]", d):
+        if not d.strip() or _SPEECH_EMPTY_D.match(d.strip()):
+            errs.append("omit silent <d> lines completely rather than putting 'no dialogue' or empty text inside <d>...</d>")
+            break
+        if re.search(r"[‘’“”\xa0]", d):
             errs.append("straight quotes and plain spaces inside <d> lines")
             break
     return errs
@@ -417,7 +467,8 @@ async def write(stage, brief, *, complete_fn, ref_plan="", duration_s=10.0,
 
     def consume(reply, attempt, sch):
         blk = parse_reply(reply, "write")
-        errs = contract_errors(blk, mode=mode, lab=lab, duration_s=duration_s)
+        errs = contract_errors(blk, mode=mode, lab=lab, duration_s=duration_s,
+                               start_image=bool(start_image))
         # Notes only on a block that passed: a broken one would mostly report
         # its own breakage. Never handed back to the model (see block_checks).
         try:

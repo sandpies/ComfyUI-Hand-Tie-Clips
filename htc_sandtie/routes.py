@@ -470,7 +470,7 @@ def register_sandtie_routes(instance, web) -> None:
             if found:
                 conn["model"] = found[0]["id"]
 
-        async def complete_fn(messages, schema=None, temperature=0.25, max_tokens=2200):
+        async def complete_fn(messages, schema=None, temperature=0.2, max_tokens=3600):
             return await _llm.complete(conn["server_url"], conn["model"], messages, schema=schema, temperature=temperature, max_tokens=max_tokens)
 
         try:

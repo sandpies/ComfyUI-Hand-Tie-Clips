@@ -4,7 +4,8 @@
   "pacing_rules": {
     "motion_language": "Describe smooth natural speed transitions ('glides gently', 'snaps crisply', 'rolls steadily') rather than numeric Hz values.",
     "anatomy_order": "State bone, hip, and shoulder trajectory first, adding 'with natural soft-tissue movement' during drops or shimmies.",
-    "orientation_lock": "State initial body angle toward or away from camera in [Shot 1], keeping left/right hand placement concrete in every beat."
+    "orientation_lock": "State initial body angle toward or away from camera in [Shot 1], keeping left/right hand placement concrete in every beat.",
+    "fingertip_rule": "Articulate choreography down to wrists, palms, knuckles, and individual fingers (sequential pinky-to-thumb curls, 90-degree wrist hinges, interlocked finger-tutting frames, sharp finger-gun recoils, and fingertips grazing lens or jawline), pairing hand snaps with motivated gimbal drops, whip pans, or crane reveals."
   },
   "categories": {
     "views_and_framing": [
@@ -50,6 +51,13 @@
       "snappy wrist-flick silk folding fan opening beside a fluid 360-degree flowing-sleeve spin",
       "breezy side-step groove with shoulder shrug, hair tuck behind the ear, and finger-heart wink",
       "weightless floating slickback foot-swap glide beneath calm swinging arms"
+    ],
+    "kpop_fingertip_tutting_and_mv_cuts": [
+      "sequential pinky-to-index finger-wave ripple gliding across collarbone level with elbows locked taut",
+      "90-degree geometric wrist hinges forming clean right-angle L-boxes and interlocked finger triangles framing one eye",
+      "pinky-to-thumb blossom curl snapping open diagonal arms cleanly into chest-height fists",
+      "open fingertips reaching straight toward wide-angle glass triggering a crisp beat-synced gimbal downward drop and micro-shake",
+      "anti-drop dead-stop freeze on poised fingertip command pose exploding immediately into crisp heel-toe crisscross footwork"
     ]
   }
 }

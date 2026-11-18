@@ -1,4 +1,4 @@
-"""OpenCV 30-FPS Optical Flow + Jump-Cut Detector + 2.5 MP Reference Vision (User-Local Cache)."""
+"""OpenCV Dual-Evidence Cut Detector + FPS-Invariant Optical Flow + Reference Vision (User-Local Cache)."""
 from __future__ import annotations
 
 import base64
@@ -68,30 +68,33 @@ ROLE_PROMPTS = {
 }
 
 VIDEO_EXTRACTOR_SYSTEM = """You are the SandTie Choreography & Camera Vision Extractor for MiniMax H3.
-You are given Shot-by-Shot Storyboard Contact Strips of a reference video clip.
-- Each image (`IMAGE 1 — SHOT 1`, `IMAGE 2 — SHOT 2`, ...) is a 3-frame horizontal strip (`START | MIDDLE | END`) for that exact shot or beat window.
+You are given chronological Shot-by-Shot Storyboard Contact Strips of a reference video clip.
+- Each image (`IMAGE 1 — ...`, `IMAGE 2 — ...`, ...) shows sequential numbered frames (`#1`, `#2`, `#3`, ...) with exact timestamps in seconds across that shot or sub-beat window.
 %(cuts_note)s
 
 CRITICAL EXTRACTION LAWS:
-1. Always refer to the main person as `<Subject 1>` (and `<Subject 2>` if a second person is present).
-2. Inside `shot1` and `beats`, keep the person's hair color, face identity, and skin tone out (put the garment description ONLY in `"outfit"`).
-3. Translate motion speeds into natural kinematic prose (avoid numeric Hz values); describe skeletal joint movement first followed by `'with a natural, soft jiggle'` during active bounces or shimmies.
-4. In `shot1`, lock Frame 0 (`0.00s`): state the camera framing/angle, `<Subject 1>`'s exact screen-direction body orientation (`facing straight forward toward the lens`, `standing in side profile facing toward the right edge of the frame with her head turned to look into the lens`, `three-quarter front view`), and exact starting left/right arm and hand placement.
-5. For EVERY item in `"beats"`, keep the exact `[Shot N] At MM:SS.mmm...` and `At MM:SS.mmm-MM:SS.mmm...` timestamps from the Mandatory Beat Skeleton below, and describe:
-   (a) body orientation & lean, (b) exact left & right arm/wrist/finger gesture, (c) hip/torso/leg movement, and (d) head tilt, gaze, and facial expression.
-6. POSITIVE PHRASING ONLY: Keep words strictly positive (zero negative terms anywhere).
+1. MULTI-SUBJECT CONSISTENT CASTING: Scan all images first to see how many distinct people appear anywhere in the clip. Assign `<Subject 1>` (primary lead), `<Subject 2>` (second performer, if any), and `<Subject 3>` (if three+) consistently by persistent role/wardrobe/appearance across EVERY strip. Even when `<Subject 2>` appears alone in a cut, keep labeling them `<Subject 2>`! Whenever 2+ subjects appear together, state exact screen-left / screen-right / front-back positions and any staggered or asymmetric timing rather than merging both into identical copies.
+2. TRACE CHRONOLOGICAL FRAME PROGRESSION: Inside every strip, read frames `#1 -> #2 -> #3 -> ...` in order and describe how the action EVOLVES from start to end (weight shifts, steps, pivots/turns, airborne hops, high kicks, crouches/squats, elbow/wrist/finger trajectories, partner entrances/exits). Note peak moments cleanly without collapsing an evolving sequence into a static pose.
+3. VISUAL HONESTY & CROP FRAMING: Describe ONLY body parts, faces, and subjects directly visible in that strip. On an isolated detail/limb insert (e.g. forearm and hand against sky) or a tight bust-up/waist-up shot, state the exact framing scale (`extreme close-up of forearm`, `tight bust-up`) and describe ONLY visible parts — never invent off-screen legs, hips, or hidden faces.
+4. CHECK HORIZON & CAMERA ROLL FIRST: Inspect sky/water/horizon, walls, and floor lines before describing body posture. When the horizon or room lines sit tilted or vertical (`Dutch tilt` or `90-degree sideways camera roll`), state the camera roll explicitly while describing the subject's true posture relative to gravity (standing upright in a sideways-rolled frame, rather than falsely claiming they lie flat).
+5. SEPARATE APPEARANCE FROM CHOREOGRAPHY: Keep hair color, skin tone, ethnicity, and clothing descriptions inside `"cast"` and `"outfit"` ONLY (never inside `"shot1"` or `"beats"`, except brief physical garment/prop handling if touched during a move).
+6. KINETIC PROSE & STRICTLY POSITIVE WORDING: Translate motion speeds into natural kinematic prose (never emit Hz numbers or negative words like no/not/never/without anywhere). Describe skeletal joint action cleanly, adding `'with a natural, soft jiggle'` only during visible active bounces or shimmies.
+7. LOCK SHOT 1 & MANDATORY TIMESTAMPS:
+   - In `"shot1"`, write a clean plain sentence (WITHOUT any `[Shot 1]` prefix) locking `0.00s`: camera scale/angle/horizon, visible `<Subject N>` placement, body orientation (`facing straight forward`, `three-quarter front view`, `side profile facing screen-right`), and starting left/right arm + hand placement.
+   - In `"beats"`, emit the exact `[Shot N] At MM:SS.mmm, ...` and `At MM:SS.mmm-MM:SS.mmm, ...` timestamps from the Mandatory Beat Skeleton below.
 
 Reply with ONLY a valid JSON object matching this exact shape (without markdown fences):
 {
   "name": "Short descriptive title (4-7 words)",
+  "cast": "<Subject 1>: brief visual role/hair anchor; <Subject 2>: brief visual role/hair anchor (or 'Solo <Subject 1>')",
   "outfit": "Wearing ...",
   "room": "The exact setting and lighting visible in the frames",
-  "summary": "1-2 sentence summary of <Subject 1> performing the sequence.",
-  "shot1": "The [Shot 1] opening camera framing, setting, and t=0.0s body orientation + arm/hand pose sentence (excluding the '[Shot 1]' prefix).",
+  "summary": "1-2 sentence overview of the cast performing the choreography and camera cuts.",
+  "shot1": "Opening camera framing, horizon/angle, visible subject(s), and t=0.0s screen-left/right posture + left/right hand placement sentence (NO '[Shot 1]' prefix).",
   "beats": [
 %(beats_skeleton)s
   ],
-  "music": "Upbeat 120 BPM studio track with a clean bassline and crisp percussion."
+  "music": "Upbeat 120 BPM track with crisp percussion and clean bassline."
 }"""
 
 
@@ -150,6 +153,29 @@ _STUDIO_SCAN_SENT_RX = re.compile(
     re.I,
 )
 
+_SHEET_LEAK_SUBS = (
+    (re.compile(r"\b(?:shown|visible)\s+(?:in|across|on)\s+(?:all\s+)?(?:the\s+)?(?:(?:close-up|zoomed)\s+)?(?:inset\s+panels?|contact\s+sheets?|(?:motion\s+)?sequence\s+sheets?|storyboard(?:\s+(?:sequence|frames?))?|comic\s+strip)\b", re.I), ""),
+    (re.compile(r"\b(?:in|across|from|on|inside)\s+(?:all\s+)?(?:the\s+)?(?:close-up|zoomed)\s+inset\s+panels?\b", re.I), "in close-up"),
+    (re.compile(r"\b(?:in|across|from|on|inside)\s+(?:all\s+)?(?:the\s+)?inset\s+panels?\b", re.I), ""),
+    (re.compile(r"\b(?:in|from|on|at)\s+(?:frame|panel|tile)\s*#\s*\d+\b", re.I), ""),
+    (re.compile(r"\b(?:storyboard(?:\s+(?:sequence|video|sheet|frames?))?|comic\s+strip|manga\s+page|stitched\s+images?|contact\s+sheets?|(?:motion\s+)?sequence\s+sheets?|speech\s+bubbles?|speech\s+balloons?|panel\s+borders?|gutters?|split[- ]screen\s+grid|grid\s+cells?|inset\s+panels?)\b", re.I), ""),
+    (re.compile(r"\{[^{}\n]{2,60}\}"), ""),
+)
+
+
+def scrub_sheet_leaks(text: str, strip: bool = True) -> str:
+    """Strip VLM contact-sheet, storyboard-panel, and template-placeholder leakage cleanly."""
+    t = str(text or "")
+    if not t:
+        return t
+    for rx, repl in _SHEET_LEAK_SUBS:
+        t = rx.sub(repl, t)
+    t = re.sub(r"[ \t]+([,.;!?])", r"\1", t)
+    t = re.sub(r",[ \t]*,+", ",", t)
+    t = re.sub(r"\([ \t]*\)", "", t)
+    t = re.sub(r"[ \t]{2,}", " ", t)
+    return t.strip() if strip else t
+
 
 def _clean_desc(text: str, cap: int = 420, strip_studio: bool = False) -> str:
     t = re.sub(r"[*#_`>]+", "", text or "")
@@ -157,6 +183,7 @@ def _clean_desc(text: str, cap: int = 420, strip_studio: bool = False) -> str:
     t = " ".join(t.split()).strip()
     if strip_studio or t.lower().startswith("anchor:"):
         t = _STUDIO_SCAN_SENT_RX.sub(" ", t)
+    t = scrub_sheet_leaks(t)
     t = re.sub(r"\b(?:with\s+)?no\s+(?:visible\s+)?(?:tattoos?|markings?|jewell?ery|accessories)\b[,.]?", "", t, flags=re.I)
     t = re.sub(r"\bwithout\s+any\s+[^,.;]+", "", t, flags=re.I)
     t = " ".join(t.split()).strip()
@@ -232,10 +259,54 @@ def _fmt_mmss(t_sec: float) -> str:
     return f"{m_i:02d}:{s_r:06.3f}"
 
 
-def build_opencv_video_strips(video_path: str, in_sec: float = 0.0, out_sec: float = 0.0, max_seconds: float = 15.0):
+def _summarize_flow_rows(rows: list) -> tuple[str, str, list[float]]:
+    import numpy as np
+    if not rows:
+        return "LOCKED / STATIC CAMERA", "LOW SUBJECT MOTION / HELD POSE", []
+    mid_idx = max(1, len(rows) // 2)
+    halves = [rows, rows[:mid_idx], rows[mid_idx:]] if len(rows) >= 4 else [rows]
+    best_tx = max((float(np.mean([r[1] for r in h])) for h in halves if h), key=abs)
+    best_ty = max((float(np.mean([r[2] for r in h])) for h in halves if h), key=abs)
+    best_div = max((float(np.mean([r[3] for r in h])) for h in halves if h), key=abs)
+    best_roll = max((float(np.mean([r[4] for r in h])) for h in halves if h), key=abs)
+
+    cam_bits = []
+    if best_div >= 0.09:
+        cam_bits.append("PUSH-IN / ZOOM IN")
+    elif best_div <= -0.09:
+        cam_bits.append("PULL-OUT / ZOOM OUT")
+    if best_tx <= -0.08:
+        cam_bits.append("PAN/TRUCK RIGHT")
+    elif best_tx >= 0.08:
+        cam_bits.append("PAN/TRUCK LEFT")
+    if best_ty >= 0.07:
+        cam_bits.append("TILT/RISE UP")
+    elif best_ty <= -0.07:
+        cam_bits.append("TILT/DROP DOWN")
+    if abs(best_roll) >= 10.0:
+        cam_bits.append(f"ROLL/SPIN ({best_roll:+.0f} deg/s)")
+    cam_desc = " + ".join(cam_bits) if cam_bits else "LOCKED / STATIC CAMERA"
+
+    fg_mean = float(np.mean([r[6] for r in rows]))
+    fg_peak_row = max(rows, key=lambda r: r[6])
+    peak_ts = [round(r[0], 2) for r in sorted(rows, key=lambda x: x[6], reverse=True)[:2]]
+    if fg_mean >= 0.28 or fg_peak_row[6] >= 0.42:
+        e_desc = f"HIGH-ENERGY ACTION (peak ~{fg_peak_row[0]:.2f}s)"
+    elif fg_mean >= 0.14 or fg_peak_row[6] >= 0.22:
+        e_desc = f"ACTIVE CHOREOGRAPHY (peak ~{fg_peak_row[0]:.2f}s)"
+    elif fg_mean >= 0.075 or fg_peak_row[6] >= 0.12:
+        e_desc = f"MODERATE MOTION (peak ~{fg_peak_row[0]:.2f}s)"
+    else:
+        e_desc = "MINIMAL MOTION / HELD POSE"
+    return cam_desc, e_desc, peak_ts
+
+
+def _scan_video_cv(video_path: str, in_sec: float = 0.0, out_sec: float = 0.0,
+                   max_seconds: float = 15.0, min_dur: float = 1.5):
+    """Dual-evidence hard-cut detector + ~15 Hz IRLS affine flow scanner."""
+    import math
     import cv2
     import numpy as np
-    from PIL import Image, ImageDraw, ImageFont
 
     cap = cv2.VideoCapture(video_path)
     fps = float(cap.get(cv2.CAP_PROP_FPS) or 30.0)
@@ -244,167 +315,459 @@ def build_opencv_video_strips(video_path: str, in_sec: float = 0.0, out_sec: flo
     h = max(1, int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
     total_dur = n_frames / fps
 
-    t0 = max(0.0, min(float(in_sec or 0.0), max(0.0, total_dur - 0.5)))
+    t0 = max(0.0, min(float(in_sec or 0.0), max(0.0, total_dur - 0.25)))
     t1 = float(out_sec or 0.0)
-    t1 = min(total_dur, t0 + max_seconds) if t1 <= t0 + 0.3 else min(total_dur, t0 + max_seconds, t1)
-    raw_dur = max(1.0, round(t1 - t0, 2))
+    t1 = min(total_dur, t0 + max_seconds) if t1 <= t0 + 0.15 else min(total_dur, t0 + max_seconds, t1)
+    raw_dur = max(0.25, round(t1 - t0, 2))
 
     start_f = max(0, int(round(t0 * fps)))
     end_f = min(n_frames, int(round(t1 * fps)))
     if start_f > 0:
         cap.set(cv2.CAP_PROP_POS_FRAMES, start_f)
 
-    prev_small = None
-    prev_gray = None
-    all_diffs = [0.0]
-    frame_flows = []
-    last_active_t = raw_dur
+    scale_an = 128.0 / float(max(w, h))
+    fw = max(32, int(round(w * scale_an / 2.0) * 2))
+    fh = max(32, int(round(h * scale_an / 2.0) * 2))
+    diag_an = math.hypot(fw, fh)
 
-    for idx in range(end_f - start_f):
+    frame_thumbs: list = []
+    all_diffs: list[float] = [0.0]
+    prev_small = None
+    last_active_t = raw_dur
+    dark_streak = 0
+    dark_thresh = max(3, int(round(0.35 * fps)))
+
+    for idx in range(max(1, end_f - start_f)):
         ok, frame = cap.read()
         if not ok or frame is None:
             break
         t_s = round(idx / fps, 3)
-        small = cv2.resize(frame, (72, 128)).astype(np.float32)
-        gray = cv2.cvtColor(small.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+        thumb_u8 = cv2.resize(frame, (fw, fh), interpolation=cv2.INTER_AREA)
+        small = thumb_u8.astype(np.float32)
+        bright = float(np.mean(small))
         if prev_small is not None:
             diff = float(np.mean(np.abs(small - prev_small)))
             all_diffs.append(diff)
-            mean_bright = float(np.mean(small))
-            flow = cv2.calcOpticalFlowFarneback(prev_gray, gray, None, 0.5, 2, 11, 2, 5, 1.1, 0)
-            fx, fy = flow[..., 0], flow[..., 1]
-            frame_motion = float(np.percentile(np.hypot(fx, fy), 90))
-            if t_s > 4.5 and mean_bright < 52.0 and frame_motion < 0.25:
-                last_active_t = round(max(2.5, t_s - 0.1), 1)
-                break
-            bg_mask = np.zeros_like(fx, dtype=bool)
-            bg_mask[:, :10] = True
-            bg_mask[:, -10:] = True
-            cam_vx = float(np.median(fx[bg_mask]))
-            cam_vy = float(np.median(fy[bg_mask]))
-            rel_fx = fx - cam_vx
-            rel_fy = fy - cam_vy
-            ch_fx, ch_fy = rel_fx[32:64, 16:56], rel_fy[32:64, 16:56]
-            hp_fx, hp_fy = rel_fx[64:100, 16:56], rel_fy[64:100, 16:56]
-            frame_flows.append((
-                t_s, cam_vx, cam_vy,
-                float(np.mean(ch_fx)), float(np.percentile(np.hypot(ch_fx, ch_fy), 85)),
-                float(np.mean(hp_fx)), float(np.percentile(np.hypot(hp_fx, hp_fy), 85)),
-            ))
+            if t_s > 4.5 and bright < 30.0 and diff < 1.2:
+                dark_streak += 1
+                if dark_streak >= dark_thresh:
+                    last_active_t = round(max(2.5, t_s - dark_streak / fps), 2)
+                    break
+            else:
+                dark_streak = 0
+        frame_thumbs.append(thumb_u8)
         prev_small = small
-        prev_gray = gray
 
-    dur = max(2.0, min(max_seconds, round(last_active_t, 2)))
-    active_max_f = min(len(all_diffs), int(round(dur * fps)))
+    cap.release()
+    actual_span = max(0.1, round(len(frame_thumbs) / fps, 2)) if frame_thumbs else raw_dur
+    dur = max(min(min_dur, actual_span), min(max_seconds, round(last_active_t, 2)))
+    active_max_f = min(len(all_diffs), len(frame_thumbs), max(1, int(round(dur * fps))))
 
-    cut_times = []
-    for f_i in range(1, active_max_f):
+    cut_cands: list[tuple[float, float]] = []
+    for f_i in range(1, max(1, active_max_f - 1)):
         t_s = round(f_i / fps, 3)
         if t_s < 0.25 or t_s > dur - 0.25:
             continue
         d = all_diffs[f_i]
-        win = [all_diffs[j] for j in range(max(1, f_i - 4), min(active_max_f, f_i + 5)) if j != f_i]
+        win = [all_diffs[j] for j in range(max(1, f_i - 5), min(active_max_f, f_i + 6)) if abs(j - f_i) >= 2]
         loc_med = float(np.median(win)) if win else 1.0
-        if d > 19.0 and (d / max(1.0, loc_med)) > 1.55:
-            if not cut_times or (t_s - cut_times[-1]) >= 0.38:
-                cut_times.append(round(t_s, 2))
+        ratio = d / max(1.0, loc_med)
+        if d > 15.0 and ratio > 1.48:
+            im_a = frame_thumbs[max(0, f_i - 2)]
+            im_b = frame_thumbs[min(len(frame_thumbs) - 1, f_i + 1)]
+            ha = cv2.calcHist([cv2.cvtColor(im_a, cv2.COLOR_BGR2HSV)], [0, 1], None, [16, 8], [0, 180, 0, 256])
+            hb = cv2.calcHist([cv2.cvtColor(im_b, cv2.COLOR_BGR2HSV)], [0, 1], None, [16, 8], [0, 180, 0, 256])
+            cv2.normalize(ha, ha, 1.0, 0.0, cv2.NORM_L1)
+            cv2.normalize(hb, hb, 1.0, 0.0, cv2.NORM_L1)
+            bhat = float(cv2.compareHist(ha, hb, cv2.HISTCMP_BHATTACHARYYA))
+            ga = cv2.resize(cv2.cvtColor(im_a, cv2.COLOR_BGR2GRAY), (16, 16)).astype(np.float32)
+            gb = cv2.resize(cv2.cvtColor(im_b, cv2.COLOR_BGR2GRAY), (16, 16)).astype(np.float32)
+            corr16 = float(np.corrcoef(ga.ravel(), gb.ravel())[0, 1]) if (ga.std() > 1.0 and gb.std() > 1.0) else 1.0
+            is_cut = (d > 15.5 and ratio > 1.48 and (bhat >= 0.19 or corr16 < 0.42)) or (d > 26.0 and ratio >= 2.60)
+            if is_cut:
+                score = (d / 20.0) + bhat * 2.2 + max(0.0, 0.5 - corr16)
+                if cut_cands and (t_s - cut_cands[-1][0]) < 0.36:
+                    if (t_s - cut_cands[-1][0]) < 0.18 and score > cut_cands[-1][1]:
+                        cut_cands[-1] = (round(t_s, 2), score)
+                else:
+                    cut_cands.append((round(t_s, 2), score))
 
+    cut_times = [ct for ct, _ in cut_cands]
+    flow_step = max(1, int(round(fps / 15.0)))
+    yy_g, xx_g = np.mgrid[0:fh, 0:fw]
+    nx_g = (xx_g + 0.5) / float(fw) - 0.5
+    ny_g = (yy_g + 0.5) / float(fh) - 0.5
+    bmask = (np.abs(nx_g) > 0.30) | (np.abs(ny_g) > 0.30)
+    cut_frames_set = {int(round(ct * fps)) for ct in cut_times}
+
+    frame_flows = []  # (t_s, tx, ty, div, roll_deg_s, fg_p95, fg_p98)
+    prev_f_idx = None
+    prev_gray = None
+    for f_i in range(0, active_max_f, flow_step):
+        gray = cv2.cvtColor(frame_thumbs[f_i], cv2.COLOR_BGR2GRAY)
+        if prev_gray is not None and prev_f_idx is not None:
+            crossed_cut = any(prev_f_idx < cf <= f_i + 1 for cf in cut_frames_set)
+            if not crossed_cut:
+                dt_pair = (f_i - prev_f_idx) / fps
+                flow = cv2.calcOpticalFlowFarneback(prev_gray, gray, None, 0.5, 3, 13, 3, 5, 1.1, 0)
+                fx = flow[..., 0] / (fw * dt_pair)
+                fy = flow[..., 1] / (fh * dt_pair)
+                A1 = np.column_stack([np.ones(int(bmask.sum())), nx_g[bmask], ny_g[bmask]])
+                px, _, _, _ = np.linalg.lstsq(A1, fx[bmask], rcond=None)
+                py, _, _, _ = np.linalg.lstsq(A1, fy[bmask], rcond=None)
+                res0 = np.hypot((fx - (px[0] + px[1] * nx_g + px[2] * ny_g)) * fw, (fy - (py[0] + py[1] * nx_g + py[2] * ny_g)) * fh)
+                bg2 = res0 < max(0.35, float(np.percentile(res0, 65)))
+                if int(bg2.sum()) >= 48:
+                    A2 = np.column_stack([np.ones(int(bg2.sum())), nx_g[bg2], ny_g[bg2]])
+                    px, _, _, _ = np.linalg.lstsq(A2, fx[bg2], rcond=None)
+                    py, _, _, _ = np.linalg.lstsq(A2, fy[bg2], rcond=None)
+                pred_x = px[0] + px[1] * nx_g + px[2] * ny_g
+                pred_y = py[0] + py[1] * nx_g + py[2] * ny_g
+                res_diag_s = np.hypot((fx - pred_x) * fw, (fy - pred_y) * fh) / diag_an
+                tx_v, ty_v = float(px[0]), float(py[0])
+                div_v = 0.5 * (float(px[1]) + float(py[2]))
+                roll_deg_s = math.degrees(0.5 * (float(py[1]) * fh / float(fw) - float(px[2]) * fw / float(fh)))
+                frame_flows.append((
+                    round(f_i / fps, 3), tx_v, ty_v, div_v, roll_deg_s,
+                    float(np.percentile(res_diag_s, 95)), float(np.percentile(res_diag_s, 98)),
+                ))
+        prev_f_idx = f_i
+        prev_gray = gray
+
+    return {
+        "fps": fps, "n_frames": n_frames, "w": w, "h": h, "total_dur": total_dur,
+        "t0": t0, "start_f": start_f, "dur": dur, "cut_times": cut_times, "frame_flows": frame_flows,
+    }
+
+
+def _grab_exact_frames_rgb(video_path: str, frame_indices: list[int]) -> dict[int, object]:
+    """Decode exact 0-based frame indices sequentially via grab/retrieve (zero B-frame seek drift)."""
+    import cv2
+    from PIL import Image
+
+    need = sorted({max(0, int(i)) for i in frame_indices})
+    if not need:
+        return {}
+    max_idx = need[-1]
+    need_set = set(need)
+    out = {}
+    cap = cv2.VideoCapture(video_path)
+    try:
+        start_at = need[0]
+        if start_at > 24:
+            # Back off ~24 frames before first target to avoid H264/HEVC keyframe land drift while staying fast
+            cap.set(cv2.CAP_PROP_POS_FRAMES, max(0, start_at - 24))
+            cur = int(cap.get(cv2.CAP_PROP_POS_FRAMES) or 0)
+        else:
+            cur = 0
+        while cur <= max_idx:
+            ok = cap.grab()
+            if not ok:
+                break
+            if cur in need_set:
+                ok_r, fr = cap.retrieve()
+                if ok_r and fr is not None:
+                    out[cur] = Image.fromarray(cv2.cvtColor(fr, cv2.COLOR_BGR2RGB))
+            cur += 1
+    finally:
+        cap.release()
+    return out
+
+
+def build_swap_vision_bundle(video_path: str, start: float = 0.0, end: float = 0.0, max_seconds: float = 15.0) -> dict:
+    """Build SWAP-optimized OpenCV vision package: 1 crisp anchor IN frame + 1-2 timestamped sequence strips + telemetry."""
+    import cv2
+    from PIL import Image, ImageDraw, ImageFont
+
+    scan = _scan_video_cv(video_path, in_sec=start, out_sec=end, max_seconds=max_seconds, min_dur=0.4)
+    fps, n_frames = scan["fps"], scan["n_frames"]
+    w, h, t0, dur = scan["w"], scan["h"], scan["t0"], scan["dur"]
+    cut_times, frame_flows = scan["cut_times"], scan["frame_flows"]
     has_cuts = len(cut_times) > 0
+
+    bounds = [0.0] + cut_times + [dur] if has_cuts else [0.0, dur]
+    segments = [(i + 1, round(bounds[i], 3), round(bounds[i + 1], 3)) for i in range(len(bounds) - 1)]
+
+    # Budget 6..16 timestamped samples across the trimmed window, hitting every cut/shot + motion peaks
+    target_total = 6 if dur <= 4.8 else (8 if dur <= 7.5 else (12 if dur <= 12.2 else 16))
+    if has_cuts and len(segments) * 2 > target_total:
+        target_total = min(16, max(target_total, len(segments)))
+
+    # Allocate samples per segment proportionally, >=2 when slots allow, >=1 always
+    seg_counts = {}
+    for sid, ta, tb in segments:
+        seg_counts[sid] = 1
+    rem = max(0, target_total - len(segments))
+    if rem > 0:
+        weights = [(sid, max(0.15, tb - ta)) for sid, ta, tb in segments]
+        tot_w = sum(wt for _, wt in weights) or 1.0
+        for sid, wt in weights:
+            add = int(round(rem * wt / tot_w))
+            seg_counts[sid] += add
+        while sum(seg_counts.values()) > target_total:
+            cands = [(seg_counts[s], s) for s in seg_counts if seg_counts[s] > 1]
+            if not cands:
+                break
+            cands.sort(reverse=True)
+            seg_counts[cands[0][1]] -= 1
+        while sum(seg_counts.values()) < target_total and segments:
+            longest = max(segments, key=lambda x: (x[2] - x[1]) / float(seg_counts[x[0]]))
+            seg_counts[longest[0]] += 1
+
+    samples = []  # (t_rel, seg_id, is_cut_entry, f_idx)
+    seg_telem_lines = []
+    for sid, ta, tb in segments:
+        seg_len = max(0.1, tb - ta)
+        win_rows = [r for r in frame_flows if (ta + 0.03) < r[0] < (tb - 0.02)] or [r for r in frame_flows if ta <= r[0] <= tb]
+        cam_desc, e_desc, peak_ts = _summarize_flow_rows(win_rows)
+        cut_tag = f" [CUT AT {ta:.2f}s]" if (has_cuts and sid > 1) else ""
+        lbl = f"Shot {sid}" if has_cuts else "Clip"
+        seg_telem_lines.append(f"  - {lbl} ({ta:.2f}s–{tb:.2f}s){cut_tag}: camera [{cam_desc}] | action [{e_desc}]")
+
+        n_here = seg_counts[sid]
+        pad = min(0.055, seg_len * 0.12)
+        t_a = ta + (0.04 if (has_cuts and sid > 1) else 0.0)
+        t_b = max(t_a, tb - pad)
+        ts_here = []
+        if n_here == 1:
+            # Prefer a clear interior frame (~40% into the shot, biased away from cut-out whip blurs)
+            t_pick = t_a + 0.4 * max(0.0, t_b - t_a)
+            mid_rows = [r for r in win_rows if (t_a + 0.15 * seg_len) <= r[0] <= (t_b - 0.15 * seg_len)]
+            if mid_rows:
+                t_pick = max(mid_rows, key=lambda r: r[6])[0]
+            ts_here.append(round(t_pick, 2))
+        else:
+            dt_slot = (t_b - t_a) / float(n_here - 1)
+            for k in range(n_here):
+                tu = t_a + k * dt_slot
+                if 0 < k < (n_here - 1) and win_rows:
+                    cands = [r for r in win_rows if max(t_a + 0.02, tu - 0.25 * dt_slot) <= r[0] <= min(t_b - 0.02, tu + 0.25 * dt_slot)]
+                    if cands:
+                        best_r = max(cands, key=lambda r: r[6])
+                        center_r = min(cands, key=lambda r: abs(r[0] - tu))
+                        if best_r[6] >= 1.18 * max(0.05, center_r[6]):
+                            tu = best_r[0]
+                if ts_here and tu <= ts_here[-1] + 0.04:
+                    tu = min(t_b, ts_here[-1] + 0.05)
+                ts_here.append(round(tu, 2))
+        for j, tr in enumerate(ts_here):
+            f_no = min(n_frames - 1, max(0, int(round((t0 + tr) * fps))))
+            samples.append((tr, sid, bool(has_cuts and sid > 1 and j == 0), f_no))
+
+    anchor_f = min(n_frames - 1, max(0, int(round(t0 * fps))))
+    need_frames = [anchor_f] + [s[3] for s in samples]
+    decoded = _grab_exact_frames_rgb(video_path, need_frames)
+    anchor_im = decoded.get(anchor_f)
+    anchor_url = encode_pil_mp(anchor_im, mp=0.65) if anchor_im is not None else None
+
+    try:
+        font_big = ImageFont.truetype("arialbd.ttf", 19)
+        font_sub = ImageFont.truetype("arialbd.ttf", 15)
+    except Exception:
+        font_big = font_sub = None
+
+    # Pack samples into 1 or 2 crisp contact grids (max 8 per sheet: 2x3 or 2x4)
+    chunks = [samples[:8], samples[8:]] if len(samples) > 8 else [samples]
+    strip_urls, strip_labels = [], []
+    shot_palette = [(28, 60, 125), (155, 32, 54), (24, 102, 78), (138, 72, 20), (84, 38, 128), (24, 96, 122)]
+
+    for s_idx, chunk in enumerate(chunks, 1):
+        if not chunk:
+            continue
+        n_c = len(chunk)
+        cols = 4 if n_c >= 7 else (3 if n_c >= 5 else n_c)
+        rows_g = (n_c + cols - 1) // cols
+        thumb_w = (320 if cols <= 3 else 270) if w >= h else (260 if cols <= 3 else 220)
+        thumb_h = max(110, int(round(thumb_w * h / float(max(1, w)))))
+        hdr_h, cell_hdr_h = 32, 22
+        cell_h = cell_hdr_h + thumb_h + 2
+        canvas = Image.new("RGB", (cols * thumb_w, hdr_h + rows_g * cell_h), (14, 14, 18))
+        draw = ImageDraw.Draw(canvas)
+        ta_c, tb_c = chunk[0][0], chunk[-1][0]
+        draw.rectangle([0, 0, cols * thumb_w, hdr_h], fill=(28, 56, 110))
+        draw.text((10, 6), f"SEQUENCE {s_idx}/{len(chunks)} ({ta_c:.2f}s -> {tb_c:.2f}s of {dur:.2f}s)", fill=(255, 250, 130), font=font_big)
+        for idx_c, (tr, sid, is_cut, f_no) in enumerate(chunk):
+            im = decoded.get(f_no)
+            if im is None:
+                continue
+            im_r = im.resize((thumb_w, thumb_h), Image.Resampling.LANCZOS)
+            r_i, c_i = idx_c // cols, idx_c % cols
+            x0, y0 = c_i * thumb_w, hdr_h + 1 + r_i * cell_h
+            bar_col = shot_palette[(sid - 1) % len(shot_palette)] if has_cuts else (26, 28, 38)
+            tag = " [CUT]" if is_cut else (" [IN]" if (s_idx == 1 and idx_c == 0) else (" [OUT]" if (s_idx == len(chunks) and idx_c == n_c - 1) else ""))
+            draw.rectangle([x0, y0, x0 + thumb_w - 2, y0 + cell_hdr_h], fill=bar_col)
+            draw.text((x0 + 6, y0 + 2), f"{tr:.2f}s{tag}", fill=(205, 255, 210), font=font_sub)
+            canvas.paste(im_r, (x0, y0 + cell_hdr_h + 1))
+        strip_urls.append(encode_pil_mp(canvas, mp=1.25))
+        strip_labels.append(
+            f"Clip motion sequence sheet {s_idx} of {len(chunks)} ({ta_c:.2f}s to {tb_c:.2f}s in time order, "
+            f"{len(chunk)} timestamped frames). Read left-to-right, top-to-bottom to trace camera path and movement."
+        )
+
+    global_cam, global_e, _ = _summarize_flow_rows(frame_flows)
+    cuts_desc = (f"{len(cut_times)} hard cut(s) at {', '.join(f'{c:.2f}s' for c in cut_times)}"
+                 if has_cuts else "continuous single shot (0 hard cuts)")
+    telem_hdr = f"[CLIP TIMELINE & CAMERA MOTION]\nWindow: {dur:.2f}s | {cuts_desc} | Overall camera: [{global_cam}] | Energy: [{global_e}]"
+    telemetry = telem_hdr + ("\n" + "\n".join(seg_telem_lines) if len(seg_telem_lines) > 1 else "")
+    return {
+        "anchor_url": anchor_url,
+        "strip_urls": strip_urls,
+        "strip_labels": strip_labels,
+        "telemetry": telemetry,
+        "duration_s": dur,
+        "cut_times": cut_times,
+    }
+
+
+def build_opencv_video_strips(video_path: str, in_sec: float = 0.0, out_sec: float = 0.0, max_seconds: float = 15.0):
+    import cv2
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFont
+
+    scan = _scan_video_cv(video_path, in_sec=in_sec, out_sec=out_sec, max_seconds=max_seconds, min_dur=1.5)
+    fps, n_frames = scan["fps"], scan["n_frames"]
+    w, h, t0, dur = scan["w"], scan["h"], scan["t0"], scan["dur"]
+    cut_times, frame_flows = scan["cut_times"], scan["frame_flows"]
+    has_cuts = len(cut_times) > 0
+
+    cap = cv2.VideoCapture(video_path)
     if has_cuts:
         bounds = [0.0] + cut_times + [dur]
         segments = [(i + 1, round(bounds[i], 3), round(bounds[i + 1], 3)) for i in range(len(bounds) - 1)]
     else:
-        n_segs = max(3, min(6, int(round(dur / 2.2))))
-        bounds = [round(i * dur / n_segs, 3) for i in range(n_segs + 1)]
-        segments = [(i + 1, bounds[i], bounds[i + 1]) for i in range(n_segs)]
+        segments = [(1, 0.0, dur)]
 
-    telemetry_lines, skeleton_items, seg_short_badge = [], [], {}
+    shot_parts: dict[int, int] = {}
     for seg_id, t_a, t_b in segments:
         seg_len = max(0.1, t_b - t_a)
-        seg_rows = [r for r in frame_flows if (t_a + 0.045) < r[0] < (t_b - 0.035)] or [r for r in frame_flows if t_a <= r[0] <= t_b]
-        if seg_rows:
-            cam_vx = float(np.mean([r[1] for r in seg_rows]))
-            cam_vy = float(np.mean([r[2] for r in seg_rows]))
-            ch_e = float(np.mean([r[4] for r in seg_rows]))
-            hp_e = float(np.mean([r[6] for r in seg_rows]))
-            ch_vxs = [r[3] for r in seg_rows if abs(r[3]) > 0.16]
-            hp_vxs = [r[5] for r in seg_rows if abs(r[5]) > 0.16]
-            ch_hz = (sum(1 for a, b in zip(ch_vxs, ch_vxs[1:]) if a * b < 0) / 2.0) / seg_len if len(ch_vxs) > 1 else 0.0
-            hp_hz = (sum(1 for a, b in zip(hp_vxs, hp_vxs[1:]) if a * b < 0) / 2.0) / seg_len if len(hp_vxs) > 1 else 0.0
+        if not has_cuts:
+            shot_parts[seg_id] = max(3, min(8, int(round(seg_len / 2.2))))
+        elif seg_len > 3.65:
+            shot_parts[seg_id] = max(2, min(5, int(round(seg_len / 2.2))))
         else:
-            cam_vx = cam_vy = ch_e = hp_e = ch_hz = hp_hz = 0.0
+            shot_parts[seg_id] = 1
 
-        max_e = max(ch_e, hp_e)
-        peak_hz = max(ch_hz, hp_hz)
-        if cam_vy > 0.45:
-            cam_desc = "CAMERA TILTING/PEDESTALING UPWARD"
-        elif cam_vy < -0.45:
-            cam_desc = "CAMERA TILTING/PEDESTALING DOWNWARD"
-        elif abs(cam_vx) > 0.55:
-            cam_desc = "CAMERA PANNING/TRUCKING SIDEWAYS"
-        else:
-            cam_desc = "STATIC TRIPOD"
+    max_strips = 14 if len(segments) <= 14 else min(16, len(segments))
+    while sum(shot_parts.values()) > max_strips:
+        splittable = [
+            (shot_parts[sid], (tb - ta) / float(shot_parts[sid]), sid)
+            for sid, ta, tb in segments if shot_parts[sid] > 1
+        ]
+        if not splittable:
+            break
+        splittable.sort(reverse=True)
+        shot_parts[splittable[0][2]] -= 1
 
-        if max_e >= 2.3 or (seg_len >= 1.0 and peak_hz >= 2.8):
-            e_desc, e_tag = "FAST ENERGETIC BOUNCE / SHIMMY", "energetic bounce and hip shimmy"
-        elif seg_len >= 1.0 and (max_e >= 0.78 or peak_hz >= 1.2):
-            e_desc, e_tag = "CONTINUOUS RHYTHMIC VERTICAL BOUNCE & SIDE-TO-SIDE HIP SWAY", "continuous rhythmic vertical knee-bounce and side-to-side hip sway"
-        else:
-            e_desc, e_tag = "POSED MICRO-CUT HOLD WITH SUBTLE HIP/POSTURE SWAY", "posed stance with subtle hip sway"
-
-        seg_short_badge[seg_id] = f"{cam_desc} | {e_desc}"
-        lbl_kind = f"SHOT {seg_id}" if has_cuts else f"BEAT {seg_id}"
-        cut_prefix = f" [HARD JUMP-CUT AT {t_a:.2f}s]" if (has_cuts and seg_id > 1) else ""
-        telemetry_lines.append(
-            f"  • IMAGE {seg_id} -> {lbl_kind} ({_fmt_mmss(t_a)}–{_fmt_mmss(t_b)}, dur={seg_len:.2f}s){cut_prefix}: "
-            f"[{cam_desc}] | [{e_desc}] — Inspect the 3 frames (START | MIDDLE | END) of IMAGE {seg_id} and describe "
-            f"<Subject 1>'s exact screen-direction body orientation, left & right hand/finger pose, {e_tag}, and facial expression!"
-        )
-        if has_cuts and seg_id > 1:
-            skeleton_items.append(f'    "[Shot {seg_id}] At {_fmt_mmss(t_a)}, the camera cuts to a hard jump-cut in the exact same spot with <Subject 1> <describe {lbl_kind} body orientation and starting hand/arm position>."')
-        skeleton_items.append(f'    "At {_fmt_mmss(t_a)}-{_fmt_mmss(t_b)}, <Subject 1> <describe {lbl_kind} exact left/right hand gesture, {e_tag}, and eye contact / facial expression>."')
+    strip_specs = []
+    for seg_id, t_a, t_b in segments:
+        if len(strip_specs) >= max_strips:
+            break
+        n_parts = shot_parts[seg_id]
+        seg_len = max(0.1, t_b - t_a)
+        for p_i in range(n_parts):
+            w_a = round(t_a + (p_i / float(n_parts)) * seg_len, 3)
+            w_b = round(t_a + ((p_i + 1) / float(n_parts)) * seg_len, 3)
+            w_len = max(0.1, w_b - w_a)
+            if n_parts == 1 and has_cuts:
+                n_f = 3 if w_len <= 1.35 else (4 if w_len <= 2.35 else 6)
+            else:
+                n_f = 3 if w_len <= 1.35 else 4
+            strip_specs.append((len(strip_specs) + 1, seg_id, p_i + 1, n_parts, w_a, w_b, n_f, p_i == 0))
 
     try:
-        font_big = ImageFont.truetype("arialbd.ttf", 22)
-        font_sub = ImageFont.truetype("arialbd.ttf", 17)
+        font_big = ImageFont.truetype("arialbd.ttf", 20)
+        font_sub = ImageFont.truetype("arialbd.ttf", 16)
     except Exception:
         font_big = font_sub = None
 
-    cols, thumb_w = 3, 260
-    thumb_h = max(140, int(thumb_w * h / max(1, w)))
-    row_banner_h, frame_hdr_h = 36, 26
-    strip_h = thumb_h + row_banner_h + frame_hdr_h + 2
     shot_palette = [(25, 55, 115), (155, 25, 50), (20, 100, 75), (135, 70, 15), (80, 35, 125), (20, 95, 120), (125, 30, 90), (55, 95, 30)]
+    strips, strip_headers, telemetry_lines, skeleton_items = [], [], [], []
 
-    strips, strip_headers = [], []
-    stage_names = ["START", "MIDDLE", "END"]
-    for seg_id, t_a, t_b in segments[:10]:
-        seg_len = max(0.15, t_b - t_a)
-        pad = min(0.06, seg_len * 0.14)
-        t_start = t_a + pad
-        t_end = max(t_start, t_b - pad)
-        canvas = Image.new("RGB", (cols * thumb_w, strip_h), (14, 14, 18))
+    for img_id, seg_id, part_i, part_tot, w_a, w_b, n_f, is_shot_start in strip_specs:
+        w_len = max(0.15, w_b - w_a)
+        win_rows = [r for r in frame_flows if (w_a + 0.035) < r[0] < (w_b - 0.025)] or [r for r in frame_flows if w_a <= r[0] <= w_b]
+        cam_desc, e_desc, peak_ts = _summarize_flow_rows(win_rows)
+
+        part_lbl = f"SHOT {seg_id}" if has_cuts else f"BEAT {img_id}"
+        if has_cuts and part_tot > 1:
+            part_lbl = f"SHOT {seg_id} (Part {part_i}/{part_tot})"
+        cut_prefix = f" [HARD CUT AT {w_a:.2f}s]" if (has_cuts and seg_id > 1 and is_shot_start) else ""
+
+        pad = min(0.055, w_len * 0.12)
+        t_start = w_a + pad
+        t_end = max(t_start, w_b - pad)
+        sample_ts = []
+        slot_dt = (t_end - t_start) / float(max(1, n_f - 1))
+        for c_i in range(n_f):
+            t_u = t_start + c_i * slot_dt
+            if 0 < c_i < (n_f - 1) and win_rows:
+                lo_t = max(t_start + 0.03, t_u - 0.25 * slot_dt)
+                hi_t = min(t_end - 0.03, t_u + 0.25 * slot_dt)
+                cand_rows = [r for r in win_rows if lo_t <= r[0] <= hi_t]
+                if cand_rows:
+                    best_r = max(cand_rows, key=lambda r: r[6])
+                    center_r = min(cand_rows, key=lambda r: abs(r[0] - t_u))
+                    if best_r[6] >= 1.18 * max(0.05, center_r[6]):
+                        t_u = best_r[0]
+            if sample_ts and t_u <= sample_ts[-1] + 0.04:
+                t_u = min(t_end, sample_ts[-1] + 0.05)
+            sample_ts.append(round(t_u, 2))
+
+        cols = 3 if n_f == 6 else n_f
+        rows_g = 2 if n_f == 6 else 1
+        thumb_w = (340 if cols <= 3 else 300) if w >= h else (280 if cols <= 3 else 240)
+        thumb_h = max(120, int(round(thumb_w * h / float(max(1, w)))))
+        row_banner_h, frame_hdr_h = 34, 24
+        cell_h = frame_hdr_h + thumb_h + 2
+        canvas = Image.new("RGB", (cols * thumb_w, row_banner_h + rows_g * cell_h), (14, 14, 18))
         draw = ImageDraw.Draw(canvas)
         hdr_col = shot_palette[(seg_id - 1) % len(shot_palette)]
-        kind_prefix = f"SHOT {seg_id}" if has_cuts else f"BEAT {seg_id}"
-        cut_str = f" [JUMP-CUT AT {t_a:.2f}s]" if (has_cuts and seg_id > 1) else " [OPENING SHOT]"
+        cut_str = " [HARD CUT]" if (has_cuts and seg_id > 1 and is_shot_start) else (" [OPENING SHOT]" if img_id == 1 else " [CONTINUATION]")
         draw.rectangle([0, 0, cols * thumb_w, row_banner_h], fill=hdr_col)
-        draw.text((10, 6), f"{kind_prefix} ({_fmt_mmss(t_a)} - {_fmt_mmss(t_b)}){cut_str}", fill=(255, 250, 120), font=font_big)
+        draw.text((10, 6), f"{part_lbl} ({_fmt_mmss(w_a)} - {_fmt_mmss(w_b)}){cut_str}", fill=(255, 250, 120), font=font_big)
 
-        for c_i in range(cols):
-            t_sec = round(t_start + (c_i / float(cols - 1)) * (t_end - t_start), 2)
+        for c_i, t_sec in enumerate(sample_ts):
             f_no = min(n_frames - 1, max(0, int(round((t0 + t_sec) * fps))))
             cap.set(cv2.CAP_PROP_POS_FRAMES, f_no)
             ok, frame = cap.read()
             if ok and frame is not None:
                 im = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).resize((thumb_w, thumb_h), Image.Resampling.LANCZOS)
-                x0 = c_i * thumb_w
-                fy0 = row_banner_h + 1
+                r_idx = c_i // cols
+                c_col = c_i % cols
+                x0 = c_col * thumb_w
+                fy0 = row_banner_h + 1 + r_idx * cell_h
+                tag_pos = "START" if c_i == 0 else ("END" if c_i == n_f - 1 else "")
+                lbl_f = f"#{c_i + 1} {tag_pos} ({t_sec:.2f}s)".replace("  ", " ")
                 draw.rectangle([x0, fy0, x0 + thumb_w - 2, fy0 + frame_hdr_h], fill=(24, 24, 32))
-                draw.text((x0 + 8, fy0 + 3), f"{kind_prefix} {stage_names[c_i]} ({t_sec:.2f}s)", fill=(180, 255, 195), font=font_sub)
+                draw.text((x0 + 8, fy0 + 3), lbl_f, fill=(180, 255, 195), font=font_sub)
                 canvas.paste(im, (x0, fy0 + frame_hdr_h + 1))
+
         strips.append(canvas)
-        strip_headers.append(f"IMAGE {seg_id} — {kind_prefix} ({_fmt_mmss(t_a)} to {_fmt_mmss(t_b)}){cut_str} | {seg_short_badge.get(seg_id, '')}")
+        strip_headers.append(f"IMAGE {img_id} — {part_lbl} ({_fmt_mmss(w_a)} to {_fmt_mmss(w_b)}){cut_str} | {cam_desc} | {e_desc}")
+        peak_note = f" | Peak action near {', '.join(f'{pt:.2f}s' for pt in peak_ts)}" if peak_ts else ""
+        telemetry_lines.append(
+            f"  • IMAGE {img_id} -> {part_lbl} ({_fmt_mmss(w_a)}–{_fmt_mmss(w_b)}, dur={w_len:.2f}s, {n_f} frames #1..#{n_f}){cut_prefix}: "
+            f"[{cam_desc}] | [{e_desc}{peak_note}] — Inspect frames #1..#{n_f} in order and report exact visible framing/horizon, "
+            f"who is in shot (`<Subject 1>`, `<Subject 2>`, or detail insert), and chronological step/pose/hand transitions."
+        )
+
+        if has_cuts and seg_id > 1 and is_shot_start:
+            skeleton_items.append(
+                f'    "[Shot {seg_id}] At {_fmt_mmss(w_a)}, hard cut to <state camera scale/angle/horizon roll, which `<Subject N>` (or body detail) appears, screen-left/right placement, and starting pose>."'
+            )
+        if n_f == 6:
+            w_mid = round(0.5 * (w_a + w_b), 3)
+            skeleton_items.append(
+                f'    "At {_fmt_mmss(w_a)}-{_fmt_mmss(w_mid)}, <trace {part_lbl} first half (frames #1-#3): camera move, visible subject(s), body turns/steps, left/right arm & hand transitions, and gaze>."'
+            )
+            skeleton_items.append(
+                f'    "At {_fmt_mmss(w_mid)}-{_fmt_mmss(w_b)}, <trace {part_lbl} second half (frames #4-#6): any newly visible subject or formation change, footwork, left/right hand poses, and expression>."'
+            )
+        else:
+            skeleton_items.append(
+                f'    "At {_fmt_mmss(w_a)}-{_fmt_mmss(w_b)}, <trace {part_lbl} across frames #1-#{n_f}: camera movement, visible subject(s) & staggered/asymmetric actions, footwork/kicks/crouches/pivots, left/right hand shapes, and gaze>."'
+            )
+
     cap.release()
     return strips, dur, cut_times, "\n".join(telemetry_lines), ",\n".join(skeleton_items), strip_headers
 
@@ -412,9 +775,10 @@ def build_opencv_video_strips(video_path: str, in_sec: float = 0.0, out_sec: flo
 VIDEO_EXTRACT_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["name", "outfit", "room", "summary", "shot1", "beats", "music"],
+    "required": ["name", "cast", "outfit", "room", "summary", "shot1", "beats", "music"],
     "properties": {
         "name": {"type": "string"},
+        "cast": {"type": "string"},
         "outfit": {"type": "string"},
         "room": {"type": "string"},
         "summary": {"type": "string"},
@@ -494,14 +858,32 @@ def _parse_lenient_json_obj(raw: str) -> dict | None:
     return None
 
 
+def _clean_extracted_shot1(text: str) -> str:
+    s = scrub_sheet_leaks(str(text or "").strip())
+    s = re.sub(r"^(?:The\s+)?\[\s*Shot\s+1\s*\](?:\s*At\s+\d+:\d+(?:\.\d+)?\s*,?)?\s*[,:\-]*\s*", "", s, flags=re.I).strip()
+    if s and s[0].islower():
+        s = s[0].upper() + s[1:]
+    return s
+
+
+def _scrub_extracted_result(res: dict) -> dict:
+    out = dict(res)
+    for k in ("cast", "outfit", "room", "summary", "music"):
+        if k in out and isinstance(out[k], str):
+            out[k] = scrub_sheet_leaks(out[k])
+    out["shot1"] = _clean_extracted_shot1(out.get("shot1") or "")
+    out["beats"] = [scrub_sheet_leaks(str(b).strip()) for b in (out.get("beats") or []) if scrub_sheet_leaks(str(b).strip())]
+    return out
+
+
 async def extract_video_to_plan(video_path: str, complete_fn, in_sec: float = 0.0, out_sec: float = 0.0, max_seconds: float = 15.0) -> dict:
     if not video_path or not os.path.isfile(video_path):
         raise ValueError(f"Video file not found: {video_path}")
     mtime = int(os.path.getmtime(video_path))
-    cache_key = f"vidextract|{os.path.abspath(video_path)}|{mtime}|{in_sec:.2f}|{out_sec:.2f}|{max_seconds:.1f}"
+    cache_key = f"vidextract_v2|{os.path.abspath(video_path)}|{mtime}|{in_sec:.2f}|{out_sec:.2f}|{max_seconds:.1f}"
     cached = _load_cache().get(cache_key)
     if isinstance(cached, dict) and cached.get("beats"):
-        return cached
+        return _scrub_extracted_result(cached)
 
     import asyncio
     strips, dur, cut_times, telemetry_str, beats_skeleton_str, strip_headers = await asyncio.get_running_loop().run_in_executor(
@@ -510,16 +892,16 @@ async def extract_video_to_plan(video_path: str, complete_fn, in_sec: float = 0.
     if cut_times:
         cuts_str = ", ".join(f"{ct:.2f}s" for ct in cut_times)
         cuts_note = (
-            f"OPENCV DETECTED {len(cut_times)} HARD JUMP-CUTS AT: {cuts_str} "
+            f"OPENCV DETECTED {len(cut_times)} HARD SHOT CUTS AT: {cuts_str} "
             f"(dividing the {dur:.2f}s clip into {len(cut_times) + 1} shots).\n"
-            f"Output all {len(cut_times) + 1} shots in order using the exact `[Shot N] At MM:SS.mmm...` and "
-            f"`At MM:SS.mmm-MM:SS.mmm...` timestamps in the Mandatory Beat Skeleton!\n\n"
-            f"30-FPS OPTICAL FLOW TELEMETRY:\n{telemetry_str}"
+            f"Output all {len(cut_times) + 1} shots in order using the exact `[Shot N] At MM:SS.mmm, ...` and "
+            f"`At MM:SS.mmm-MM:SS.mmm, ...` timestamps in the Mandatory Beat Skeleton!\n\n"
+            f"OPTICAL FLOW & CAMERA TELEMETRY:\n{telemetry_str}"
         )
     else:
         cuts_note = (
-            f"Continuous single-take clip ({dur:.2f}s). Describe each `BEAT N` strip using the exact "
-            f"`At MM:SS.mmm-MM:SS.mmm` timestamps below.\n\n30-FPS OPTICAL FLOW TELEMETRY:\n{telemetry_str}"
+            f"Continuous single-take clip ({dur:.2f}s, zero hard cuts). Describe each chronological `BEAT` strip using the exact "
+            f"`At MM:SS.mmm-MM:SS.mmm` timestamps below.\n\nOPTICAL FLOW & CAMERA TELEMETRY:\n{telemetry_str}"
         )
 
     prompt_txt = VIDEO_EXTRACTOR_SYSTEM % {"cuts_note": cuts_note, "beats_skeleton": beats_skeleton_str}
@@ -527,11 +909,11 @@ async def extract_video_to_plan(video_path: str, complete_fn, in_sec: float = 0.
     for idx, st_im in enumerate(strips):
         hdr = strip_headers[idx] if idx < len(strip_headers) else f"IMAGE {idx + 1}"
         content.append({"type": "text", "text": f"=== {hdr} ==="})
-        content.append({"type": "image_url", "image_url": {"url": encode_pil_mp(st_im, mp=1.0)}})
+        content.append({"type": "image_url", "image_url": {"url": encode_pil_mp(st_im, mp=1.35)}})
     content.append({"type": "text", "text": prompt_txt})
 
     user_msg = {"role": "user", "content": content}
-    raw = await complete_fn([user_msg], schema=VIDEO_EXTRACT_SCHEMA, temperature=0.25, max_tokens=2200)
+    raw = await complete_fn([user_msg], schema=VIDEO_EXTRACT_SCHEMA, temperature=0.2, max_tokens=3600)
     from .. import planner as _pl
     obj = _pl._parse_obj(raw)
     if not isinstance(obj, dict):
@@ -544,7 +926,7 @@ async def extract_video_to_plan(video_path: str, complete_fn, in_sec: float = 0.
             {"role": "user", "content": "Your previous reply had invalid JSON syntax (such as a missing comma or unescaped quote). Return ONLY the fixed valid JSON object matching the exact schema, with no extra prose."},
         ]
         try:
-            raw2 = await complete_fn(repair_msgs, schema=VIDEO_EXTRACT_SCHEMA, temperature=0.1, max_tokens=2200)
+            raw2 = await complete_fn(repair_msgs, schema=VIDEO_EXTRACT_SCHEMA, temperature=0.1, max_tokens=3600)
             obj = _pl._parse_obj(raw2) or _parse_lenient_json_obj(raw2)
             if isinstance(obj, dict):
                 raw = raw2
@@ -553,19 +935,20 @@ async def extract_video_to_plan(video_path: str, complete_fn, in_sec: float = 0.
     if not isinstance(obj, dict):
         snippet = re.sub(r"\s+", " ", str(raw or "")).strip()[:180]
         raise ValueError(f"Vision model did not return a JSON object for the video extraction. ({snippet or 'empty reply'})")
-    res = {
+    res = _scrub_extracted_result({
         "ok": True,
         "name": str(obj.get("name") or os.path.splitext(os.path.basename(video_path))[0]),
+        "cast": str(obj.get("cast") or ""),
         "duration_s": dur,
         "cuts": cut_times,
         "telemetry": telemetry_str,
         "outfit": str(obj.get("outfit") or ""),
         "room": str(obj.get("room") or ""),
         "summary": str(obj.get("summary") or ""),
-        "shot1": str(obj.get("shot1") or ""),
+        "shot1": _clean_extracted_shot1(obj.get("shot1") or ""),
         "beats": [str(b).strip() for b in (obj.get("beats") or []) if str(b).strip()],
         "music": str(obj.get("music") or ""),
-    }
+    })
     if res["beats"]:
         _save_cache(cache_key, res)
     return res

@@ -9,6 +9,7 @@ from . import catalogs as _cat
 from . import dialogue as _dlg
 from . import director_cards as _dir
 from . import refs as _refs
+from . import vision_cv as _vcv
 
 MAX_H3_CHARS = 7000
 
@@ -69,6 +70,91 @@ _META_SCAFFOLD_RX = re.compile(
     r"|,?\s*\bcompleting\s+the\s+continuous\s+entry\s+and\s+climax\s+payoff\b",
     re.I,
 )
+_EMPTY_SILENT_D_RX = re.compile(
+    r"[ \t]*(?:\(DIALOGUE\)[ \t]*(?:<Subject\s+\d+>(?:\s+[A-Z][a-zA-Z]+)?[ \t]*)?(?:\(S\d+(?:,S\d+)*\))?[ \t]*(?:says?[,:]?)?[ \t]*|"
+    r"<Subject\s+\d+>(?:\s+[A-Z][a-zA-Z]+)?[ \t]*\(S\d+(?:,S\d+)*\)[ \t]*(?:says?[,:]?)?[ \t]*|"
+    r"\(S\d+(?:,S\d+)*\)[ \t]*(?:says?[,:]?)?[ \t]*)?"
+    r"<d>\s*(?:\[(?:English|Spanish|Japanese|Korean|Mandarin|Cantonese|Chinese|French|German|Italian|Portuguese|Russian|Arabic|Hindi|Lang)\]\s*)?"
+    r"(?:[\(\[]?(?:no\s+dialogue[^)\]]*|no\s+speech[^)\]]*|silent(?:\s+focus)?|silence|none|n/?a|\.{2,})[\)\]]?\.?)?\s*</d>[ \t]*\.?",
+    re.I,
+)
+_SUBJ_POSS_ADJ = (
+    r"left|right|own|bare|wet|damp|oiled|glistening|smooth|soft|warm|cool|slender|curved|"
+    r"arched|raised|lifted|extended|outstretched|free|other|opposite|open|parted|flushed|"
+    r"upturned|swollen|stretched|taut|erect|thick|hard|vertical|rosy|pink|pale|dark|glossy|"
+    r"loose|long|short|cropped|fitted|sheer|lace|silk|black|white|red|high|lower|upper|"
+    r"inner|outer|front|rear|near|far|clean|sleek|steady|full|rapid|deep|slow|gentle|"
+    r"bright|playful|heavy|gloved|manicured|nylon-clad|stockinged|barefoot|sleeping|"
+    r"foreground|background|toned|naked|exposed|bent|crossed|supple|delicate|small|wide|"
+    r"bouncing|braced|calm|curled|gleaming|heaving|licking|pursed|reclined|relaxed|rounded|seated|"
+    r"slick|smiling|spread|standing|suspended|unblinking|hypnotic|satin|wide-parted|open-mouthed|"
+    r"smoking|interlaced|coiled|sword|blade|knife|katana|spear|dagger|pistol|rifle|hammer|boot|steel|armored|gauntleted"
+)
+_SUBJ_POSS_COMPOUND = (
+    r"(?:shoulder\s+blades?|inner\s+thighs?|bare\s+glutes?|ass\s+cheeks?|rib\s*cage|"
+    r"collar\s*bone|waist\s*band|lower\s+back|lower\s+lip|upper\s+thigh|upper\s+chest|"
+    r"eye\s+level|dress\s+straps?|thong\s+waistband|deep\s+thrusts?|warm\s+finish|"
+    r"(?:upright\s+)?(?:erect\s+)?(?:cock|penis|shaft|nipples?)|hard\s+cock|"
+    r"(?:wet\s+)?(?:pussy|vulva|clitoris|clit|labia|lips?)|"
+    r"(?:natural\s+|bare\s+)?breasts?|mirror\s+reflection|lace\s+(?:bra|thong|panties)|"
+    r"(?:chest|torso|shoulders)(?:,\s*(?:chest|torso|shoulders|head))*,?\s+and\s+(?:head|torso|shoulders|chest))"
+)
+_SUBJ_POSS_RX = re.compile(
+    rf"<Subject\s+(\d+)>(?:'s|\u2019s)\s+"
+    rf"((?:(?:{_SUBJ_POSS_ADJ})\s+){{0,3}}(?:{_SUBJ_POSS_COMPOUND}|[a-z]+(?:-[a-z]+)?))\b",
+    re.I,
+)
+_BOTH_SUBJ_ACT_RX = re.compile(
+    r"\bboth\s+(?:dancers|fighters|women|men|partners|performers|subjects|combatants|girls|boys|rivals|of\s+them)\b"
+    r"|\bboth(?=\s+(?:bounce|step|turn|move|stand|sit|kneel|lie|recline|lean|hold|lock|freeze|drop|pivot|rise|hit|snap|sway|pulse|wave|melt|trade|gaze|look|smile|laugh|tremble|arch|keep|press|glide|stride|dash|duck|hop|launch|reach|pull|push|grasp|grip|roll|sink|wrap|twist|slide|kick|punch|block|parry|execute|wear)\b)",
+    re.I,
+)
+
+
+def _strip_empty_silent_d(text: str) -> str:
+    """Remove empty `<d></d>` or silent-placeholder `<d>[English] (no dialogue)</d>` before speech hits H3."""
+    return _EMPTY_SILENT_D_RX.sub("", str(text or ""))
+
+
+def _detach_subject_possessives(text: str, lab: dict | None = None) -> str:
+    """Keep `<Subject N>` whitespace-separated by detaching `'s` suffixes cleanly."""
+    subs = (lab or {}).get("subjects") or {}
+
+    def _repl(m):
+        sn = int(m.group(1))
+        tail = m.group(2).strip()
+        cname = str((subs.get(sn) or {}).get("char_name") or "").strip()
+        if cname and len(cname) >= 2:
+            return f"<Subject {sn}> {cname}'s {tail}"
+        return f"the {tail} of <Subject {sn}>"
+
+    out = _SUBJ_POSS_RX.sub(_repl, str(text or ""))
+    out = re.sub(
+        r"(<Subject\s+(\d+)>)(?:'s|\u2019s)\b",
+        lambda m: f"{m.group(1)} {str((subs.get(int(m.group(2))) or {}).get('char_name') or '').strip()}'s"
+        if str((subs.get(int(m.group(2))) or {}).get("char_name") or "").strip()
+        else m.group(1),
+        out,
+    )
+    return out
+
+
+def _scrub_multi_subject_pronouns(text: str, subject_count: int) -> str:
+    """Rewrite plural pronouns (`they`/`them`/`their`) and subject-level `both` in 2+ subject prose."""
+    n_subj = int(subject_count or 0)
+    if n_subj < 2:
+        return str(text or "")
+    pair_lbl = "<Subject 1> and <Subject 2>" if n_subj == 2 else "the performers"
+    c = str(text or "")
+    if n_subj == 2:
+        c = _BOTH_SUBJ_ACT_RX.sub(pair_lbl, c)
+    c = re.sub(r"\bthey(?:\s+are|'re)\b", f"{pair_lbl} are", c, flags=re.I)
+    c = re.sub(r"\bthey\s+were\b", f"{pair_lbl} were", c, flags=re.I)
+    c = re.sub(r"\bthey(?:\s+have|'ve)\b", f"{pair_lbl} have", c, flags=re.I)
+    c = re.sub(r"\btheirs?\b", "each performer's", c, flags=re.I)
+    c = re.sub(r"\bthemselves\b", "each other", c, flags=re.I)
+    c = re.sub(r"\b(?:them|they)\b", pair_lbl, c, flags=re.I)
+    return c
 
 
 def _clean_outside_d(text: str, fn) -> str:
@@ -295,6 +381,9 @@ def _sanitize_audio_sections(block: str, silent: bool = False) -> str:
         if not val:
             continue
         cleaned = re.sub(r"\s*;\s*", ", ", val.strip())
+        cleaned = re.sub(r"<d>.*?</d>", "", cleaned, flags=re.S | re.I)
+        cleaned = re.sub(r"</?d>", "", cleaned, flags=re.I)
+        cleaned = re.sub(r"\{[^{}\n]{2,60}\}", "", cleaned)
         if fld == "overall_soundscape:":
             if cleaned.strip().upper() == "N/A":
                 cleaned = "N/A"
@@ -457,6 +546,7 @@ def finish_block(
     t = _clean_outside_d(t, lambda s: _UI_WARDROBE_LABEL_RX.sub("", s))
     t = _clean_outside_d(t, lambda s: _UI_STATE_LABEL_RX.sub(r"\1", s))
     t = _clean_outside_d(t, lambda s: _META_SCAFFOLD_RX.sub("", s))
+    t = _clean_outside_d(t, lambda s: _vcv.scrub_sheet_leaks(s, strip=False))
 
     fields = _std.REF2VA_FIELDS if mode == "Ref2VA" else _std.T2VA_FIELDS
     first_pos = t.find(fields[0])
@@ -524,8 +614,19 @@ def finish_block(
         t = _clean_outside_d(t, lambda s: re.sub(r"<Subject\s+[2-9]>", "the other person", s))
         t = _clean_outside_d(t, lambda s: re.sub(r"\s*<(?:Picture|Audio|Video)\s+\d+>", "", s))
 
-    # Bind bare character names in Ref2VA (and fix any nested `<Subject N> (<Subject N> Name)` artifacts)
+    # Bind bare character names in Ref2VA (and fix any nested `<Subject N> (<Subject N> Name)` or unwired `<Subject 2+>` tags)
     if mode == "Ref2VA":
+        wired_sub_nums = set((lab.get("subjects") or {}).keys())
+        unwired_nums = {int(n) for n in re.findall(r"<Subject\s+(\d+)>", t) if int(n) not in wired_sub_nums}
+        if unwired_nums:
+            s1_blob_u = " ".join(str(p.get("desc") or "") for p in (lab.get("pictures") or []) if p.get("subject") == 1).lower()
+            s1_male_u = bool(re.search(r"\b(?:man|male|boy|guy|he|his)\b", s1_blob_u)) and not bool(re.search(r"\b(?:woman|female|girl|she|her)\b", s1_blob_u))
+            poss_u = "his" if s1_male_u else "her"
+            is_comb_u = _dir.is_combat(brief, str(flavors.get("combat") or ""), str(flavors.get("wardrobe") or ""), str(flavors.get("fx") or ""))
+            for un_i in sorted(unwired_nums):
+                noun_u = "the lead performer" if un_i == 1 else ((f"{poss_u} rival" if is_comb_u else f"{poss_u} partner") if un_i == 2 else "another performer")
+                t = _clean_outside_d(t, lambda s, ui=un_i, nu=noun_u: re.sub(rf"<Subject\s+{ui}>'s\b", f"{nu}'s", s))
+                t = _clean_outside_d(t, lambda s, ui=un_i, nu=noun_u: re.sub(rf"<Subject\s+{ui}>", nu, s))
         for s_n, s_meta in sorted((lab.get("subjects") or {}).items()):
             cname = str(s_meta.get("char_name") or "").strip()
             if cname and len(cname) >= 3:
@@ -558,7 +659,18 @@ def finish_block(
         return out
 
     t = re.sub(r"(<d>\[[^\]]+\][^<\n]+?)(?=\.\s*$|\s*$)", r"\1</d>", t, flags=re.M)
+    t = _strip_empty_silent_d(t)
     t = _clean_outside_d(t, _strip_neg)
+    if mode == "Ref2VA":
+        wired_n_sub = len((lab.get("subjects") or {}))
+        if wired_n_sub >= 2:
+            for _pfld, _pnxt in (("summary:", ("retention_analysis:", "detailed_description:", "overall_soundscape:")), (desc_field, ("overall_soundscape:", "non_diegetic_music:"))):
+                _pval = _std._field(t, _pfld)
+                if _pval:
+                    _pnew = _clean_outside_d(_pval, lambda s, ns=wired_n_sub: _scrub_multi_subject_pronouns(s, ns))
+                    if _pnew != _pval:
+                        t = _replace_section_body(t, _pfld, _pnew, _pnxt)
+        t = _clean_outside_d(t, lambda s, l=lab: _detach_subject_possessives(s, l))
     t = _clean_outside_d(t, lambda s: re.sub(r"[ \t]+([.,;!?])", r"\1", s))
     if not silent:
         t = _clean_inside_d(t)
@@ -909,6 +1021,8 @@ def format_h3_output(block: str, *, output_format: str = "h3_auto", duration_s: 
         raw_desc = re.sub(r"<d>.*?</d>", "", raw_desc, flags=re.I | re.S)
         return re.sub(r"\s+", " ", raw_desc).strip() or t
     dur = float(duration_s or 10.0)
+    shot_nums = [int(n) for n in re.findall(r"\[\s*Shot\s+(\d+)\s*\]", t, flags=re.I)]
+    last_shot_n = max(shot_nums) if shot_nums else 1
     # Strip Ref2VA headers if targeting I2VA / FL2VA / L2VA base keyframe modes
     body = t
     if "integrated_multimodal_description:" not in body and "detailed_description:" in body:
@@ -920,10 +1034,10 @@ def format_h3_output(block: str, *, output_format: str = "h3_auto", duration_s: 
         hdr = "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced."
         return f"{hdr}\n\n{body}"
     if fmt == "h3_fl2va":
-        hdr = f"How the reference pictures align with the target video — Picture 1 (from Shot 1) aligns with the 0.00-second mark of the target video; Picture 2 (from Shot 1) aligns with the {dur:.2f}-second mark of the target video."
+        hdr = f"How the reference pictures align with the target video — Picture 1 (from Shot 1) aligns with the 0.00-second mark of the target video; Picture 2 (from Shot {last_shot_n}) aligns with the {dur:.2f}-second mark of the target video."
         return f"{hdr}\n\n{body}"
     if fmt == "h3_l2va":
-        hdr = f"How the reference pictures align with the target video — <Picture 1> (from [Shot 1]) aligns with the {dur:.2f}-second mark of the target video."
+        hdr = f"How the reference pictures align with the target video — <Picture 1> (from [Shot {last_shot_n}]) aligns with the {dur:.2f}-second mark of the target video."
         return f"{hdr}\n\n{body}"
     return t
 
@@ -1184,8 +1298,8 @@ def build_pass2_audit_checklist(
                 f"(sample: `{_dlg.native_sample_for(tgt_lang_p2)}`), keeping all surrounding descriptions in English."
             )
     for fl in flavor_lines:
-        if any(tag in fl for tag in ("LAW:", "COMBAT", "ANIME-TO-REAL-LIFE", "ORBIT", "ELEVATOR", "TOP-DOWN", "OPEN-END", "HOP-JOIN CONTINUITY", "HOP TRANSITION", "SCREEN-AXIS")):
+        if any(tag in fl for tag in ("LAW:", "COMBAT", "DANCE", "BEAT-GRID", "ANIME-TO-REAL-LIFE", "ORBIT", "ELEVATOR", "TOP-DOWN", "OPEN-END", "HOP-JOIN CONTINUITY", "HOP TRANSITION", "SCREEN-AXIS")):
             checks.append(fl)
     if str(prev_hop_context or "").strip() and not any("HOP" in c for c in checks):
         checks.append(f"HOP CONTINUITY CHECK: Ensure [Shot 1] smoothly continues the previous hop ending (`{str(prev_hop_context).strip()[:160]}`) with continuous posture and camera axis.")
-    return checks[:12]
+    return checks[:14]

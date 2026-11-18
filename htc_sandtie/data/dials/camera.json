@@ -20,7 +20,7 @@
       "id": "multi_position_3cut_intimate",
       "label": "🔥 Multi-Position 3-Shot Intimate Cut (Doggy POV -> Sofa Missionary -> POV Oral)",
       "group": "00 · Multi-Angle, Action-Follow & Coverage",
-      "rule": "a three-shot multi-position intimate sequence framed exclusively in tight close and medium close-up cuts focused on the action: [Shot 1] establishes ONLY <Subject 1> bent over the table or surface on all fours with her dress hiked up above her waist exposing her bare hips and rounded ass cheeks, followed in the first timed beat by a first-person POV from <Subject 2>'s eye level looking down at <Subject 1> as she grinds her rear end back onto <Subject 2>'s deep thrusts; [Shot 2] cuts to a low-angle medium close-up from the side on the sofa where <Subject 2> straddles <Subject 1>'s hips and thrusts his hips forward and backward fully against her vagina while her breasts bounce and ripple; [Shot 3] cuts to a tight first-person POV (or steep 3/4 top-down high angle) from <Subject 2>'s perspective looking down at <Subject 1> kneeling below him with her lips in a tight O-ring vacuum seal and hollowed cheeks while he pulls her head fully down the length of the shaft repeatedly at great speed.",
+      "rule": "a three-shot multi-position intimate sequence framed exclusively in tight close and medium close-up cuts focused on the action: [Shot 1] establishes ONLY <Subject 1> bent over the table or surface on all fours with her dress hiked up above her waist exposing her bare hips and rounded ass cheeks, followed in the first timed beat by a first-person POV from the eye level of <Subject 2> looking down at <Subject 1> as she grinds her rear end back onto the deep thrusts of <Subject 2>; [Shot 2] cuts to a low-angle medium close-up from the side on the sofa where <Subject 2> straddles the hips of <Subject 1> and thrusts his hips forward and backward fully against her vagina while her breasts bounce and ripple; [Shot 3] cuts to a tight first-person POV (or steep 3/4 top-down high angle) from the perspective of <Subject 2> looking down at <Subject 1> kneeling below him with her lips in a tight O-ring vacuum seal and hollowed cheeks while he pulls her head fully down the length of the shaft repeatedly at great speed.",
       "aspect_best": "either",
       "aspect_badge": "📐 9:16/16:9",
       "aspect_tip": "📐 RESOLUTION: Works in both 📱 9:16 Portrait (768×1344, best for solo/vertical stacking) and 🖥️ 16:9 Landscape (1344×768, best for multi-subject/wide horizontal blocking).",
@@ -1727,6 +1727,60 @@
       "aspect_best": "16:9",
       "duration_best": "10-15 s",
       "rule": "Keep camera motion fast, snappy, and urgent throughout: dart laterally with punches, drop low near floor height on crouching leg sweeps, tilt sharply upward following jump kicks and mid-air clashes, snap-zoom rapidly inward onto the ultimate attack in the next-to-last beat, and whip wide across crash debris in the final beat."
+    },
+    {
+      "id": "cam_kpop_inkigayo_ronin_hand_drop",
+      "label": "🎬 K-Pop Gimbal Push-Shake & Fingertip-Motivated Drop",
+      "group": "Dynamic Cuts",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "Run a dynamic 28mm handheld gimbal chasing the idol's hands: push straight inward toward outstretched fingertips, drop sharply downward with a tight micro-shake the instant fingers curl or strike down, whip laterally in the direction a pointed index finger leads, and rise smoothly onto a hero chorus wide frame."
+    },
+    {
+      "id": "cam_kpop_tutting_arm_window_frame",
+      "label": "🔳 K-Pop Arm-Window Peek & Precision Aspect Snap-Zoom",
+      "group": "Dynamic Cuts",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "Open locked closely behind or opposite a front performer's geometric 90-degree bent-arm window framing the partner's eyes and fingertips inside the forearm rectangle, punch cleanly through the wrist box on the beat drop into tight twin eye-level close-ups, and snap back wide on synchronized hand locks."
+    },
+    {
+      "id": "cam_kpop_through_wall_match_truck",
+      "label": "🚪 K-Pop Lateral Match-Truck Scene Wipe & Styling Snap-Cut",
+      "group": "Dynamic Cuts",
+      "domain": "general",
+      "aspect_best": "16:9",
+      "duration_best": "10-15 s",
+      "rule": "Drive a brisk continuous horizontal lateral truck past a clean vertical pillar or doorway wipe, hard-cutting at peak speed directly into a matched dance pose inside a fresh contrasting lighting setup while the dancer's motion carries smoothly through the transition."
+    },
+    {
+      "id": "cam_kpop_anti_drop_macro_to_crane",
+      "label": "🤏 K-Pop Fingertip-Macro Anti-Drop Freeze -> Crane Boom-Out",
+      "group": "Dynamic Cuts",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "8-12 s",
+      "rule": "Open tightly framed on fingertips and eyes locked in an intricate geometric tutting box beside the cheek, hold dead-still through a split-second anti-drop micro-freeze, then whip-boom rapidly backward and high onto a sweeping overhead crane arc as full-body footwork explodes wide."
+    },
+    {
+      "id": "cam_kpop_studio_choom_crimson_dolly_snap",
+      "label": "🎬 K-Pop Studio-Choom Crimson Dolly Push & Strobe Beat-Snap",
+      "group": "Dynamic Cuts",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "10-12 s",
+      "rule": "Glide smoothly along a low 24mm track dolly pushing from waist level toward the performer's upper torso beneath vivid colored studio backlight, snap dead-still for a crisp anti-drop beat freeze as key lighting switches sharply from cool ice-cyan to saturated crimson, then glide rapidly wide again as synchronized footwork breaks across the reflective floor."
+    },
+    {
+      "id": "cam_kpop_choreo_overhead_halo_drop",
+      "label": "🌀 K-Pop Overhead Halo Corkscrew Drop -> Eye-Level Lens Grab",
+      "group": "Dynamic Cuts",
+      "domain": "general",
+      "aspect_best": "either",
+      "duration_best": "10-12 s",
+      "rule": "Open centered straight overhead looking downward onto symmetrical star-and-diamond arm geometry, spiral rapidly downward in a smooth corkscrew descent matching the performer's spinning shoulders down to eye level, and lock tight inches from outstretched fingertips reaching straight toward the glass."
     }
   ]
 }

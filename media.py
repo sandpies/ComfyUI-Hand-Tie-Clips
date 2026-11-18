@@ -154,19 +154,24 @@ def video_frame_data_urls(name, start=0.0, end=0.0, count=3,
 
         with av.open(path) as container:
             vs = container.streams.video[0]
-            fps = float(vs.average_rate or 0) or 24.0
-            total = int(vs.frames or 0)
-            first = max(0, int(round(float(start or 0.0) * fps)))
-            last = int(round(float(end or 0.0) * fps)) if end else 0
+            src_fps, n_total, secs, _lo, first, last = _video_window_spec(
+                vs, start, end)
             if last <= first:
-                # No OUT point: use the clip's own end when it is known, and
-                # otherwise fall back to a fixed window rather than decoding a
-                # whole file to find out how long it is.
-                last = (total - 1) if total > first else first + int(fps * 4)
-            if count == 1 or last <= first:
+                # No OUT point: use the clip's known end (frames or duration*time_base)
+                # rather than truncating to 4 s when a container lacks vs.frames.
+                if n_total > first + 1:
+                    eff_last = n_total - 1
+                elif secs > _lo + MIN_WINDOW_S:
+                    eff_last = max(first + 1, int(round(secs * src_fps)) - 1)
+                else:
+                    eff_last = first + int(src_fps * 4)
+            else:
+                eff_last = (min(last - 1, n_total - 1)
+                            if n_total > first else max(first, last - 1))
+            if count == 1 or eff_last <= first:
                 wanted = [first]
             else:
-                step = (last - first) / float(count - 1)
+                step = (eff_last - first) / float(count - 1)
                 wanted = [int(round(first + step * k)) for k in range(count)]
             need = set(wanted)
             got = {}
@@ -480,14 +485,52 @@ def video_target(width, height, size=DEFAULT_VIDEO_SIZE):
     return int(cw), int(ch)
 
 
+TARGET_VIDEO_FPS = 24.0
+
+
+def _video_window_spec(vs, start, end):
+    """Stream timing and trim bounds `(src_fps, n_total, secs, lo, first, last)`."""
+    src_fps = float(vs.average_rate or 0) or TARGET_VIDEO_FPS
+    n_total = int(vs.frames or 0)
+    secs = (n_total / src_fps) if n_total else float(
+        (vs.duration or 0) * float(vs.time_base or 0) or 0.0)
+    if secs > 0:
+        lo, hi = clip_window(start, end, secs)
+    else:
+        lo = max(0.0, float(start or 0.0))
+        raw_hi = float(end or 0.0)
+        hi = raw_hi if raw_hi > lo + MIN_WINDOW_S else 0.0
+    first = int(round(lo * src_fps))
+    last = int(round(hi * src_fps)) if hi > 0 else 0
+    if not n_total and secs > 0:
+        n_total = int(round(secs * src_fps))
+    return src_fps, n_total, secs, lo, first, last
+
+
+def _resampled_frame_count(lo, first, eff_last, src_fps,
+                           target_fps=TARGET_VIDEO_FPS):
+    """Exact frame count produced by `load_video` after 24 fps reframing."""
+    if not eff_last or eff_last <= first:
+        return 0
+    if abs(src_fps - target_fps) <= 0.05:
+        return max(0, eff_last - first)
+    k = max(0, int((eff_last - first) * target_fps / src_fps))
+    while k > 0 and int(round((lo + (k - 1) / target_fps) * src_fps)) >= eff_last:
+        k -= 1
+    while int(round((lo + k / target_fps) * src_fps)) < eff_last:
+        k += 1
+    return k
+
+
 def load_video(name, max_frames=None, start=0.0, end=0.0,
                size=DEFAULT_VIDEO_SIZE):
-    """A clip as an IMAGE batch `[N,H,W,3]`, or None.
+    """A clip as an IMAGE batch `[N,H,W,3]` at 24 fps, or None.
 
-    `start`/`end` are the trim window in seconds; see `clip_window`. H3 already
-    truncates a reference video to the hop length, but only from frame 0
-    (`frames[:frame_count]` in nodes_minimax_h3.py), so without this there is no
-    way to point at the segment whose motion you actually want.
+    `start`/`end` are the trim window in seconds; see `clip_window`. H3 expects
+    reference video frames at 24 fps and truncates to the hop length from frame
+    0 (`frames[:frame_count]` in nodes_minimax_h3.py), so non-24 fps inputs
+    (30/48/60/15 fps) are temporally reframed onto H3's 24 fps clock to stay
+    synced with real time and their audio track.
 
     Frames are counted rather than sought. A keyframe seek lands on the nearest
     I-frame, which can be a second off -- and a bar that says 3.10 s while the
@@ -504,24 +547,29 @@ def load_video(name, max_frames=None, start=0.0, end=0.0,
         frames = []
         with av.open(path) as container:
             vs = container.streams.video[0]
-            fps = float(vs.average_rate or 0) or 24.0
-            n_total = int(vs.frames or 0)
-            secs = (n_total / fps) if n_total else float(
-                (vs.duration or 0) * float(vs.time_base or 0) or 0.0)
-            lo, hi = clip_window(start, end, secs) if secs > 0 else (0.0, 0.0)
-            first = int(round(lo * fps))
-            last = int(round(hi * fps)) if hi > 0 else 0
+            src_fps, _n_total, _secs, lo, first, last = _video_window_spec(
+                vs, start, end)
+            resample = abs(src_fps - TARGET_VIDEO_FPS) > 0.05
             target = video_target(vs.codec_context.width,
                                   vs.codec_context.height, size)
             if target:
                 print(f"[{TAG}] reference clip {name!r}: decoding "
                       f"{vs.codec_context.width}x{vs.codec_context.height} "
                       f"at {target[0]}x{target[1]} ({size})", flush=True)
+            next_out_k = 0
+            target_src_i = (int(round((lo + next_out_k / TARGET_VIDEO_FPS) * src_fps))
+                            if resample else first)
             for i, frame in enumerate(container.decode(video=0)):
-                if i < first:
-                    continue
-                if last and i >= last:
-                    break
+                if resample:
+                    if last and (i >= last or target_src_i >= last):
+                        break
+                    if i < target_src_i:
+                        continue
+                else:
+                    if i < first:
+                        continue
+                    if last and i >= last:
+                        break
                 if target:
                     # Scaled by libswscale on the way out of the decoder, so a
                     # full-resolution RGB array is never built. BILINEAR is the
@@ -535,13 +583,36 @@ def load_video(name, max_frames=None, start=0.0, end=0.0,
                     except (TypeError, ValueError):
                         frame = frame.reformat(width=target[0], height=target[1],
                                                format="rgb24")
-                    frames.append(frame.to_ndarray())
+                    arr_rgb = frame.to_ndarray()
                 else:
-                    frames.append(frame.to_ndarray(format="rgb24"))
-                if max_frames and len(frames) >= int(max_frames):
-                    break
+                    arr_rgb = frame.to_ndarray(format="rgb24")
+                if not resample:
+                    frames.append(arr_rgb)
+                    if max_frames and len(frames) >= int(max_frames):
+                        break
+                else:
+                    done = False
+                    while True:
+                        if last and target_src_i >= last:
+                            done = True
+                            break
+                        if i < target_src_i:
+                            break
+                        frames.append(arr_rgb)
+                        if max_frames and len(frames) >= int(max_frames):
+                            done = True
+                            break
+                        next_out_k += 1
+                        target_src_i = int(round(
+                            (lo + next_out_k / TARGET_VIDEO_FPS) * src_fps))
+                    if done:
+                        break
         if not frames:
             return None
+        if resample and len(frames) > 1:
+            print(f"[{TAG}] reference clip {name!r}: reframed "
+                  f"{src_fps:.3g} fps -> {int(TARGET_VIDEO_FPS)} fps "
+                  f"({len(frames)} frames)", flush=True)
         arr = np.stack(frames).astype(np.float32) / 255.0
         return torch.from_numpy(arr)
     except Exception as exc:
@@ -671,12 +742,11 @@ def probe_size(name):
 
 
 def probe_frames(name, start=0.0, end=0.0, max_frames=0):
-    """How many frames `load_video` would return for this window, or None.
+    """How many 24 fps frames `load_video` would return for this window, or None.
 
     Counted from the stream's own frame total and rate rather than by
     decoding, so the panel can price a clip while the user drags its
-    window. `load_video` seeks to a keyframe, so this is the window's
-    length, not a promise about which frame it starts on.
+    window.
     """
     path = resolve(name, kinds={"video"})
     if path is None:
@@ -688,20 +758,12 @@ def probe_frames(name, start=0.0, end=0.0, max_frames=0):
             if not container.streams.video:
                 return None
             vs = container.streams.video[0]
-            fps = float(vs.average_rate or 0) or 24.0
-            n_total = int(vs.frames or 0)
-            secs = (n_total / fps) if n_total else float(
-                (vs.duration or 0) * float(vs.time_base or 0) or 0.0)
+            src_fps, n_total, _secs, lo, first, last = _video_window_spec(
+                vs, start, end)
     except Exception:  # noqa: BLE001
         return None
-    lo, hi = clip_window(start, end, secs) if secs > 0 else (0.0, 0.0)
-    first = int(round(lo * fps))
-    last = int(round(hi * fps)) if hi > 0 else 0
-    if not n_total:
-        n_total = int(round(secs * fps)) if secs > 0 else 0
-    if last <= first:
-        last = n_total
-    n = max(0, min(last, n_total) - first) if n_total else 0
+    eff_last = min(last, n_total) if (last > first and n_total) else n_total
+    n = _resampled_frame_count(lo, first, eff_last, src_fps)
     if max_frames:
         n = min(n, int(max_frames))
     return n
@@ -723,8 +785,11 @@ def probe_clip(name, start=0.0, end=0.0):
 
         with av.open(path) as container:
             vs = container.streams.video[0] if container.streams.video else None
-            fps = float(vs.average_rate or 0) if vs is not None else 0.0
-            secs = (n / fps) if (n and fps) else None
+            src_fps = float(vs.average_rate or 0) if vs is not None else 0.0
+            eff_fps = (TARGET_VIDEO_FPS
+                       if (src_fps and abs(src_fps - TARGET_VIDEO_FPS) > 0.05)
+                       else src_fps)
+            secs = (n / eff_fps) if (n and eff_fps) else None
             sound = bool(container.streams.audio)
     except Exception:  # noqa: BLE001
         pass

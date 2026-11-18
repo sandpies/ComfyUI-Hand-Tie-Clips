@@ -41,6 +41,15 @@ _MOUTH = re.compile(r"\b(lips?|mouth|jaw|silent|closed|pressed|smil\w*|grin\w*|f
                     r"swallow\w*|chew\w*|bit(?:es|ing) (?:his|her) lip)\b", re.I)
 _PERSON = re.compile(r"<Subject \d+>|\b(?:he|she|his|her|the (?:man|woman|boy|girl))\b", re.I)
 _NO_BED = re.compile(r"^\s*(?:n/?a|none|silence)?\s*\.?\s*$", re.I)
+_SHEET_LEAK = re.compile(
+    r"\b(?:storyboard(?:\s+(?:sequence|video|sheet|frames?))?|comic\s+strip|manga\s+page|"
+    r"stitched\s+images?|contact\s+sheets?|(?:motion\s+)?sequence\s+sheets?|speech\s+bubbles?|"
+    r"speech\s+balloons?|panel\s+borders?|gutters?|inset\s+panels?)\b",
+    re.I,
+)
+_SUBJ_SUFFIX = re.compile(r"<Subject\s+\d+>(?:'s|\u2019s|[a-zA-Z]|-)")
+_PLURAL_PRON = re.compile(r"\b(?:they|them|their|theirs|themselves)\b", re.I)
+_SUBJ_TAG = re.compile(r"<Subject\s+(\d+)>")
 
 
 def _norm(text):
@@ -165,12 +174,54 @@ def _busy_mouth(blk):
     return out
 
 
+def _sheet_leak(blk):
+    out = []
+    for name in ("summary:", "detailed_description:", "integrated_multimodal_description:"):
+        val = _pl._D_LINE.sub(" ", blk.fields.get(name, ""))
+        m = _SHEET_LEAK.search(val)
+        if m:
+            out.append(f"sheet-leak: '{m.group(0)}' looks like reference-sheet or comic-strip "
+                       f"terminology; describe the live scene directly instead.")
+    return out
+
+
+def _subject_suffix(blk):
+    out = []
+    for name in ("summary:", "detailed_description:", "integrated_multimodal_description:"):
+        val = _pl._D_LINE.sub(" ", blk.fields.get(name, ""))
+        m = _SUBJ_SUFFIX.search(val)
+        if m:
+            out.append(f"subject-suffix: keep <Subject N> whitespace-separated ('{m.group(0)}'); "
+                       f"write 'the X of <Subject N>' or `<Subject N> Name's` so the special token stays clean.")
+    return out
+
+
+def _multi_pronoun(blk):
+    all_prose = "\n".join(blk.fields.get(k, "") for k in (
+        "subject_definitions:", "summary:", "detailed_description:", "integrated_multimodal_description:"
+    ))
+    sub_nums = {int(n) for n in _SUBJ_TAG.findall(all_prose)}
+    if len(sub_nums) < 2:
+        return []
+    out = []
+    for name in ("summary:", "detailed_description:"):
+        val = _pl._D_LINE.sub(" ", blk.fields.get(name, ""))
+        hits = sorted({w.lower() for w in _PLURAL_PRON.findall(val)})
+        if hits:
+            out.append(f"multi-pronoun: {name.rstrip(':')} uses {', '.join(hits)} with multiple "
+                       f"<Subject N> tags; name <Subject 1> and <Subject 2> explicitly to avoid identity bleed.")
+    return out
+
+
 _CHECKS = (("line-ledger", lambda blk, brief: _ledger(blk, brief)),
            ("spoken-sound", lambda blk, brief: _spoken_sound(blk)),
            ("busy-mouth", lambda blk, brief: _busy_mouth(blk)),
            ("speech-share", lambda blk, brief: _speech_share(blk)),
            ("silent-face", lambda blk, brief: _silent_face(blk)),
-           ("gap", lambda blk, brief: _gap(blk)))
+           ("gap", lambda blk, brief: _gap(blk)),
+           ("sheet-leak", lambda blk, brief: _sheet_leak(blk)),
+           ("subject-suffix", lambda blk, brief: _subject_suffix(blk)),
+           ("multi-pronoun", lambda blk, brief: _multi_pronoun(blk)))
 _LOGGED = set()
 
 

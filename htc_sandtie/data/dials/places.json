@@ -92,7 +92,7 @@
       "rule": "a sleek corner executive office after hours with a wide polished dark mahogany desk in the foreground, a black leather executive chair, a green-shaded brass banker's lamp casting a warm pool of light, and floor-to-ceiling glass walls overlooking midnight skyscraper towers",
       "sound": "hushed after-hours office air-conditioning hum, smooth leather chair creak, muffled midnight city ambience",
       "life": "distant office tower lights glow across the night skyline; warm brass lamp light reflects off the polished mahogany desktop",
-      "domain": "wet_pool"
+      "domain": "office_desk"
     },
     {
       "id": "cyberpunk_neon_bedroom_pod",
@@ -282,7 +282,7 @@
       "rule": "a wet concrete skyscraper rooftop in a pouring midnight rainstorm, mirror-like puddles reflecting towering pink and cyan Japanese neon billboards and holographic signs, industrial exhaust vents billowing white steam, a chain-link parapet edge",
       "sound": "heavy rain hammering concrete and splashing in puddles, roaring vent steam, distant thunder and cyberpunk siren",
       "life": "curtains of silver rain splash across the neon-lit puddles; giant holographic signs flicker in the background; white steam billows across the wet floor",
-      "domain": "mirror_vanity"
+      "domain": "combat_action"
     },
     {
       "id": "shattered_marble_lobby",
@@ -352,7 +352,7 @@
       "rule": "a subterranean luxury bathhouse with dark mosaic-tiled pillars and ankle-deep reflective water pools, illuminated by vivid electric-blue and crimson-red neon light bars, glass block partitions, rising warm steam",
       "sound": "splashing footsteps in shallow water, echoing tile acoustics, cascading water wall, low bass pulse",
       "life": "blue and red neon reflections ripple across the water pools and tiled pillars; steam drifts across the glass partitions; water cascades down a lit stone wall",
-      "domain": "wet_pool"
+      "domain": "combat_action"
     },
     {
       "id": "roman_gladiator_colosseum",
@@ -522,7 +522,7 @@
       "rule": "a spacious dance rehearsal studio: wide sprung honey-oak flooring in the foreground, a continuous wall-to-wall mirror and brass ballet barre along the back wall reflecting the entire room, and warm diffused overhead track lighting",
       "sound": "clean studio room acoustics, light shoe or bare-foot friction on polished wood, low warm bass",
       "life": "the full-wall mirror behind reflects the performer's back and movements in crystal-clear symmetry under warm studio lights",
-      "domain": "mirror_vanity"
+      "domain": "general"
     },
     {
       "id": "plate_rainy_tokyo_hotel_window_seat",
@@ -682,7 +682,7 @@
       "rule": "a sleek private fitness studio: a black leather adjustable weight bench and rubberized flooring in the foreground, a chrome dumbbell rack in the midground, and floor-to-ceiling backlit mirrors spanning the rear wall",
       "sound": "low studio ventilation hum, soft rubber floor squeak, rhythmic breathing",
       "life": "warm LED backlighting glows along the edges of the full-wall mirror",
-      "domain": "mirror_vanity"
+      "domain": "gym_sport"
     },
     {
       "id": "plate_anime2real_infinity_castle_floating_tatami",
@@ -869,7 +869,7 @@
       "label": "Sunlit Artist Loft · Tall Industrial Windows",
       "group": "Contemporary",
       "character": "sunlit brick artist loft",
-      "domain": "bedroom",
+      "domain": "general",
       "rule": "a spacious warm brick loft with tall grid windows, sheer curtains swaying in warm sunbeams, wooden floorboards, and low linen daybed",
       "sound": "quiet morning breeze rustling linen curtains and soft wooden floor creaks",
       "life": "curtains sway lazily through bright dust-filled light shafts"
@@ -1069,7 +1069,7 @@
       "label": "🏛️ Realistic Plate: Open Concrete Rooftop Parking Deck at Golden Hour (360° Skyline)",
       "group": "Urban",
       "character": "open rooftop parking deck at golden hour",
-      "domain": "car_cabin",
+      "domain": "general",
       "rule": "a sweeping top-level concrete parking deck with painted yellow lane stripes and low concrete parapet walls, warm golden-hour sunlight casting long dramatic shadows across the asphalt, and a panoramic downtown glass skyline glowing on the horizon",
       "sound": "open-air rooftop breeze and distant city traffic murmur below",
       "life": "warm golden sunlight glints off distant skyscraper glass across the open deck"
@@ -1259,7 +1259,7 @@
       "label": "🏛️ Realistic Plate: Parisian Dance Atelier (Tall Arched Mirrors & Parquet Floor)",
       "group": "Performance",
       "character": "sunlit Parisian dance atelier",
-      "domain": "mirror_vanity",
+      "domain": "general",
       "rule": "a classic sunlit Parisian ballet studio featuring honey-toned herringbone parquet floors, tall French arched mirrors bordered by warm brass handrails, and soft afternoon sunbeams streaming through high paned windows",
       "sound": "crisp shoe taps on hollow wooden parquet and airy sunlit room acoustics",
       "life": "warm sunbeams stretch across polished parquet and arched mirror glass"

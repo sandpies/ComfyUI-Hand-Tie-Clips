@@ -69,7 +69,7 @@ tags:
 | **🎵 MEDIA** (Clips, Voices & Lip-Sync) | Load a starting frame, up to 3 reference videos, 3 voice timbre clips, a background music bed (with auto-ducking), or a **Master Audio File** that locks lip-sync across the entire film. |
 | **✍️ WRITE** (AI Draft Assistant — *WIP*) | Connect a local OpenAI-compatible server (nInfer / LM Studio / llama.cpp) to propose films, draft shot cards, surgically edit individual hops (`Edit shots`), or lay out bar-synced music videos (`Song` → `Lay out`). **Note:** WRITE is an experimental work-in-progress drafting tool, not a 100% hands-off autopilot — always review the generated beats and photo descriptions before rendering. |
 | **🎭 SWAP** (Guided Video Swap) | Standalone one-hop character or head swap driven by a reference video's motion and audio (`replace_person`, `head_swap`, `face_only`, `keep_person`) with a free-text wardrobe override box and automatic dual Swap LoRA loading. Leaves your multi-shot `SCRIPT` and `REFS` untouched. |
-| **📄 STANDARD (`SandTie Scribe`)** | Native clean-room single-generation H3 prompt rig (`Ref2VA`, `T2VA`, `I2VA`/`FL2VA`/`L2VA`, `Start-Frame Prep`) with 19 domain-locked dials, **Reference Bible**, 2.5 MP Eye Scan, Time-Tied beats, and 30-FPS Video → Beats extractor. Also available as the standalone **`SandTie PromptRig (H3)`** node. |
+| **📄 STANDARD (`SandTie Scribe`)** | Native clean-room single-generation H3 prompt rig (`Ref2VA`, `T2VA`, `I2VA`/`FL2VA`/`L2VA`, `Start-Frame Prep`) with 19 domain-locked dials, **Reference Bible**, 2.5 MP Eye Scan, Time-Tied beats, and 24-FPS Video → Beats extractor. Also available as the standalone **`SandTie PromptRig (H3)`** node. |
 
 ---
 

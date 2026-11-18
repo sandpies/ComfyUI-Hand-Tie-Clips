@@ -3541,24 +3541,36 @@ def scrub_swap_negations(text):
     return _clean_span(raw)
 
 
-def scrub_swap_pronouns(text):
-    """Rewrite plural pronouns (they/them/their) outside spoken dialogue to <Subject 1>.
+def scrub_swap_pronouns(text, subject_count=1):
+    """Rewrite plural pronouns (they/them/their) outside spoken dialogue cleanly.
 
     When a clip shows a second figure (such as a partner partially in frame),
     vision models frequently write 'their' or 'they' for the interaction or for
-    the main subject. Rewriting those spans outside <d> / quoted speech keeps
-    the H3 prompt bound to <Subject 1> instead of failing the render gate.
+    the main subject. For single-subject swaps (`subject_count <= 1`), rewrite
+    to `<Subject 1>`; for multi-subject swaps (`subject_count >= 2`), avoid
+    collapsing everyone into `<Subject 1>`.
     """
     raw = str(text or "")
     if not raw or not _SWAP_PLURAL.search(raw):
         return raw
 
+    n_subj = max(1, int(subject_count or 1))
+    pair_lbl = "<Subject 1> and <Subject 2>" if n_subj == 2 else "the subjects"
+
     def _fix_chunk(chunk):
-        c = re.sub(r"\bthey(?:\s+are|'re)\b", "<Subject 1> is", chunk, flags=re.I)
-        c = re.sub(r"\bthey\s+were\b", "<Subject 1> was", c, flags=re.I)
-        c = re.sub(r"\bthey(?:\s+have|'ve)\b", "<Subject 1> has", c, flags=re.I)
-        c = re.sub(r"\btheirs?\b", "<Subject 1>'s", c, flags=re.I)
-        c = re.sub(r"\b(?:themselves|them|they)\b", "<Subject 1>", c, flags=re.I)
+        if n_subj <= 1:
+            c = re.sub(r"\bthey(?:\s+are|'re)\b", "<Subject 1> is", chunk, flags=re.I)
+            c = re.sub(r"\bthey\s+were\b", "<Subject 1> was", c, flags=re.I)
+            c = re.sub(r"\bthey(?:\s+have|'ve)\b", "<Subject 1> has", c, flags=re.I)
+            c = re.sub(r"\btheirs?\b", "<Subject 1>'s", c, flags=re.I)
+            c = re.sub(r"\b(?:themselves|them|they)\b", "<Subject 1>", c, flags=re.I)
+            return c
+        c = re.sub(r"\bthey(?:\s+are|'re)\b", f"{pair_lbl} are", chunk, flags=re.I)
+        c = re.sub(r"\bthey\s+were\b", f"{pair_lbl} were", c, flags=re.I)
+        c = re.sub(r"\bthey(?:\s+have|'ve)\b", f"{pair_lbl} have", c, flags=re.I)
+        c = re.sub(r"\btheirs?\b", "each performer's" if n_subj >= 2 else "<Subject 1>'s", c, flags=re.I)
+        c = re.sub(r"\bthemselves\b", "each other", c, flags=re.I)
+        c = re.sub(r"\b(?:them|they)\b", pair_lbl, c, flags=re.I)
         return c
 
     spans = sorted(dialogue_spans(raw))
@@ -3581,7 +3593,8 @@ def finish_swap_beat(beat, *, idents=(), mode=DEFAULT_SWAP_MODE, cited=(), durat
     t = str(beat or "").strip()
     if not t:
         return t
-    t = scrub_swap_pronouns(t)
+    n_subj = max(1, len(idents or ()))
+    t = scrub_swap_pronouns(t, subject_count=n_subj)
     # Ensure summary opens with [video generation + reference]
     if "summary:" in t and "detailed_description:" in t:
         m_sum = re.search(r"(summary:\s*\n)(.*?)(?=\n+detailed_description:)", t, re.S)
@@ -3608,12 +3621,12 @@ def finish_swap_beat(beat, *, idents=(), mode=DEFAULT_SWAP_MODE, cited=(), durat
             m_vis = re.search(r"(\(VISUAL\)\s*)(.*?)(\s*\(SOUND\).*)$", dd_body, re.S)
             if m_vis:
                 vis_body = m_vis.group(2).strip()
-                # Ensure every <Subject N> and @ident is cited in (VISUAL)
+                # Ensure every <Subject N> and @ident is cited cleanly in (VISUAL)
                 if swap_mode_needs_identity(mode):
                     for idx, tag in enumerate(idents or (), 1):
                         if not re.search(rf"<Subject\s*{idx}\s*>", vis_body, re.I):
                             vis_body = f"<Subject {idx}> (@{tag}) performs the motion in the frame. " + vis_body
-                        elif not re.search(r"@" + re.escape(tag) + r"\b", t):
+                        elif not re.search(r"@" + re.escape(tag) + r"\b", t + " " + vis_body):
                             vis_body = re.sub(
                                 rf"(<Subject\s*{idx}\s*>)",
                                 rf"\1 (@{tag})",
@@ -3629,7 +3642,7 @@ def finish_swap_beat(beat, *, idents=(), mode=DEFAULT_SWAP_MODE, cited=(), durat
                 dd_body = dd_body[:m_vis.start()] + m_vis.group(1) + vis_body + "\n" + m_vis.group(3).lstrip()
             t = t[:m_dd.start()] + m_dd.group(1) + dd_body + "\n\n" + t[m_dd.end():].lstrip()
     t = scrub_swap_negations(t)
-    t = scrub_swap_pronouns(t)
+    t = scrub_swap_pronouns(t, subject_count=n_subj)
     return t
 
 
@@ -3654,7 +3667,7 @@ def _scrub_shot_json(shot_text, *, idents=(), mode=DEFAULT_SWAP_MODE, cited=(), 
         return shot_text
 
 
-def _extract_swap_widgets(shot_text, mode=DEFAULT_SWAP_MODE, pins=""):
+def _extract_swap_widgets(shot_text, mode=DEFAULT_SWAP_MODE, pins="", subject_count=1):
     """Extract (swap_script, swap_refs) from a validated 1-shot JSON string."""
     if not shot_text:
         return "", ""
@@ -3664,7 +3677,8 @@ def _extract_swap_widgets(shot_text, mode=DEFAULT_SWAP_MODE, pins=""):
         shot = shots[0] if shots and isinstance(shots[0], dict) else {}
     except Exception:
         return "", ""
-    script = scrub_swap_negations(scrub_swap_pronouns(str(shot.get("beat") or "").strip()))
+    script = scrub_swap_negations(scrub_swap_pronouns(
+        str(shot.get("beat") or "").strip(), subject_count=subject_count))
     trig = SWAP_TRIGGERS.get(normalise_swap_mode(mode), "")
     clean_pins = normalise_swap_pins(pins)
     pin_line = f"\npins: {clean_pins}" if clean_pins else ""
@@ -3685,7 +3699,9 @@ def build_swap_user_turn(brief, identity_tag="", duration=None, *,
                          mode=DEFAULT_SWAP_MODE, background=DEFAULT_BG_MODE,
                          background_tag="", wardrobe_tag="", wardrobe_text="",
                          clip_s=None, clip_sound=None, identities=None, pins="",
-                         place_rule="", light_rule="", style_rule="", colour_rule=""):
+                         place_rule="", light_rule="", style_rule="", colour_rule="",
+                         talkstyle_rule="", ident_looks=None, plate_looks=None,
+                         video_telemetry="", clip_window_s=None):
     mode = normalise_swap_mode(mode)
     idents = (_normalise_identities(identity_tag, identities)
               if swap_mode_needs_identity(mode) else [])
@@ -3713,7 +3729,7 @@ def build_swap_user_turn(brief, identity_tag="", duration=None, *,
             w_src = f"@{ward}" if ward else wtext
             rule_line = rule_line.replace(
                 "The face, build, hairstyle and wardrobe of <Subject 1> come from",
-                f"The face, build and hairstyle of <Subject 1> come from",
+                "The face, build and hairstyle of <Subject 1> come from",
             )
             rule_line = rule_line.replace(
                 "every garment and worn accessory of <Subject 1> are <Video 1>'s own",
@@ -3728,6 +3744,18 @@ def build_swap_user_turn(brief, identity_tag="", duration=None, *,
                 f"of <Subject 1> stay those of <Video 1> while <Subject 1> wears {w_src}",
             )
         lines.append(rule_line)
+    if isinstance(ident_looks, dict) and ident_looks and swap_mode_needs_identity(mode):
+        lines.append("Authoritative reference look facts (copy into subject_definitions: without photo backdrop or static pose):")
+        for idx, t in enumerate(idents, 1):
+            lk = str(ident_looks.get(t) or "").strip()
+            if lk:
+                lines.append(f"  - <Subject {idx}> (@{t}, <Picture {idx}>, {mode}): {lk}.")
+    if plate_looks:
+        for pl in plate_looks:
+            s_pl = str(pl or "").strip()
+            if s_pl:
+                lines.append(f"  - {s_pl}")
+
     if clean_pins:
         pin_nums = [int(p) for p in clean_pins.replace(",", " ").split()]
         stamps = [f"<Picture {idx + 1}> pinned at frame {p} ({p / 24.0:.2f} s)"
@@ -3773,6 +3801,20 @@ def build_swap_user_turn(brief, identity_tag="", duration=None, *,
         lines.append(f"Lighting Override: light the scene with {scrub_swap_negations(light_rule)}.")
     if colour_rule:
         lines.append(f"Colour Grade Override: grade the image with {scrub_swap_negations(colour_rule)}.")
+    if talkstyle_rule:
+        lines.append(f"Speech Delivery Overlay (only if spoken dialogue is in brief): {scrub_swap_negations(talkstyle_rule)}.")
+
+    if swap_mode_needs_identity(mode):
+        if mode == "replace_person" or ward or wtext:
+            lines.append(
+                "Beat hygiene (critical at cfg 1.0): in detailed_description:, weave <Subject 1>'s target hair "
+                "and target clothing into the motion, and leave out the original clip performer's replaced "
+                "clothes, hair color, headwear, and face.")
+        else:
+            lines.append(
+                "Beat hygiene (critical at cfg 1.0): in detailed_description:, describe <Video 1>'s body motion "
+                "and clothing while reinforcing @identity for the swapped head/features, and leave out "
+                "<Picture 1>'s original outfit.")
 
     cite = []
     for t in (*(idents if swap_mode_needs_identity(mode) else ()),
@@ -3795,6 +3837,15 @@ def build_swap_user_turn(brief, identity_tag="", duration=None, *,
                 f"The clip runs {clip_s:.1f} s of this {hop_s:.0f} s hop. Its "
                 f"motion ends there: write how the action carries on from the "
                 f"clip's last frame, in the same place, for the seconds after.")
+        elif clip_window_s and hop_s and clip_s and clip_s > hop_s + 0.5:
+            lines.append(
+                f"Clip window clamped to {clip_window_s:.1f} s to match this {hop_s:.0f} s hop: "
+                f"describe only the motion shown across 0 to {clip_window_s:.1f} s.")
+    if video_telemetry:
+        lines.append(str(video_telemetry).strip())
+        lines.append(
+            "Follow the camera path and chronological movement from the sequence sheets above across "
+            "[Shot 1] 0 to N s (beginning -> middle -> end). Never write a static pose when the sheets show motion.")
     if clip_sound is True:
         lines.append(
             "Sound: the clip has its own soundtrack and it goes into the "
@@ -3859,7 +3910,9 @@ async def write_swap_plan(brief, *, complete_fn, identity_tag="", rail_tags=None
                           background=DEFAULT_BG_MODE, background_tag="",
                           wardrobe_tag="", wardrobe_text="", clip_s=None,
                           clip_sound=None, identities=None, pins="",
-                          place_rule="", light_rule="", style_rule="", colour_rule=""):
+                          place_rule="", light_rule="", style_rule="", colour_rule="",
+                          talkstyle_rule="", ident_looks=None, plate_looks=None,
+                          video_telemetry="", clip_window_s=None):
     """One hop, no register. Returns no `ref_plan` key."""
     mode = normalise_swap_mode(mode)
     clean_pins = normalise_swap_pins(pins)
@@ -3903,12 +3956,18 @@ async def write_swap_plan(brief, *, complete_fn, identity_tag="", rail_tags=None
                                 place_rule=place_rule,
                                 light_rule=light_rule,
                                 style_rule=style_rule,
-                                colour_rule=colour_rule)
+                                colour_rule=colour_rule,
+                                talkstyle_rule=talkstyle_rule,
+                                ident_looks=ident_looks,
+                                plate_looks=plate_looks,
+                                video_telemetry=video_telemetry,
+                                clip_window_s=clip_window_s)
     messages = [{"role": "system", "content": swap_prompt()},
                 {"role": "user", "content": attach_images(text, images)}]
     sch = swap_schema()
     last_errors, warnings = [], []
     shot_text = video_desc = ""
+    n_subj = max(1, len(idents))
 
     def consume(reply, attempt, turn_sch):
         nonlocal last_errors, warnings, shot_text, video_desc
@@ -3942,7 +4001,8 @@ async def write_swap_plan(brief, *, complete_fn, identity_tag="", rail_tags=None
             who = _identity_words(video_desc) if (video_desc and ident) else []
             ensured = _ensure_swap_refs(
                 shot_text, cited, exact=not swap_mode_needs_identity(mode))
-            sw_script, sw_refs = _extract_swap_widgets(ensured, mode=mode, pins=clean_pins)
+            sw_script, sw_refs = _extract_swap_widgets(
+                ensured, mode=mode, pins=clean_pins, subject_count=n_subj)
             out = {
                 "ok": True,
                 "shot_plan": ensured,
@@ -3967,7 +4027,8 @@ async def write_swap_plan(brief, *, complete_fn, identity_tag="", rail_tags=None
             + "\n\nReturn one corrected shot_plan with a single shot. "
               "Do not emit ref_plan."
         )
-        sw_script, sw_refs = _extract_swap_widgets(shot_text, mode=mode, pins=clean_pins)
+        sw_script, sw_refs = _extract_swap_widgets(
+            shot_text, mode=mode, pins=clean_pins, subject_count=n_subj)
         fail = {
             "ok": False,
             "shot_plan": shot_text,
@@ -4129,7 +4190,8 @@ async def write_ask(brief, *, complete_fn, thread=None, proposal=None,
             "warnings": warnings}
 
 
-async def describe_frame(*, complete_fn, frame_data_url=None, frames=None):
+async def describe_frame(*, complete_fn, frame_data_url=None, frames=None,
+                         captions=None, telemetry=""):
     """One-call caption. No repair loop, no shot_plan, no ref_plan.
 
     Takes a SEQUENCE, for the same reason the plan writer does: one frame is a
@@ -4141,14 +4203,23 @@ async def describe_frame(*, complete_fn, frame_data_url=None, frames=None):
         [frame_data_url] if frame_data_url else [])
     if not urls:
         return {"ok": False, "error": "no frame could be extracted from the clip"}
-    shots = [{"caption": (f"Reference clip, frame {k} of {len(urls)}, in time "
-                          "order. Read them together: the change between them "
-                          "is the action. Not a @tag."),
-              "data_url": u} for k, u in enumerate(urls, 1)]
+    caps = list(captions or ())
+    shots = [{
+        "caption": (
+            caps[k - 1]
+            if k - 1 < len(caps) and caps[k - 1]
+            else (f"Reference clip, frame {k} of {len(urls)}, in time "
+                  "order. Read them together: the change between them "
+                  "is the action. Not a @tag.")
+        ),
+        "data_url": u,
+    } for k, u in enumerate(urls, 1)]
+    prompt_txt = "Describe what is happening, the camera path, and where."
+    if telemetry:
+        prompt_txt = f"{prompt_txt}\n\n{str(telemetry).strip()}"
     messages = [
         {"role": "system", "content": _DESCRIBE_SYSTEM},
-        {"role": "user", "content": attach_images(
-            "Describe what is happening and where.", shots)},
+        {"role": "user", "content": attach_images(prompt_txt, shots)},
     ]
     reply = await complete_fn(messages, schema=None)
     text = " ".join(str(reply or "").strip().split())

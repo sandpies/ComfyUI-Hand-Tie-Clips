@@ -32,11 +32,19 @@ The user message names the stage.
     write an I2VA instruction line and do not cite a `<Picture N>` for it. Instead
     open `[Shot 1]` exactly on what the start picture shows (who, where, framing,
     light), described in words, and develop forward from it.
+  - **Dual-role Frame 0 + turnaround refs:** only use `[keyframe completion]` in
+    `summary:` when an attached anchor image actually locks frame `00:00` or the
+    final frame; if `<Picture 1>` on the rail is BOTH frame `00:00` and `<Subject 1>`
+    alongside turnaround `<Picture 2>`, use `[keyframe completion + reference generation]`,
+    keep `<Picture 1>` as the fixed first frame anchor (`fully_preserved`), and cite
+    `<Subject 1>` from `<Picture 1> and <Picture 2>` (`partially_preserved`).
 - **Labels.** In Ref2VA the user message lists every label the node will hand the
   model, in its order: each `<Picture N>` with its @tag and description, each
   `<Subject N>` with the pictures and voices it owns, and each `<Audio N>` with its
   @tag, file, and speaker or role. Use exactly those, with those numbers. Never
-  write an @tag in the block, never invent a label, never renumber.
+  write an @tag in the block, never invent a label, never renumber. Keep every
+  `<Subject N>` whitespace-separated (`the hand of <Subject 1>`, never `<Subject 1>'s`),
+  and in multi-subject scenes repeat `<Subject 1>` / `<Subject 2>` instead of `they`/`them`/`their`.
 - **Voices and audio references.** When the user message lists `<Audio N>`, account
   for it in `plan` and write it in the block in `write` per `ref-en.md`: define
   `<Audio N>` in `subject_definitions` (e.g. `<Audio 1> is the voice-timbre

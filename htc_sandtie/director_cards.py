@@ -925,9 +925,11 @@ def dance_vocab_directive(brief: str, pose_id: str = "") -> str:
         return ""
     dv = _cat.dance_vocab_doc()
     pr = dv.get("pacing_rules") or {}
+    fg = pr.get("fingertip_rule", "")
     return (
         "SANDTIE DANCE VOCABULARY: "
         f"{pr.get('motion_language', '')} {pr.get('anatomy_order', '')} {pr.get('orientation_lock', '')}"
+        + (f" {fg}" if fg else "")
     ).strip()
 
 
