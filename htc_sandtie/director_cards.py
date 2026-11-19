@@ -244,7 +244,7 @@ _OVER_SHOULDER_RX = re.compile(
 _FRONT_OR_MULTI_POS_RX = re.compile(
     r"\b(?:missionary|on\s+her\s+back|legs?\s+lifted\s+high|knees?\s+pulled\s+to\s+her\s+chest|front[- ]view|"
     r"multi[- ]?(?:positions?|angles?)|multiple\s+(?:positions?|angles?)|across\s+(?:multi(?:ple)?\s+)?positions?|"
-    r"blowjob|deep\s*throat\w*|fellatio|face[- ]?to[- ]?face)\b",
+    r"blowjob|deep\s*throat\w*|fellatio|face[- ]?to[- ]?face|(?:face-to-face|upright|chest-to-chest)\s+cowgirl)\b",
     re.I,
 )
 
@@ -305,21 +305,44 @@ REAR_EXPLICIT_IDS = {
     "anal_beads_slow_pullout", "dildo_mirror_suction_standing_doggy_watch",
     "cont_mirror_standing_dress_hike_to_rear_entry_to_neck_grab_watch",
     "mirror_selfie_rear_arch_tease", "bdsm_leather_paddle_spank_red_glutes",
-    "cont_balcony_wine_sip_to_railing_doggy_arch",
     "cont_gym_stretch_leggings_peel_to_bench_doggy",
     "cont_bed_massage_oil_to_prone_bone_climax",
     "cont_strapon_harness_buckle_to_pegging_doggy",
-    "cont_couch_undress_bra_toss_to_reverse_cowgirl", "solo_prone_pillow_grinding_hump",
+    "solo_prone_pillow_grinding_hump",
     "pov_male_reverse_cowgirl_ass_bounce", "reverse_cowgirl_lean_back_hands_on_ankles",
     "doggy_pillow_wedge_hips_elevated_arch", "doggy_doorframe_standing_brace_grip",
     "doggy_bed_edge_standing_thrusts", "doggy_prone_frog_leg_flat_arch",
     "doggy_mirror_couch_knee_up_look", "doggy_car_backseat_bent_over_headrest",
     "climax_doggy_pullout_pussy_and_ass_drip",
     "cont_elevator_coat_flash_to_mirror_rear_entry",
-    "cont_stairwell_handrail_kiss_to_skirt_flip_doggy",
     "cont_yacht_shower_rinse_to_sunpad_doggy",
     "cont_yoga_mat_splits_stretch_to_prone_entry",
     "toy_thrusting_machine_all_fours_handsfree",
+}
+
+MIXED_ORIENTATION_EXPLICIT_IDS = {
+    "cont_couch_undress_bra_toss_to_reverse_cowgirl",
+    "cont_stairwell_handrail_kiss_to_skirt_flip_doggy",
+    "cont_balcony_wine_sip_to_railing_doggy_arch",
+    "cont_mirror_reverse_cowgirl_to_doggy_flow",
+    "cont_mirror_tease_to_bed_edge_drop",
+    "stage_sauna_3cut_steam_bench_to_glass",
+    "stage_mirror_fitting_room_3cut_curtain_reveal",
+    "stage_office_3cut_desk_kiss_chair_glass",
+    "stage_hotel_window_silhouette_to_bed",
+    "stage_spa_hammam_3cut_steam_bench",
+    "stage_balcony_skyline_2cut_rail_to_carry",
+    "stage_balcony_sunset_oral_to_window_press",
+    "stage_gym_mat_split_stretch_to_rear",
+    "stage_onsen_cedar_3cut_soak_lap_rear",
+    "stage_simple_bedroom_3cut_oral_cowgirl_doggy",
+    "multi_pos_doggy_missionary_bj",
+    "multi_pos_oral_to_doggy_creampie",
+    "multi_pos_cowgirl_to_reverse_to_creampie",
+    "multi_pos_office_under_desk_to_chair_spin_to_glass_wall",
+    "multi_pos_3cut_morning_bed_shower_vanity",
+    "multi_pos_3cut_club_booth_to_elevator_to_penthouse",
+    "multi_pos_gym_stretch_to_shower_to_bed",
 }
 
 FRONT_FACING_REAR_ENTRY_EXPLICIT_IDS = {
@@ -364,6 +387,10 @@ MIRROR_EXPLICIT_IDS = {
     "titfuck_standing_mirror_cleavage_squeeze", "doggy_mirror_couch_knee_up_look",
     "cont_elevator_coat_flash_to_mirror_rear_entry", "multi_pos_3cut_morning_bed_shower_vanity",
     "playful_mirror_stocking_peel_to_lap_ride", "cont_yoga_mat_splits_stretch_to_prone_entry",
+    "stage_mirror_fitting_room_3cut_curtain_reveal", "stage_lesbian_vanity_mirror_double_tease",
+    "cont_mirror_reverse_cowgirl_to_doggy_flow", "cont_mirror_tease_to_bed_edge_drop",
+    "stage_gym_mat_split_stretch_to_rear", "cont_oil_pour_breasts_to_massage_to_titfuck",
+    "multi_pos_3cut_club_booth_to_elevator_to_penthouse",
 }
 
 MIRROR_CAMERA_IDS = {
@@ -751,9 +778,11 @@ def is_rear_facing(brief: str, explicit_id: str = "", plan: str = "", plan_hint:
     eids = [x.lower() for x in _cat.parse_multi_ids(explicit_id)]
     cids = [x.lower() for x in _cat.parse_multi_ids(camera_id)]
     pids = [x.lower() for x in _cat.parse_multi_ids(pose_id)]
-    if any(e in FRONT_FACING_REAR_ENTRY_EXPLICIT_IDS for e in eids):
+    if any(e in FRONT_FACING_REAR_ENTRY_EXPLICIT_IDS or e in MIXED_ORIENTATION_EXPLICIT_IDS for e in eids):
         return False
     if eids:
+        if has_mixed_front_and_rear_beats(brief, explicit_id=explicit_id, plan=plan, plan_hint=plan_hint):
+            return False
         non_climax_eids = [e for e in eids if not e.startswith("climax_")]
         has_rear_pick = any(e in REAR_EXPLICIT_IDS for e in eids)
         has_front_climax = any(e in ("climax_facial_f04", "climax_titjob_to_face", "climax_footjob_toes") for e in eids)
@@ -779,9 +808,38 @@ def is_rear_facing(brief: str, explicit_id: str = "", plan: str = "", plan_hint:
     return False
 
 
+def has_mixed_front_and_rear_beats(brief: str = "", explicit_id: str = "", plan: str = "", plan_hint: str = "") -> bool:
+    """True when an explicit stage/transition combines front-facing/oral/kissing beats with rear/doggy/reverse-cowgirl beats."""
+    eids = [x.lower() for x in _cat.parse_multi_ids(explicit_id)]
+    if any(e in MIXED_ORIENTATION_EXPLICIT_IDS for e in eids):
+        return True
+    blobs = [brief or "", plan or "", plan_hint or ""]
+    for eid in eids:
+        opt = _cat.dial_option("explicit", eid)
+        if opt:
+            blobs.append(f"{opt.get('label', '')} {opt.get('rule', '')}")
+    combined = "\n".join(blobs)
+    if not combined.strip():
+        return False
+    no_rev = re.sub(r"\breverse\s+cowgirl\b", " ", combined, flags=re.I)
+    has_front_pose = bool(
+        _FRONT_OR_MULTI_POS_RX.search(combined)
+        or re.search(r"\b(?:cowgirl|kiss(?:es|ing)?|face[- ]?to[- ]?face|lap\s+(?:grind|straddle)|straddl\w*\s+(?:his|the)|standing\s+carry|undress\w*)\b", no_rev, re.I)
+    )
+    has_rear_pose = bool(
+        _REAR_FACING_RX.search(combined)
+        or re.search(r"\b(?:doggy|rear[- ]?entry|from\s+behind|reverse\s+cowgirl|prone[- ]bone)\b", combined, re.I)
+    )
+    return bool(has_front_pose and has_rear_pose)
+
+
 def is_multi_position_scene(brief: str, plan: str = "", plan_hint: str = "", explicit_id: str = "") -> bool:
     eids = [x.lower() for x in _cat.parse_multi_ids(explicit_id)]
     if len(eids) >= 2:
+        return True
+    if any(e.startswith(("multi_pos_", "stage_")) for e in eids):
+        if any(e == "stage_aftercare_cooldown_whisper" for e in eids):
+            return False
         return True
     combined = f"{brief or ''}\n{plan or ''}\n{plan_hint or ''}"
     return bool(_REAR_FACING_RX.search(combined) and _FRONT_OR_MULTI_POS_RX.search(combined))
@@ -796,11 +854,35 @@ def is_over_shoulder(brief: str, explicit_id: str = "", camera_id: str = "", pla
     return bool(_OVER_SHOULDER_RX.search(f"{brief or ''}\n{plan or ''}\n{plan_hint or ''}"))
 
 
+def has_mixed_oral_beats(brief: str = "", explicit_id: str = "", plan: str = "", plan_hint: str = "") -> bool:
+    """True when an explicit stage/multi-pos/continuous scene includes both oral sucking beats and non-oral kissing/riding/thrusting beats."""
+    eids = [x.lower() for x in _cat.parse_multi_ids(explicit_id)]
+    blobs = [brief or "", plan or "", plan_hint or ""]
+    for eid in eids:
+        opt = _cat.dial_option("explicit", eid)
+        if opt:
+            blobs.append(f"{opt.get('label', '')} {opt.get('rule', '')}")
+    combined = "\n".join(blobs)
+    has_oral = bool(_ORAL_OCCUPIED_RX.search(combined))
+    if not has_oral:
+        return False
+    has_non_oral_act = bool(
+        re.search(
+            r"\b(?:cowgirl|reverse\s*cowgirl|missionary|doggy|rear[- ]?entry|from\s+behind|kiss(?:es|ing)?|lap\s+(?:grind|straddle)|riding|pussy\s+from\s+behind|into\s+her\s+(?:wet\s+)?(?:pussy|vagina))\b",
+            combined,
+            re.I,
+        )
+    )
+    return bool(has_non_oral_act and (any(e.startswith(("stage_", "multi_pos_", "cont_")) for e in eids) or len(eids) >= 2))
+
+
 def is_mouth_occupied(brief: str, explicit_id: str = "", plan: str = "", plan_hint: str = "") -> bool:
     eids = [x.lower() for x in _cat.parse_multi_ids(explicit_id)]
     if eids and all(eid in CUNNILINGUS_ONLY_EXPLICIT_IDS for eid in eids):
         return False
-    if any(eid.startswith("multi_pos_") for eid in eids) or "bdsm_ballgag_tease" in eids:
+    if any(eid.startswith(("multi_pos_", "stage_")) for eid in eids) or "bdsm_ballgag_tease" in eids:
+        return False
+    if has_mixed_oral_beats(brief, explicit_id=explicit_id, plan=plan, plan_hint=plan_hint):
         return False
     if eids and all(eid in ORAL_OCCUPIED_EXPLICIT_IDS for eid in eids):
         return True

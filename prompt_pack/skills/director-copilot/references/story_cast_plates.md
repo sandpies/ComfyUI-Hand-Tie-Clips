@@ -9,6 +9,10 @@
   the performance, the small actions and the light.
 - Use the lyrics: an action in a verse ("late night market, grab chips") becomes that hop's action.
 - Spectacle wides open a restart or close the film.
+- **Pitch prop-free first.** A held or recurring prop is the most common single cause of a broken
+  render (popping in, doubling, redesigning, flying onto furniture). Carry the story with the
+  person, the places, light, camera and faces; when a story seems to need a prop, say so and let
+  the user decide before the plates, and then give it a picture and a row on every hop.
 - Undecided user: pitch 3-5 concepts (song idea + video idea + why it suits H3: faces and lip sync
   are its strength; crowds, choreography and 3+ people in frame are harder), with a recommendation.
 
@@ -108,6 +112,11 @@ Any text-to-image model works, or photos taken from the beat's camera position.
   768x1344 for 9:16).
 - **One model, one style line** appended to every prompt, matching the `prompt_prefix`.
 - **Reroll, don't settle;** pick the one whose angle matches the beat.
+- **A CFG 1 image model (Krea 2, turbo/distilled models) has no negative branch: every word
+  adds.** "no people, no figures" drew distant walkers on an empty bridge, and "where a person
+  would stand" names a person too. For these models write zero negations and never mention a
+  person in a plate prompt; describe the empty state instead ("the walkway deserted and bare
+  from the lens to its far end, only wet concrete and railings"; "plain unmarked walls").
 - **Reject** any plate with people, faces, posters of people, legible text or watermarks; add
   "empty, deserted" and check the edges. A stray figure that won't go can stay if the beats name it
   as a still extra.

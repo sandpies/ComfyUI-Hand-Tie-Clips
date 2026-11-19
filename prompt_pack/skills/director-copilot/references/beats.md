@@ -21,7 +21,10 @@ python scripts/fit_cuts.py songmap.json --kinds R,R,C,R,... --cuts <t2> <t3:1> .
 
 - One cut per hop boundary, from the section table. `t:N` lets a cut slide up to N bars inside a
   section; keep section starts (hooks, drops) at 0 flex.
-- `--end`: just after the last sound to a second or two later.
+- `--end`: just after the last sound to a second or two later, **but never past the end of the song
+  file** (`--end` is in song time): the node refuses a chain that runs past the end of
+  `master_audio_file` ("the last 0.73s would be locked to silence"). When the file ends on the last
+  sound, `--end` is `<last sound - 1>-<file length>`.
 - Take the best result: its `master_audio_start_s` and hop lengths go into the plan and graph.
   A worst cut under ~8 frames reads as on the beat. Nothing fits: add flex, change a kind, widen
   `--tol`, or split a section.

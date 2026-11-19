@@ -286,6 +286,8 @@
 .r2-note { font-size: 9.5px; color: var(--h3-faint); line-height: 1.5; }
 .r2-bad { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
 .r2-raw { flex: 1 1 auto; min-height: 180px; resize: none; font-family: ui-monospace, Consolas, monospace; font-size: 10px; }
+.r2-script .h3e-json-wrap { flex: 0 0 auto; border-top: 1px solid var(--h3-border-soft); padding-top: 4px; }
+.r2-script .h3e-json { color: var(--h3-text); border: 1px solid var(--h3-border); border-radius: 3px; padding: 6px 8px; min-height: 110px; }
 
 /* --------------------------------------------------------------- stage --- */
 .r2-stage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; background: #0b0c0d; }

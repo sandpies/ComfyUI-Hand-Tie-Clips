@@ -643,6 +643,10 @@ def validate(shot_text, ref_text, *, hops=None, known_files=None, pinned=None,
                         f"above)" if len(have) > len(shown) else ""))
         for r in refs:
             fname = (r.get("file") or "").strip()
+            # A RefMod's file lives in models/refmods, not the reference
+            # folder; refs.py checks it there when the node loads it.
+            if r.get("source") == "refmod":
+                continue
             if fname and fname not in have:
                 errors.append(
                     f"@{r['tag']} names '{fname}', which is not in the "
@@ -661,7 +665,8 @@ def validate(shot_text, ref_text, *, hops=None, known_files=None, pinned=None,
     else:
         have = {str(f) for f in known_files}
         wired = {r["slot"] for r in refs
-                 if not (r.get("file") or "").strip()
+                 if r.get("source") == "refmod"
+                 or not (r.get("file") or "").strip()
                  or (r.get("file") or "").strip() in have}
 
     # The tag round trip. This is the fault the A/B actually produced: a beat
@@ -1358,27 +1363,33 @@ def _parse_obj(text):
     raw = str(text or "").strip()
     if not raw:
         return None
-    try:
-        obj = json.loads(raw)
-        if isinstance(obj, dict):
-            return obj
-    except ValueError:
-        pass
+    raw = re.sub(r"<think>[\s\S]*?</think>", "", raw, flags=re.I).strip()
+    raw = raw.replace("\u201c", "'").replace("\u201d", "'")
+    cands = [raw]
     for b in _FENCE.findall(raw):
-        try:
-            obj = json.loads(b.strip())
-            if isinstance(obj, dict):
-                return obj
-        except ValueError:
-            continue
+        if b.strip():
+            cands.append(b.strip())
     a, b = raw.find("{"), raw.rfind("}")
     if 0 <= a < b:
-        try:
-            obj = json.loads(raw[a:b + 1])
-            if isinstance(obj, dict):
-                return obj
-        except ValueError:
-            pass
+        cands.append(raw[a:b + 1])
+    dec = json.JSONDecoder()
+    for cand in cands:
+        repaired = re.sub(r",(\s*[}\]])", r"\1", cand)
+        for attempt in (cand, repaired):
+            try:
+                obj = json.loads(attempt)
+                if isinstance(obj, dict):
+                    return obj
+            except ValueError:
+                pass
+            idx = attempt.find("{")
+            if idx >= 0:
+                try:
+                    obj, _ = dec.raw_decode(attempt[idx:])
+                    if isinstance(obj, dict):
+                        return obj
+                except ValueError:
+                    pass
     return None
 
 

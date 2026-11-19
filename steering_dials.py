@@ -94,6 +94,18 @@ BUILTIN_DIAL_RECIPES: dict[str, dict[str, Any]] = {
             "{subject} rests in a static room with still curtains and steady light. ||| {subject} shifts weight naturally with subtle hand micro-business while air, steam, and light drift behind.",
         ]),
     },
+    "sound": {
+        "file": "htc_sound.safetensors",
+        "neg_label": "Hush / Quiet Air",
+        "pos_label": "Vivid / Rich Foley",
+        "pairs": "\n".join([
+            "overall_soundscape: Soft, hush-quiet indoor room air in stillness. ||| overall_soundscape: Crisp, vivid close-mic physical foley, sharp footfalls, and resonant spatial acoustics.",
+            "{subject} moves through a hushed, barely audible quiet space. ||| {subject} moves amidst loud, rich tactile impacts, crisp footsteps, and reverberant acoustic sound.",
+            "{subject} in a muted, silent atmospheric room. ||| {subject} in a thunderous, reverberant space with sharp percussive sound cues.",
+            "![motion] {subject} stands completely still in place. ||| {subject} sprints rapidly across the scene.",
+            "![speech] {subject} keeps closed lips without speaking. ||| {subject} speaks in a loud booming voice.",
+        ]),
+    },
 }
 
 
@@ -186,6 +198,7 @@ def resolve_axis_dial(axis: str) -> str | None:
         "expression": ("htc_expression.safetensors", "h3_expression.safetensors", "h3_face.safetensors"),
         "energy": ("htc_energy.safetensors", "h3_energy.safetensors"),
         "life": ("htc_life.safetensors", "h3_life.safetensors"),
+        "sound": ("htc_sound.safetensors", "h3_sound.safetensors"),
     }.get(ax, ())
     for c in candidates:
         p = resolve_dial_path(c)
@@ -209,7 +222,7 @@ def load_dial_file(path: str) -> tuple[str, torch.Tensor, str, dict[str, Any]]:
     with safe_open(ap, framework="pt", device="cpu") as f:
         meta = dict(f.metadata() or {})
         fam = str(meta.get("model_family") or "").strip().lower()
-        if fam and fam not in ("minimax_h3", "h3", "minimax-h3"):
+        if fam and fam not in ("minimax_h3", "h3", "minimax-h3", "minimax h3"):
             raise ValueError(f"{TAG}: dial '{os.path.basename(ap)}' belongs to model family '{fam}', not MiniMax H3.")
         keys = set(f.keys())
         if POST_KEY in keys:
@@ -237,7 +250,7 @@ def load_dial_file(path: str) -> tuple[str, torch.Tensor, str, dict[str, Any]]:
 
 
 def dial_catalog_info() -> list[dict[str, Any]]:
-    """Lightweight UI list of installed dial files + labels/ranges."""
+    """Lightweight UI list of installed dial files + labels/ranges (supports both HTC and ComfyUI-Dials v2 metadata)."""
     items = []
     for rel in list_dial_files():
         p = resolve_dial_path(rel)
@@ -252,16 +265,27 @@ def dial_catalog_info() -> list[dict[str, Any]]:
                     dinfo = json.loads(info_raw)
                 except Exception:
                     dinfo = {}
+            pos_blk = dinfo.get("pos") if isinstance(dinfo.get("pos"), dict) else {}
+            neg_blk = dinfo.get("neg") if isinstance(dinfo.get("neg"), dict) else {}
+            pos_useful = float(pos_blk.get("useful") or dinfo.get("useful") or 1.0)
+            pos_over = float(pos_blk.get("overcook") or dinfo.get("overcook") or 1.5)
+            neg_useful = float(neg_blk.get("useful") or pos_useful)
+            neg_over = float(neg_blk.get("overcook") or pos_over)
             items.append({
                 "file": rel,
                 "name": str(dinfo.get("name") or meta.get("name") or os.path.splitext(os.path.basename(rel))[0]),
                 "seam": seam,
                 "dim": int(vec.numel()),
                 "sha16": sha16,
-                "neg_label": str(dinfo.get("neg_label") or meta.get("neg_label") or "−"),
-                "pos_label": str(dinfo.get("pos_label") or meta.get("pos_label") or "+"),
-                "useful": float(dinfo.get("useful") or 1.0),
-                "overcook": float(dinfo.get("overcook") or 1.5),
+                "description": str(dinfo.get("description") or ""),
+                "neg_label": str(dinfo.get("neg_label") or dinfo.get("negative") or meta.get("neg_label") or "−"),
+                "pos_label": str(dinfo.get("pos_label") or dinfo.get("positive") or meta.get("pos_label") or "+"),
+                "useful": pos_useful,
+                "overcook": pos_over,
+                "neg_useful": neg_useful,
+                "neg_overcook": neg_over,
+                "evidence": str(dinfo.get("evidence") or ""),
+                "kind": str(dinfo.get("kind") or ""),
             })
         except Exception:
             continue
@@ -332,25 +356,37 @@ def _make_block_text_hook(delta_f64: torch.Tensor, sign: float, prev_patch):
 
 def apply_steering_dials(
     model,
-    specs: list[tuple[str, str, float]],
+    specs: list[tuple[Any, ...]],
     *,
     scope: str = SCOPE_MODES[0],
 ) -> tuple[Any, str]:
-    """Clone `model` with stacked steering dials applied cleanly.
+    """Clone `model` with stacked steering dials (and optional post-refiner `!`/Rack holds) applied cleanly.
 
-    `specs`: list of `(display_name, file_path, strength)`.
+    `specs`: list of `(display_name, file_path, strength)` or `(display_name, file_path, strength, is_hold)`.
     Returns `(patched_model, summary_str)`.
     """
-    clean_specs = [(str(nm), str(fp), float(s)) for nm, fp, s in (specs or ()) if fp and abs(float(s)) >= 1e-5]
+    clean_specs: list[tuple[str, str, float, bool]] = []
+    for item in (specs or ()):
+        if len(item) >= 4:
+            nm, fp, s, is_hold = item[0], item[1], float(item[2]), bool(item[3])
+        else:
+            nm, fp, s, is_hold = item[0], item[1], float(item[2]), False
+        if fp and (is_hold or abs(s) >= 1e-5):
+            clean_specs.append((str(nm), str(fp), 0.0 if is_hold else s, is_hold))
+
     base_to = (getattr(model, "model_options", None) or {}).get("transformer_options") or {}
-    prev_raw = list(base_to.get(RAW_OPT_KEY) or ())
+    prev_raw = [
+        (it[0], it[1], float(it[2]), bool(it[3]) if len(it) >= 4 else False)
+        for it in (base_to.get(RAW_OPT_KEY) or ())
+    ]
     combined_raw = prev_raw + clean_specs
     if not combined_raw:
         return model, "no active steering dials"
 
-    post_sum: torch.Tensor | None = None
-    pre_sum: torch.Tensor | None = None
-    fp_records: list[tuple[str, str, float, str]] = []
+    post_terms: list[tuple[str, torch.Tensor]] = []
+    pre_terms: list[tuple[str, torch.Tensor]] = []
+    hold_vecs: list[torch.Tensor] = []
+    fp_records: list[tuple[Any, ...]] = []
     labels: list[str] = []
 
     use_early = str(scope or "").startswith("blocks_0_24")
@@ -367,15 +403,39 @@ def apply_steering_dials(
             use_early = False
     scope_tag = "blocks_0_24" if use_early else "all_blocks"
 
-    for nm, fp, strength in combined_raw:
+    for nm, fp, strength, is_hold in combined_raw:
         seam, vec, sha16, _meta = load_dial_file(fp)
+        if is_hold:
+            if seam == "post_refiner":
+                hold_vecs.append(vec)
+                fp_records.append((os.path.basename(fp), sha16, "HOLD", scope_tag))
+                labels.append(f"{nm}:HOLD")
+            else:
+                labels.append(f"{nm}:HOLD(skip-pre)")
+            continue
         scaled = vec * float(strength)
         if seam == "pre_refiner":
-            pre_sum = scaled if pre_sum is None else (pre_sum + scaled)
+            pre_terms.append((sha16, scaled))
         else:
-            post_sum = scaled if post_sum is None else (post_sum + scaled)
+            post_terms.append((sha16, scaled))
         fp_records.append((os.path.basename(fp), sha16, round(float(strength), 4), scope_tag))
         labels.append(f"{nm}:{strength:+.2f}")
+
+    if not pre_terms and not post_terms:
+        return model, f"[{scope_tag}] " + (", ".join(labels) if labels else "no active steering dials")
+
+    # Sum in deterministic sorted order (float64) so row order never shifts output
+    pre_sum = sum((v for _, v in sorted(pre_terms, key=lambda it: it[0])), torch.zeros_like(pre_terms[0][1])) if pre_terms else None
+    post_sum = sum((v for _, v in sorted(post_terms, key=lambda it: it[0])), torch.zeros_like(post_terms[0][1])) if post_terms else None
+
+    if post_sum is not None and hold_vecs:
+        h_valid = [hv for hv in hold_vecs if int(hv.numel()) == int(post_sum.numel()) and float(hv.norm().item()) > 1e-6]
+        if h_valid:
+            hmat = torch.stack(h_valid, dim=1)
+            uh, sh, _ = torch.linalg.svd(hmat, full_matrices=False)
+            if sh.numel() > 0 and float(sh[0].item()) > 1e-8:
+                qh = uh[:, sh > (float(sh[0].item()) * 1e-5)]
+                post_sum = post_sum - qh @ (qh.T @ post_sum)
 
     m = model.clone()
     to = m.model_options.setdefault("transformer_options", {})
@@ -422,17 +482,60 @@ def apply_steering_dials(
     return m, f"[{scope_tag}] " + ", ".join(labels)
 
 
-def _expand_pair_lines(pairs_text: str) -> tuple[list[tuple[str, str, float]], list[tuple[str, str]]]:
-    """Parse `A ||| B [:: weight]` and `! holdA ||| holdB` lines with `{subject}` expansion."""
-    main_pairs: list[tuple[str, str, float]] = []
-    hold_pairs: list[tuple[str, str]] = []
+_SET_LINE_RX = re.compile(r"([+-])\s*(\d+(?:\.\d+)?)?\s+(.+)")
+_WEIGHTED_SPAN_RX = re.compile(r"\(([^():]+):\s*(-?\d+(?:\.\d+)?)\)")
+
+
+def _weighted_terms(text: str) -> list[tuple[str, float]]:
+    """Expand `(words:w)` spans inside one prompt side into `[(prompt, coeff)]`."""
+    spans = list(_WEIGHTED_SPAN_RX.finditer(text))
+    if not spans:
+        return [(text, 1.0)]
+
+    def _keep(idx: int | None) -> str:
+        out, pos = [], 0
+        for j, m in enumerate(spans):
+            out.append(text[pos:m.start()])
+            out.append(m.group(1) if j == idx else "")
+            pos = m.end()
+        out.append(text[pos:])
+        return re.sub(r" ([,.;:!?])", r"\1", re.sub(r"\s+", " ", "".join(out))).strip()
+
+    weights = [float(m.group(2)) for m in spans]
+    terms = [(_keep(None), 1.0 - sum(weights))] + [(_keep(i), w) for i, w in enumerate(weights)]
+    return [(t, c) for t, c in terms if t and abs(c) > 1e-9]
+
+
+def _side_terms(side) -> list[tuple[str, float]]:
+    if isinstance(side, str):
+        return _weighted_terms(side)
+    return [(t, float(w) * float(c)) for text, w in side for t, c in _weighted_terms(text)]
+
+
+def _parse_dial_pairs(pairs_text: str) -> tuple[list[tuple[Any, Any, float]], dict[str, list[tuple[str, str]]]]:
+    """Parse `A ||| B [:: weight]`, `![group] A ||| B`, `+w/-w` prompt sets, and `{subject}` expansion."""
+    main_pairs: list[tuple[Any, Any, float]] = []
+    hold_groups: dict[str, list[tuple[str, str]]] = {}
+    set_members: list[tuple[float, str]] = []
+
     for raw_ln in str(pairs_text or "").splitlines():
         ln = raw_ln.strip()
         if not ln or ln.startswith("#"):
             continue
+        if "|||" not in ln:
+            ms = _SET_LINE_RX.fullmatch(ln)
+            if ms:
+                w_set = float(ms.group(2) or 1.0)
+                if w_set > 0:
+                    set_members.append((w_set if ms.group(1) == "+" else -w_set, ms.group(3).strip()))
+            continue
         is_hold = ln.startswith("!")
+        group = ""
         if is_hold:
-            ln = ln[1:].strip()
+            ln = ln.lstrip("!").strip()
+            if ln.startswith("[") and "]" in ln:
+                group, ln = ln[1:].split("]", 1)
+                group, ln = group.strip(), ln.strip()
         if "|||" not in ln:
             continue
         weight = 1.0
@@ -451,15 +554,36 @@ def _expand_pair_lines(pairs_text: str) -> tuple[list[tuple[str, str, float]], l
                 ea = a.replace("{subject}", subj)
                 eb = b.replace("{subject}", subj)
                 if is_hold:
-                    hold_pairs.append((ea, eb))
+                    hold_groups.setdefault(group, []).append((ea, eb))
                 else:
                     main_pairs.append((ea, eb, weight))
         else:
             if is_hold:
-                hold_pairs.append((a, b))
+                hold_groups.setdefault(group, []).append((a, b))
             else:
                 main_pairs.append((a, b, weight))
-    return main_pairs, hold_pairs
+
+    if set_members:
+        neg_m = [(-w, t) for w, t in set_members if w < 0]
+        pos_m = [(w, t) for w, t in set_members if w > 0]
+        if neg_m and pos_m:
+            has_subj = any("{subject}" in t for _, t in neg_m + pos_m)
+            subjs = BUILTIN_DIAL_SUBJECTS if has_subj else (None,)
+            neg_sum = sum(w for w, _ in neg_m) or 1.0
+            pos_sum = sum(w for w, _ in pos_m) or 1.0
+            for subj in subjs:
+                side_n = [(t.replace("{subject}", subj) if subj else t, w / neg_sum) for w, t in neg_m]
+                side_p = [(t.replace("{subject}", subj) if subj else t, w / pos_sum) for w, t in pos_m]
+                main_pairs.append((side_n, side_p, 1.0))
+
+    return main_pairs, hold_groups
+
+
+def _expand_pair_lines(pairs_text: str) -> tuple[list[tuple[Any, Any, float]], list[tuple[str, str]]]:
+    """Legacy wrapper returning `(main_pairs, flat_hold_pairs)`."""
+    main_pairs, hold_groups = _parse_dial_pairs(pairs_text)
+    flat_holds = [pair for plist in hold_groups.values() for pair in plist]
+    return main_pairs, flat_holds
 
 
 def _encode_prompt_mean(clip, dm, text: str) -> torch.Tensor:
@@ -485,13 +609,13 @@ def synthesize_dial_file(
     pos_label: str = "+",
     debias: bool = True,
 ) -> tuple[str, dict[str, Any]]:
-    """Compute a clean-room post-refiner steering vector from prompt pairs & save `.safetensors`."""
+    """Compute a clean-room post-refiner steering vector from prompt pairs/sets/holds & save `.safetensors`."""
     from safetensors.torch import save_file  # noqa: PLC0415
     import comfy.model_management as mm  # noqa: PLC0415
 
-    main_pairs, hold_pairs = _expand_pair_lines(pairs_text)
+    main_pairs, hold_groups = _parse_dial_pairs(pairs_text)
     if not main_pairs:
-        raise ValueError(f"{TAG}: need at least one valid `A ||| B` prompt pair.")
+        raise ValueError(f"{TAG}: need at least one valid `A ||| B` prompt pair or `+`/`-` prompt set.")
 
     clean_stem = _SAFE_FILE_RE.sub("_", os.path.splitext(os.path.basename(str(dial_name or "custom_dial")))[0]).strip("_")
     if not clean_stem:
@@ -503,16 +627,50 @@ def synthesize_dial_file(
     if dm is None or not hasattr(dm, "preprocess_text_embeds"):
         raise ValueError(f"{TAG}: MODEL must be a MiniMax H3 diffusion model.")
 
-    # Ensure condition_proj + token_refiner are runnable on GPU/device via ComfyUI loader
-    mm.load_models_gpu([model])
+    # Pre-encode all unique prompts through Qwen/CLIP before loading the DiT onto GPU
+    nuisance_expanded: list[tuple[str, str]] = []
+    if debias:
+        for na, nb in BUILTIN_NUISANCE_PAIRS:
+            nuisance_expanded.append((
+                na.replace("{subject}", BUILTIN_DIAL_SUBJECTS[0]),
+                nb.replace("{subject}", BUILTIN_DIAL_SUBJECTS[0]),
+            ))
+
+    all_texts: list[str] = []
+    for a, b, _ in main_pairs:
+        for t, _ in _side_terms(a) + _side_terms(b):
+            all_texts.append(t)
+    for na, nb in nuisance_expanded:
+        all_texts.extend((na, nb))
+    for plist in hold_groups.values():
+        for ha, hb in plist:
+            all_texts.extend((ha, hb))
+    unique_texts = list(dict.fromkeys(all_texts))
+
     mm.load_models_gpu([clip.patcher])
+    raw_states = {t: clip.encode_from_tokens_scheduled(clip.tokenize(t))[0][0] for t in unique_texts}
+
+    mm.load_models_gpu([model])
+    dev = next(dm.condition_proj.parameters()).device
+    dt = getattr(dm, "dtype", None)
+    mean_cache: dict[str, torch.Tensor] = {}
+    with torch.no_grad():
+        for t, qs in raw_states.items():
+            eff_dt = dt or qs.dtype
+            refined = dm.preprocess_text_embeds(qs.to(device=dev, dtype=eff_dt))
+            mean_cache[t] = refined[0].float().mean(dim=0).to(device="cpu", dtype=torch.float64)
+
+    def _side_vec(side) -> torch.Tensor:
+        terms = _side_terms(side)
+        acc = torch.zeros_like(next(iter(mean_cache.values())))
+        for txt, coeff in terms:
+            acc = acc + mean_cache[txt] * float(coeff)
+        return acc
 
     diffs: list[torch.Tensor] = []
     weights: list[float] = []
     for a, b, w in main_pairs:
-        va = _encode_prompt_mean(clip, dm, a)
-        vb = _encode_prompt_mean(clip, dm, b)
-        diffs.append(vb - va)
+        diffs.append(_side_vec(b) - _side_vec(a))
         weights.append(float(w))
 
     w_sum = sum(abs(w) for w in weights) or 1.0
@@ -523,31 +681,33 @@ def synthesize_dial_file(
     cos_vals = [float(torch.dot(d, raw_vec).item() / ((float(d.norm().item()) or 1.0) * raw_norm)) for d in diffs]
     pair_agree = sum(cos_vals) / max(1, len(cos_vals))
 
-    # Collect nuisance + ! hold directions and orthogonalize via QR
-    nuis_vecs: list[torch.Tensor] = []
-    if debias:
-        for na, nb in BUILTIN_NUISANCE_PAIRS:
-            ea = na.replace("{subject}", BUILTIN_DIAL_SUBJECTS[0])
-            eb = nb.replace("{subject}", BUILTIN_DIAL_SUBJECTS[0])
-            nuis_vecs.append(_encode_prompt_mean(clip, dm, eb) - _encode_prompt_mean(clip, dm, ea))
-    for ha, hb in hold_pairs:
-        nuis_vecs.append(_encode_prompt_mean(clip, dm, hb) - _encode_prompt_mean(clip, dm, ha))
+    # Collect nuisance + per-group ! hold mean directions and orthogonalize via QR
+    nuis_vecs: list[torch.Tensor] = [mean_cache[nb] - mean_cache[na] for na, nb in nuisance_expanded]
+    for g_pairs in hold_groups.values():
+        if g_pairs:
+            g_diffs = torch.stack([mean_cache[hb] - mean_cache[ha] for ha, hb in g_pairs])
+            nuis_vecs.append(g_diffs.mean(dim=0))
 
     vec = raw_vec.clone()
     debias_frac = 0.0
     if nuis_vecs:
         mat = torch.stack([v for v in nuis_vecs if float(v.norm().item()) > 1e-6], dim=1)
         if mat.numel() > 0 and mat.shape[1] > 0:
-            q, _ = torch.linalg.qr(mat, mode="reduced")
-            proj = q @ (q.T @ vec)
-            before_sq = float(torch.dot(vec, vec).item()) or 1.0
-            vec = vec - proj
-            after_sq = float(torch.dot(vec, vec).item())
-            debias_frac = max(0.0, 1.0 - (after_sq / before_sq))
+            u, s_vals, _ = torch.linalg.svd(mat, full_matrices=False)
+            if s_vals.numel() > 0 and float(s_vals[0].item()) > 1e-8:
+                q = u[:, s_vals > (float(s_vals[0].item()) * 1e-5)]
+                proj = q @ (q.T @ vec)
+                before_sq = float(torch.dot(vec, vec).item()) or 1.0
+                vec = vec - proj
+                after_sq = float(torch.dot(vec, vec).item())
+                debias_frac = max(0.0, 1.0 - (after_sq / before_sq))
 
+    n_holds = sum(len(v) for v in hold_groups.values())
+    neg_s = str(neg_label or "−")
+    pos_s = str(pos_label or "+")
     meta = {
         "format": "HTC-SteeringDial v1",
-        "model_family": "minimax_h3",
+        "model_family": "MiniMax H3",
         "name": clean_stem,
         "inject": "post_refiner (hook)",
         "n_pairs": str(len(main_pairs)),
@@ -556,10 +716,17 @@ def synthesize_dial_file(
         "dial_info": json.dumps({
             "version": 2,
             "name": clean_stem,
-            "neg_label": str(neg_label or "−"),
-            "pos_label": str(pos_label or "+"),
+            "description": f"{neg_s} ↔ {pos_s} ({len(main_pairs)} pairs)",
+            "negative": neg_s[:60],
+            "positive": pos_s[:60],
+            "neg_label": neg_s,
+            "pos_label": pos_s,
             "useful": 1.0,
             "overcook": 1.5,
+            "neg": {"useful": 1.0, "overcook": 1.5},
+            "pos": {"useful": 1.0, "overcook": 1.5},
+            "evidence": "creator",
+            "pipeline": "MiniMax H3",
         }),
     }
     tmp_path = out_path + ".tmp"
@@ -571,13 +738,13 @@ def synthesize_dial_file(
         "path": out_path,
         "file": os.path.basename(out_path),
         "n_pairs": len(main_pairs),
-        "n_holds": len(hold_pairs),
+        "n_holds": n_holds,
         "pair_agreement": round(pair_agree, 3),
         "debias_removed": round(debias_frac, 3),
     }
 
 
-def _parse_rack_json(raw: str) -> list[tuple[str, str, float]]:
+def _parse_rack_json(raw: str) -> list[tuple[str, str, float, bool]]:
     if not raw or not str(raw).strip():
         return []
     try:
@@ -587,7 +754,7 @@ def _parse_rack_json(raw: str) -> list[tuple[str, str, float]]:
     if not isinstance(rows, list):
         return []
     any_solo = any(isinstance(r, dict) and r.get("on", True) and r.get("solo") for r in rows)
-    out: list[tuple[str, str, float]] = []
+    out: list[tuple[str, str, float, bool]] = []
     for r in rows:
         if not isinstance(r, dict):
             continue
@@ -596,15 +763,16 @@ def _parse_rack_json(raw: str) -> list[tuple[str, str, float]]:
         if any_solo and not r.get("solo"):
             continue
         fn = str(r.get("file") or r.get("dial") or "").strip()
+        is_hold = bool(r.get("hold", False))
         try:
             s = float(r.get("strength") or 0.0)
         except (TypeError, ValueError):
             s = 0.0
-        if not fn or fn == NONE or abs(s) < 1e-5:
+        if not fn or fn == NONE or (not is_hold and abs(s) < 1e-5):
             continue
         p = resolve_dial_path(fn)
         if p:
-            out.append((os.path.splitext(os.path.basename(fn))[0], p, s))
+            out.append((os.path.splitext(os.path.basename(fn))[0], p, s, is_hold))
     return out
 
 
@@ -660,11 +828,15 @@ class HTCSteeringDials:
             },
             "optional": {
                 "clip": ("CLIP", {
-                    "tooltip": "Optional H3 CLIP (Qwen3-VL). Only needed once to auto-mint missing built-in Motion/Expression/Energy .safetensors dials.",
+                    "tooltip": "Optional H3 CLIP (Qwen3-VL). Only needed once to auto-mint missing built-in Motion/Expression/Energy/Sound .safetensors dials.",
                 }),
                 "rack_json": ("STRING", {
                     "default": "[]", "multiline": False,
-                    "tooltip": "JSON list of extra stacked dial rows managed by the node's Dial Rack & Map panel.",
+                    "tooltip": "JSON list of extra stacked dial rows managed by the node's Dial Rack & Map panel (supports 'hold': true QR projection).",
+                }),
+                "sound": ("FLOAT", {
+                    "default": 0.0, "min": -2.5, "max": 2.5, "step": 0.05,
+                    "tooltip": "Acoustic & foley richness steering (-2.5 hushed quiet air <-> +2.5 vivid crisp foley). Auto-synthesizes htc_sound.safetensors if CLIP is wired; pair with All-50 scope and prompt overall_soundscape for strongest audio shift.",
                 }),
             },
         }
@@ -680,11 +852,12 @@ class HTCSteeringDials:
         scope: str = SCOPE_MODES[0],
         clip=None,
         rack_json: str = "[]",
+        sound: float = 0.0,
     ):
-        specs: list[tuple[str, str, float]] = []
+        specs: list[tuple[Any, ...]] = []
         notes: list[str] = []
 
-        for ax, val in (("motion", motion), ("expression", expression), ("energy", energy)):
+        for ax, val in (("motion", motion), ("expression", expression), ("energy", energy), ("sound", sound)):
             s = float(val or 0.0)
             if abs(s) < 1e-5:
                 continue
@@ -704,14 +877,14 @@ class HTCSteeringDials:
                     notes.append(f"{ax} synth skipped ({exc})")
                     p = None
             if p is not None:
-                specs.append((ax, p, s))
+                specs.append((ax, p, s, False))
             else:
                 notes.append(f"{ax}: no .safetensors found (wire CLIP or run HTCMakeSteeringDial)")
 
         if mood_dial and mood_dial != NONE and abs(float(mood_strength or 0.0)) >= 1e-5:
             mp = resolve_dial_path(mood_dial)
             if mp:
-                specs.append((os.path.splitext(os.path.basename(mood_dial))[0], mp, float(mood_strength)))
+                specs.append((os.path.splitext(os.path.basename(mood_dial))[0], mp, float(mood_strength), False))
             else:
                 notes.append(f"missing dial '{mood_dial}'")
 
@@ -731,8 +904,8 @@ class HTCMakeSteeringDial:
     FUNCTION = "build"
     OUTPUT_NODE = True
     DESCRIPTION = (
-        "Build a compact ~14 KB H3 steering dial from `A ||| B` prompt pairs "
-        "(supports `{subject}` expansion and `! hold` orthogonalization). Saves to models/loras/dials/."
+        "Build a compact ~14 KB H3 steering dial from `A ||| B` prompt pairs, `+w/-w` prompt sets, or `(words:w)` weighted spans "
+        "(supports `{subject}` expansion and `!` / `![group]` hold orthogonalization). Saves to models/loras/dials/."
     )
 
     @classmethod
@@ -745,9 +918,9 @@ class HTCMakeSteeringDial:
                 "model": ("MODEL", {
                     "tooltip": "MiniMax-H3 model whose token_refiner + condition_proj project the prompt pair difference into a compact ~14 KB dial.",
                 }),
-                "recipe": (["custom", "motion", "expression", "energy", "life"], {
+                "recipe": (["custom", "motion", "expression", "energy", "life", "sound"], {
                     "default": "expression",
-                    "tooltip": "Pick a built-in contrast recipe (motion, expression, energy, life) or custom to use pairs_text below.",
+                    "tooltip": "Pick a built-in contrast recipe (motion, expression, energy, life, sound) or custom to use pairs_text below.",
                 }),
                 "dial_name": ("STRING", {
                     "default": "htc_expression", "multiline": False,
@@ -765,8 +938,8 @@ class HTCMakeSteeringDial:
                     "multiline": True,
                     "default": BUILTIN_DIAL_RECIPES["expression"]["pairs"],
                     "tooltip": (
-                        "Contrast prompt pairs, one per line as 'negative A ||| positive B'. "
-                        "Supports {subject} expansion and '! hold: ...' lines to project out unwanted traits (like hair or lighting)."
+                        "Contrast prompt pairs (`negative A ||| positive B`), `+w`/`-w` prompt sets, or `(words:w)` weighted spans. "
+                        "Supports `{subject}` expansion and `!` / `![group]` hold lines to project out unwanted traits (like motion or voice loudness)."
                     ),
                 }),
                 "debias": ("BOOLEAN", {

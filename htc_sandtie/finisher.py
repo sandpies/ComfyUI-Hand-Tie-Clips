@@ -88,7 +88,7 @@ _SUBJ_POSS_ADJ = (
     r"foreground|background|toned|naked|exposed|bent|crossed|supple|delicate|small|wide|"
     r"bouncing|braced|calm|curled|gleaming|heaving|licking|pursed|reclined|relaxed|rounded|seated|"
     r"slick|smiling|spread|standing|suspended|unblinking|hypnotic|satin|wide-parted|open-mouthed|"
-    r"smoking|interlaced|coiled|sword|blade|knife|katana|spear|dagger|pistol|rifle|hammer|boot|steel|armored|gauntleted"
+    r"smoking|interlaced|coiled|index|trigger|middle|ring|pinky|sword|blade|knife|katana|spear|dagger|pistol|rifle|hammer|boot|steel|armored|gauntleted"
 )
 _SUBJ_POSS_COMPOUND = (
     r"(?:shoulder\s+blades?|inner\s+thighs?|bare\s+glutes?|ass\s+cheeks?|rib\s*cage|"
@@ -100,13 +100,18 @@ _SUBJ_POSS_COMPOUND = (
     r"(?:chest|torso|shoulders)(?:,\s*(?:chest|torso|shoulders|head))*,?\s+and\s+(?:head|torso|shoulders|chest))"
 )
 _SUBJ_POSS_RX = re.compile(
-    rf"<Subject\s+(\d+)>(?:'s|\u2019s)\s+"
+    rf"<Subject\s+(\d+)>(?:'s|\u2019s|['\u2019](?=\s+[a-z]))\s+"
+    rf"((?:(?:{_SUBJ_POSS_ADJ})\s+){{0,3}}(?:{_SUBJ_POSS_COMPOUND}|[a-z]+(?:-[a-z]+)?))\b",
+    re.I,
+)
+_PAIR_POSS_RX = re.compile(
+    rf"(<Subject\s+\d+>\s+and\s+<Subject\s+\d+>)(?:'s|\u2019s|['\u2019](?=\s+[a-z]))\s+"
     rf"((?:(?:{_SUBJ_POSS_ADJ})\s+){{0,3}}(?:{_SUBJ_POSS_COMPOUND}|[a-z]+(?:-[a-z]+)?))\b",
     re.I,
 )
 _BOTH_SUBJ_ACT_RX = re.compile(
-    r"\bboth\s+(?:dancers|fighters|women|men|partners|performers|subjects|combatants|girls|boys|rivals|of\s+them)\b"
-    r"|\bboth(?=\s+(?:bounce|step|turn|move|stand|sit|kneel|lie|recline|lean|hold|lock|freeze|drop|pivot|rise|hit|snap|sway|pulse|wave|melt|trade|gaze|look|smile|laugh|tremble|arch|keep|press|glide|stride|dash|duck|hop|launch|reach|pull|push|grasp|grip|roll|sink|wrap|twist|slide|kick|punch|block|parry|execute|wear)\b)",
+    r"\bboth\s+(?:dancers|fighters|women|men|partners|performers|subjects|combatants|girls|boys|rivals|of\s+them)\b(?!['\u2019])"
+    r"|\bboth(?=\s+(?:bounce|bouncing|step|stepping|turn|turning|move|moving|stand|standing|sit|sitting|kneel|kneeling|lie|lying|recline|reclining|lean|leaning|hold|holding|lock|locking|freeze|freezing|drop|dropping|pivot|pivoting|rise|rising|hit|hitting|snap|snapping|sway|swaying|pulse|pulsing|wave|waving|ripple|rippling|mirror|mirroring|maintain|maintaining|perform|performing|dance|dancing|frame|framing|wink|winking|counter|countering|match|matching|share|sharing|melt|melting|trade|trading|gaze|gazing|look|looking|smile|smiling|laugh|laughing|tremble|trembling|arch|arching|keep|keeping|press|pressing|glide|gliding|stride|striding|dash|dashing|duck|ducking|hop|hopping|launch|launching|reach|reaching|pull|pulling|push|pushing|grasp|grasping|grip|gripping|roll|rolling|sink|sinking|wrap|wrapping|twist|twisting|slide|sliding|kick|kicking|punch|punching|block|blocking|parry|parrying|execute|executing|wear|wearing)\b)",
     re.I,
 )
 
@@ -120,6 +125,8 @@ def _detach_subject_possessives(text: str, lab: dict | None = None) -> str:
     """Keep `<Subject N>` whitespace-separated by detaching `'s` suffixes cleanly."""
     subs = (lab or {}).get("subjects") or {}
 
+    out = _PAIR_POSS_RX.sub(lambda m: f"the {m.group(2).strip()} of {m.group(1)}", str(text or ""))
+
     def _repl(m):
         sn = int(m.group(1))
         tail = m.group(2).strip()
@@ -128,15 +135,31 @@ def _detach_subject_possessives(text: str, lab: dict | None = None) -> str:
             return f"<Subject {sn}> {cname}'s {tail}"
         return f"the {tail} of <Subject {sn}>"
 
-    out = _SUBJ_POSS_RX.sub(_repl, str(text or ""))
+    out = _SUBJ_POSS_RX.sub(_repl, out)
     out = re.sub(
-        r"(<Subject\s+(\d+)>)(?:'s|\u2019s)\b",
-        lambda m: f"{m.group(1)} {str((subs.get(int(m.group(2))) or {}).get('char_name') or '').strip()}'s"
-        if str((subs.get(int(m.group(2))) or {}).get("char_name") or "").strip()
+        r"(<Subject\s+(\d+>))(?:'s|\u2019s|['\u2019](?=\s|[.,;!?]|$))",
+        lambda m: f"{m.group(1)} {str((subs.get(int(m.group(2).rstrip('>'))) or {}).get('char_name') or '').strip()}'s"
+        if str((subs.get(int(m.group(2).rstrip('>'))) or {}).get("char_name") or "").strip()
         else m.group(1),
         out,
     )
     return out
+
+
+_PLURAL_BODY_NOUNS = (
+    r"bodies|faces|eyes|lips|cheeks|eyebrows|brows|hands|palms|fingers|wrists|forearms|biceps|arms|elbows|shoulders|"
+    r"midriffs|abdomens|torsos|bellies|navels|pelvises|chests|hips|waists|thighs|knees|calves|legs|ankles|feet|heels|toes|"
+    r"backs|necks|throats|chins|heads|expressions|smirks|smiles|poses|grips|gestures|waves|pops|isolations|accents|angles|"
+    r"outfits|garments|clothes|states|positions|orientations|movements|motions|steps|glances|gazes"
+)
+_THEIR_PLURAL_RX = re.compile(
+    rf"\btheir(?=\s+(?:[a-z]+(?:-[a-z]+)?\s+){{0,2}}?(?:{_PLURAL_BODY_NOUNS})\b)",
+    re.I,
+)
+_EACH_PLURAL_RX = re.compile(
+    rf"\beach\s+performer(?:'s|\u2019s)(?=\s+(?:[a-z]+(?:-[a-z]+)?\s+){{0,2}}?(?:{_PLURAL_BODY_NOUNS})\b)",
+    re.I,
+)
 
 
 def _scrub_multi_subject_pronouns(text: str, subject_count: int) -> str:
@@ -145,13 +168,16 @@ def _scrub_multi_subject_pronouns(text: str, subject_count: int) -> str:
     if n_subj < 2:
         return str(text or "")
     pair_lbl = "<Subject 1> and <Subject 2>" if n_subj == 2 else "the performers"
+    poss_plural = "both performers'" if n_subj == 2 else "the performers'"
     c = str(text or "")
     if n_subj == 2:
         c = _BOTH_SUBJ_ACT_RX.sub(pair_lbl, c)
     c = re.sub(r"\bthey(?:\s+are|'re)\b", f"{pair_lbl} are", c, flags=re.I)
     c = re.sub(r"\bthey\s+were\b", f"{pair_lbl} were", c, flags=re.I)
     c = re.sub(r"\bthey(?:\s+have|'ve)\b", f"{pair_lbl} have", c, flags=re.I)
+    c = _THEIR_PLURAL_RX.sub(poss_plural, c)
     c = re.sub(r"\btheirs?\b", "each performer's", c, flags=re.I)
+    c = _EACH_PLURAL_RX.sub(poss_plural, c)
     c = re.sub(r"\bthemselves\b", "each other", c, flags=re.I)
     c = re.sub(r"\b(?:them|they)\b", pair_lbl, c, flags=re.I)
     return c
@@ -167,7 +193,8 @@ def _clean_outside_d(text: str, fn) -> str:
 def _clean_inside_d(text: str) -> str:
     parts = re.split(r"(<d>.*?</d>)", text, flags=re.S | re.I)
     for i in range(1, len(parts), 2):
-        inner = _dlg.sanitize_gluck(parts[i])
+        inner = _EMOJI_STRIP_RX.sub("", parts[i])
+        inner = _dlg.sanitize_gluck(inner)
         inner = inner.replace("\u201c", "'").replace("\u201d", "'").replace('"', "'")
         parts[i] = inner
     return "".join(parts)
@@ -333,6 +360,71 @@ def clean_plan_output(raw_plan: str, duration_s: float, silent: bool = False) ->
     return t.strip()
 
 
+_SOUND_MODES = frozenset({"auto", "pure_bgm", "quiet_air", "foley"})
+
+
+def resolve_sound_mode(brief: str = "", flavors: dict | None = None) -> str:
+    """Resolve UI `sound_mode` dial (`auto` | `pure_bgm` | `quiet_air` | `foley`)."""
+    flavors = flavors or {}
+    raw = str(flavors.get("sound_mode") or "auto").strip().lower()
+    return raw if raw in _SOUND_MODES else "auto"
+
+
+_FOLEY_TAIL_AUDIBLE_RX = re.compile(
+    r",?\s*\band\s+(?:punchy\s+gunshot\s+reverb|heavy\s+body-slam\s+foley|deafening\s+shotgun\s+booms?|ringing\s+steel-on-steel\s+clangs?|whooshing\s+blade\s+arcs?|heavy\s+punch[^,.\n]*?impacts?)\s+audible\s+throughout\b",
+    re.I,
+)
+_FOLEY_WITH_AUDIBLE_RX = re.compile(
+    r",?\s*\bwith\s+[^,.\n:;]*?\b(?:foley|reverb)\b[^.\n:;]*?\baudible\s+throughout\b",
+    re.I,
+)
+_FOLEY_AUDIBLE_ONLY_RX = re.compile(r",?\s*\baudible\s+throughout\b", re.I)
+_FOLEY_ACCOMP_RX = re.compile(
+    r",?\s*\baccompanied\s+by\s+(?:loud|audible|rhythmic|heavy|crisp|sharp)\s+[^,.\n;]*?\b(?:slaps?|impacts?|foley|sounds?|clicks?|clacks?|thuds?|clangs?)\b",
+    re.I,
+)
+_FOLEY_WITH_NOISE_RX = re.compile(
+    r",?\s*\bwith\s+(?:a\s+|an\s+|one\s+)?(?:audible|loud|deafening|ear-splitting|thunderous|echoing|resounding|ringing|sharp\s+metallic|heavy|crisp)\s+(?:skin-on-skin\s+|forearm\s+|metallic\s+)?(?:foley|reverb|thuds?|clangs?|clacks?|clatter|booms?|bong|slaps?|skin-slaps?|creaks?|rustl(?:e|ing)|clicks?|impacts?|sounds?)\b",
+    re.I,
+)
+_FOLEY_NOISE_ADJ_RX = re.compile(
+    r"\b(?:loud|deafening|ear-splitting|echoing|resounding|thunderous)\s+(?=(?:footsteps?|heel\s+clicks?|thuds?|clangs?|clacks?|booms?|crunch(?:es|ing)?|rustl(?:e|ing)|slaps?|impacts?|roar|metallic))",
+    re.I,
+)
+_FOLEY_PURE_BGM_RX = re.compile(
+    r"(?:,?\s*(?:\b(?:and|with)\s+)?(?:(?:crisp|sharp|loud|audible)\s+)*heel\s+clicks?\b(?:\s+on\s+(?:[a-z]+\s+){0,2}(?:marble|tile|floor|flooring|concrete|wood|stone|pavement|stairs))?|,?\s*(?:\b(?:and|with)\s+)?(?:(?:audible|loud|heavy|ragged)\s+)+breathing\b)",
+    re.I,
+)
+_FOLEY_LEADING_JOIN_RX = re.compile(r"\s+(?:with|and)(?=\s*(?:[.,;]|$|\(DIALOGUE\)))", re.I)
+
+
+def scrub_foley_cues_in_description(text: str, *, mode: str = "pure_bgm", strip: bool = True) -> str:
+    """Scrub noisy diegetic foley / acoustic cue phrases from visual prose without harming `<d>` or visual action."""
+    t = str(text or "")
+    if not t or mode not in ("pure_bgm", "quiet_air"):
+        return t
+    t = _FOLEY_TAIL_AUDIBLE_RX.sub("", t)
+    t = _FOLEY_WITH_AUDIBLE_RX.sub("", t)
+    t = _FOLEY_AUDIBLE_ONLY_RX.sub("", t)
+    t = _FOLEY_ACCOMP_RX.sub("", t)
+    t = _FOLEY_WITH_NOISE_RX.sub("", t)
+    t = re.sub(r"\baudibly\s+", "", t, flags=re.I)
+    t = _FOLEY_NOISE_ADJ_RX.sub("", t)
+    t = re.sub(r"\bfootsteps\s+thunder\b", "boots stride fast", t, flags=re.I)
+    if mode == "pure_bgm":
+        t = _FOLEY_PURE_BGM_RX.sub("", t)
+        t = _FOLEY_LEADING_JOIN_RX.sub("", t)
+    elif mode == "quiet_air":
+        t = re.sub(r"\baudible\s+(?=heavy\s+breathing|breathing|footsteps|heel\s+clicks)", "", t, flags=re.I)
+        t = re.sub(r"\bheavy\s+ragged\s+breathing\b", "quiet natural breathing", t, flags=re.I)
+        t = re.sub(r"\bheavy\s+breathing\b", "quiet breathing", t, flags=re.I)
+    t = re.sub(r"[ \t]{2,}", " ", t)
+    t = re.sub(r"[ \t]+([,.;:!?])", r"\1", t)
+    t = re.sub(r",\s*,+", ", ", t)
+    t = re.sub(r",\s*\.", ".", t)
+    return t.strip() if strip else t
+
+
 def is_pure_bgm_soundscape(
     brief: str = "",
     flavors: dict | None = None,
@@ -342,6 +434,11 @@ def is_pure_bgm_soundscape(
 ) -> bool:
     """Return True when soundscape should stay N/A so BGM plays cleanly unobstructed."""
     flavors = flavors or {}
+    sm = resolve_sound_mode(brief, flavors)
+    if sm == "pure_bgm":
+        return True
+    if sm in ("quiet_air", "foley"):
+        return False
     raw_amb_str = str(flavors.get("ambience") or "").strip().lower()
     raw_amb = _cat.parse_multi_ids(flavors.get("ambience"))
     if raw_amb_str == "none" or "amb_none_na" in raw_amb:
@@ -672,10 +769,23 @@ def finish_block(
                         t = _replace_section_body(t, _pfld, _pnew, _pnxt)
         t = _clean_outside_d(t, lambda s, l=lab: _detach_subject_possessives(s, l))
     t = _clean_outside_d(t, lambda s: re.sub(r"[ \t]+([.,;!?])", r"\1", s))
+    if silent or is_pure_bgm_soundscape(brief=brief, flavors=flavors):
+        t = _clean_outside_d(
+            t,
+            lambda s: re.sub(
+                r"\bphysical/vocal\s+commitment\b",
+                "physical commitment",
+                re.sub(r"\b(?:bold\s+|commanding\s+)?vocal\s+projection(?:\s+energy)?\b", "spirited physical energy", s, flags=re.I),
+                flags=re.I,
+            ),
+        )
+    plan_hint = str(flavors.get("plan_hint") or "")
+    _is_sex_clip = _dir.is_sexual(brief, str(flavors.get("explicit") or ""), str(flavors.get("wardrobe") or ""), fetish_id=str(flavors.get("fetish") or ""))
+    if not _is_sex_clip and not re.search(r"\b(?:bunched|hiked|pulled\s+aside|unzipped|unbuttoned|lowered|removed|displaced|undress|strip|nude)\b", f"{brief or ''} {plan_hint} {flavors.get('wardrobe') or ''}", re.I):
+        t = _clean_outside_d(t, lambda s: re.sub(r"\bdisplaced\s+(outfits?|garments?|clothes|clothing|hair\s+states?)\b", r"active \1", s, flags=re.I))
     if not silent:
         t = _clean_inside_d(t)
 
-    plan_hint = str(flavors.get("plan_hint") or "")
     if not _dir.is_anal(brief, explicit_id=str(flavors.get("explicit") or ""), plan=plan_hint):
         t = re.sub(r"[ \t]*The head of his erect penis is inside her anus\.", "", t, flags=re.I)
         t = re.sub(r"[ \t]*The anal ring is stretched tautly around the shaft and stays closed around it\.", "", t, flags=re.I)
@@ -859,7 +969,8 @@ def finish_block(
                     missing_ret.append(f"<Audio {a['n']}>: timbre_reference (quiet during music-only dance)")
                 else:
                     missing_ret.append(f"<Audio {a['n']}>: full_reference")
-        new_ret = "\n".join(_sort_ref_lines((ret.splitlines() if ret else []) + missing_ret)).strip()
+        ret_tagged_lines = [ln for ln in (ret.splitlines() if ret else []) if re.match(r"^\s*<(?:Subject|Picture|Audio)\s+\d+>", ln)]
+        new_ret = "\n".join(_sort_ref_lines(ret_tagged_lines + missing_ret)).strip()
         if new_ret:
             t = _replace_section_body(t, "retention_analysis:", new_ret, ("detailed_description:", "overall_soundscape:"))
         if anal_nude or ward_ids_fin:
@@ -872,16 +983,36 @@ def finish_block(
 
         sdefs = _std._field(t, "subject_definitions:")
         if sdefs:
+            # Split inline multi-tag definitions (e.g. `<Subject 1> ... <Subject 2> ... <Picture 1> depicts ...`) onto separate lines
+            sdefs = re.sub(r"(?<=[.!?])\s+(?=<(?:Subject|Picture|Audio)\s+\d+>)", "\n", sdefs)
             sdef_lines = []
+            seen_s_nums: set[int] = set()
+            seen_p_nums: set[int] = set()
+            seen_a_nums: set[int] = set()
             for sl in sdefs.splitlines():
-                mp = re.match(r"^\s*<Picture\s+(\d+)>\s*(?::|\()", sl)
-                if mp and (int(mp.group(1)) in subj_pic_nums or _refs.is_studio_backdrop_text(sl)):
-                    continue
+                mp = re.match(r"^\s*<Picture\s+(\d+)>", sl)
+                if mp:
+                    p_idx = int(mp.group(1))
+                    if p_idx in subj_pic_nums or _refs.is_studio_backdrop_text(sl) or p_idx in seen_p_nums:
+                        continue
+                    seen_p_nums.add(p_idx)
+                ma = re.match(r"^\s*<Audio\s+(\d+)>", sl)
+                if ma:
+                    a_idx = int(ma.group(1))
+                    if a_idx in seen_a_nums:
+                        continue
+                    seen_a_nums.add(a_idx)
                 ms = re.match(r"^\s*<Subject\s+(\d+)>", sl)
                 if ms:
-                    owned = [p["label"] for p in (lab.get("pictures") or []) if p.get("subject") == int(ms.group(1))]
-                    if owned:
-                        sl = re.sub(r"<Picture\s+\d+>", owned[0], sl)
+                    s_idx = int(ms.group(1))
+                    if s_idx in seen_s_nums:
+                        continue
+                    seen_s_nums.add(s_idx)
+                    owned = [p["label"] for p in (lab.get("pictures") or []) if p.get("subject") == s_idx]
+                    if owned and not any(int(pm) != s_idx for pm in re.findall(r"<Subject\s+(\d+)>", sl)):
+                        # Only swap wrong <Picture N> when line isn't describing a non-subject setting
+                        if not re.search(r"<Picture\s+\d+>\s+(?:depicts?|features?|shows?|is\s+the\s+(?:scene|room|setting))", sl, re.I):
+                            sl = re.sub(r"<Picture\s+\d+>", owned[0], sl)
                     sl = _refs._STUDIO_BACKDROP_RX.sub(" ", sl)
                     sl = re.sub(r"\(\s*Anchor\s*:\s*", "(", sl, flags=re.I)
                     sl = re.sub(r"\s{2,}", " ", sl).strip()
@@ -892,14 +1023,20 @@ def finish_block(
         for s_n, s_meta in sorted((lab.get("subjects") or {}).items()):
             pics_for_s = [p for p in (lab.get("pictures") or []) if p.get("subject") == s_n]
             pic_labels = [p["label"] for p in pics_for_s]
+            owned_pic_nums = {int(p["n"]) for p in pics_for_s if p.get("n") is not None}
             s_desc = next((str(p.get("desc") or "").strip() for p in pics_for_s if p.get("desc")), "")
             s_desc = re.sub(r"^\s*Anchor\s*:\s*", "", s_desc, flags=re.I).strip()
             eth_s = _refs.extract_ethnicity_phrase(s_desc, brief=brief)
             cname = s_meta.get("char_name") or s_meta.get("name") or ""
             cname_str = f" {cname}," if cname else ""
-            has_sub_line = bool(re.search(rf"^\s*<Subject {s_n}>", sdefs, re.M))
-            missing_pics = [pl for pl in pic_labels if pl not in sdefs]
-            if not has_sub_line or missing_pics:
+            m_sub_line = re.search(rf"^\s*<Subject {s_n}>[^\n]*$", sdefs, re.M)
+            sub_line = m_sub_line.group(0) if m_sub_line else ""
+            has_sub_line = bool(sub_line)
+            missing_pics = [pl for pl in pic_labels if pl not in sub_line]
+            cross_subj = any(int(sm) != s_n for sm in re.findall(r"<Subject\s+(\d+)>", sub_line)) if sub_line else False
+            wrong_pic = any(int(pm) not in owned_pic_nums for pm in re.findall(r"<Picture\s+(\d+)>", sub_line)) if (sub_line and owned_pic_nums) else False
+            scene_leak = bool(re.search(r"<Picture\s+\d+>\s+(?:depicts?|features?|shows?|is\s+the\s+(?:scene|room|setting))", sub_line, re.I)) if sub_line else False
+            if not has_sub_line or missing_pics or cross_subj or wrong_pic or scene_leak:
                 p_join = ", ".join(pic_labels) if pic_labels else "the reference"
                 who_phrase = f"the {eth_s}" if eth_s else "the person"
                 desc_tail = f" ({s_desc})" if s_desc else ""
@@ -923,10 +1060,10 @@ def finish_block(
                         new_l = re.sub(rf"(<Subject {s_n}>[^\n.]*)", lambda m, e=eth_s: f"{m.group(1)}, an {e}", old_l, count=1)
                     sdefs = sdefs.replace(old_l, new_l, 1)
         for p in lab.get("pictures") or []:
-            if p.get("subject") is None and not _refs.is_studio_backdrop_text(p.get("desc") or "") and p["label"] not in sdefs:
+            if p.get("subject") is None and not _refs.is_studio_backdrop_text(p.get("desc") or "") and not re.search(rf"^\s*{re.escape(p['label'])}(?=\s|:|\(|$)", sdefs, re.M):
                 missing_defs.append(f"{p['label']} is the scene setting ({p.get('desc') or 'the scene environment reference'}).")
         for a in lab.get("audios") or []:
-            if a["label"] not in sdefs:
+            if not re.search(rf"^\s*{re.escape(a['label'])}(?=\s|:|\(|$)", sdefs, re.M):
                 missing_defs.append(f"{a['label']} is the audio reference.")
         new_defs = "\n".join(_sort_ref_lines((sdefs.splitlines() if sdefs else []) + missing_defs)).strip()
         if new_defs:
@@ -963,11 +1100,38 @@ def finish_block(
                     cur_desc = cur_desc.replace(s1_line, new_s1_line, 1)
                     t = _replace_section_body(t, desc_field, cur_desc, ("overall_soundscape:", "non_diegetic_music:"))
 
-    # Enforce ambience & music (with commas, zero semicolons!)
+    # Enforce SOUND dial + ambience & music (with commas, zero semicolons!)
+    sm_fin = resolve_sound_mode(brief=brief, flavors=flavors)
+    pure_bgm_fin = is_pure_bgm_soundscape(brief=brief, flavors=flavors)
+    if pure_bgm_fin or sm_fin == "quiet_air":
+        scrub_mode = "pure_bgm" if pure_bgm_fin else "quiet_air"
+        cur_desc_snd = _std._field(t, desc_field)
+        if cur_desc_snd:
+            scrubbed_desc = _clean_outside_d(cur_desc_snd, lambda s: scrub_foley_cues_in_description(s, mode=scrub_mode, strip=False))
+            if scrubbed_desc and scrubbed_desc != cur_desc_snd:
+                t = _replace_section_body(t, desc_field, scrubbed_desc, ("overall_soundscape:", "non_diegetic_music:"))
+
     amb_opts_fin = [o for o in _cat.resolve_dial_opts("ambience", flavors.get("ambience")) if o.get("id") not in ("none", "amb_none_na") and (o.get("rule") or o.get("world"))]
-    if is_pure_bgm_soundscape(brief=brief, flavors=flavors):
+    if pure_bgm_fin:
         if "overall_soundscape:" in t:
             t = _replace_section_body(t, "overall_soundscape:", "N/A", ("non_diegetic_music:",))
+    elif sm_fin == "quiet_air":
+        if "overall_soundscape:" in t:
+            if amb_opts_fin:
+                amb_q = ", ".join(sanitize_additive_rule((o.get("rule") or o.get("world") or "").strip()) for o in amb_opts_fin)
+                amb_q = scrub_foley_cues_in_description(amb_q, mode="quiet_air").rstrip(".") + "."
+                t = _replace_section_body(t, "overall_soundscape:", "Soft, narrowband quiet room air, " + amb_q[0].lower() + amb_q[1:], ("non_diegetic_music:",))
+            else:
+                t = _replace_section_body(t, "overall_soundscape:", "Soft, narrowband quiet indoor room air and gentle stillness.", ("non_diegetic_music:",))
+    elif sm_fin == "foley":
+        cur_snd = (_std._field(t, "overall_soundscape:") or "").strip()
+        if amb_opts_fin:
+            if not cur_snd or len(cur_snd) < 20 or cur_snd.upper() == "N/A":
+                amb_text = ", ".join(sanitize_additive_rule((o.get("rule") or o.get("world") or "").strip()) for o in amb_opts_fin)
+                if amb_text and "overall_soundscape:" in t:
+                    t = _replace_section_body(t, "overall_soundscape:", amb_text.rstrip(".") + ".", ("non_diegetic_music:",))
+        elif (not cur_snd or len(cur_snd) < 20 or cur_snd.upper() == "N/A") and "overall_soundscape:" in t:
+            t = _replace_section_body(t, "overall_soundscape:", "Crisp physical movement foley, natural footfalls, fabric motion, and spatial room acoustics.", ("non_diegetic_music:",))
     elif amb_opts_fin:
         cur_snd = (_std._field(t, "overall_soundscape:") or "").strip()
         if not cur_snd or len(cur_snd) < 20 or cur_snd.lower() in ("n/a", "room tone.", "natural room tone.", "steady room tone."):
@@ -1205,7 +1369,7 @@ You receive a Pass-1 draft (`plan` storyboard or complete `block` prompt) and a 
 Your task:
 1. Satisfy EVERY item in the Audit Checklist while keeping Pass 1's valid labels, timestamps, `[Shot N]` cut headers, single-thought unity, and field structure intact.
 2. Lock any character sheet's racial/ethnic identity and bone structure across `subject_definitions:`, `summary:`, `retention_analysis:`, and `[Shot 1]`, writing `<Subject 1> Name` smoothly (omitting parentheses and UI emojis).
-3. Enforce strict wardrobe, screen-left/right spatial axis, set, and transition continuity across EVERY beat—keep active outfits locked per assigned subject, keep displaced/removed garments in that displaced state, and bridge every movement with concrete cause-and-effect motion (`action -> contact -> secondary reaction`).
+3. Enforce strict wardrobe, screen-left/right spatial axis, set, and transition continuity across EVERY beat—keep active outfits locked per assigned subject (and keep any explicitly bunched/pulled/removed garment in that state), explicitly declare camera angle/distance on every `[Shot N]` cut, and bridge every posture/position transition with concrete step-by-step physical motion (`unseat/pivot/brace -> align -> enter/move -> secondary reaction`).
 4. Write direct literal visual prose free of literary filler; in explicit/NSFW scenes name anatomy directly (`cock`, `erect penis`, `pussy`, `bare breasts`, `asshole`, `cum`) and use `his erect cock` / `the man` rather than euphemisms.
 5. Keep every sentence outside `<d>...</d>` 100% affirmative (describing what IS visible and moving), keep `overall_soundscape:` and `non_diegetic_music:` free of semicolons and spoken words, and keep each beat to one clear foreground audio focus.
 6. Reply with ONLY the JSON object `{ "block": "<the refined prompt block>" }` (or `{ "plan": "<the refined storyboard>" }` when Stage is `plan`)."""
@@ -1226,6 +1390,7 @@ def build_pass2_audit_checklist(
     flavor_lines: list[str],
     plan: str = "",
     prev_hop_context: str = "",
+    tree=None,
 ) -> list[str]:
     checks = []
     exp_p2_str = str(flavors.get("explicit") or "")
@@ -1274,22 +1439,52 @@ def build_pass2_audit_checklist(
     if is_pov:
         pov_lbl = "male POV" if pov_val == "male" else ("female POV" if pov_val == "female" else "first-person POV")
         checks.append(f"POV CHECK ({pov_lbl}): Write camera perspective strictly in first-person `my`/`I` with the partner centered ahead.")
-    if rear_scene and not anal_scene and not mirror_p2:
+    mixed_orient_p2 = _dir.has_mixed_front_and_rear_beats(brief, explicit_id=exp_p2_str, plan=plan, plan_hint=plan_hint_p2)
+    mixed_oral_p2 = _dir.has_mixed_oral_beats(brief, explicit_id=exp_p2_str, plan=plan, plan_hint=plan_hint_p2)
+    if rear_scene and not anal_scene and not mirror_p2 and not mixed_orient_p2:
         checks.append("REAR-POSE LOCK: Keep torso, chest, shoulders, and head facing forward away from the lens throughout.")
+    elif mixed_orient_p2:
+        checks.append("TRANSITION ORIENTATION CHECK: Keep faces visible during front/oral/cowgirl beats and face forward away ONLY during rear-entry/reverse-cowgirl beats (unless mirror-reflected).")
     if over_shoulder:
         checks.append("OVER-SHOULDER LOCK: Keep hips and shoulders angled away while only the chin turns back over one shoulder.")
-    if mouth_occupied:
+    if mouth_occupied and not mixed_oral_p2:
         checks.append("ORAL SEAL LOCK: Keep lips sealed tightly around the shaft/object with hollowed cheeks during sucking beats.")
+    elif mixed_oral_p2:
+        checks.append("BEAT-SCOPED ORAL SEAL: Seal lips tightly in an O-ring ONLY on sucking beats; open naturally on kissing/riding beats.")
+    if exp_p2_str:
+        if any(x.startswith("cont_") for x in _cat.parse_multi_ids(exp_p2_str)):
+            checks.append("CONTINUOUS TRANSITION CHECK: Keep ONE unbroken shot with clear step-by-step limb/hip/garment movement bridging every micro-beat smoothly across the full timeline.")
+        elif any(x.startswith(("stage_", "multi_pos_")) for x in _cat.parse_multi_ids(exp_p2_str)):
+            checks.append("MULTI-SHOT POSITION & ANGLE CHECK: Ensure every `[Shot N]` cut states camera distance/angle, screen-left/right placement, sticky displaced clothes, and exact hand/body contact.")
+    if tree is not None and getattr(tree, "shots", None):
+        n_sh = len(tree.shots)
+        if n_sh >= 2:
+            checks.append(f"SHOT-TREE CUT COUNT LOCK: Preserve all {n_sh} `[Shot N]` sections (`[Shot 1]` .. `[Shot {n_sh}]`) at their chronological cut timestamps.")
+        for sh_i in tree.shots:
+            cs_i = getattr(sh_i, "carried_state", None) or {}
+            if sh_i.shot_n > 1 and cs_i.get("outfit_displaced"):
+                checks.append(f"CARRIED STATE LOCK ([Shot {sh_i.shot_n}]): Keep `{cs_i['outfit_displaced']}` in its displaced state across `[Shot {sh_i.shot_n}]` without resetting attire.")
+                break
+    sm_p2 = resolve_sound_mode(brief=brief, flavors=flavors)
     if no_dialogue:
         is_sex_p2 = _dir.is_sexual(brief, exp_p2_str, ward_p2_str, fetish_id=str(flavors.get("fetish") or ""))
-        if is_sex_p2:
+        if is_pure_bgm_soundscape(brief=brief, flavors=flavors, sex_scene=is_sex_p2):
+            checks.append("SOUNDSCAPE OFF: Keep `<d>` dialogue omitted, strip noisy footsteps/breath/impact foley from visual beats, and set `overall_soundscape:` strictly to `N/A` so music plays unobstructed.")
+        elif sm_p2 == "quiet_air":
+            checks.append("QUIET AIR LOCK: Keep `<d>` dialogue omitted and set `overall_soundscape:` to soft narrowband indoor room air without loud impacts, crunch, or heavy breath.")
+        elif is_sex_p2:
             checks.append("WORDLESS AUDIO LOCK: Keep all beats free of `<d>` speech; place natural breaths, moans, and wet foley inside `overall_soundscape:`.")
-        elif is_pure_bgm_soundscape(brief=brief, flavors=flavors, sex_scene=is_sex_p2):
-            checks.append("SOUNDSCAPE OFF: Keep `<d>` dialogue omitted and set `overall_soundscape:` strictly to `N/A` so the music track plays unobstructed.")
+        elif sm_p2 == "foley":
+            checks.append("FOLEY ACTIVE LOCK: Keep `<d>` dialogue omitted while describing rich diegetic physical movement and environmental foley inside `overall_soundscape:`.")
         else:
             checks.append("SILENT LIPS LOCK: Keep `<d>` dialogue omitted; describe poised closed lips and tactile room foley inside `overall_soundscape:`.")
     else:
-        checks.append("AUDIO DISCIPLINE: Keep `overall_soundscape:` strictly free of spoken words and semicolons, using comma-separated foley.")
+        if sm_p2 == "pure_bgm":
+            checks.append("PURE BGM MIX: Keep `overall_soundscape:` set strictly to `N/A` and keep visual beats free of distracting footsteps or impact foley.")
+        elif sm_p2 == "quiet_air":
+            checks.append("QUIET AIR MIX: Keep `overall_soundscape:` soft narrowband room tone beneath spoken `<d>` lines without harsh foley.")
+        else:
+            checks.append("AUDIO DISCIPLINE: Keep `overall_soundscape:` strictly free of spoken words and semicolons, using comma-separated foley.")
         acc_opts_p2 = _cat.resolve_dial_opts("accent", flavors.get("accent"))
         tgt_lang_p2 = _dlg.detect_target_language(brief, acc_opts_p2[0] if acc_opts_p2 else None)
         if tgt_lang_p2 != "English":

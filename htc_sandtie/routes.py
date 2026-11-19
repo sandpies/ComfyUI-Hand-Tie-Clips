@@ -602,6 +602,7 @@ def register_sandtie_routes(instance, web) -> None:
                 start_image_path=start_path or "", plan=plan, voice_files=voice_files,
                 flavors=flavors, extracted_video=extracted_video,
                 prev_hop_context=prev_hop_context, resolve_file_fn=_media.resolve,
+                structured_schema=bool(_llm.structured_supported()),
             )
         except Exception as exc:
             return web.json_response({"ok": False, "error": str(exc)})

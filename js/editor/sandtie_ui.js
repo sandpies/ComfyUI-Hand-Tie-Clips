@@ -378,7 +378,7 @@ export const BUILTIN_DIAL_COMBOS = [
     { id: "__builtin_kpop_chair_velvet_legcross_916", label: "🪑 K-Pop Velvet Chair Stage: Heel-Hook Spin, Jacket-Slip & Backrest Pose (9:16)", values: { style: "style_kpop_music_bank_4k_stage", camera: "cam_contour_shoulder_hip_glide", pose: "dance_kpop_chair_velvet_legcross_snap_916", place: "plate_proscenium_theater_stage_spotlight", wardrobe: "street_idol_stage_coord_blazer_mini", light: "tokyo_love_hotel_magenta_violet_velvet", colour: "velvet_crimson_gold", music: "kpop_sensual_velvet_rnb_98", motion: "natural", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "silent" } },
     { id: "__builtin_kpop_duet_finale_confetti_169", label: "🎊 K-Pop Encore Duet: Linked-Arm Spin, Knee-Bounce & Twin Ending Fairy (16:9)", values: { style: "style_kpop_music_bank_4k_stage", camera: "cam_360_slowmo_duet_orbit", pose: "dance_kpop_duet_finale_confettispin_169", place: "plate_proscenium_theater_stage_spotlight", wardrobe: "street_balletcore_wrap_bolero_legwarmers", light: "light_kpop_concert_multi_spot_haze", colour: "colour_kpop_pastel_milk_highlights", fx: "fx_kpop_confetti_sparkle_cannon", fx_timing: "from_start", music: "kpop_hyper_hype_train_134", motion: "max", energy: "peak", expression: "vivid", expr_read: "warm", life: "hyper", talk_mode: "silent" } },
     { id: "__builtin_stage_gym_mat_split_916", label: "NSFW 2-Stage: Studio Mirror Stretch -> Padded Gym Mat Rear Entry (9:16)", values: { style: "glamour_boudoir_8k", camera: "portrait_vertical_stack", explicit: "stage_gym_mat_split_stretch_to_rear", place: "plate_private_gym_mirror_weight_bench", wardrobe: "partial_yoga_leggings_peeled_mid_thigh", light: "soft_natural_light", colour: "champagne_honey_glow", ambience: "gym_locker_bench_echo", motion: "natural", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
-    { id: "__builtin_stage_kitchen_island_169", label: "NSFW 2-Stage: Marble Kitchen Island Edge Tease -> Hip-High Press (16:9)", values: { style: "glamour_boudoir_8k", camera: "multi_position_3cut_intimate", explicit: "stage_kitchen_island_seat_to_press", place: "plate_luxury_kitchen_island_night", wardrobe: "partial_blouse_open_bra_pushed_up", light: "penthouse_blue_amber", colour: "champagne_honey_glow", ambience: "penthouse_night_hum", motion: "natural", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
+    { id: "__builtin_stage_kitchen_island_169", label: "NSFW 2-Stage: Marble Kitchen Island Edge Tease -> Hip-High Press (16:9)", values: { style: "glamour_boudoir_8k", camera: "coverage_match_on_action", explicit: "stage_kitchen_island_seat_to_press", place: "plate_luxury_kitchen_island_night", wardrobe: "partial_blouse_open_bra_pushed_up", light: "penthouse_blue_amber", colour: "champagne_honey_glow", ambience: "penthouse_night_hum", motion: "natural", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
     { id: "__builtin_stage_aftercare_whisper_169", label: "NSFW Aftercare Stage: Fireplace Silk Breathing & Skin Rest (16:9)", values: { style: "h3_astro_cinema", camera: "static_close", explicit: "stage_aftercare_cooldown_whisper", place: "plate_satin_four_poster_fireplace_cabin", wardrobe: "partial_silk_robe_open_front", fetish: "aftercare_cuddle_pillow_talk", light: "fireplace_ember_warm_low", colour: "champagne_honey_glow", talkstyle: "husky_aftercare_murmur", ambience: "fireplace_ember_pop_silk", motion: "slow", energy: "hush", expression: "subtle", expr_read: "warm", life: "natural", talk_mode: "auto" } },
     { id: "__builtin_stage_balcony_skyline_916", label: "NSFW 2-Stage: Night Skyline Balcony Rail Arch -> Lifted Carry Thrusts (9:16)", values: { style: "erotic_thriller_90s_35mm", camera: "portrait_vertical_stack", explicit: "stage_balcony_skyline_2cut_rail_to_carry", place: "luxury_hotel_balcony_night", wardrobe: "partial_dress_hiked_waist", light: "moonlight", colour: "champagne_honey_glow", ambience: "city_night", motion: "brisk", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
     { id: "__builtin_stage_hotel_window_bed_169", label: "NSFW 3-Stage: Sheer-Curtain Suite Silhouette -> Oral -> Bed Missionary (16:9)", values: { style: "glamour_boudoir_8k", camera: "multi_position_3cut_intimate", explicit: "stage_hotel_window_silhouette_to_bed", place: "plate_sunlit_french_balcony_sheers", wardrobe: "lingerie_pearl_mesh_teddy_sheer_robe", light: "dappled_sunlight_sheer_curtains", colour: "champagne_honey_glow", ambience: "silk_sheets_skin_breath", motion: "natural", energy: "steady", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
@@ -390,7 +390,7 @@ export const BUILTIN_DIAL_COMBOS = [
     { id: "__builtin_stage_office_late_night_916", label: "NSFW 3-Stage Office: Desk-Edge Kiss -> Swivel Chair Oral -> Glass Doggy (9:16)", values: { style: "erotic_thriller_90s_35mm", camera: "portrait_vertical_stack", explicit: "stage_office_3cut_desk_kiss_chair_glass", place: "executive_corner_office_midnight", wardrobe: "partial_office_pencil_skirt_unzipped_dropped", light: "penthouse_blue_amber", colour: "champagne_honey_glow", talkstyle: "secretive_office_whisper", ambience: "penthouse_night_hum", motion: "brisk", energy: "charged", expression: "vivid", expr_read: "sly", life: "alive", talk_mode: "auto" } },
     { id: "__builtin_stage_wall_to_bed_contrast_169", label: "NSFW 2-Stage Contrast: Intense Standing Wall-Pin -> Tender Bed Missionary (16:9)", values: { style: "glamour_boudoir_8k", camera: "orbit_push", explicit: "stage_rough_to_tender_wall_to_bed", place: "plate_penthouse_master_bed_mirror", wardrobe: "nude_full", light: "candlelight_flicker_boudoir", colour: "champagne_honey_glow", ambience: "intimate_skin_foley", motion: "brisk", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
     { id: "__builtin_stage_ffm_threesome_169", label: "NSFW 3-Stage FFM: Dual Oral Tease -> Alternating Cowgirl & Face-Sit (16:9)", values: { style: "glamour_boudoir_8k", camera: "multi_position_3cut_intimate", explicit: "stage_ffm_3cut_dual_oral_alternating_ride", place: "plate_penthouse_master_bed_mirror", wardrobe: "nude_all_cast_subjects_s1_s9", light: "candlelight_flicker_boudoir", colour: "champagne_honey_glow", ambience: "silk_sheets_skin_breath", motion: "brisk", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
-    { id: "__builtin_stage_wine_cellar_169", label: "NSFW 2-Stage: Oak Wine-Cellar Tasting-Table Lift -> Candlelit Missionary (16:9)", values: { style: "erotic_thriller_90s_35mm", camera: "multi_position_3cut_intimate", explicit: "stage_wine_cellar_2cut_table_lift_to_missionary", place: "plate_private_wine_cellar_candlelight", wardrobe: "partial_evening_gown_bodice_peeled_waist", light: "candlelight_flicker_boudoir", colour: "velvet_crimson_gold", ambience: "intimate_skin_foley", motion: "natural", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
+    { id: "__builtin_stage_wine_cellar_169", label: "NSFW 2-Stage: Oak Wine-Cellar Tasting-Table Lift -> Candlelit Missionary (16:9)", values: { style: "erotic_thriller_90s_35mm", camera: "coverage_match_on_action", explicit: "stage_wine_cellar_2cut_table_lift_to_missionary", place: "plate_private_wine_cellar_candlelight", wardrobe: "partial_evening_gown_bodice_peeled_waist", light: "candlelight_flicker_boudoir", colour: "velvet_crimson_gold", ambience: "intimate_skin_foley", motion: "natural", energy: "charged", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
     { id: "__builtin_stage_desk_siren_916", label: "NSFW 3-Stage Office Siren: Blouse & Glasses Tease -> Under-Desk -> Cowgirl (9:16)", values: { style: "erotic_thriller_90s_35mm", camera: "portrait_vertical_stack", explicit: "stage_desk_siren_3cut_glasses_tease_cowgirl", place: "executive_corner_office_night", wardrobe: "fetish_office_siren_skirt", light: "blinds", colour: "champagne_honey_glow", talkstyle: "cocky_dominant_commentary", ambience: "penthouse_night_hum", motion: "brisk", energy: "charged", expression: "vivid", expr_read: "sly", life: "alive", talk_mode: "auto" } },
     { id: "__builtin_stage_lesbian_poolside_169", label: "NSFW 2-Stage Lesbian: Wet Waterline Kiss -> Sunbed Mutual Thigh Ride (16:9)", values: { style: "glamour_boudoir_8k", camera: "orbit_push", explicit: "stage_lesbian_poolside_wet_kiss_to_sunbed", place: "plate_rooftop_infinity_pool_skyline", wardrobe: "partial_bikini_top_untied_sliding", light: "sunset_silhouette_halo_rim", colour: "honey_bronze_sun_glow", ambience: "yacht_waves_teak_breeze", motion: "natural", energy: "steady", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
     { id: "__builtin_stage_mmf_standing_169", label: "NSFW 3-Stage MMF Standing: DP Sandwich -> Double Oral -> Twin Finish (16:9)", values: { style: "erotic_thriller_90s_35mm", camera: "multi_angle_orbit_arc_cut", explicit: "stage_mmf_standing_split_focus_3cut", place: "plate_tokyo_love_hotel_mirror_ceiling_suite", wardrobe: "nude_all_cast_subjects_s1_s9", light: "tokyo_love_hotel_magenta_violet_velvet", colour: "magenta_violet_bisexual_lighting", ambience: "intimate_skin_foley", motion: "brisk", energy: "peak", expression: "vivid", expr_read: "intense", life: "hyper", talk_mode: "auto" } },
@@ -552,7 +552,7 @@ function createSandTieCore(node, {
     const defaultFlavors = {
         time_tied: true, kinetic_grip: true, eye_scan: true, double_knot: true, wake_writer: true,
         link_prev_hop: false,
-        fx_timing: "delayed_mid", talk_mode: "auto",
+        fx_timing: "delayed_mid", talk_mode: "auto", sound_mode: "auto",
         motion: "natural", life: "natural", energy: "steady", expression: "natural", expr_read: "auto",
         pov: "off", steering_bind: false, steering_scope: "blocks_0_24 (voice safe)",
         camera: "", light: "", lens: "", fx: "", style: "", colour: "", place: "", wardrobe: "",
@@ -611,6 +611,7 @@ function createSandTieCore(node, {
             obj[ax] = normPerfVal(ax, obj[ax]);
         }
         if (!obj.expr_read) obj.expr_read = "auto";
+        if (!obj.sound_mode) obj.sound_mode = "auto";
         if (!obj.steering_scope) obj.steering_scope = "blocks_0_24 (voice safe)";
     }
 
@@ -696,10 +697,10 @@ function createSandTieCore(node, {
         lbl.append(chk, el("span", null, `${icon} ${text}`));
         return { lbl, chk };
     }
-    const swTime = makeSw("time_tied", "⏱", "Time-Tied", "Bridge beat timestamps smoothly across the timeline without pausing momentum");
+    const swTime = makeSw("time_tied", "⏱", "Time-Tied", "Send Shot-Tree & StateLedger blueprint (<shot_blueprint>) to lock cuts, carried attire, and weighted micro-beats");
     const swKinetic = makeSw("kinetic_grip", "⚡", "Kinetic Flow", "Natural weight transfer, grounded hands & smooth beat transitions (yields at calm Motion)");
     const swEye = makeSw("eye_scan", "👁", "Eye Scan", "2.5 MP cached reference scan locking likeness & attire without overriding hop pose");
-    const swDouble = makeSw("double_knot", "✧", "Double-Knot", "Pass-2 continuity audit verifying hop joins, domains, positive English & zero semicolons");
+    const swDouble = makeSw("double_knot", "✧", "Double-Knot", "Pass-2 continuity audit verifying Shot-Tree cuts, carried outfit/orientation, domains, positive English & zero semicolons");
     const swWake = makeSw("wake_writer", "☕", "Auto-Wake", "Auto-start nInfer if VRAM was evicted by a render");
     swWake.lbl.style.fontSize = "11px";
 
@@ -1155,17 +1156,20 @@ function createSandTieCore(node, {
         const motW = stNode.widgets?.find((w) => w.name === "motion");
         const expW = stNode.widgets?.find((w) => w.name === "expression");
         const enW = stNode.widgets?.find((w) => w.name === "energy");
+        const sndW = stNode.widgets?.find((w) => w.name === "sound");
         const scW = stNode.widgets?.find((w) => w.name === "scope");
         const motV = perfWeightOf("motion", flavors.motion) * 0.5;
         const expV = perfWeightOf("expression", flavors.expression) * 0.5;
         const enV = perfWeightOf("energy", flavors.energy) * 0.5;
-        for (const [w, val] of [[motW, motV], [expW, expV], [enW, enV], [scW, flavors.steering_scope]]) {
+        const sndMap = { pure_bgm: -1.0, quiet_air: -0.5, auto: 0.0, foley: 1.0 };
+        const sndV = sndMap[String(flavors.sound_mode || "auto").toLowerCase()] ?? 0.0;
+        for (const [w, val] of [[motW, motV], [expW, expV], [enW, enV], [sndW, sndV], [scW, flavors.steering_scope]]) {
             if (!w || val === undefined) continue;
             w.value = val;
             try { w.callback?.(val, stNode.graph?.canvas, stNode); } catch (_) {}
         }
         stNode.graph?.setDirtyCanvas?.(true, true);
-        if (announce) say(`Synced Motion=${motV >= 0 ? "+" : ""}${motV.toFixed(2)}, Expr=${expV >= 0 ? "+" : ""}${expV.toFixed(2)}, Energy=${enV >= 0 ? "+" : ""}${enV.toFixed(2)} onto HTCSteeringDials.`, "hint");
+        if (announce) say(`Synced Motion=${motV >= 0 ? "+" : ""}${motV.toFixed(2)}, Expr=${expV >= 0 ? "+" : ""}${expV.toFixed(2)}, Energy=${enV >= 0 ? "+" : ""}${enV.toFixed(2)}, Sound=${sndV >= 0 ? "+" : ""}${sndV.toFixed(2)} onto HTCSteeringDials.`, "hint");
         return true;
     }
 
@@ -1257,12 +1261,12 @@ function createSandTieCore(node, {
         const grp = el("div", "h3st-chips");
         grp.appendChild(el("span", "h3st-chips-lbl", title));
         const btns = [];
-        for (const [val, lbl] of choices) {
-            const b = button(lbl, `${title}: ${lbl}`, () => {
+        for (const [val, lbl, tip] of choices) {
+            const b = button(lbl, tip || `${title}: ${lbl}`, () => {
                 flavors[key] = val;
                 persistFlavors();
                 syncChips();
-                if (key === "steering_scope" && flavors.steering_bind) syncSteeringNode();
+                if ((key === "steering_scope" || key === "sound_mode") && flavors.steering_bind) syncSteeringNode();
             }, "h3e-btn");
             b.style.padding = "2px 6px";
             b.style.fontSize = "10.5px";
@@ -1297,9 +1301,27 @@ function createSandTieCore(node, {
         }
     }
 
-    const talkGrp = buildChipGroup("talk_mode", "TALK", [["auto", "Auto"], ["talk_all", "All"], ["quotes_only", "Quotes"], ["silent", "Silent"]]);
-    const povGrp = buildChipGroup("pov", "POV", [["off", "Off"], ["male", "M"], ["female", "F"]]);
-    const scopeGrp = buildChipGroup("steering_scope", "STEERING", [["blocks_0_24 (voice safe)", "Blocks 0–24 (Voice Safe)"], ["all_blocks", "All 50"]]);
+    const talkGrp = buildChipGroup("talk_mode", "TALK", [
+        ["auto", "Auto", "Auto dialogue: speak only when brief quotes, talkstyle, or accent ask for speech"],
+        ["talk_all", "All", "Speak across every beat/shot with natural voice rhythm"],
+        ["quotes_only", "Quotes", "Speak ONLY explicit quoted lines in brief; keep unquoted scenes wordless"],
+        ["silent", "Silent", "Strip all spoken <d> dialogue (keeps closed lips)"],
+    ]);
+    const soundGrp = buildChipGroup("sound_mode", "SOUND", [
+        ["auto", "Auto", "Smart default: Pure Music (N/A) for dance with music; Ambience/room tone otherwise"],
+        ["pure_bgm", "Pure BGM", "Force overall_soundscape: N/A & scrub noisy foley cues so music plays cleanly without footsteps or crunch"],
+        ["quiet_air", "Quiet Air", "Soft narrowband indoor room air & minimal contact; suppresses loud crunch, impacts, and heavy breath"],
+        ["foley", "Foley", "Keep crisp physical & environmental foley active in overall_soundscape (even on dance/MV presets)"],
+    ]);
+    const povGrp = buildChipGroup("pov", "POV", [
+        ["off", "Off", "Standard third-person camera"],
+        ["male", "M", "Male POV camera perspective"],
+        ["female", "F", "Female POV camera perspective"],
+    ]);
+    const scopeGrp = buildChipGroup("steering_scope", "STEERING", [
+        ["blocks_0_24 (voice safe)", "Blocks 0–24 (Voice Safe)", "Steer visual/motion blocks 0–24 while leaving blocks 25–49 untouched for clean voice & skin"],
+        ["all_blocks", "All 50", "Shift refined prompt across all 50 DiT blocks (strongest for audio/sound dials)"],
+    ]);
     const linkPrevLbl = el("label", "h3st-sw");
     linkPrevLbl.title = "Chain continuity from the active Script tab's previous hop into [Shot 1] (off by default so Quick Tie / Write stay isolated from old chains)";
     const linkPrevChk = document.createElement("input");
@@ -1314,7 +1336,7 @@ function createSandTieCore(node, {
     syncChips();
 
     const auxRow = el("div", "h3st-aux-row");
-    auxRow.append(talkGrp, povGrp, scopeGrp);
+    auxRow.append(talkGrp, soundGrp, povGrp, scopeGrp);
     if (!standalone) auxRow.appendChild(linkPrevLbl);
     perfBox.append(perfHead, perfGrid, auxRow);
 
@@ -2183,7 +2205,7 @@ function createSandTieCore(node, {
     // 8. Primary Action Bar + Block Tools + Telemetry
     let activeAbortCtrl = null;
     const fastBtn = button("⚡ Quick Tie (1-Pass)", "1-pass instant write using all active SandTie dials & Eye Scan", () => runSandTie("fast"), "h3e-btn h3e-btn-accent");
-    const skelBtn = button("◩ Skeleton (0 VRAM)", "Build timed beat skeleton on CPU with zero LLM/VRAM usage", () => runSandTie("skeleton"));
+    const skelBtn = button("◩ Skeleton (0 VRAM)", "Build Shot-Tree storyboard ([Shot N] + weighted micro-beats) on CPU with zero LLM/VRAM usage", () => runSandTie("skeleton"));
     const cpuBtn = button("◩ CPU Tie", "Assemble instant complete H3 prompt on CPU with zero VRAM usage", () => runSandTie("cpu"));
     const freshDlgBtn = button("❝ Fresh Dialogue", "Rewrite spoken <d> lines while keeping physical pose/hands locked", () => runSandTie("dialogue"));
     const copyBtn = button("Copy", "Copy Prompt block to clipboard", async () => {
@@ -2327,6 +2349,7 @@ function createSandTieCore(node, {
         const vals = {};
         for (const k of ALL_DIAL_KEYS) if (flavors[k]) vals[k] = flavors[k];
         vals.talk_mode = flavors.talk_mode;
+        vals.sound_mode = flavors.sound_mode;
         vals.motion = flavors.motion;
         vals.energy = flavors.energy;
         vals.expression = flavors.expression;
@@ -2434,6 +2457,7 @@ function createSandTieCore(node, {
         flavors.dial_modes = {};
         flavors.pov = "off";
         flavors.talk_mode = "auto";
+        flavors.sound_mode = "auto";
         flavors.fx_timing = "delayed_mid";
 
         if (track === "action_tactical_gunfu") {
@@ -2544,8 +2568,18 @@ function createSandTieCore(node, {
             flavors.wardrobe = wr?.id || "";
             flavors.explicit = ex?.id || "";
             flavors.fetish = pb?.id || "";
+            const exIdB = String(ex?.id || "");
+            const isContB = exIdB.startsWith("cont_") || exIdB === "stage_aftercare_cooldown_whisper" || exIdB === "stage_slow_grind_lap_tease_insertion";
+            const isTwoCutB = /_2cut_|_to_(?:rear|press|carry|missionary|sunbed|double_tease)$/.test(exIdB) && !/_3cut_/.test(exIdB);
+            const camCompatB = (x) => {
+                if (!camIsSafeIntimate(x) || !domainsMatch(domP, x.domain)) return false;
+                if (isContB && /(?:multi_position_3cut|multi_angle|shot_reverse|whip_pan|match_cut|graphic_match|smash_cut|coverage_match)/.test(x.id)) return false;
+                if (isTwoCutB && /multi_position_3cut|multi_angle_action|multi_angle_orbit/.test(x.id)) return false;
+                if (exIdB && !/(?:^solo_|^undress_)/.test(exIdB) && /(?:elevator_3stop|body_contour_s_curve)/.test(x.id)) return false;
+                return true;
+            };
             flavors.style = pickPref("style", (x) => /glamour_boudoir|erotic_thriller|h3_astro|japanese_4k_gravure/.test(x.id))?.id || "glamour_boudoir_8k";
-            flavors.camera = pickPref("camera", (x) => camIsSafeIntimate(x) && domainsMatch(domP, x.domain) && /multi_position_3cut|portrait_vertical|mirror_|body_contour|push_in|low_angle_power|dolly_push/.test(x.id), (x) => camIsSafeIntimate(x) && domainsMatch(domP, x.domain))?.id || "push_in";
+            flavors.camera = pickPref("camera", (x) => camCompatB(x) && /multi_position_3cut|portrait_vertical|mirror_|push_in|low_angle_power|dolly_push|coverage_match/.test(x.id), camCompatB)?.id || "push_in";
             flavors.light = pickPref("light", (x) => domainsMatch(domP, x.domain) && lightMatchesPlace(x, pl) && /candlelight|vip_amber|red_velvet|fireplace|soft_natural|sunset_blinds|tokyo_love/.test(x.id))?.id || "candlelight_flicker_boudoir";
             flavors.colour = pickPref("colour", (x) => /champagne|peach_milk|crimson|kodak/.test(x.id))?.id || "champagne_honey_glow";
             flavors.ambience = pickPref("ambience", (x) => domainsMatch(domP, x.domain) && /intimate_skin|silk_sheets|fireplace|love_hotel|penthouse/.test(x.id))?.id || "intimate_skin_foley";
@@ -2560,8 +2594,18 @@ function createSandTieCore(node, {
             flavors.wardrobe = wr?.id || "";
             flavors.explicit = ex?.id || "";
             flavors.fetish = pb?.id || "";
+            const exIdW = String(ex?.id || "");
+            const isContW = exIdW.startsWith("cont_");
+            const isTwoCutW = /_2cut_|_to_(?:rear|press|carry|missionary|sunbed|double_tease)$/.test(exIdW) && !/_3cut_/.test(exIdW);
+            const camCompatW = (x) => {
+                if (!camIsSafeIntimate(x) || !domainsMatch(domP, x.domain)) return false;
+                if (isContW && /(?:multi_position_3cut|multi_angle|shot_reverse|whip_pan|match_cut|graphic_match|smash_cut|coverage_match)/.test(x.id)) return false;
+                if (isTwoCutW && /multi_position_3cut|multi_angle_action|multi_angle_orbit/.test(x.id)) return false;
+                if (exIdW && !/(?:^solo_|^undress_)/.test(exIdW) && /(?:elevator_3stop|body_contour_s_curve)/.test(x.id)) return false;
+                return true;
+            };
             flavors.style = pickPref("style", (x) => /glamour_boudoir|erotic_thriller|h3_astro/.test(x.id))?.id || "glamour_boudoir_8k";
-            flavors.camera = pickPref("camera", (x) => camIsSafeIntimate(x) && domainsMatch(domP, x.domain) && /multi_position_3cut|portrait_vertical|body_contour|push_in|buckle_up|low_angle_power/.test(x.id), (x) => camIsSafeIntimate(x) && domainsMatch(domP, x.domain))?.id || "push_in";
+            flavors.camera = pickPref("camera", (x) => camCompatW(x) && /multi_position_3cut|portrait_vertical|push_in|buckle_up|low_angle_power|coverage_match/.test(x.id), camCompatW)?.id || "push_in";
             flavors.light = pickPref("light", (x) => domainsMatch(domP, x.domain) && lightMatchesPlace(x, pl))?.id || (domP === "wet_pool" ? "sunset_silhouette_halo_rim" : "soft_natural_window");
             flavors.colour = pickPref("colour", (x) => /champagne|kodak|golden_hour/.test(x.id))?.id || "champagne_honey_glow";
             flavors.ambience = pickPref("ambience", (x) => domainsMatch(domP, x.domain))?.id || (domP === "wet_shower" ? "bathhouse_steam_water_drip" : "intimate_skin_foley");
@@ -2579,14 +2623,23 @@ function createSandTieCore(node, {
         pushUndoSnapshot();
         const tokens = txt.split(/[^a-z0-9]+/).filter((t) => t.length >= 4);
         const asp = parseAspectSpec(getAspect()).bucket;
+        const refPlanObj = readRefPlanObj();
+        const wiredSubjs = new Set((refPlanObj.refs || []).map((r) => Number(r.subject || 0)).filter((n) => n > 0));
+        const nSubj = Math.max(1, wiredSubjs.size || Object.keys(refPlanObj.subjects || {}).length || 1);
+        const pickedDoms = [];
+        const matchOrder = ["place", "explicit", "combat", "pose", "wardrobe", "fetish", "camera", "style", "light", "colour", "lens", "fx", "character", "era", "tv_show", "talkstyle", "accent", "ambience", "music"];
         let matched = 0;
-        for (const k of ALL_DIAL_KEYS) {
+        for (const k of matchOrder) {
             const items = dialControllers[k]?.getItems() || [];
             let best = null;
             let bestScore = 0;
             for (const it of items) {
                 if (it.multi_hop_only) continue;
                 if (asp !== "either" && it.aspect_best !== "either" && it.aspect_best !== asp) continue;
+                if (it.domain && it.domain !== "general" && !pickedDoms.every((d) => domainsMatch(d, it.domain))) continue;
+                const blob = `${it.id || ""} ${it.label || ""} ${it.group || ""}`.toLowerCase();
+                if (nSubj <= 1 && (Number(it.people || 0) >= 2 || /duet|two_shot|ensemble|s1_s9/.test(blob))) continue;
+                if (nSubj >= 2 && (Number(it.people || 0) === 1 || /\bsolo\b/.test(blob))) continue;
                 const hay = `${it.label} ${it.id} ${it.group}`.toLowerCase();
                 let sc = 0;
                 for (const tk of tokens) if (hay.includes(tk)) sc += 1;
@@ -2594,24 +2647,33 @@ function createSandTieCore(node, {
             }
             if (best && bestScore >= 1) {
                 flavors[k] = best.id;
+                if (best.domain && best.domain !== "general") pickedDoms.push(best.domain);
                 matched += 1;
             }
         }
         persistFlavors();
         syncAllWidgets();
-        say(`Matched ${matched} dial(s) from your brief.`, "hint");
+        say(`Matched ${matched} domain-safe dial(s) from your brief.`, "hint");
     }
 
     function runComposeBrief() {
+        const cleanLbl = (s) => String(s || "")
+            .replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]+/gu, "")
+            .replace(/^(?:NUDE(?:\s*\(.*?\))?|FETISH(?:\s+NUDE)?|PARTIAL|TOPLESS|BOTTOMLESS|SFW|NSFW|UBER FIGHT(?:\s*\(ms\))?)\s*[—\-–:]+\s*/i, "")
+            .replace(/\s{2,}/g, " ")
+            .trim();
         const doc = readRefPlanObj();
         const castNames = doc.refs.filter((r) => r.subject).map((r) => doc.subjects?.[r.subject]?.name || `@${r.tag}`);
         const who = castNames.length ? castNames.join(" and ") : "The lead character";
-        const pName = dialControllers.place?.getItem(parseMultiValue(flavors.place)[0])?.label?.split("·")[0]?.trim() || "";
-        const wName = dialControllers.wardrobe?.getItem(parseMultiValue(flavors.wardrobe)[0])?.label || "";
-        const act = dialControllers.combat?.getItem(parseMultiValue(flavors.combat)[0])?.label
+        const pName = cleanLbl(dialControllers.place?.getItem(parseMultiValue(flavors.place)[0])?.label?.split("·")[0] || "");
+        const wItems = parseMultiValue(flavors.wardrobe).map((id) => cleanLbl(dialControllers.wardrobe?.getItem(id)?.label || "")).filter(Boolean);
+        const wName = wItems.join(" and ");
+        const act = cleanLbl(
+            dialControllers.combat?.getItem(parseMultiValue(flavors.combat)[0])?.label
             || dialControllers.explicit?.getItem(parseMultiValue(flavors.explicit)[0])?.label
             || dialControllers.pose?.getItem(parseMultiValue(flavors.pose)[0])?.label
-            || "moves expressively with natural eye contact";
+            || "moves expressively with natural eye contact"
+        );
         const bits = [who];
         if (wName) bits.push(`wearing ${wName.toLowerCase()}`);
         if (pName) bits.push(`inside ${pName.toLowerCase()}`);

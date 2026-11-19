@@ -182,6 +182,11 @@ These are not style preferences. They are how this model fails.
    three, and repeating them competes with the pin instead of reinforcing it.
    Rule 11 still applies to **objects**: hop 2+ may repeat "the white porcelain
    bowl". It may not re-paint the face, the outfit or the room.
+   **A cut is the exception.** A `[Shot N]` cut or a restart redraws the person
+   from the references plus the words of that shot, not from the pin: there,
+   repeat the outfit phrase (its defining cut, rule 16) word for word in every
+   shot that shows the person, or the garment changes or vanishes at the cut
+   (a jacket written only in shot 1 was gone in the close after the cut).
 
 10. **Write `@tags` into the action line.** Describing a reference in the register
    does not make the model use it; the beat is what drives the frame. Write
@@ -320,7 +325,11 @@ These are not style preferences. They are how this model fails.
       hands, same camera side. Before a `motion_context` continuation, end on a
       face at medium or closer with hands at rest, and keep `[Shot 1]` cutting-free
       for at least the first 2 seconds. Sitting down, standing up and changing spot
-      happen on screen inside a hop;
+      happen on screen inside a hop. Anything the next hop needs in its first
+      frames (a prop on a chair, an object in a hand) must be visible in this
+      hop's final frame; something absent from that frame pops in or flies in
+      partway through the next hop. Before dropping a prop from a hop, check
+      whether that hop's camera sees where the prop rests;
     - eyelines follow the spots: whoever stands to a person's right in the wide
       shot is off frame right in every close shot of that person. On a pull-back
       the renderer draws the other person where the eyes point. In a close shot

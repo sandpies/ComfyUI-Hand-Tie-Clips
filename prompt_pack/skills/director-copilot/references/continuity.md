@@ -121,6 +121,11 @@ holds), what happens (every change on screen), the END, and the END framing.
   hop: never sit in one hop and stand at the start of the next.
 - **The END framing is the next hop's first frame** on a continuation. Before a continuation it
   is a face at medium or closer (rule 8).
+- **Whatever the next hop needs at its start must be in this hop's END frame.** A continuation
+  starts from the last frames it is handed; a prop resting on a chair the END frame shows empty
+  pops in or flies in partway through the next hop, however the next beat words it. Before taking
+  a prop off a hop, ask whether that hop's camera sees where the prop rests; if it does, the prop
+  stays on the hop, named in place in every shot.
 - **Read the rows as the audience would:** does every hop give a reason for the next? A line
   that asks a question gets its answer, or its refusal, on screen.
 

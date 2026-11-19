@@ -18,13 +18,13 @@
     },
     {
       "id": "multi_position_3cut_intimate",
-      "label": "🔥 Multi-Position 3-Shot Intimate Cut (Doggy POV -> Sofa Missionary -> POV Oral)",
+      "label": "🔥 Multi-Position 3-Shot Intimate Cut (Wide/Medium -> Tight Contact -> Contrasting Climax)",
       "group": "00 · Multi-Angle, Action-Follow & Coverage",
-      "rule": "a three-shot multi-position intimate sequence framed exclusively in tight close and medium close-up cuts focused on the action: [Shot 1] establishes ONLY <Subject 1> bent over the table or surface on all fours with her dress hiked up above her waist exposing her bare hips and rounded ass cheeks, followed in the first timed beat by a first-person POV from the eye level of <Subject 2> looking down at <Subject 1> as she grinds her rear end back onto the deep thrusts of <Subject 2>; [Shot 2] cuts to a low-angle medium close-up from the side on the sofa where <Subject 2> straddles the hips of <Subject 1> and thrusts his hips forward and backward fully against her vagina while her breasts bounce and ripple; [Shot 3] cuts to a tight first-person POV (or steep 3/4 top-down high angle) from the perspective of <Subject 2> looking down at <Subject 1> kneeling below him with her lips in a tight O-ring vacuum seal and hollowed cheeks while he pulls her head fully down the length of the shaft repeatedly at great speed.",
+      "rule": "a three-shot multi-position intimate camera sequence adapting cleanly to the active stage, subjects, and wardrobe across cuts: [Shot 1] opens in a medium or three-quarter two-shot establishing full body positions, screen-left and screen-right placement, and active setting; [Shot 2] cuts to a tight low-angle or steep high-angle close-up locked onto hands, faces, and physical contact; [Shot 3] cuts to a contrasting angle and framing scale capturing peak motion and climax while carrying forward sticky displaced clothing and lighting.",
       "aspect_best": "either",
       "aspect_badge": "📐 9:16/16:9",
       "aspect_tip": "📐 RESOLUTION: Works in both 📱 9:16 Portrait (768×1344, best for solo/vertical stacking) and 🖥️ 16:9 Landscape (1344×768, best for multi-subject/wide horizontal blocking).",
-      "domain": "sofa_lounge",
+      "domain": "general",
       "duration_best": "10-14 s",
       "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Multi-stage camera travel needs 240+ frames so the move lands smoothly (LoopForge H3 benchmark)."
     },
@@ -1100,7 +1100,7 @@
       "label": "Shot / Reverse-Shot Cut",
       "group": "Conversation",
       "aspect_best": "16:9",
-      "rule": "alternating over-the-shoulder dialogue cuts cleanly switching perspective from Speaker 1's angle across to Speaker 2's reaction",
+      "rule": "[Shot 1] opens in an over-the-shoulder two-shot framing Speaker 1 across the listener's near shoulder; [Shot 2] cuts cleanly on the reverse line to the matching over-the-shoulder close-medium angle onto Speaker 2's reaction; [Shot 3] cuts cleanly back to a tight close-medium angle on Speaker 1's response",
       "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
@@ -1579,7 +1579,7 @@
       "id": "graphic_match_cut",
       "label": "⭕ Graphic Match Cut (Matching Circular/Linear Geometry Cut)",
       "group": "00 · Multi-Angle, Action-Follow & Coverage",
-      "rule": "two-shot graphic match cut: [Shot 1] centers a distinct circular or vertical geometric shape moving cleanly in frame, then cuts smoothly onto a matching shape at the exact screen position inside [Shot 2]",
+      "rule": "two-shot graphic match cut: [Shot 1] centers a distinct circular or vertical geometric shape moving cleanly in frame; [Shot 2] cuts smoothly onto a matching shape at the identical screen position",
       "aspect_best": "either",
       "domain": "general",
       "duration_best": "8-12 s"
@@ -1588,7 +1588,7 @@
       "id": "smash_cut_contrast",
       "label": "⚡ Smash Cut Contrast (Quiet Pause -> Sudden Energy Shift)",
       "group": "00 · Multi-Angle, Action-Follow & Coverage",
-      "rule": "high-contrast two-shot smash cut: [Shot 1] holds a calm, still close framing in soft room tone before cutting sharply into [Shot 2] bursting with immediate kinetic motion and crisp ambient impact",
+      "rule": "high-contrast two-shot smash cut: [Shot 1] holds a calm, still close framing in soft room tone; [Shot 2] smash-cuts sharply into immediate kinetic motion and crisp ambient impact",
       "aspect_best": "either",
       "domain": "general",
       "duration_best": "8-12 s"
@@ -1645,7 +1645,7 @@
       "domain": "general",
       "aspect_best": "either",
       "duration_best": "6-10 s",
-      "rule": "Hold steady medium framing for the opening beat, fire a rapid horizontal whip-pan blur left-to-right on the midpoint transition, and lock instantaneously onto the new angle or pose."
+      "rule": "[Shot 1] holds steady medium framing for the opening beat before whipping horizontally left-to-right into crisp blur; [Shot 2] snaps out of the horizontal whip pan onto a locked contrasting angle and pose"
     },
     {
       "id": "cam_contour_shoulder_hip_glide",
@@ -1681,7 +1681,7 @@
       "domain": "general",
       "aspect_best": "either",
       "duration_best": "10-12 s",
-      "rule": "Open tight waist-up building pre-drop tension with micro beat-synced push-ins, smash out instantaneously into a crisp wide full-body master frame on the bass drop for full footwork and kicks, then cut smoothly inward onto chest-up ending-fairy smiles."
+      "rule": "[Shot 1] opens tight waist-up building pre-drop tension with micro beat-synced push-ins; [Shot 2] smash-cuts instantaneously out into a crisp wide full-body master frame on the bass drop for full footwork and kicks; [Shot 3] cuts smoothly inward onto chest-up ending-fairy smiles."
     },
     {
       "id": "cam_palm_cover_lens_reveal_snap",
@@ -1690,7 +1690,7 @@
       "domain": "general",
       "aspect_best": "9:16",
       "duration_best": "10-12 s",
-      "rule": "Begin handheld medium-close as a dancer sweeps her open palm directly across the lens glass, then snap cleanly away in a fast whip-pan reveal locking onto explosive full-body choreography and forward tracking struts."
+      "rule": "[Shot 1] opens handheld medium-close as the dancer sweeps an open palm directly across the lens glass; [Shot 2] snaps cleanly away in a fast whip-reveal tracking angle locked onto explosive full-body choreography and forward struts."
     },
     {
       "id": "cam_low_hero_squat_to_highkick_boom",
@@ -1708,7 +1708,7 @@
       "domain": "general",
       "aspect_best": "either",
       "duration_best": "10-15 s",
-      "rule": "Open in a distant wide establishing shot framing full figures at roughly half frame height with generous floor and sky headroom for explosive footwork and lateral travel, then fire an instant hard cut straight into a close medium thigh-up two-shot or solo payoff."
+      "rule": "[Shot 1] opens in a distant wide establishing shot framing full figures at roughly half frame height with generous floor and sky headroom for explosive footwork and lateral travel; [Shot 2] fires an instant hard cut straight into a close medium thigh-up two-shot or solo payoff."
     },
     {
       "id": "cam_stacked_reveal_dutch_zoom_level",

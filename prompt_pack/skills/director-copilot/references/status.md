@@ -155,6 +155,12 @@ can only move a rule down.
   the next window restated it and the lines were spoken again, several times in a one-minute
   take (lints `carry-line`, `stacked-lines`).
 
+- An outfit phrase written only in a hop's `[Shot 1]`: the jacket was gone in the close after the
+  cut (11-20). Every shot that shows the person carries the phrase (lint `state`).
+- A prop taken off a hop whose camera sees where it rests: that hop ended on an empty chair, and the
+  continuation after it drew the shirt popping onto the chair mid-walk, twice, whatever its words
+  said (11-20). The END frame decides what the next hop starts with (continuity.md, START → END).
+
 - A cut in the middle of one continuous action (a man walks in, cut, he leans on the counter): read as a
   jump. Keep the action in one shot and move the camera with it (11-15, user-watched).
 - A vanish written as a cut back to the same framing with the person gone: read as an error. Reveal the

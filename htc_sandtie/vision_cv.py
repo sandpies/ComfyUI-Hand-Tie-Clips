@@ -823,7 +823,7 @@ def _repair_json_text(cand: str) -> str:
     return "".join(out_chars)
 
 
-def _parse_lenient_json_obj(raw: str) -> dict | None:
+def parse_lenient_json_obj(raw: str) -> dict | None:
     txt = str(raw or "").strip()
     if not txt:
         return None
@@ -856,6 +856,9 @@ def _parse_lenient_json_obj(raw: str) -> dict | None:
                 except Exception:
                     pass
     return None
+
+
+_parse_lenient_json_obj = parse_lenient_json_obj
 
 
 def _clean_extracted_shot1(text: str) -> str:
