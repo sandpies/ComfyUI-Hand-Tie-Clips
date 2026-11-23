@@ -13,14 +13,6 @@
       "domain": "general"
     },
     {
-      "id": "cinestill_800t_halation",
-      "label": "🎞️ CineStill 800T Night Film (Cool Cyan Shadows + Red Halation Glow)",
-      "group": "Natural & Film Stocks",
-      "key": "CineStill 800T night film grade",
-      "rule": "a CineStill 800T night tungsten film grade: cool emerald-cyan night shadows, warm skin under practical lights, and signature ruby-red halation blooming around bright light sources",
-      "domain": "general"
-    },
-    {
       "id": "fuji_eterna_soft",
       "label": "🎞️ Fujifilm Eterna 250D (Soft Pastel Contrast & Silky Skin Tones)",
       "group": "Natural & Film Stocks",
@@ -328,6 +320,27 @@
       "group": "Warm & Golden",
       "domain": "general",
       "rule": "Warm late-afternoon sun-kissed color grade with rich honey-bronze skin highlights, warm amber midtones, and soft violet-blue shadow depth."
+    },
+    {
+      "id": "colour_ultrareal_neutral_rec709",
+      "label": "🎚️ Ultra-Realism: Raw Neutral Rec.709 (True Contrast & Undertones)",
+      "group": "Natural & Film Stocks",
+      "domain": "general",
+      "rule": "true-to-life neutral Rec.709 cinema grade preserving natural uneven skin undertones, matte neutral whites, broad midtone separation, deep neutral-black shadow toe preserving dark hair and cloth, and gentle filmic highlight rolloff"
+    },
+    {
+      "id": "colour_ultrareal_kodak_250d_grain",
+      "label": "🎞️ Ultra-Realism: Kodak Vision3 250D Daylight (True Contrast)",
+      "group": "Natural & Film Stocks",
+      "domain": "general",
+      "rule": "authentic Kodak Vision3 250D 35mm daylight film grade with honest daylight skin accuracy, crisp natural shadow contrast, muted earthy greens and concrete greys, and gentle highlight compression"
+    },
+    {
+      "id": "colour_ultrareal_16mm_gritty_doc",
+      "label": "📽️ Ultra-Realism: Raw 16mm Mixed-Light Contrast Grade",
+      "group": "Natural & Film Stocks",
+      "domain": "general",
+      "rule": "candid 16mm documentary color balance with natural mixed tungsten-and-daylight temperature, honest muted shadow tones, and crisp natural contrast bite"
     }
   ]
 }

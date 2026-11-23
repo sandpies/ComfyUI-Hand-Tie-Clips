@@ -335,18 +335,6 @@
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
     },
     {
-      "id": "ensemble_lateral_lineup_roll_call_s1_s9",
-      "label": "🎭 Ensemble Hero Lineup Truck (S1→S9) — Lateral Dolly Roll-Call Gliding Past Each Cast Subject",
-      "group": "00 · Multi-Angle, Action-Follow & Coverage",
-      "rule": "a lateral hero-lineup dolly truck across all cast subjects (<Subject 1> through <Subject N>): the camera tracks horizontally parallel to the lineup from left to right, holding briefly on each subject as they hit their signature pose or spoken line before gliding to the next.",
-      "aspect_best": "16:9",
-      "aspect_badge": "🖥️ 16:9",
-      "aspect_tip": "🖥️ BEST RESOLUTION: 16:9 Landscape (1344×768) — Horizontal dolly track across a multi-character lineup is built for 16:9 widescreen.",
-      "domain": "general",
-      "duration_best": "6-12 s",
-      "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
-    },
-    {
       "id": "body_contour_s_curve_pedestal_glide",
       "label": "💃 Body-Contour S-Curve Pedestal Glide — Lens Hugs Ankle → Hip Curve → Waist → Collarbone → Eyes",
       "group": "Crane",
@@ -354,18 +342,6 @@
       "aspect_best": "9:16",
       "aspect_badge": "📱 9:16",
       "aspect_tip": "📱 BEST RESOLUTION: 9:16 Portrait (768×1344) — Vertical Y-axis pedestal climb from ankle to eyes fills the 9:16 frame.",
-      "domain": "general",
-      "duration_best": "6-12 s",
-      "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
-    },
-    {
-      "id": "under_glass_floor_upward_pov",
-      "label": "🔭 Under-Glass Floor Upward POV — Camera Beneath Transparent Crystal Floor Looking Straight Up",
-      "group": "Rigs",
-      "rule": "an under-glass upward floor rig: the camera is mounted directly beneath a crystal-clear tempered glass floor looking straight up at the soles of the subject's boots/feet, legs, and full towering posture directly overhead.",
-      "aspect_best": "9:16",
-      "aspect_badge": "📱 9:16",
-      "aspect_tip": "📱 BEST RESOLUTION: 9:16 Portrait (768×1344) — Steep upward vertical perspective stacks soles, legs, and torso in 9:16.",
       "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
@@ -379,30 +355,6 @@
       "aspect_badge": "🖥️ 16:9",
       "aspect_tip": "🖥️ BEST RESOLUTION: 16:9 Landscape (1344×768) — Widescreen arc showcases the suspended background debris and full 180-degree parallax.",
       "domain": "combat_action",
-      "duration_best": "6-12 s",
-      "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
-    },
-    {
-      "id": "blade_tip_locked_sword_cam",
-      "label": "⚔️ Blade-Cam Rig — Camera Locked to Katana / Weapon Hilt Looking Down the Gleaming Steel Edge",
-      "group": "Mounted",
-      "rule": "a weapon-mounted blade-cam rig: the camera is locked rigidly to the guard of the sword or weapon looking straight down the gleaming steel blade as it swings, parries sparks, and thrusts through space.",
-      "aspect_best": "16:9",
-      "aspect_badge": "🖥️ 16:9",
-      "aspect_tip": "🖥️ BEST RESOLUTION: 16:9 Landscape (1344×768) — Horizontal blade axis and wide swing arcs read cleanest in 16:9.",
-      "domain": "combat_action",
-      "duration_best": "6-12 s",
-      "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
-    },
-    {
-      "id": "hip_locked_kinetic_bounce_rig",
-      "label": "🔥 Hip-Locked Kinetic Stabilizer Rig — Frame Locked to Pelvis While Background & Torso Move",
-      "group": "Mounted",
-      "rule": "a body-mounted hip-locked stabilizer shot: the camera is invisibly locked at waist/hip distance so the subject's rolling hips stay centered in the frame while the upper torso and background shift dynamically with every movement.",
-      "aspect_best": "9:16",
-      "aspect_badge": "📱 9:16",
-      "aspect_tip": "📱 BEST RESOLUTION: 9:16 Portrait (768×1344) — Vertical frame captures waist, hips, and upper thighs with maximum detail.",
-      "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
     },
@@ -682,36 +634,6 @@
       "group": "Handheld",
       "rule": "authentic smartphone rear-camera footage: crisp wide-angle digital sharpness, subtle autofocus breathing on depth shifts, mild rolling-shutter jello on fast turns, and intimate close-quarters walking follow.",
       "domain": "general",
-      "duration_best": "6-12 s",
-      "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
-    },
-    {
-      "id": "fake_webcam_desk",
-      "label": "💻 Laptop Webcam (Fixed Desk Height & Compression)",
-      "group": "Mounted",
-      "rule": "fixed laptop-webcam viewpoint at seated desk height with wide-angle close framing, screen-glow illumination across the speaker's face, slightly muted digital contrast, and direct-to-lens conversation.",
-      "multi_hop_only": true,
-      "domain": "office_desk",
-      "duration_best": "6-12 s",
-      "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
-    },
-    {
-      "id": "pet_cam_collar",
-      "label": "🐾 Pet Collar-Cam (Floor Height + Ears/Snout Edges)",
-      "group": "Mounted",
-      "rule": "wide-angle camera clipped low to a pet's collar with soft fur ears or snout occasionally dipping into the lower corners while trotting across rooms and looking playfully up at people.",
-      "multi_hop_only": true,
-      "domain": "general",
-      "duration_best": "6-12 s",
-      "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
-    },
-    {
-      "id": "bird_cam_flight",
-      "label": "🦅 Bird-Mount Flight Cam (Wingbeats at Frame Edges)",
-      "group": "Aerial",
-      "rule": "fast airborne bird-mounted viewpoint soaring smoothly above rooftops and treetops with rhythmic feathered wingbeats entering the left and right edges between level glides.",
-      "multi_hop_only": true,
-      "domain": "combat_action",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
     },
@@ -1368,16 +1290,6 @@
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
     },
     {
-      "id": "double_dolly",
-      "label": "Synchronized Character + Background Glide",
-      "group": "Tracking",
-      "aspect_best": "16:9",
-      "rule": "character and camera glide together at identical speed so the subject remains eerily anchored center-frame while scenery sweeps behind",
-      "domain": "general",
-      "duration_best": "6-12 s",
-      "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
-    },
-    {
       "id": "aerial_pullback",
       "label": "Close-Up -> Soaring Aerial Pullback",
       "group": "Aerial",
@@ -1423,16 +1335,6 @@
       "group": "Tracking",
       "aspect_best": "16:9",
       "rule": "lightning-fast high-precision swoop snapping cleanly from wide pose into crisp macro impact and freezing smoothly",
-      "domain": "general",
-      "duration_best": "6-12 s",
-      "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
-    },
-    {
-      "id": "hyperlapse",
-      "label": "Forward Walking Time-Passage Glide",
-      "group": "Tracking",
-      "aspect_best": "either",
-      "rule": "steady centered forward tracking progression through shifting light and passing crowds at brisk rhythmic pace",
       "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
@@ -1493,60 +1395,6 @@
       "aspect_best": "16:9",
       "domain": "car_cabin",
       "duration_best": "6-10 s"
-    },
-    {
-      "id": "conveyor_lateral_belt",
-      "label": "🎞️ Conveyor Constant Lateral Belt (Relentless Steady Slide)",
-      "group": "00 · Vehicle, Rig & Kinetic Transitions",
-      "rule": "relentless constant-speed lateral trucking shot gliding sideways like a conveyor belt at steady tempo while rows of subjects, props, or neon bays pass cleanly across frame",
-      "aspect_best": "16:9",
-      "domain": "general",
-      "duration_best": "8-12 s"
-    },
-    {
-      "id": "flying_cam_wall_portal",
-      "label": "🛸 Flying Cam Continuous Room-Punch (Doorway/Window Glide)",
-      "group": "00 · Vehicle, Rig & Kinetic Transitions",
-      "rule": "one continuous fluid drone-glide trajectory flying smoothly forward straight through an open window, doorway, or curtain threshold to reveal a completely new interior space on the far side",
-      "aspect_best": "either",
-      "domain": "general",
-      "duration_best": "10-14 s"
-    },
-    {
-      "id": "lazy_susan_turntable_orbit",
-      "label": "🔄 Lazy Susan Fixed-Radius 360° Turntable Showcase",
-      "group": "00 · Vehicle, Rig & Kinetic Transitions",
-      "rule": "fixed-radius circular showcase orbit keeping the centered figure or object at constant screen scale while lighting reflections and background planes sweep cleanly around 360 degrees",
-      "aspect_best": "either",
-      "domain": "general",
-      "duration_best": "6-10 s"
-    },
-    {
-      "id": "trunk_shot_low_pit",
-      "label": "🧰 Trunk Shot (Steep Upward Look from Inside Trunk Rim)",
-      "group": "00 · Vehicle, Rig & Kinetic Transitions",
-      "rule": "steep upward low-angle framing placed inside an open car trunk or deep container looking up past the dark interior rim as the faces lean down into view against the sky or ceiling lights",
-      "aspect_best": "16:9",
-      "domain": "combat_action",
-      "duration_best": "6-10 s"
-    },
-    {
-      "id": "object_pov_rigid",
-      "label": "📦 Object POV (Camera Locked Onto Moving Prop / Cup / Blade)",
-      "group": "00 · Vehicle, Rig & Kinetic Transitions",
-      "rule": "first-person object perspective mounted directly onto a moving prop (glass, suitcase, skateboard, or blade edge) so the object stays anchored in the foreground while hands and the room swing around it",
-      "aspect_best": "either",
-      "domain": "general",
-      "duration_best": "6-10 s"
-    },
-    {
-      "id": "through_object_portal_in",
-      "label": "🕳️ Through-Object Scale Push (Keyhole / Glass / Frame Dive)",
-      "group": "00 · Vehicle, Rig & Kinetic Transitions",
-      "rule": "smooth forward push-in diving directly through a small aperture (keyhole, glass rim, mirror gap, or teacup) that opens seamlessly into a full-scale room and subject beyond",
-      "aspect_best": "either",
-      "domain": "general",
-      "duration_best": "8-12 s"
     },
     {
       "id": "wandering_curiosity_drift",

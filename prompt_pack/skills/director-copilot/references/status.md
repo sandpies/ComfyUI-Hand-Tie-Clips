@@ -122,7 +122,36 @@ can only move a rule down.
   hops loaded from cache; the retake's last frames met the next locked hop with a small mismatch
   the user still read as coherent, because that join is a cut.
 
+**Cut-every-bar anime rap MV** (one user-passed 15-hop, 2:42 render, 11-20: "mint ... magnifico",
+everything held except the carriage hops listed under Failed)
+- 4-7 `[Shot N]` cuts per hop over a master song with one singer and no `<d>` lines (73 shots in
+  15 hops, 34-53 words a second, the outfit phrase in every shot): no truncation, shots held.
+- Every new place as a hard-cut continuation (no anchor), the hop before ending on her face at a
+  different size and angle each time: seven teleports held.
+- Named pose hits that land on the downbeat and freeze, in place of "dances": no flailing arms.
+- Single-clip moves inside a chain, with a sheet on the hop: eye macro, worm's-eye squat over the
+  lens, axial cuts, whip pans landing dead still, fisheye close, a Dutch tilt ratcheting per beat,
+  a top-down shot from its own plate, flat white and black void shots inside a plated hop, a knee
+  slide, a crash zoom, a half-turn arc around a frozen pose, a leap with a crouch landing.
+- Close shots written "alone in the frame, nobody else is in the frame", with a short place
+  instead of the wide's full spot phrase.
+- Finish (user: "job well done"): kinetic word flashes burned in post with an ASS file through
+  ffmpeg libass, not subtitles. A few hero words per lyric moment, timed to word timestamps,
+  placed opposite the face. Each scene gets a style from its light: neon glow on dark shots;
+  a tape bar or flat yellow on bright ones (plain white text read as tacky). Mix a heavy
+  condensed font with marker/glitch accents and a JP display face. Then a 3 s photosensitivity
+  card, 0.2 s white dips on the hard-cut seams, and a 1 s fade to white at the end.
+
 ## Failed (tried on purpose; do not rely on it)
+
+- A close shot carrying the wide's full spot phrase ("standing on the left roof three steps back
+  from its inner edge above the gap"): a second, distant full-body copy stood in the background
+  (11-20). In a close, keep a short place and write "alone in the frame".
+- A swing round a pole, then "her sneakers braced together" while leaning out from it: the legs
+  crossed and merged at the pole's base (11-20). Keep both feet planted apart and clear of the pole.
+- A near-photographic plate (glossy floor, metallic highlights, bright even light) in an anime
+  piece: the body came out realistic under the anime face for both hops on it (11-20). Plates in
+  the piece's medium with line art and flat fills; name the medium on the person in those shots.
 
 - A selective colour hold (ffmpeg `colorhold`) on candle flames in a mono grade: caught the flames
   weakly and leaked onto skin tones (11-14).
@@ -183,6 +212,13 @@ can only move a rule down.
   slid one shot early onto the wrong face (lint `shot-count`; 3-4 shots per hop with lines is proven).
 
 ## Unproven (from one failure; test before a piece depends on it)
+
+- Camera placement over move variety (camera.md, "Place the camera"). A three-person 15-hop
+  story MV used seven move families but sat mostly at medium and eye level, framed from the
+  front, slow or still (25% bold placements). The user read it as "zoom in, truck, zoom in ...
+  too safe", a slideshow again (11-22). A one-singer MV with 56% bold placements (floor,
+  body-mounted, airborne, whips landing on the beat) was rated the best so far. Not yet the same
+  story both ways; `check_plan.py` prints the mix under "review by reading".
 
 - A mask-on moment on screen (the man unmasked from behind, then pressing the mask over his face)
   ended the hop on a fully unmasked, invented face, and the next continuations would have kept it

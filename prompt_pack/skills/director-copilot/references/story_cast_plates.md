@@ -130,6 +130,17 @@ Per plate: does the viewpoint match the beat's camera (if not: a new plate, a ne
 drop it from that hop)? Is there empty space for the people? Any people, text or logos? Does the
 grade match? Then write the beats to what the plate shows.
 
+### The plate's desc and the beats must describe the plate
+
+The ref row's `desc` is read as what the setting is, and beat words outweigh a `reference`
+plate. A desc that names only the place ("an empty late-night train carriage") plus beats that
+describe the place's usual look ("white ceiling lights strobing") get the model's default version
+of that place, whatever the picture shows: a flat cel-shaded violet carriage rendered as a
+realistic bright train (11-20). Write the desc from the image: medium, light and colour ("a dim
+violet anime train carriage in flat cel-shaded line art, magenta window light"). **When a plate is
+swapped, rewrite its desc and every beat line about its light and surfaces in the same edit**,
+then read the dry-run prompt for that hop against the new picture.
+
 ### Plate filenames and tags
 
 Copy plates into `input/h3_refs/` with plain, free names. The tag is the plate's short name; no tag

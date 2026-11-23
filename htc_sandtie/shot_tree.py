@@ -25,6 +25,7 @@ class MicroBeat:
     state_delta: dict[str, str] = field(default_factory=dict)
     state_after: dict[str, str] = field(default_factory=dict)
     dialogue_text: str = ""
+    is_canned_cue: bool = False
 
 
 @dataclass
@@ -50,7 +51,9 @@ class ShotTree:
     shots: list[ShotNode] = field(default_factory=list)
     q_map: dict[int, list[str]] = field(default_factory=dict)
     header_s1: str = ""
+    cam_s1: str = ""
     is_extracted: bool = False
+    brief: str = ""
 
     def flat_spans(self) -> list[tuple[float, float]]:
         return [(b.t0, b.t1) for sh in self.shots for b in sh.beats]
@@ -117,12 +120,17 @@ _GARMENT_KEY_RX = re.compile(
 )
 
 _REAR_BEAT_RX = re.compile(
-    r"\b(?:from\s+behind|rear\s+three[- ]quarter|rear\s+3/4|low\s+rear|facing\s+away|all\s+fours|doggy(?:-style)?|reverse\s+cowgirl|bent\s+(?:forward\s+)?over|bare\s+back\s+and\s+(?:rounded\s+)?glutes\s+toward|back\s+arched\s+toward)\b",
+    r"\b(?:from\s+behind|rear\s+three[- ]quarter|rear\s+3/4|low\s+rear|"
+    r"facing\s+(?:forward\s+(?:toward\s+(?:his|her)\s+feet\s+)?)?away(?:\s+from\s+(?:the\s+)?(?:lens|camera))?|"
+    r"bare\s+back(?:\s+and\s+(?:rounded\s+)?(?:glutes|ass(?:\s+cheeks)?))?\s+(?:facing|toward)\s+(?:the\s+)?(?:lens|camera)|"
+    r"all\s+fours|doggy(?:-style)?|reverse\s+cowgirl|bent\s+(?:forward\s+)?over|"
+    r"bare\s+back\s+and\s+(?:rounded\s+)?glutes\s+toward|back\s+arched\s+toward)\b",
     re.I,
 )
 
 _FRONT_BEAT_RX = re.compile(
-    r"\b(?:facing\s+each\s+other|face[- ]to[- ]face|facing\s+(?:forward|camera)|missionary|upright\s+cowgirl|straddling\s+chest[- ]to[- ]chest|kneel(?:s|ing)?\s+(?:upward\s+)?between\s+(?:his|her|both)|looks?\s+up\s+at|lock(?:s|ing)?\s+lips)\b",
+    r"\b(?:facing\s+each\s+other|face[- ]to[- ]face|facing\s+(?:forward(?!\s+(?:toward\s+(?:his|her)\s+feet\s+)?away\s+from)|camera)|"
+    r"missionary|upright\s+cowgirl|straddling\s+chest[- ]to[- ]chest|kneel(?:s|ing)?\s+(?:upward\s+)?between\s+(?:his|her|both)|looks?\s+up\s+at|lock(?:s|ing)?\s+lips)\b",
     re.I,
 )
 
@@ -299,17 +307,25 @@ def adapt_rule_subjects(rule_text: str, lab: dict | None = None, *, brief: str =
 
 
 def strip_rule_intro_scaffold(txt: str) -> tuple[str, str]:
-    """Strip 'Structure across 3 ...:' / 'a three-shot ...:' intro wrapper, returning `(intro_cam_cue, body)`."""
+    """Strip 'Structure across 3 ...:' / 'Stage a ...:' / 'Frame a ...' intro wrapper, returning `(intro_cam_cue, body)`."""
     s = str(txt or "").strip()
     intro_cam = ""
     s = re.sub(r"\([^)]*\[\s*Shot\s+\d+\s*\][^)]*\)", "", s, flags=re.I)
+    # Strip meta-instruction sentences before `In Beat 1` / `Across the beats` (e.g. "keep her shoulders ... Write the rear hole map ... In Beat 1, ...")
+    s = re.sub(
+        r"(?:^|\.\s*)(?:keep\s+(?:her|his|their)\s+shoulders\s+level[^.]{0,220}\.\s*(?:Write\s+the\s+rear\s+hole\s+map[^:]{0,140}:\s*[^.]{0,420}\.\s*)?|Write\s+the\s+rear\s+hole\s+map[^:]{0,140}:\s*[^.]{0,420}\.\s*)(?=(?:In\s+Beat\s+1\b|One\s+hand\s+is\s+already\b|Across\s+the\s+beats\b))",
+        "",
+        s,
+        flags=re.I,
+    ).strip()
+
     m_wrap = re.match(
-        r"^(?:(?:Structure|Stage|Hold|Frame)\s+(?:the\s+clip\s+)?(?:across|as|one)\b"
+        r"^(?:(?:Structure|Stage|Hold|Frame|Show|Choreograph|Deliver|Capture)\s+(?:the\s+clip\s+)?(?:across|as|one|a|an|the|this)\b"
         r"|One\s+(?:unbroken|continuous|unhurried)\b"
         r"|(?:a|an|classic|high-contrast)\s+(?:three-shot|two-shot|match-on-action|dynamic\s+multi-angle|table\s+dialogue|two-shot\s+graphic|two-shot\s+smash)\b"
         r"|connect\s+two\s+contrasting\s+locations\b"
         r"|join\s+two\s+locations\b)"
-        r"([^:\n]{0,240}):\s*(.+)$",
+        r"([^:\n]{0,280}):\s*\.?\s*(.+)$",
         s,
         flags=re.I | re.S,
     )
@@ -329,7 +345,39 @@ def strip_rule_intro_scaffold(txt: str) -> tuple[str, str]:
             if re.search(r"\b(?:shot|close-?up|angle|view|portrait|framing)\b", cleaned_w, re.I) and 6 <= len(cleaned_w) <= 110:
                 if not re.search(r"\b(?:multi-angle|multi-position|orbiting|table\s+dialogue|graphic\s+match|smash\s+cut)\b", cleaned_w, re.I):
                     intro_cam = cleaned_w
+        # Strip trailing meta-instructions between ":" and "In Beat 1" / "One hand is" / "Across the beats"
+        if re.match(r"^(?:keep\s+|write\s+the\s+rear\s+hole\s+map\b)", body_txt, re.I):
+            body_txt = re.sub(r"^.*?(?=(?:In\s+Beat\s+1\b|One\s+hand\s+is\s+already\b|Across\s+the\s+beats\b))", "", body_txt, count=1, flags=re.I | re.S).strip()
         return intro_cam, body_txt
+
+    # Handle standalone sentence opener: "Frame a <camera/angle sentence>. In Beat 1 / In [Shot 1] / <Subject>..."
+    m_frame_sent = re.match(
+        r"^Frame\s+(?:a|an)\s+([^.!?\n]{8,220}?)[.!?]\s+(?=(?:In\s+(?:Beat\s+1|\[\s*Shot\s+1\s*\])|<Subject|She\b|He\b|They\b|Both\b|The\b))(.+)$",
+        s,
+        flags=re.I | re.S,
+    )
+    if m_frame_sent:
+        cand = m_frame_sent.group(1).strip(" .,")
+        rest = m_frame_sent.group(2).strip()
+        cand_clean = re.sub(r"\s*\([^)]*\)\s*", " ", cand).strip()
+        if re.search(r"\b(?:shot|angle|close-?up|medium|wide|pov|view|portrait|framing)\b", cand_clean, re.I):
+            intro_cam = cand_clean[:120].strip(" .,")
+        return intro_cam, rest
+
+    # Handle "Frame a <camera/angle> looking [up/down] at/across/from ... <Subject N> <participle...>"
+    m_frame_part = re.match(
+        r"^Frame\s+(?:a|an)\s+([^,;\n]{8,180}?(?:shot|angle|close-?up|pov|view|perspective|framing)[^,;\n]{0,80}?)\s+(?:looking\s+(?:up|down)\s+(?:from\s+[^,;\n]{2,40}\s+)?(?:at|across)|at|across)\s+(<Subject\s+\d+>(?:\s+[A-Z][a-zA-Z'\-]+)?)\s+([a-z]+(?:ing|ed))\b(.+)$",
+        s,
+        flags=re.I | re.S,
+    )
+    if m_frame_part:
+        cam_p = m_frame_part.group(1).strip(" .,")
+        subj_p = m_frame_part.group(2).strip()
+        verb_ing = m_frame_part.group(3).lower()
+        rest_p = m_frame_part.group(4)
+        fin_v = _PARTICIPLE_TO_FINITE.get(verb_ing, "sits perched" if verb_ing == "perched" else ("reclines" if verb_ing == "reclined" else verb_ing))
+        return cam_p[:120], f"{subj_p} {fin_v}{rest_p}"
+
     return intro_cam, s
 
 
@@ -457,12 +505,13 @@ def clean_shot_cam_and_action(raw_clause: str, s_idx: int) -> tuple[str, str]:
         )
         # Fix "<Subject N> [Name] on all fours" (missing verb after stripping "establishing")
         act = re.sub(
-            r"^((?:nude\s+)?<Subject\s+\d+>(?:\s+[A-Z][a-zA-Z]+)?)\s+(on\s+all\s+fours|flat\s+on\s+(?:her|his)\s+back|astride\s+his\s+lap|at\s+the\s+brink)\b",
+            r"^((?:nude\s+)?<Subject\s+\d+>(?:\s+[A-Z][a-zA-Z]+)?)\s+(?!braces|kneels|stands|lies|sits|leans|crouches|perches)(on\s+all\s+fours|flat\s+on\s+(?:her|his)\s+back|astride\s+his\s+lap|at\s+the\s+brink)\b",
             r"\1 braces \2",
             act,
             count=1,
             flags=re.I,
         )
+        act = re.sub(r"\b(braces|kneels|stands|lies|sits)\s+\1\b", r"\1", act, flags=re.I)
         if re.match(r"^(?:low|tight|close|wide)\s+as\s+", act, re.I):
             m_la = re.match(r"^(low|tight|close|wide)\s+as\s+(.+)$", act, re.I | re.S)
             if m_la:
@@ -550,12 +599,13 @@ def extract_shot_segments_from_rule(
             clause = parts[i + 1].strip(" .;,-")
             if clause:
                 out[b_idx] = clause
-        # Prepend non-camera opening context cleanly onto Beat 0 if distinct from Beat 0
-        if lead_act and 0 in out and lead_act.lower()[:24] not in out[0].lower():
+        # Prepend non-camera opening context cleanly onto Beat 0 if distinct from Beat 0 (never prepend meta-imperatives)
+        is_meta_lead = bool(re.match(r"^(?:stage|frame|keep|maintain|ensure|write|repeat|deliver|choreograph|capture|show|structure)\b", lead_act or "", re.I))
+        if lead_act and not is_meta_lead and 0 in out and lead_act.lower()[:24] not in out[0].lower():
             if len(lead_act.split()) >= 5:
                 b0_cap = out[0][0].upper() + out[0][1:] if (out[0] and out[0][0].islower()) else out[0]
                 out[0] = f"{lead_act.rstrip('.')}. {b0_cap}"
-        elif lead_act and 0 not in out:
+        elif lead_act and not is_meta_lead and 0 not in out:
             out[0] = lead_act
         return cams, out
 
@@ -743,16 +793,17 @@ def split_clause_for_two_microbeats(
 
     # 3. Clean middle grammatical hinges
     n_len = len(c)
-    lo, hi = int(n_len * 0.24), int(n_len * 0.78)
+    lo, hi = int(n_len * 0.22), int(n_len * 0.80)
     hinge_patterns = [
+        r",\s+followed\s+by\s+",
         r",\s+(?:and\s+)?then\s+",
-        r"\s+before\s+(?=(?:<Subject\s+\d+>|she\b|he\b|they\b|both\b|the\s+(?:man|woman|lead|other)\b|launching\b|lowering\b|driving\b|sinking\b|snapping\b|dropping\b))",
-        r",\s*while\s+(?=(?:<Subject\s+\d+>|she\b|he\b|they\b|both\b|the\s+(?:man|woman|lead|other)\b|her\b|his\b|pearlescent\b|thick\b|steam\b|water\b|sparks\b))",
-        r"\s+while\s+(?=(?:<Subject\s+\d+>|the\s+(?:man|woman)\b|her\s+partner\b|she\b|he\b))",
+        r"\s+before\s+(?=(?:<Subject\s+\d+>|she\b|he\b|they\b|both\b|the\s+(?:man|woman|lead|other)\b|launching\b|lowering\b|driving\b|sinking\b|snapping\b|dropping\b|pivoting\b|rising\b|turning\b|settling\b|tracing\b|wrapping\b|tucking\b))",
+        r",\s*while\s+(?=(?:<Subject\s+\d+>|she\b|he\b|they\b|both\b|the\s+(?:man|woman|lead|other)\b|her\b|his\b|pearlescent\b|thick\b|steam\b|water\b|sparks\b|gliding\b|rolling\b|swaying\b|keeping\b))",
+        r"\s+while\s+(?=(?:<Subject\s+\d+>|the\s+(?:man|woman)\b|her\s+partner\b|she\b|he\b|gliding\b|rolling\b|swaying\b|tracing\b|keeping\b|holding\b|popping\b|bouncing\b|stepping\b|spinning\b))",
         r",\s+as\s+(?=(?:<Subject\s+\d+>|both\b|she\b|he\b|they\b|the\s+(?:man|woman)\b|her\b|his\b))",
-        r",\s+and\s+(?=(?:<Subject\s+\d+>|she\b|he\b|they\b|both\b|the\s+(?:man|woman|lead)\b|launches\b|lowers\b|drives\b|thrusts\b|bounces\b|grinds\b|glides\b|aligns\b|sinks\b|plants\b|pivots\b|straddles\b|wraps\b|strokes\b|pulls\b|slides\b|erupts\b|snaps\b|fires\b|drops\b|holds\b|arches\b|rises\b|looks\b|driving\b|gripping\b|pulling\b|sliding\b|bouncing\b|grinding\b))",
-        r"\s+and\s+(?=(?:<Subject\s+\d+>|she\b|he\b|they\b|both\b|launches\b|lowers\b|drives\b|thrusts\b|bounces\b|grinds\b|glides\b|aligns\b|sinks\b|plants\b|pivots\b|straddles\b|wraps\b|strokes\b|pulls\b|slides\b|erupts\b|snaps\b|fires\b|drops\b|holds\b|arches\b|rises\b|looks\b|driving\b|gripping\b|pulling\b|sliding\b|bouncing\b|grinding\b))",
-        r",\s+(?=(?:gripping|driving|thrusting|hiking|lifting|pulling|sliding|lowering|bouncing|grinding|riding|kissing|sucking|taking|wrapping|stroking|opening|parting|revealing|exposing|raising|arching|pressing|holding|staring|smiling|sweeping|stepping|locking|firing|moving|slamming|leaping|spinning)\b)",
+        r",\s+and\s+(?=(?:<Subject\s+\d+>|she\b|he\b|they\b|both\b|the\s+(?:man|woman|lead)\b|launches\b|lowers\b|drives\b|thrusts\b|bounces\b|grinds\b|glides\b|aligns\b|sinks\b|plants\b|pivots\b|straddles\b|wraps\b|strokes\b|pulls\b|slides\b|erupts\b|snaps\b|fires\b|drops\b|holds\b|arches\b|rises\b|looks\b|rolls\b|sweeps\b|traces\b|rocks\b|sways\b|tucks\b|tilts\b|settles\b|freezes\b|smiles\b|winks\b|locks\b|steps\b|turns\b|pops\b|driving\b|gripping\b|pulling\b|sliding\b|bouncing\b|grinding\b))",
+        r"\s+and\s+(?=(?:<Subject\s+\d+>|she\b|he\b|they\b|both\b|launches\b|lowers\b|drives\b|thrusts\b|bounces\b|grinds\b|glides\b|aligns\b|sinks\b|plants\b|pivots\b|straddles\b|wraps\b|strokes\b|pulls\b|slides\b|erupts\b|snaps\b|fires\b|drops\b|holds\b|arches\b|rises\b|looks\b|rolls\b|sweeps\b|traces\b|rocks\b|sways\b|tucks\b|tilts\b|settles\b|freezes\b|smiles\b|winks\b|locks\b|steps\b|turns\b|pops\b|driving\b|gripping\b|pulling\b|sliding\b|bouncing\b|grinding\b))",
+        r",\s+(?=(?:rolls|sweeps|traces|rocks|sways|tucks|tilts|settles|freezes|smiles|winks|locks|steps|turns|pops|gripping|driving|thrusting|hiking|lifting|pulling|sliding|lowering|bouncing|grinding|riding|kissing|sucking|taking|wrapping|stroking|opening|parting|revealing|exposing|raising|arching|pressing|holding|staring|smiling|sweeping|stepping|locking|firing|moving|slamming|leaping|spinning|rolling|tracing|tilting|dipping|gliding)\b)",
     ]
     best_hit: tuple[int, int, int] | None = None
     mid_target = n_len // 2
@@ -774,16 +825,20 @@ def split_clause_for_two_microbeats(
     if len(head.split()) < 5 or len(tail.split()) < 4:
         return None
 
-    # Ensure tail starts cleanly as an independent finite sentence
-    has_explicit_subj = bool(re.match(
-        r"^(?:<Subject\s+\d+>|she\b|he\b|they\b|both\b|the\s+(?:man|woman|lead|other)\b|her\b|his\b|their\b|with\b|keeping\b|my\b|I\b)",
-        tail,
-        flags=re.I,
-    ))
-    if not has_explicit_subj:
-        subj_lbl = _infer_active_subject_for_tail(head, tail, lab, brief=brief, flavors=flavors)
-        is_pl = subj_lbl.lower() in ("they", "both")
-        tail = _conjugate_leading_participle(tail, subj_lbl, is_plural=is_pl)
+    if re.match(r"^a\s+", tail, re.I) and "revealing" in tail.lower():
+        tail = re.sub(r"\brevealing\b", "reveals", tail, count=1, flags=re.I)
+        tail = tail[0].upper() + tail[1:]
+    else:
+        # Ensure tail starts cleanly as an independent finite sentence
+        has_explicit_subj = bool(re.match(
+            r"^(?:<Subject\s+\d+>|she\b|he\b|they\b|both\b|the\s+(?:man|woman|lead|other)\b|her\b|his\b|their\b|with\b|keeping\b|my\b|I\b)",
+            tail,
+            flags=re.I,
+        ))
+        if not has_explicit_subj:
+            subj_lbl = _infer_active_subject_for_tail(head, tail, lab, brief=brief, flavors=flavors)
+            is_pl = subj_lbl.lower() in ("they", "both")
+            tail = _conjugate_leading_participle(tail, subj_lbl, is_plural=is_pl)
 
     return head, tail
 
@@ -902,6 +957,8 @@ def _extract_state_delta(text: str, state: dict[str, Any], *, is_sex: bool, is_m
                 deltas["oral"] = "mouth free"
         if _CUMSHOT_RX.search(t):
             state["act_mode"] = "cumshot_climax"
+        elif re.search(r"\b(?:internal\s+creampie|creampie\s+finish|semen\s+welling|holds?\s+(?:deep|flush)\s+inside\s+her\s+in\s+.*climax)\b", t, re.I):
+            state["act_mode"] = "internal_creampie"
         elif _INTERCOURSE_RX.search(t):
             state["act_mode"] = "intercourse"
         elif _HANDJOB_RX.search(t):
@@ -946,7 +1003,7 @@ def _format_brief_beat(brief: str, *, lab: dict, flavors: dict | None = None, st
         m = sub_meta.get(sn) or {}
         cn = str(m.get("char_name") or m.get("name") or "").strip()
         if cn and re.search(rf"(?<!> )\b{re.escape(cn)}\b", b):
-            b = re.sub(rf"(?<!<Subject {sn}> )\b{re.escape(cn)}\b", _sub_lbl(sn), b, count=1)
+            b = re.sub(rf"(?<!<Subject {sn}> )\b{re.escape(cn)}\b", _sub_lbl(sn), b)
 
     if re.match(r"^(?:she|he)\b", b, re.I):
         b = re.sub(r"^(?:she|he)\b", primary if re.match(r"^" + s1_pron[2] + r"\b", b, re.I) or len(subs) == 1 else _sub_lbl(subs[1] if len(subs) >= 2 else 1), b, count=1, flags=re.I)
@@ -1054,6 +1111,12 @@ def _build_state_aware_beat_text(
                 f"{primary_speaker} tilts {s1_poss} chin up with flushed skin, parted glossy lips, and glistening warm cum across {s1_poss} chest while catching {s1_poss} breath into a steady closing hold"
             )
 
+        if act_mode == "internal_creampie" or (beat.role in ("peak_settle", "closing_hold") and re.search(r"\b(?:creampie|semen\s+welling|draw-back|ejaculat\w+|cum\s+ropes)\b", s0_act_fin, re.I)):
+            return (
+                f"{s1_who} rest close together in post-climax release{surf_phrase}{carry_tail} as breathing slows and warm flushed skin settles cleanly through the closing frame"
+                + prop_tail
+            )
+
         if act_mode == "cumshot_climax":
             return (
                 f"Thick glossy white ropes of cum coat {s1_poss} flushed skin cleanly{surf_phrase}{carry_tail} as muscles tremble and breathing slows into steady climax release"
@@ -1077,8 +1140,16 @@ def _build_state_aware_beat_text(
             dir_note = "angled forward away from the lens" if is_rear_now else "squarely aligned"
             return f"{primary_speaker} shifts weight{surf_phrase} ({dir_note}){carry_tail} as {partner_lbl} grips {s1_poss} hips firmly to align contact"
         if beat.role in ("peak_settle", "closing_hold"):
+            if len(subs) < 2 and not is_pov:
+                return (
+                    f"{primary_speaker} holds teasing, confident eye contact{surf_phrase}{carry_tail} with a slow smirk and relaxed shoulder poise through the closing frame{prop_tail}"
+                )
             return (
                 f"{s1_who} reach peak muscular tension and flush{carry_tail}{surf_phrase}, slowing {pace_w} into a tightly pressed closing hold with parted lips and steady breath{prop_tail}"
+            )
+        if len(subs) < 2 and not is_pov:
+            return (
+                f"{primary_speaker} sustains poised, unhurried teasing posture and expressive gaze{surf_phrase}{carry_tail}{prop_tail}"
             )
         return (
             f"{partner_lbl} and {primary_speaker} drive {pace_w} through full-depth rhythmic strokes{surf_phrase}{carry_tail} with firm waist grips and reactive flesh recoil{prop_tail}"
@@ -1114,15 +1185,15 @@ def _build_state_aware_beat_text(
                 return f"{primary_speaker} pops center-front on count 1 while {partner_lbl} and cast hit staggered sharp lines behind"
             if beat.role == "ending_hold":
                 return "All subjects lock cleanly into unified formation with bright eye contact as hair and stage fabric settle"
-            return f"As camera tracks across depth, {s1_who} snap contrasting chest isolations, footwork hops, and crisp fingertip lines"
+            return f"As camera tracks across depth, {s1_who} snap contrasting shoulder-and-torso accents, footwork hops, and crisp fingertip lines"
         if beat.role == "count_hit":
-            return f"{primary_speaker} hits the opening count-1 pop sharply on beat with fluid hip tilt and crisp hand framing"
+            return f"{primary_speaker} hits the opening count-1 shoulder snap sharply on beat with fluid hip tilt and crisp hand framing"
         if beat.role == "choreo_turn":
             return f"{primary_speaker} whips through a crisp 180-degree pivot, arm-frame accent, and rhythmic footwork step as hair and hem flare"
         if beat.role == "ending_hold":
             if is_duet_dance:
-                return f"{s1_who} lock into a poised duet ending-fairy pose with natural chest breathing, bright smiles, and direct camera eye lock"
-            return f"{primary_speaker} freezes into a poised ending-fairy silhouette with chest breathing, bright smile, and direct camera eye lock"
+                return f"{s1_who} lock into a poised duet ending-fairy pose with relaxed shoulder poise, bright smiles, and direct camera eye lock"
+            return f"{primary_speaker} freezes into a poised ending-fairy silhouette with relaxed shoulder poise, bright smile, and direct camera eye lock"
         return f"{primary_speaker} layers fluid shoulder isolations, waist grooves, and alternating hand accents continuously on beat"
 
     # 5. Cinema / Dialogue
@@ -1254,38 +1325,69 @@ def build_shot_tree(
     n_shots = len(topo["shots"])
 
     # Extract raw rule clauses & per-shot cameras
-    def _segments_for_dial(opts: list[dict], *, is_explicit: bool = False) -> tuple[dict[int, str], dict[int, str]]:
+    def _segments_for_dial(opts: list[dict], *, is_explicit: bool = False, is_camera_dial: bool = False) -> tuple[dict[int, str], dict[int, str]]:
         if not opts:
             return {}, {}
         if len(opts) == 1:
-            return extract_shot_segments_from_rule(
+            sc_m, cl_m = extract_shot_segments_from_rule(
                 opts[0].get("rule") or "", lab=lab, brief=brief, explicit_id=opts[0]["id"] if is_explicit else "", flavors=flavors,
             )
+            if (not is_camera_dial) and n_shots >= 2 and topo["source"] != "ms_rule" and len(cl_m) == 1 and 0 in cl_m:
+                split_sh = _split_long_single_clause(cl_m[0], n_shots, lab=lab, brief=brief, flavors=flavors)
+                if len(split_sh) >= 2:
+                    cl_m = split_sh
+            return sc_m, cl_m
         cams_m: dict[int, str] = {}
         mapped: dict[int, str] = {}
-        # When multiple picks represent distinct shots (n_shots == len(opts)), map 1:1 to shot index
-        if n_shots >= 2 and len(opts) == n_shots:
-            for s_idx, opt in enumerate(opts):
-                sub_cams, sub = extract_shot_segments_from_rule(
-                    opt.get("rule") or "", lab=lab, brief=brief, explicit_id=opt["id"] if is_explicit else "", flavors=flavors,
-                )
-                if sub_cams.get(0):
-                    cams_m[s_idx] = sub_cams[0]
-                clause_txt = sub.get(0) or sanitize_beat_clause(adapt_rule_subjects(opt.get("rule") or "", lab, brief=brief, explicit_id=opt["id"] if is_explicit else "", flavors=flavors))
-                if clause_txt:
-                    mapped[s_idx] = clause_txt
+        if n_shots >= 2 and topo["source"] != "ms_rule":
+            # Map picked presets cleanly across Shot indices (0 .. n_shots - 1), never raw beat indices!
+            if len(opts) == n_shots:
+                for s_idx, opt in enumerate(opts):
+                    sub_cams, sub = extract_shot_segments_from_rule(
+                        opt.get("rule") or "", lab=lab, brief=brief, explicit_id=opt["id"] if is_explicit else "", flavors=flavors,
+                    )
+                    if sub_cams.get(0):
+                        cams_m[s_idx] = sub_cams[0]
+                    clause_txt = sub.get(0) or sanitize_beat_clause(adapt_rule_subjects(opt.get("rule") or "", lab, brief=brief, explicit_id=opt["id"] if is_explicit else "", flavors=flavors))
+                    if clause_txt:
+                        mapped[s_idx] = clause_txt
+            else:
+                shot_buckets = _bg.allocate_stages_to_spans(opts, [(sh_s["t0"], sh_s["t1"]) for sh_s in topo["shots"]])
+                for opt, s_list in shot_buckets:
+                    sub_cams, sub = extract_shot_segments_from_rule(
+                        opt.get("rule") or "", lab=lab, brief=brief, explicit_id=opt["id"] if is_explicit else "", flavors=flavors,
+                    )
+                    base_c = sub.get(0) or sanitize_beat_clause(adapt_rule_subjects(opt.get("rule") or "", lab, brief=brief, explicit_id=opt["id"] if is_explicit else "", flavors=flavors))
+                    if (not is_camera_dial) and len(s_list) >= 2 and len(sub) < len(s_list) and base_c:
+                        exp_sub = _split_long_single_clause(base_c, len(s_list), lab=lab, brief=brief, flavors=flavors)
+                        if len(exp_sub) >= 2:
+                            sub = exp_sub
+                    for k_idx, (sh_num, _) in enumerate(s_list):
+                        s_i = sh_num - 1
+                        cam_txt = sub_cams.get(k_idx) or sub_cams.get(0)
+                        if cam_txt:
+                            cams_m[s_i] = cam_txt
+                        clause_txt = sub.get(k_idx) if k_idx in sub else (base_c if k_idx == 0 else "")
+                        if clause_txt:
+                            mapped[s_i] = clause_txt
             return cams_m, mapped
+
         alloc = _bg.allocate_stages_to_spans(opts, spans)
         for opt, b_list in alloc:
             sub_cams, sub = extract_shot_segments_from_rule(
                 opt.get("rule") or "", lab=lab, brief=brief, explicit_id=opt["id"] if is_explicit else "", flavors=flavors,
             )
+            base_c = sub.get(0) or sanitize_beat_clause(adapt_rule_subjects(opt.get("rule") or "", lab, brief=brief, explicit_id=opt["id"] if is_explicit else "", flavors=flavors))
+            if (not is_camera_dial) and len(b_list) >= 2 and len(sub) < len(b_list) and base_c:
+                exp_sub = _split_long_single_clause(base_c, len(b_list), lab=lab, brief=brief, flavors=flavors)
+                if len(exp_sub) >= 2:
+                    sub = exp_sub
             for k_idx, (b_num, _) in enumerate(b_list):
                 b_i = b_num - 1
                 cam_txt = sub_cams.get(k_idx) or sub_cams.get(0)
                 if cam_txt:
                     cams_m[b_i] = cam_txt
-                clause_txt = sub.get(k_idx) or sub.get(0) or sanitize_beat_clause(adapt_rule_subjects(opt.get("rule") or "", lab, brief=brief, explicit_id=opt["id"] if is_explicit else "", flavors=flavors))
+                clause_txt = sub.get(k_idx) if k_idx in sub else (base_c if k_idx == 0 else "")
                 if clause_txt:
                     mapped[b_i] = clause_txt
         return cams_m, mapped
@@ -1293,7 +1395,7 @@ def build_shot_tree(
     exp_cams, exp_clauses = _segments_for_dial(exp_opts, is_explicit=True)
     cb_cams, cb_clauses = _segments_for_dial(combat_opts)
     pose_cams, pose_clauses = _segments_for_dial(pose_opts)
-    cam_shot_cams, cam_shot_clauses = ({}, {}) if is_pov else _segments_for_dial(cam_opts)
+    cam_shot_cams, cam_shot_clauses = ({}, {}) if is_pov else _segments_for_dial(cam_opts, is_camera_dial=True)
 
     # Expand 1-sentence rules in single-take scenes
     if n_shots == 1 and len(exp_clauses) == 1 and 0 in exp_clauses and len(spans) >= 2:
@@ -1332,20 +1434,55 @@ def build_shot_tree(
         "cast_n": len(subs),
     }
 
+    def _cam_profile(txt: str) -> tuple[str, str, str]:
+        tl = str(txt or "").lower()
+        elev = "low" if re.search(r"\b(?:low[- ]angle|worm.?s[- ]eye|floor[- ]level|near shin|looking (?:steeply )?upward)\b", tl) else ("high" if re.search(r"\b(?:high[- ]angle|elevated angle|bird.?s[- ]eye|overhead|top[- ]down|looking (?:cleanly )?down(?:ward)?)\b", tl) else "")
+        size = "close" if re.search(r"\b(?:extreme close[- ]up|ecu|close[- ]up|tight frame|macro)\b", tl) else ("wide" if re.search(r"\b(?:wide shot|full[- ]body|full shot|establishing wide|long shot)\b", tl) else "")
+        orient = "rear" if re.search(r"\b(?:from behind|behind-the-back|rear angle|rear view|over-the-shoulder|from the rear)\b", tl) else ("front" if re.search(r"\b(?:facing camera|front-facing|frontal|direct eye contact)\b", tl) else "")
+        return elev, size, orient
+
+    def _cam_conflicts(a: str, b: str) -> bool:
+        ea, sa, oa = _cam_profile(a)
+        eb, sb, ob = _cam_profile(b)
+        if ea and eb and ea != eb:
+            return True
+        if sa and sb and sa != sb:
+            return True
+        if oa and ob and oa != ob:
+            return True
+        return False
+
     # Build [Shot 1] header metadata
     canvas_asp = _bg.detect_canvas_aspect(brief=brief, node_aspect=str(flavors.get("aspect") or ""), camera_id=",".join(o["id"] for o in cam_opts))
     canvas_bkt = _bg.aspect_bucket(canvas_asp)
     s1_parts: list[str] = []
+    s1_cam_parts: list[str] = []
     if canvas_bkt == "9:16":
         s1_parts.append(f"Vertical {canvas_asp} framing")
+        s1_cam_parts.append(f"Vertical {canvas_asp} framing")
     elif canvas_bkt == "1:1":
         s1_parts.append("Square 1:1 framing")
+        s1_cam_parts.append("Square 1:1 framing")
     elif canvas_bkt == "16:9":
         s1_parts.append(f"Wide {canvas_asp} framing")
+        s1_cam_parts.append(f"Wide {canvas_asp} framing")
     if style_opts:
-        s1_parts.append(_fin.sanitize_additive_rule(style_opts[0].get("rule") or style_opts[0]["label"]))
-    if lens_opts:
-        s1_parts.append(_fin.sanitize_additive_rule(lens_opts[0].get("rule") or lens_opts[0]["label"]))
+        st_str = _fin.sanitize_additive_rule(style_opts[0].get("rule") or style_opts[0]["label"])
+        s1_parts.append(st_str)
+        s1_cam_parts.append(st_str)
+
+    exp_is_cont = topo["genre"] == "explicit_cont"
+    shot1_cam_txt = exp_cams.get(0) or cb_cams.get(0) or pose_cams.get(0) or ""
+    cam0_preview = ""
+    if cam_opts and not is_pov:
+        cam0_preview = cam_shot_cams.get(0) or cam_shot_clauses.get(0) or _fin.sanitize_additive_rule(cam_opts[0].get("rule") or cam_opts[0]["label"])
+    arb_cam_ref = shot1_cam_txt or cam0_preview
+
+    for lens_o in lens_opts:
+        lens_str = _fin.sanitize_additive_rule(lens_o.get("rule") or lens_o["label"])
+        if lens_str and not (arb_cam_ref and _cam_conflicts(lens_str, arb_cam_ref)):
+            s1_parts.append(lens_str)
+            s1_cam_parts.append(lens_str)
     if place_opts:
         s1_parts.append("inside " + _lc_lead(_fin.sanitize_additive_rule(place_opts[0].get("rule") or place_opts[0]["label"])))
     if light_opts:
@@ -1353,39 +1490,49 @@ def build_shot_tree(
     if col_opts:
         s1_parts.append(_lc_lead(_fin.sanitize_additive_rule(col_opts[0].get("rule") or col_opts[0]["label"])))
 
-    exp_is_cont = topo["genre"] == "explicit_cont"
-    shot1_cam_txt = exp_cams.get(0) or cb_cams.get(0) or pose_cams.get(0) or ""
     if is_pov:
         pov_cam_tag = "first-person male POV perspective" if pov_val == "male" else ("first-person female POV perspective" if pov_val == "female" else "first-person POV perspective")
-        s1_parts.append(pov_cam_tag if not shot1_cam_txt else _lc_lead(shot1_cam_txt))
+        cam_tail_s1 = pov_cam_tag if not shot1_cam_txt else _lc_lead(shot1_cam_txt)
+        s1_parts.append(cam_tail_s1)
+        s1_cam_parts.append(cam_tail_s1)
     else:
         if shot1_cam_txt:
             s1_parts.append(_lc_lead(shot1_cam_txt))
+            s1_cam_parts.append(_lc_lead(shot1_cam_txt))
         elif cam_opts:
             c0_raw = _fin.sanitize_additive_rule(cam_opts[0].get("rule") or cam_opts[0]["label"])
             has_multi_in_cam = bool(cam_shot_cams.get(1) or re.search(r"\[\s*Shot\s+2\s*\]", c0_raw, re.I))
             if exp_is_cont and has_multi_in_cam:
                 c0_pick = cam_shot_cams.get(0) or cam_shot_clauses.get(0) or "continuous smooth tracking framing"
-                s1_parts.append(_lc_lead(re.sub(r"\b(?:three-shot|two-shot|cut(?:ting|s)?)\b", "continuous", c0_pick, flags=re.I)))
+                c0_pick_lc = _lc_lead(re.sub(r"\b(?:three-shot|two-shot|cut(?:ting|s)?)\b", "continuous", c0_pick, flags=re.I))
+                s1_parts.append(c0_pick_lc)
+                s1_cam_parts.append(c0_pick_lc)
             elif has_multi_in_cam:
                 c0_pick = cam_shot_cams.get(0) or cam_shot_clauses.get(0) or c0_raw.split("[Shot 2]")[0]
                 c0_pick = re.sub(r"^.*?\[\s*Shot\s+1\s*\]\s*", "", c0_pick, flags=re.I).strip(" .;,:")
                 if c0_pick:
                     s1_parts.append(_lc_lead(c0_pick))
+                    s1_cam_parts.append(_lc_lead(c0_pick))
             else:
                 s1_parts.append(_lc_lead(c0_raw))
+                s1_cam_parts.append(_lc_lead(c0_raw))
         if shot1_cam_txt and cam_opts and not cam_shot_cams.get(1) and not re.search(r"\[\s*Shot\s+2\s*\]", cam_opts[0].get("rule") or "", re.I):
             c_id0 = cam_opts[0]["id"]
             if c_id0 not in ("portrait_vertical_stack", "landscape_widescreen_blocking", "multi_position_3cut_intimate", "cam_viral_dutch_90roll_wipe_cuts"):
                 c0_extra = _fin.sanitize_additive_rule(cam_opts[0].get("rule") or "")
-                if c0_extra and len(c0_extra) < 260 and not (exp_is_cont and "cut" in c0_extra.lower()):
+                if c0_extra and len(c0_extra) < 260 and not (exp_is_cont and "cut" in c0_extra.lower()) and not _cam_conflicts(c0_extra, shot1_cam_txt):
                     if c_id0 == "body_contour_s_curve_pedestal_glide" and exp_opts and not any(str(o.get("id") or "").startswith(("solo_", "undress_")) for o in exp_opts):
-                        s1_parts.append("smooth body-contouring camera glide following hips and torso")
+                        glide_s = "smooth body-contouring camera glide following hips and torso"
+                        s1_parts.append(glide_s)
+                        s1_cam_parts.append(glide_s)
                     else:
                         s1_parts.append(_lc_lead(c0_extra))
+                        s1_cam_parts.append(_lc_lead(c0_extra))
 
     clean_s1 = [p.strip().rstrip(".") for p in s1_parts if p and p.strip().rstrip(".")]
+    clean_cam_s1 = [p.strip().rstrip(".") for p in s1_cam_parts if p and p.strip().rstrip(".")]
     header_s1 = "[Shot 1] " + (", ".join(clean_s1) or f"{s1_who} inside the scene") + "."
+    cam_s1 = (", ".join(clean_cam_s1) or f"{s1_who} framed inside the scene") + "."
 
     # Distribute active rule clauses cleanly onto ShotNode -> MicroBeat[]
     polish_fn = _make_polish_fn(lab, brief=brief, flavors=flavors)
@@ -1400,33 +1547,37 @@ def build_shot_tree(
         if topo["source"] == "ms_rule":
             single_clauses = dict(src_map)
         elif src_map:
-            ordered = [src_map[k] for k in sorted(src_map.keys()) if src_map.get(k)]
-            if len(ordered) == 1 and cb_clauses and pose_clauses and not exp_clauses:
-                ordered = [f"{pose_clauses[0].rstrip('.')} before {cb_clauses[0]}"]
-            if len(ordered) == n_b0:
-                single_clauses = {i: ordered[i] for i in range(n_b0)}
-            elif len(ordered) == 3 and n_b0 == 4:
-                # Split the richest transition clause cleanly onto 2 micro-beats if grammatically sound
-                split_done = False
-                for try_i in (1, 0, 2):
-                    pair = split_clause_for_two_microbeats(ordered[try_i], lab, brief=brief, flavors=flavors)
-                    if pair:
-                        if try_i == 0:
-                            single_clauses = {0: pair[0], 1: pair[1], 2: ordered[1], 3: ordered[2]}
-                        elif try_i == 1:
-                            single_clauses = {0: ordered[0], 1: pair[0], 2: pair[1], 3: ordered[2]}
-                        else:
-                            single_clauses = {0: ordered[0], 1: ordered[1], 2: pair[0], 3: pair[1]}
-                        split_done = True
-                        break
-                if not split_done:
-                    single_clauses = {0: ordered[0], 1: ordered[1], 2: ordered[2]}
-            elif len(ordered) > n_b0:
-                for i in range(n_b0):
-                    single_clauses[i] = ordered[i] if i < n_b0 - 1 else "; ".join(ordered[n_b0 - 1:])
+            if len(src_map) == n_b0 and all(i in src_map for i in range(n_b0)):
+                single_clauses = dict(src_map)
             else:
-                for i, c in enumerate(ordered):
-                    single_clauses[i] = c
+                ordered = [src_map[k] for k in sorted(src_map.keys()) if src_map.get(k)]
+                if len(ordered) == 1 and cb_clauses and pose_clauses and not exp_clauses:
+                    ordered = [f"{pose_clauses[0].rstrip('.')} before {cb_clauses[0]}"]
+                if len(ordered) == n_b0:
+                    single_clauses = {i: ordered[i] for i in range(n_b0)}
+                elif len(ordered) == 3 and n_b0 == 4:
+                    split_done = False
+                    for try_i in (1, 0, 2):
+                        pair = split_clause_for_two_microbeats(ordered[try_i], lab, brief=brief, flavors=flavors)
+                        if pair:
+                            if try_i == 0:
+                                single_clauses = {0: pair[0], 1: pair[1], 2: ordered[1], 3: ordered[2]}
+                            elif try_i == 1:
+                                single_clauses = {0: ordered[0], 1: pair[0], 2: pair[1], 3: ordered[2]}
+                            else:
+                                single_clauses = {0: ordered[0], 1: ordered[1], 2: pair[0], 3: pair[1]}
+                            split_done = True
+                            break
+                    if not split_done:
+                        single_clauses = {0: ordered[0], 1: ordered[1], 2: ordered[2]}
+                elif len(ordered) > n_b0:
+                    for i in range(n_b0):
+                        single_clauses[i] = ordered[i] if i < n_b0 - 1 else "; ".join(ordered[n_b0 - 1:])
+                else:
+                    # Place clauses at non-overlapping sparse indices so adjacent beats never duplicate verbatim
+                    for idx_k, c in enumerate(ordered):
+                        if idx_k not in single_clauses:
+                            single_clauses[idx_k] = c
 
     shot_nodes: list[ShotNode] = []
     flat_beat_global = 0
@@ -1449,20 +1600,21 @@ def build_shot_tree(
                 pl_str = _fin.sanitize_additive_rule(place_opts[pl_idx].get("rule") or "")
             exp_cut_cam = exp_cams.get(s_idx) or cb_cams.get(s_idx) or pose_cams.get(s_idx) or ""
             cam_cut_cam = cam_shot_cams.get(s_idx) or cam_shot_clauses.get(s_idx) or ""
+            _CAM_VERB_RE = r"^(?:cuts?\s|hard[- ]?cut|quick[- ]?cut|smash[- ]?cut|camera\s|snaps?\s|fires?\s|whips?\s|punches?\s|glides?\s|tracks?\s|zooms?\s|tilts?\s|drops?\s|rises?\s|pulls?\s|pushes?\s|orbits?\s|arcs?\s)"
             if exp_cut_cam:
                 ec = _lc_lead(exp_cut_cam.rstrip("."))
                 ec = re.sub(r"^(?:cleanly\s+to\s+)+", "", ec, flags=re.I).strip()
-                cam_str = (f"camera {ec}" if not ec.lower().startswith("camera") else ec) if re.match(r"^(?:instant\s+hard\s+cut|hard[- ]?cut|quick[- ]?cut|smash[- ]?cut|cuts?\s)", ec, re.I) else f"camera cuts cleanly to {ec}"
+                cam_str = (ec if ec.lower().startswith("camera") else f"camera {ec}") if re.match(r"^(?:instant\s+hard\s+cut|hard[- ]?cut|quick[- ]?cut|smash[- ]?cut|cuts?\s|snaps?\s|fires?\s|whips?\s|punches?\s|camera\s)", ec, re.I) else f"camera cuts cleanly to {ec}"
             elif cam_cut_cam:
                 cc = _lc_lead(cam_cut_cam.rstrip("."))
                 cc = re.sub(r"^(?:cleanly\s+to\s+)+", "", cc, flags=re.I).strip()
-                cam_str = (cc if cc.lower().startswith("camera") else f"camera {cc}") if re.match(r"^(?:cuts?\s|hard[- ]?cut|quick[- ]?cut|smash[- ]?cut|camera\s)", cc, re.I) else f"camera cuts cleanly to {cc}"
+                cam_str = (cc if cc.lower().startswith("camera") else f"camera {cc}") if re.match(_CAM_VERB_RE, cc, re.I) else f"camera cuts cleanly to {cc}"
             else:
                 hint_sc = (exp_clauses.get(s_idx) or pose_clauses.get(s_idx) or cb_clauses.get(s_idx) or "").lower()
-                if re.search(r"\b(?:jawline|eyes|lips|cheek|closeup|close-up|wink|smile|gaze|brow)\b", hint_sc):
+                if re.search(r"\b(?:jawline|eyes|lips|cheek|closeup|close-up|wink|smile|gaze|brow|peace sign)\b", hint_sc):
                     cam_str = "camera cuts cleanly to a tight medium close-up capturing upper-body detail and facial expression"
                 elif re.search(r"\b(?:knee-lunge|squat|drop|floor|heels|kick|footwork)\b", hint_sc):
-                    cam_str = "camera cuts cleanly to a low-angle three-quarter medium shot framing the stance drop and full motion"
+                    cam_str = "camera cuts cleanly to a three-quarter medium-full shot framing the stance drop and full motion"
                 elif re.search(r"\b(?:rear|doggy|all fours|reverse|glutes|ass)\b", hint_sc):
                     cam_str = "camera cuts cleanly to a three-quarter rear medium angle framing hips, spine arch, and physical contact"
                 else:
@@ -1514,14 +1666,22 @@ def build_shot_tree(
                             shot_beat_clauses[0], shot_beat_clauses[1] = pair
                         else:
                             shot_beat_clauses[0] = raw_sc
-                elif s_idx == 0 and brief_clean and not fetish_opts and not pose_opts and not (brief_is_speech and 1 in (topo["q_map"] or {})):
+                elif s_idx == 0 and brief_clean and not (brief_is_speech and 1 in (topo["q_map"] or {})):
                     shot_beat_clauses[0] = brief_clean
         else:
             for mb_i in range(n_mb):
                 if single_clauses.get(mb_i):
                     shot_beat_clauses[mb_i] = single_clauses[mb_i]
-                elif mb_i == 0 and brief_clean and not fetish_opts and not pose_opts and not exp_opts and not combat_opts and not (brief_is_speech and 1 in (topo["q_map"] or {})):
+                elif mb_i == 0 and brief_clean and not (brief_is_speech and 1 in (topo["q_map"] or {})):
                     shot_beat_clauses[0] = brief_clean
+
+        # Weave user intent (`brief_clean`) into Shot 1 Beat 1 when dials are active so user text never vanishes
+        if s_idx == 0 and brief_clean and not (brief_is_speech and 1 in (topo["q_map"] or {})):
+            b0_cur = shot_beat_clauses.get(0, "")
+            if not b0_cur:
+                shot_beat_clauses[0] = brief_clean
+            elif brief_clean[:24].lower() not in b0_cur.lower():
+                shot_beat_clauses[0] = f"{brief_clean.rstrip('.')}; {_lc_lead(b0_cur)}"
 
         sh_node = ShotNode(
             shot_n=sh_spec["shot_n"],
@@ -1533,9 +1693,11 @@ def build_shot_tree(
             carried_state=carried,
         )
 
-        # Update orientation from camera string on Shot 2+
+        # Update orientation from camera string on Shot 2+ so Carried State Into Shot reflects the cut angle
         if s_idx > 0 and cam_str:
-            _extract_state_delta(cam_str, ledger, is_sex=is_sex, is_mirror=mirror_scene)
+            _cam_deltas = _extract_state_delta(cam_str, ledger, is_sex=is_sex, is_mirror=mirror_scene)
+            if "orientation" in _cam_deltas:
+                sh_node.carried_state["orientation"] = str(ledger["orientation"])
 
         for mb_i, b_spec in enumerate(sh_spec["beats"]):
             mb = MicroBeat(
@@ -1577,8 +1739,10 @@ def build_shot_tree(
     # Attach dialogue cues cleanly (one speaking focus per beat / shot, never on oral_sealed or pure impact unless explicit quote)
     no_dlg = _dlg.should_suppress_dialogue(brief, flavors=flavors, plan=plan)
     tm = str(flavors.get("talk_mode") or "auto").strip().lower()
-    has_speech_ask = bool(re.search(r"\b(?:say\w*|speak\w*|talk\w*|whisper\w*|tell\w*|ask\w*|dialogue|monologue)\b", brief or "", re.I))
-    exp_has_dlg = any("<d>" in str(o.get("rule") or "") for o in exp_opts)
+    has_speech_ask = bool(re.search(r"\b(?:say\w*|speak\w*|talk\w*|whisper\w*|tell\w*|ask\w*|taunt\w*|mock\w*|teas\w*|flirt\w*|argu\w*|complain\w*|confess\w*|beg\w*|plead\w*|greet\w*|mutter\w*|murmur\w*|answer\w*|repl\w*|shout\w*|yell\w*|explain\w*|narrat\w*|sing\w*|banter\w*|dialogue|monologue)\b", brief or "", re.I))
+    has_user_brief = bool(str(brief or "").strip())
+    # Do not let a preset's sample <d> force canned dialogue when user typed a non-speaking brief
+    exp_has_dlg = (not has_user_brief) and any("<d>" in str(o.get("rule") or "") for o in exp_opts)
     audios = lab.get("audios") or []
     primary_speaker = _sub_lbl(subs[0]) if subs else "The lead character"
 
@@ -1605,19 +1769,18 @@ def build_shot_tree(
             explicit_qs = topo["q_map"].get(g_i) or mb.quotes
             if explicit_qs:
                 mb.dialogue_text = f" (DIALOGUE) {primary_speaker} (S1) speaks{au_ref}: <d>[{acc_tag}, {tone_tag}] {explicit_qs[0]}</d>"
+                mb.is_canned_cue = False
                 mb.audio_fg = "dialogue"
                 shot_spoke.add(sh.shot_n)
                 continue
             if mb.audio_fg in ("oral_sealed", "impact"):
                 continue
             if tm == "talk_all":
-                # 1 speaking beat per shot (or up to 3 beats across single-take) so foley/breath breathe between lines
+                # 1 speaking beat per shot so foley/breath breathe between lines
                 if len(shot_nodes) >= 2 and sh.shot_n in shot_spoke:
                     continue
-                if len(shot_nodes) == 1 and n_total_b >= 4 and g_i == 0 and any(b.audio_fg != "oral_sealed" for _, b in all_beats[1:]):
-                    # Prefer mid/close beat after anchor on 4-beat single take if not every beat
-                    pass
                 mb.dialogue_text = f" (DIALOGUE) {primary_speaker} (S1) speaks{au_ref}: <d>[{acc_tag}, {tone_tag}] {cues[g_i]}</d>"
+                mb.is_canned_cue = True
                 mb.audio_fg = "dialogue"
                 shot_spoke.add(sh.shot_n)
             elif bool(talk_opts) or bool(acc_opts) or has_speech_ask or exp_has_dlg:
@@ -1627,6 +1790,7 @@ def build_shot_tree(
                 if len(sh.beats) >= 2 and g_i == 0 and len(shot_nodes) == 1 and sh.beats[1].audio_fg not in ("oral_sealed", "impact"):
                     continue
                 mb.dialogue_text = f" (DIALOGUE) {primary_speaker} (S1) speaks{au_ref}: <d>[{acc_tag}, {tone_tag}] {cues[g_i]}</d>"
+                mb.is_canned_cue = True
                 mb.audio_fg = "dialogue"
                 shot_spoke.add(sh.shot_n)
 
@@ -1655,7 +1819,9 @@ def build_shot_tree(
         shots=shot_nodes,
         q_map=topo["q_map"],
         header_s1=header_s1,
+        cam_s1=cam_s1,
         is_extracted=False,
+        brief=str(brief or "").strip(),
     )
 
 
@@ -1723,6 +1889,7 @@ def render_llm_blueprint(
     *,
     brief: str = "",
     flavors: dict | None = None,
+    include_brief: bool = True,
 ) -> str:
     """Compile a structured, state-aware Shot-Tree Blueprint for `Quick Tie` & `Plan` LLM calls."""
     if tree.is_extracted:
@@ -1735,13 +1902,16 @@ def render_llm_blueprint(
     sm_bp = _fin.resolve_sound_mode(brief=brief, flavors=flavors)
     sound_tag = f" | Sound: {sm_bp}" if sm_bp != "auto" else (" | Sound: pure_bgm (auto)" if _fin.is_pure_bgm_soundscape(brief=brief, flavors=flavors) else "")
     lines.append(f"Topology: {topo_desc} | Genre: {tree.genre} | Duration: {tree.duration_s:.2f}s" + (f" | Aspect: {tree.canvas_aspect}" if tree.canvas_aspect else "") + sound_tag)
+    use_brief = str(brief or getattr(tree, "brief", "") or "").strip()
+    if use_brief and include_brief:
+        lines.append(f"User Intent (TOP PRIORITY — weave every detail & dialogue topic into beats below): {use_brief}")
     init = tree.initial_state or {}
     if init.get("axis"):
         lines.append(f"Initial Axis: {init['axis']}" + (f" | Base Wardrobe: {init['wardrobe']}" if init.get("wardrobe") else "") + (f" | Place: {init['place']}" if init.get("place") else ""))
 
     for sh in tree.shots:
         hdr = f"[Shot {sh.shot_n}]" if sh.shot_n == 1 else f"[Shot {sh.shot_n}] At {_bg.stamp(sh.t0)}"
-        cam_txt = tree.header_s1[8:].strip() if sh.shot_n == 1 else (sh.camera or "contrasting camera angle")
+        cam_txt = (tree.cam_s1 or tree.header_s1[8:].strip()) if sh.shot_n == 1 else (sh.camera or "contrasting camera angle")
         lines.append(f"{hdr} ({_bg.stamp(sh.t0)}->{_bg.stamp(sh.t1)}) | Camera: {cam_txt}")
         cs = sh.carried_state or {}
         first_d = sh.beats[0].state_delta if sh.beats else {}
@@ -1762,7 +1932,17 @@ def render_llm_blueprint(
             lines.append("  Carried State Into Shot: " + " | ".join(carry_bits))
         for mb in sh.beats:
             delta_s = f" | delta={'; '.join(f'{k}:{v}' for k, v in mb.state_delta.items())}" if mb.state_delta else ""
-            dlg_s = f" | spoken_cue={mb.dialogue_text.strip()}" if mb.dialogue_text else ""
+            beat_dur = max(0.5, mb.t1 - mb.t0)
+            w_lo = max(3, int(round(beat_dur * 1.6)))
+            w_hi = max(w_lo + 2, int(round(beat_dur * 2.5)))
+            if mb.dialogue_text and mb.is_canned_cue and use_brief:
+                m_tag = re.search(r"<d>\s*(\[[^\]]+\])", mb.dialogue_text, re.I)
+                tag_ex = m_tag.group(1) if m_tag else "[English, natural tone]"
+                dlg_s = f" | spoken_cue=AUTHOR FRESH <d>{tag_ex} ...</d> FROM <scene_brief> (~{w_lo}-{w_hi} spoken words for {beat_dur:.1f}s, distinct, commas/periods only)"
+            elif mb.dialogue_text:
+                dlg_s = f" | spoken_cue={mb.dialogue_text.strip()} (~{w_lo}-{w_hi} words for {beat_dur:.1f}s)"
+            else:
+                dlg_s = ""
             lines.append(f"  - At {_bg.stamp(mb.t0)}-{_bg.stamp(mb.t1)} [{mb.role_label} | audio={mb.audio_fg}{delta_s}]: {mb.action}{dlg_s}")
 
     return "\n".join(lines)

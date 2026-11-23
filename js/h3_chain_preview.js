@@ -249,6 +249,7 @@ function mountPanel(node) {
             }
             if (data?.width && data?.height) bits.push(["size", `${data.width}x${data.height}`]);
             if (data?.seam_health) bits.push(["seams", String(data.seam_health)]);
+            if (data?.tone_drift) bits.push(["drift", String(data.tone_drift)]);
             if (data?.motion_overload) bits.push(["motion", String(data.motion_overload)]);
             if (bits.length) {
                 meta.textContent = "";

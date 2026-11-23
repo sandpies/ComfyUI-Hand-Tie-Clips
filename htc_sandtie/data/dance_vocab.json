@@ -1,9 +1,9 @@
 {
   "vocabulary_version": "2.0-sandtie",
-  "description": "Clean-room SandTie H3 kinetic choreography vocabulary built with skeletal joint phrasing and natural soft-tissue motion.",
+  "description": "Clean-room SandTie H3 kinetic choreography vocabulary built with clear skeletal shoulder, spine, hip, arm, and footwork phrasing.",
   "pacing_rules": {
     "motion_language": "Describe smooth natural speed transitions ('glides gently', 'snaps crisply', 'rolls steadily') rather than numeric Hz values.",
-    "anatomy_order": "State bone, hip, and shoulder trajectory first, adding 'with natural soft-tissue movement' during drops or shimmies.",
+    "anatomy_order": "Describe clear skeletal motion across feet, knees, hips, shoulders, elbows, wrists, and hair inertia—keep movement rooted in posture shifts, footwork, and arm lines rather than chest-bouncing jargon.",
     "orientation_lock": "State initial body angle toward or away from camera in [Shot 1], keeping left/right hand placement concrete in every beat.",
     "fingertip_rule": "Articulate choreography down to wrists, palms, knuckles, and individual fingers (sequential pinky-to-thumb curls, 90-degree wrist hinges, interlocked finger-tutting frames, sharp finger-gun recoils, and fingertips grazing lens or jawline), pairing hand snaps with motivated gimbal drops, whip pans, or crane reveals."
   },
@@ -16,8 +16,8 @@
     ],
     "core_actions": [
       "figure-eight hip sway shifting weight smoothly left to right",
-      "vertical body wave rolling seamlessly from shoulders down through ribcage and hips",
-      "rhythmic chest pop accent followed by controlled torso release",
+      "vertical spine wave rolling seamlessly from shoulders through waist and hips",
+      "sharp shoulder-and-torso snap followed by controlled posture release",
       "slow 360-degree pivot turn planting heels cleanly on the final beat",
       "controlled deep knee drop rising smoothly through the lower spine"
     ],
@@ -30,17 +30,17 @@
     "finales_and_poses": [
       "settles weight cleanly onto one hip with poised chin tilt and unbroken eye lock",
       "turns three-quarters back over one shoulder holding a knowing smirk",
-      "steps smoothly toward the lens landing in an intimate chest-up hold"
+      "steps smoothly toward the lens landing in an intimate upper-body hold"
     ],
     "tiktok_and_kpop_flows": [
-      "crisp double chest pop snapping smoothly into a liquid vertical ribcage body wave",
-      "rapid figure-eight hip shake on bent knees with clean natural soft-tissue recoil",
+      "crisp double shoulder-and-torso snap flowing smoothly into a liquid vertical spine wave",
+      "rapid figure-eight hip shake on bent knees with clean weight shift and flowing hair inertia",
       "playful cheek-poke finger heart and glossy idol wink held cleanly at beat end",
       "smooth knee drop sweeping palms up outer thighs while tossing hair backward",
-      "elbow-locked isolated ribcage slides snapping left to right on percussive hits"
+      "elbow-locked isolated upper-torso slides snapping left to right on percussive hits"
     ],
     "club_twerk_and_heels": [
-      "deep lumbar spine arch pulsing isolated rhythmic glute bounces with natural recoil",
+      "deep lumbar spine arch pulsing isolated rhythmic hip-and-glute bounces with rhythmic knee drive",
       "weightless 360-degree chrome pole orbit spin melting into a slow thigh-hook descent",
       "confident stiletto catwalk cross-step snapping into a 180-degree hair-whip lookback",
       "sultry chair reverse-straddle back arch rolling steadily from collarbone through waist"

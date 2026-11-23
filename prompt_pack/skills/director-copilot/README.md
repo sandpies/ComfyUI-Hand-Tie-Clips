@@ -8,9 +8,15 @@ START → END row per hop that the user vets. Beats are then written from that s
 read back as the node will send them: brief → song or script → story, cast and voices → plates →
 continuity sheet → directed shot plans → check → graph → retakes.
 
-It is for **agent harnesses that load skills** (a folder with a `SKILL.md` plus scripts the agent
-can run), with any model behind them, hosted or local. It is not a chat prompt: the agent has to
-run the scripts. For a plain chat app, use `prompt_pack/AUTHORING_PROMPT.md` instead.
+It runs three ways, chosen in the brief ([pipelines](references/pipelines.md)):
+
+| pipeline | for | how |
+|---|---|---|
+| `agent` | a hosted or frontier model in an agent harness | the model runs every script and builds the graph |
+| `local-agent` | a local model (Qwen, Llama, Gemma...) in an agent harness that can run commands | the same scripts, read one page at a time, one hop written and checked at a time, progress kept in `STATE.md` |
+| `local-chat` | a chat window with no commands (LM Studio, Open WebUI, llama.cpp chat) | you are the hands: the model says exactly what to click and paste in ComfyUI's studio, and what to paste back |
+
+For a one-shot prompt with no stages at all, `prompt_pack/AUTHORING_PROMPT.md` is still there.
 
 ## Install
 
@@ -48,5 +54,14 @@ or pass `--htc <path>` to each script. The scripts import the pack's own modules
 ## Local models
 
 The skill is written as stages with stop points and numbered rules so a smaller model can follow
-it literally. Give the model a context of 32k+ (the references are read on demand, one per stage),
-and a low temperature (0.3-0.5) so the JSON stays strict.
+it literally. Give the model a context of 32k+ (16k is the floor for `local-chat`), and a low
+temperature (0.3-0.5) so the JSON stays strict.
+
+- **`local-agent`:** install the folder as for any agent. The model reads `SKILL.md`, then only
+  the page or section each stage names, and writes `STATE.md` in the project folder at every
+  stop. When its context fills, start a new session; it picks up from `STATE.md`.
+- **`local-chat`:** put `SKILL.md` and `references/pipelines.md` in the system prompt (about 10k
+  tokens). The model asks for each further page when a stage needs it; paste it in. Keep the
+  `PROJECT STATE` block it prints at every stop, and start a new chat with it at stages 4, 8
+  and 11. If you can open a terminal, run the `check_plan.py` command it gives you and paste
+  the output back; that check catches what a small model misses.

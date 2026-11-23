@@ -1273,6 +1273,126 @@
       "rule": "a gritty concrete concert-arena backstage tunnel lined with stenciled black roadie flight cases, coiled power cables along the floor, cool blue work lights contrasting with warm amber arena spill at the far exit, and drifting stage haze",
       "sound": "muffled crowd roar and sub-bass throb from the arena ahead plus echoing boots",
       "life": "volumetric stage haze curls slowly out of the bright arena doorway ahead"
+    },
+    {
+      "id": "plate_real_lived_in_cotton_bedroom",
+      "label": "🛏️ Real Bedroom: Lived-In Cotton Sheets, Matte Plaster Walls & Oak Floor (Daylight)",
+      "group": "00 · Everyday Simple Plates",
+      "domain": "bedroom",
+      "character": "lived-in cotton-sheeted everyday bedroom",
+      "rule": "an enclosed lived-in apartment bedroom bounded by matte eggshell plaster walls with a framed paper print and baseboard trim: raw scuffed oak floorboards under a woven wool rug, low oak bedframe with rumpled charcoal-and-cream cotton duvet and creased pillows against the back wall, scuffed wood nightstand holding a ceramic mug and paperback stack, and sheer linen window curtains diffusing soft overcast daylight",
+      "life": "soft overcast window daylight settles across rumpled cotton fabric, oak floor grain, and matte drywall",
+      "sound": "quiet residential bedroom room tone and gentle cotton bedding rustle"
+    },
+    {
+      "id": "plate_real_night_bedside_lamp_bedroom",
+      "label": "🛏️ Real Bedroom: Warm Shaded Bedside Lamp & Rumpled Linen (Night)",
+      "group": "00 · Everyday Simple Plates",
+      "domain": "bedroom",
+      "character": "dim night bedroom lit by one shaded bedside lamp",
+      "rule": "an enclosed suburban bedroom at night with matte sage-grey drywall, solid oak headboard against the wall, rumpled ivory cotton sheets and wool blanket, a single fabric-shaded bedside table lamp casting warm amber falloff into deep dim room corners, and a closed painted wood bedroom door along the far wall",
+      "life": "steady warm lamp glow falls softly across rumpled linen folds while distant room shadows hold still",
+      "sound": "quiet night indoor air, faint distant clock tick, and soft cotton sheet rustle"
+    },
+    {
+      "id": "plate_real_attic_wood_sloped_bedroom",
+      "label": "🛏️ Real Attic Loft Bedroom: Exposed Timber Beams & Dormer Window (Daylight)",
+      "group": "00 · Everyday Simple Plates",
+      "domain": "bedroom",
+      "character": "sloped-ceiling attic bedroom with timber beams",
+      "rule": "a cozy sloped-ceiling attic bedroom with matte white plaster walls, exposed knotty pine ceiling beams, wide-plank pine floorboards, a low wooden platform bed tucked under the eave with rumpled oatmeal linen bedding and woven knit throw, and a paned dormer window letting cool natural daylight spill across the bed",
+      "life": "soft sky daylight from the dormer window grazes across raw pine beams and textured woven bedding",
+      "sound": "quiet attic stillness, subtle wood floorboard creak, and gentle exterior breeze"
+    },
+    {
+      "id": "plate_real_cheap_motel_venetian_blinds",
+      "label": "🛏️ Real Gritty Motel Room: Textured Walls, Worn Carpet & Venetian Blinds",
+      "group": "00 · Everyday Simple Plates",
+      "domain": "bedroom",
+      "character": "dated roadside motel room with venetian blinds",
+      "rule": "a lived-in roadside motel room with matte beige textured plaster walls, low-pile patterned carpet, wooden headboard and queen bed with quilted floral spread and crisp cotton sheets, scuffed laminate nightstand holding a corded desk phone and glass tumbler, and bent aluminum venetian blinds leaking muted amber streetlamp stripes",
+      "life": "muted amber streetlamp light seeps faintly through tilted aluminum blinds across textured walls",
+      "sound": "low motel air-conditioner fan hum and muffled distant highway traffic"
+    },
+    {
+      "id": "plate_real_lived_in_living_room_sofa",
+      "label": "🛋️ Real Living Room: Worn Fabric Sofa, Oak Floor & Window Plant (Overcast)",
+      "group": "00 · Everyday Simple Plates",
+      "domain": "sofa_lounge",
+      "character": "lived-in everyday apartment living room",
+      "rule": "an everyday apartment living room with matte off-white drywall, wide oak floorboards under a flatweave cotton rug, a deep heather-grey woven fabric sofa with creased linen cushions against the wall, scuffed walnut coffee table holding ceramic coasters and an open magazine, potted rubber plant in clay pot beside a tall double-hung window diffusing soft natural daylight",
+      "life": "even overcast daylight rests cleanly across woven upholstery, oak grain, and matte painted walls",
+      "sound": "natural indoor apartment room tone and soft fabric cushion rustle"
+    },
+    {
+      "id": "plate_real_small_urban_studio_apt",
+      "label": "🏠 Real Studio Apartment: Painted Brick Wall, Bed & Dining Table (Morning)",
+      "group": "00 · Everyday Simple Plates",
+      "domain": "bedroom",
+      "character": "compact city studio apartment with painted brick",
+      "rule": "a lived-in compact city studio apartment combining a painted matte whitewashed brick wall on screen-left with matte plaster walls, worn oak flooring, rumpled cotton-sheeted double bed near the back wall, small wooden dining table with two bentwood chairs and ceramic dishware, and soft morning daylight entering through a paned fire-escape window",
+      "life": "cool morning skylight grazes textured whitewashed brick mortar and rumpled cotton bedding",
+      "sound": "quiet city apartment room air and faint muffled street ambience through closed glass"
+    },
+    {
+      "id": "plate_real_home_office_cluttered_desk",
+      "label": "💻 Real Home Study: Matte Wood Desk, Bookshelves & Task Lamp",
+      "group": "00 · Everyday Simple Plates",
+      "domain": "office_desk",
+      "character": "lived-in home study with loaded bookshelves and wood desk",
+      "rule": "an enclosed home study with matte slate-grey drywall, loaded pine bookshelves packed with paperbacks along the back wall, scuffed solid walnut desk holding an open spiral notebook, stoneware mug, matte dark monitor and articulated metal task lamp casting focused warm light across wood grain and paper",
+      "life": "warm task lamp spill illuminates paper and walnut grain while loaded bookshelves recede into soft shadow",
+      "sound": "quiet indoor study room tone and faint paper rustle"
+    },
+    {
+      "id": "plate_real_everyday_kitchen_wooden_table",
+      "label": "☕ Real Kitchen: Matte Subway Tile, Butcher-Block Counter & Window Table",
+      "group": "00 · Everyday Simple Plates",
+      "domain": "general",
+      "character": "everyday home kitchen with butcher-block counter",
+      "rule": "an authentic lived-in home kitchen with chalky matte off-white subway tile backsplash, oiled oak butcher-block counter holding a wooden cutting board and ceramic kettle, cast-iron skillet on a four-burner gas stove, worn wooden kitchen table with mismatched timber chairs, striped cotton dish towel hanging on the oven handle, and soft daylight from a single sink window",
+      "life": "natural window daylight tracks across matte ceramic tile, oak grain, and cotton kitchen towels",
+      "sound": "quiet kitchen room tone and subtle refrigerator compressor hum"
+    },
+    {
+      "id": "plate_real_dim_apartment_hallway_door",
+      "label": "🚪 Real Apartment Hallway: Matte Plaster Scuffs, Hardwood & Brass Deadbolt",
+      "group": "00 · Everyday Simple Plates",
+      "domain": "general",
+      "character": "narrow residential apartment hallway",
+      "rule": "a narrow lived-in residential hallway bounded by matte cream plaster walls with painted wood baseboard trim, scuffed dark oak floorboards, framed snapshots hanging at eye height, a solid painted entry door with brushed brass deadbolt and coat hooks, and one warm glass ceiling fixture casting natural falloff down the corridor",
+      "life": "warm overhead ceiling fixture fades naturally toward the shadowed doorway at the far end of the hall",
+      "sound": "tight indoor corridor acoustics and subtle hardwood floor creaks"
+    },
+    {
+      "id": "plate_real_tiled_home_bathroom_mirror",
+      "label": "🪞 Real Home Bathroom: Matte Ceramic Tile, Wall Mirror & Pedestal Sink",
+      "group": "00 · Everyday Simple Plates",
+      "domain": "mirror_vanity",
+      "character": "everyday tiled apartment bathroom with mirror",
+      "rule": "an enclosed everyday apartment bathroom lined with matte off-white square ceramic wall tiles and darkened cement grout, white ceramic pedestal sink with brushed steel faucet, ceramic toothbrush cup and cotton hand towel on a wall ring, rectangular wood-framed wall mirror above the basin, and warm frosted sconce bulbs illuminating the space evenly",
+      "life": "warm sconce light settles cleanly across matte tile grout lines and subtle condensation near the mirror edge",
+      "sound": "tight tiled bathroom room acoustics and faint water pipe stillness"
+    },
+    {
+      "id": "plate_real_ceramic_tile_home_shower",
+      "label": "🚿 Real Home Shower: Matte Subway Tile, Chrome Showerhead & Glass Door",
+      "group": "00 · Everyday Simple Plates",
+      "domain": "wet_shower",
+      "character": "residential tiled walk-in shower",
+      "rule": "a grounded residential walk-in shower stall lined with matte off-white ceramic subway tiles and crisp grey cement grout, brushed chrome mixing valve and wall-mounted showerhead spraying steady clear water, textured clear glass door frame, and light warm steam softening the upper tile wall",
+      "life": "clear water streams steadily down matte ceramic tiles while light warm steam curls near the ceiling",
+      "sound": "steady indoor shower spray pattering cleanly against tiled walls and drain"
+    },
+    {
+      "id": "plate_real_concrete_laundry_basement",
+      "label": "🧺 Real Utility / Laundry Room: Matte Cinderblock Walls & Overhead Tube",
+      "group": "00 · Everyday Simple Plates",
+      "domain": "general",
+      "character": "raw concrete utility and laundry room",
+      "rule": "a raw basement utility and laundry room with matte grey painted cinderblock walls, poured concrete floor with faint sweep marks, matte white front-load washer and dryer holding a woven wicker laundry basket and folded cotton towels, exposed copper water pipes along the timber joist ceiling, and a single overhead utility light casting crisp downward contrast",
+      "life": "cool overhead utility tube illuminates painted cinderblock texture and concrete floor grain evenly",
+      "sound": "low utility room air stillness and subtle basement pipe hum"
     }
   ]
 }

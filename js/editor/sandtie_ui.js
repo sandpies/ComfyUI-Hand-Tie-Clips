@@ -229,6 +229,8 @@ function ensureMselStyle() {
 
 export const BUILTIN_DIAL_COMBOS = [
     { id: "__builtin_noir_rainy_cafe_confession", label: "SFW Noir Drama: Rainy Corner Café Quiet Confession", values: { style: "h3_astro_cinema", camera: "table_two_shot_profile_to_single", place: "cafe_rain_window", light: "soft_natural_window", wardrobe: "tailored_black_blazer_trousers", talkstyle: "earnest_dramatic_confession", ambience: "cafe", music: "piano_cello_65", colour: "kodak_vision3_500t", motion: "slow", energy: "calm", expression: "subtle", expr_read: "tense", life: "natural" } },
+    { id: "__builtin_ultrareal_daylight_matte_169", label: "🎞️ Ultra-Realism Rig: Raw Matte Skin, North Window & 35mm Grain (16:9)", values: { style: "style_ultrareal_matte_35mm", camera: "push_in", place: "plate_real_lived_in_living_room_sofa", light: "light_ultrareal_north_window_matte", lens: "cam_cooke_anamm_raw_50mm", colour: "colour_ultrareal_kodak_250d_grain", fx: "fx_ultrareal_35mm_celluloid_grain", fx_timing: "from_start", ambience: "room_tone", motion: "natural", energy: "calm", expression: "subtle", expr_read: "warm", life: "natural" } },
+    { id: "__builtin_ultrareal_night_practical_916", label: "📷 Ultra-Realism Rig: Raw Sensor Portrait, Single Lamp & Grain (9:16)", values: { style: "style_ultrareal_raw_sensor_doc", camera: "handheld", place: "plate_real_night_bedside_lamp_bedroom", light: "light_ultrareal_single_practical_raw", lens: "cam_cooke_anamm_raw_50mm", colour: "colour_ultrareal_neutral_rec709", fx: "fx_ultrareal_35mm_celluloid_grain", fx_timing: "from_start", ambience: "room_tone", motion: "natural", energy: "calm", expression: "subtle", expr_read: "warm", life: "natural" } },
     { id: "__builtin_rooftop_skyline_banter", label: "SFW Cinema: Golden-Hour Rooftop Skyline Talk", values: { style: "h3_astro_cinema", camera: "arc_right", place: "plate_luxury_rooftop_infinity_pool", light: "sunset_silhouette_halo_rim", wardrobe: "casual_silk_camisole_denim", talkstyle: "warm_witty_banter", colour: "fuji_eterna_soft", music: "ethereal_shoegaze_dream_95", motion: "slow", energy: "calm", expression: "natural", expr_read: "warm", life: "alive" } },
     { id: "__builtin_kdrama_subway_rain_walk", label: "SFW K-Drama: Neon Alley Rain Walk & Look-Back", values: { style: "korean_drama_glow", camera: "steadicam_follow", place: "neon_night_street", light: "neon_rain_window_caustics", colour: "colour_cinestill_800t_halation", wardrobe: "street_cropped_jacket_cargo", talkstyle: "natural_conversational", ambience: "rain_heavy", music: "piano_cello_65", motion: "natural", energy: "steady", expression: "natural", expr_read: "warm", life: "alive" } },
     { id: "__builtin_loft_studio_vlog_host", label: "SFW Everyday: Sunlit Artist Loft Camera Vlog", values: { style: "h3_astro_cinema", camera: "push_in", place: "sunlit_loft_studio", light: "soft_natural_light", colour: "colour_kodak_portra_400_warm", wardrobe: "casual_silk_camisole_denim", talkstyle: "bright_vlog_host", ambience: "room_tone", music: "city_pop_80s_112", motion: "natural", energy: "charged", expression: "vivid", expr_read: "warm", life: "alive" } },
@@ -337,7 +339,7 @@ export const BUILTIN_DIAL_COMBOS = [
     { id: "__builtin_solo_waacking_crunk_neon_916", label: "⚡ Energy Solo: Arm Waacking, Reverse Backsteps & Hook-Kick Hang (9:16)", values: { style: "style_douyin_highgloss_neon_beauty", pose: "dance_solo_waacking_crunk_hook_kick_12s", camera: "cam_distant_wide_master_to_hardcut_closeup", place: "plate_tokyo_izakaya_lantern_alley", wardrobe: "street_idol_stage_coord_blazer_mini", light: "neon_rain_window_caustics", colour: "colour_douyin_porcelain_neon_cyan", music: "kpop_crunk_waacking_132", motion: "max", energy: "peak", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
     { id: "__builtin_duet_house_jack_backstep_169", label: "🔥 Energy Duet: Stacked V-Lean -> Same-Dir Backsteps + House Jack (16:9)", values: { style: "style_commercial_beauty_skincare_reel", pose: "dance_duet_stacked_v_lean_popping_microfreeze,dance_duet_same_dir_backstep_waacking_crunk", camera: "cam_distant_wide_master_to_hardcut_closeup", place: "plate_concrete_rooftop_parking_golden", wardrobe: "everyday_oversized_poplin_shirt_bike_shorts", light: "sunset_silhouette_halo_rim", colour: "colour_golden_hour_bronze_glow", music: "house_jack_shuffle_126", motion: "max", energy: "peak", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
     { id: "__builtin_solo_kpop_dancebreak_43", label: "💥 K-Pop Solo Dance Break (15s 4:3): 5-Cut Popping, Waacking & Hook-Kick Hang", values: { style: "style_kpop_music_bank_4k_stage", pose: "dance_solo_hyper_dancebreak_5cut_montage", camera: "cam_viral_dutch_90roll_wipe_cuts", place: "plate_proscenium_theater_stage_spotlight", wardrobe: "action_cyber_idol_metallic_corset_boots", light: "light_kpop_concert_multi_spot_haze", colour: "colour_kpop_pastel_milk_highlights", fx: "fx_kpop_confetti_sparkle_cannon", fx_timing: "from_start", music: "kpop_hyper_hype_train_134", motion: "max", energy: "peak", expression: "vivid", expr_read: "intense", life: "hyper", talk_mode: "silent" } },
-    { id: "__builtin_duet_gym_crunk_hook_hang_916", label: "🥁 Energy Duet: Mirror Gym Crunk Lock, Body Wave & Hook-Kick Hang (9:16)", values: { style: "style_douyin_highgloss_neon_beauty", pose: "dance_duet_same_dir_backstep_waacking_crunk,dance_duet_hook_kick_hang_quickstep_break", camera: "cam_stacked_reveal_dutch_zoom_level", place: "plate_private_gym_mirror_weight_bench", wardrobe: "street_cargo_miniskirt_zip_hoodie_platforms", light: "soft_natural_light", colour: "colour_kpop_pastel_milk_highlights", music: "kpop_crunk_waacking_132", motion: "max", energy: "peak", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
+    { id: "__builtin_duet_gym_crunk_hook_hang_916", label: "🥁 Energy Duet: Mirror Gym Crunk Lock, Body Wave & Hook-Kick Hang (9:16)", values: { style: "style_douyin_highgloss_neon_beauty", pose: "dance_duet_hook_kick_hang_quickstep_break", camera: "multi_angle_action_close", place: "plate_private_gym_mirror_weight_bench", wardrobe: "street_cargo_miniskirt_zip_hoodie_platforms", light: "soft_natural_light", colour: "colour_kpop_pastel_milk_highlights", music: "kpop_crunk_waacking_132", motion: "max", energy: "peak", expression: "vivid", expr_read: "sly", life: "hyper", talk_mode: "silent" } },
     { id: "__builtin_simple_bedroom_nsfw_missionary_916", label: "🛏️ Simple Enclosed Bedroom: Casual Top Strip -> Bed Crawl -> Missionary (9:16)", values: { style: "glamour_boudoir_8k", camera: "portrait_vertical_stack", place: "plate_simple_enclosed_soft_natural_bedroom", light: "soft_natural_light", colour: "champagne_honey_glow", explicit: "cont_simple_bedroom_casual_strip_to_missionary", wardrobe: "street_oversized_boyfriend_hoodie_bare_legs", motion: "natural", energy: "steady", expression: "vivid", expr_read: "sensual", life: "alive", talk_mode: "auto" } },
     { id: "__builtin_uber_stairwell_railing_brawl_169", label: "UBER FIGHT (ms): Cramped Concrete Stairwell Railing Toss & Slam (16:9)", values: { style: "john_wick_neon_gunfu", camera: "cam_combat_kinetic_whip_zoom_ultimate", combat: "uber_fight_stairwell_railing_brawl", place: "plate_rainy_backstage_concert_tunnel", light: "cyber_dual_gel", colour: "crimson_john_wick_gold", wardrobe: "action_stealth_infiltration_turtleneck_harness", music: "john_wick_club_techno_132", motion: "max", energy: "peak", expression: "stoic", expr_read: "intense", life: "hyper", talk_mode: "silent" } },
     { id: "__builtin_uber_scifi_lab_onetake_brawl_169", label: "UBER FIGHT (ms): One-Take Sci-Fi Bio-Lab Table Vault, Spark Sweep & Penultimate Blast (16:9)", values: { style: "h3_astro_cinema", combat: "uber_fight_scifi_lab_table_vault_chamber_ko", camera: "cam_combat_kinetic_whip_zoom_ultimate", place: "plate_sterile_scifi_biolab_stainless_chamber", light: "cyber_dual_gel", colour: "teal_orange", fx: "vfx_kinetic_shockwave_dust_ring", fx_timing: "from_start", music: "john_wick_club_techno_132", motion: "max", energy: "peak", expression: "vivid", expr_read: "intense", life: "hyper", talk_mode: "silent" } },
@@ -2414,14 +2416,14 @@ function createSandTieCore(node, {
         const isAnimeOpt = (it) => /(?:anime|sakuga|manhwa|2d_|manga|makoto|ghibli|trigger|ufotable|arcane|edgerunner|hollow_purple|black_flash|rasengan|susanoo|senbonzakura|water_breathing|hinokami|thunder_clap|moon_breathing|beast_breathing|mist_breathing|domain_void|getsu|bankai|amaterasu|gear_fifth|chainsaw|conquerors_haki)/.test(itemBlob(it));
         const isWuxiaOpt = (it) => /(?:wuxia|samurai|iaido|katana|bamboo|shinobi|kunoichi|shihakusho|kimono|shamisen|dojo)/.test(itemBlob(it));
         const isCyberOpt = (it) => /(?:cyber|neon|holo|mantis|sandevistan|starship|scifi|biolab|mech|laser|hud|plasma)/.test(itemBlob(it));
-        const isDayPlace = (it) => /(?:morning|sunlit|amalfi|pacific_wet_sand|mediterranean|parking_golden|ring_sunlight|ballet_rehearsal|scandinavian|pine_forest_sunbeams|stoop_golden|private_gym|sunpad_mediterranean|infinity_courtyard|simple_enclosed|plain_soft_natural)/.test(itemBlob(it));
-        const isNightNeonPlace = (it) => /(?:neon|night|midnight|hongdae|izakaya|laundromat|bowling|ramen|proscenium|strip_club|backstage|shibuya|lantern|subway|obsidian|foundry|throne|vault)/.test(itemBlob(it));
+        const isDayPlace = (it) => /(?:morning|sunlit|amalfi|pacific_wet_sand|mediterranean|parking_golden|ring_sunlight|ballet_rehearsal|scandinavian|pine_forest_sunbeams|stoop_golden|private_gym|sunpad_mediterranean|infinity_courtyard|simple_enclosed|plain_soft_natural|real_lived_in|real_attic|real_small_urban|real_everyday_kitchen)/.test(itemBlob(it));
+        const isNightNeonPlace = (it) => /(?:neon|night|midnight|hongdae|izakaya|laundromat|bowling|ramen|proscenium|strip_club|backstage|shibuya|lantern|subway|obsidian|foundry|throne|vault|real_night_bedside|real_cheap_motel|real_dim_apartment)/.test(itemBlob(it));
         const lightMatchesPlace = (lt, pl) => {
             if (!lt) return false;
             const lb = itemBlob(lt);
             if (/refrigerator_door|police_red_blue|bioluminescent/.test(lb)) return false;
             if (pl && isDayPlace(pl)) {
-                return /(?:soft_natural|sunset|golden|dappled|overcast|three_point|butterfly|high_key)/.test(lb);
+                return /(?:soft_natural|sunset|golden|dappled|overcast|three_point|butterfly|high_key|north_window|raking)/.test(lb);
             }
             if (pl && isNightNeonPlace(pl)) {
                 return /(?:neon|cyber|strobe|kpop_concert|ringlight|ring_beauty|laser|puddle|chiaroscuro|blue_hour|moonlight|vip_amber|red_velvet|underground_cage|fluorescent|practical|firelight)/.test(lb);
@@ -2817,6 +2819,9 @@ function createSandTieCore(node, {
         if (_sharedStatus.running) {
             statusPill.textContent = `${_sharedStatus.backend_label || "Writer"} Ready`;
             statusPill.className = "h3st-pill h3st-pill-ok";
+        } else if (_sharedStatus.loading) {
+            statusPill.textContent = `${_sharedStatus.backend_label || "Writer"} Loading…`;
+            statusPill.className = "h3st-pill";
         } else {
             statusPill.textContent = `${_sharedStatus.backend_label || "Writer"} Offline`;
             statusPill.className = "h3st-pill";
@@ -2835,6 +2840,7 @@ function createSandTieCore(node, {
             if (j.ok) {
                 _sharedStatus = {
                     running: Boolean(j.running),
+                    loading: Boolean(j.loading),
                     backend: j.backend,
                     backend_label: j.backend_label,
                     model: j.model,
@@ -3015,7 +3021,7 @@ function createSandTieCore(node, {
                 return;
             }
             say(j.note || "Starting local writer… waiting for server.", "hint");
-            for (let i = 0; i < 40; i++) {
+            for (let i = 0; i < 80; i++) {
                 await new Promise((res) => setTimeout(res, 1500));
                 await refreshStatus(false);
                 if (_sharedStatus.running) {
@@ -3023,7 +3029,7 @@ function createSandTieCore(node, {
                     say(`${_sharedStatus.backend_label || "Writer"} Ready!`, "hint");
                     return;
                 }
-                if (_sharedStatus.startup_error) {
+                if (_sharedStatus.startup_error && !_sharedStatus.loading) {
                     say(`Writer stopped during startup: ${_sharedStatus.startup_error}`, "error");
                     return;
                 }
@@ -3137,7 +3143,15 @@ function createSandTieCore(node, {
         setBusyState(true);
         abortBtn.hidden = false;
         activeAbortCtrl = new AbortController();
-        say(stage === "skeleton" ? "Building 0-VRAM beat skeleton…" : (stage === "cpu" ? "Assembling instant CPU H3 prompt…" : `Running SandTie (${stage})…`), "hint");
+        const wakingLocal = (stage !== "skeleton" && stage !== "cpu") && !_sharedStatus.running && swWake.chk.checked && (_sharedStatus.backend === "ninfer" || writerModeSel.value === "ninfer");
+        say(
+            stage === "skeleton"
+                ? "Building 0-VRAM beat skeleton…"
+                : (stage === "cpu"
+                    ? "Assembling instant CPU H3 prompt…"
+                    : (wakingLocal ? `Waking nInfer & running SandTie (${stage})…` : `Running SandTie (${stage})…`)),
+            "hint",
+        );
         try {
             const r = await fetch(SANDTIE_WRITE_URL, {
                 method: "POST",

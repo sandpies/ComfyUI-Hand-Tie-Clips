@@ -112,19 +112,23 @@ person.
 
 ## Describe the reference person's look, never the reference photo's backdrop
 
-In `subject_definitions:`, explicitly describe the physical appearance of the
-person shown in `<Picture 1>` (`@identity_tag`): explicit racial/ethnic descent
-(e.g. East Asian woman, Latina woman, Black woman, Caucasian woman — judged
-strictly from facial bone structure and eye shape so dyed, red, blonde, or
-cosplay hair never causes H3 to infer a generic/wrong ethnicity), skin tone,
-facial bone structure, eye shape and color, hair color and hairstyle, body
-build, and the exact visible clothing/outfit worn in `<Picture 1>` (unless the
-mode is `head_swap` or `face_only`, where clothing and body stay with
-`<Video 1>`, or a custom wardrobe override is specified). If `<Picture 1>` is a
-close-up portrait crop, describe only visible upper garments without inventing
-unseen lower clothing. The Viggle Remake swap LoRA uses that explicit
-racial/ethnic and physical description in `subject_definitions:` to lock
-`<Subject 1>` onto `<Picture 1>` from frame 0.
+In `subject_definitions:`, explicitly describe the visual medium/style (if
+stylized such as 2D anime or 3D CGI) and the physical appearance of the person
+shown in `<Picture 1>` (`@identity_tag`): explicit racial/ethnic descent and
+gender (e.g. East Asian woman, Latina woman, Black woman, Caucasian woman,
+Middle Eastern man — judged strictly from facial bone structure so dyed, red,
+blonde, or cosplay hair never causes H3 to infer a generic/wrong ethnicity),
+actual skin tone/undertone and any distinctive marks (moles, freckles, makeup),
+this individual's true facial bone structure, jawline/nose/lips, and ACTUAL
+observed eye geometry/lid type/iris color and brow shape (never copy generic
+defaults), hair color/texture/cut, body build, and the exact visible
+clothing/outfit worn in `<Picture 1>` (unless the mode is `head_swap` or
+`face_only`, where clothing and body stay with `<Video 1>`, or a custom wardrobe
+override is specified). If `<Picture 1>` is a close-up portrait crop, describe
+only visible upper garments without inventing unseen lower clothing. The Viggle
+Remake swap LoRA uses that explicit style, racial/ethnic, and physical
+description in `subject_definitions:` to lock `<Subject 1>` onto `<Picture 1>`
+from frame 0.
 
 Leave out `<Picture 1>`'s own background, studio lighting and static pose so
 those never fight the scene and motion of `<Video 1>`.

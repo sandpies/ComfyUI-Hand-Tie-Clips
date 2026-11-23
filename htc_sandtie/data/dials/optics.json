@@ -26,41 +26,6 @@
       "domain": "general"
     },
     {
-      "id": "directive_framing_landing",
-      "label": "🎯 Directive Law: Framing as Move Landing (Open on Pin, Land on Target Size)",
-      "group": "Time & motion",
-      "rule": "framing-as-landing directive: open on the starting view and let the camera movement carry the frame smoothly to land on the target framing by the end of the beat.",
-      "domain": "general"
-    },
-    {
-      "id": "directive_tail_ongoing",
-      "label": "🎯 Directive Tail: Ongoing Action Through Final Frame (zero Reference Freeze)",
-      "group": "Time & motion",
-      "rule": "ongoing tail directive: the primary physical action, rhythm, and breathing remain actively underway right through the final millisecond of the clip so the frame stays alive to the very end.",
-      "domain": "general"
-    },
-    {
-      "id": "directive_tail_settle_hold",
-      "label": "🎯 Directive Tail: Smooth Settle & Living Hold in Final 2 Seconds",
-      "group": "Time & motion",
-      "rule": "settle-and-hold tail directive: the main gesture eases smoothly to its resting mark in the final two seconds and holds steady while visible breathing, subtle eye shifts, and ambient light continue.",
-      "domain": "general"
-    },
-    {
-      "id": "fieldcraft_micro_clocks",
-      "label": "⏱️ Field-Craft: Sub-Second Micro-Clocked Limb Paths (Onset -> Path -> Contact -> Recoil)",
-      "group": "Time & motion",
-      "rule": "field-craft micro-clocked action grammar: spell out every physical interaction by naming the actor, the moving body part, the exact trajectory path, the contact point, the immediate skin/cloth deformation, and the follow-through recoil.",
-      "domain": "general"
-    },
-    {
-      "id": "fieldcraft_anchored_isolation",
-      "label": "⚓ Field-Craft: Anchored Body + Single-Axis Isolated Moving Part (Zero Drift)",
-      "group": "Composition",
-      "rule": "anchored body isolation: explicitly state which part of the body stays planted and stationary on the surface and which single limb or hip axis moves, keeping the surrounding frame rock-solid.",
-      "domain": "general"
-    },
-    {
       "id": "anamorphic_oval_bokeh_streak",
       "label": "🔭 2x Anamorphic Cinema Prime (Vertical Oval Bokeh + Blue Horizontal Streak)",
       "group": "Lens",
@@ -117,25 +82,11 @@
       "domain": "general"
     },
     {
-      "id": "comp_zero_clip_headroom_limb_guard",
-      "label": "🛡️ Directive: Zero-Clip Headroom & Full-Limb Frame Guard",
-      "group": "Composition",
-      "rule": "strict headroom and limb framing guard: maintain clean 10% breathing room above the highest head/hair and keep active hands, hips, and contact zones comfortably inside the frame borders across every beat.",
-      "domain": "general"
-    },
-    {
       "id": "tex_wet_skin_micro_specular_lock",
       "label": "✨ Directive: Wet / Oiled Skin Micro-Specular & Subsurface Scattering Lock",
       "group": "Film texture",
       "rule": "hyper-tactile skin rendering: crisp micro-specular highlights on beads of sweat, body oil, and glossy lips paired with warm red-orange subsurface scattering through ears, fingertips, and curves.",
       "domain": "general"
-    },
-    {
-      "id": "motion_anime_impact_speed_ramp",
-      "label": "⚡ Directive: Anime2Real Speed-Ramp (Slow-Mo Windup → Instant Whip Strike → Impact Hold)",
-      "group": "Time & motion",
-      "rule": "dynamic anime speed-ramping: slow the windup to a tension-filled 120fps glide, accelerate the strike into a 2-frame supersonic whip-snap, and hold for a micro-beat on the explosive impact shockwave.",
-      "domain": "combat_action"
     },
     {
       "id": "angle_sole_and_heel_ground_worship",
@@ -551,13 +502,6 @@
       "domain": "general"
     },
     {
-      "id": "speed_ramp",
-      "label": "Fluid Speed-Ramp Cadence",
-      "group": "Time",
-      "rule": "smooth brisk real-time approach gliding cleanly into suspended slow-motion emphasis",
-      "domain": "general"
-    },
-    {
       "id": "split",
       "label": "Clean Split-Screen Composition",
       "group": "Composition",
@@ -572,13 +516,6 @@
       "domain": "general"
     },
     {
-      "id": "step_print",
-      "label": "Expressive Motion-Streak Cadence",
-      "group": "Time",
-      "rule": "dreamy stepped shutter cadence leaving delicate silky motion trails across neon nightlife",
-      "domain": "general"
-    },
-    {
       "id": "thirds",
       "label": "Classic Rule-of-Thirds Balance",
       "group": "Composition",
@@ -590,13 +527,6 @@
       "label": "Selective Miniature Tilt-Shift Plane",
       "group": "Focus",
       "rule": "angled selective focus slice keeping one thin band razor-sharp while foreground and background blur softly",
-      "domain": "general"
-    },
-    {
-      "id": "time_lapse",
-      "label": "Fluid Light-Shift Time-Lapse",
-      "group": "Time",
-      "rule": "smooth accelerated passage of shifting shadows, clouds, and neon trails around a poised subject",
       "domain": "general"
     },
     {
@@ -660,6 +590,20 @@
       "label": "🌀 Golden Ratio Lead Room (1.618 Balance & Directional Gaze)",
       "group": "Composition",
       "rule": "balanced golden-ratio placement giving generous open breathing room across the direction the subject looks or walks",
+      "domain": "general"
+    },
+    {
+      "id": "tex_ultrareal_matte_skin_pores",
+      "label": "🧬 Ultra-Realism Lock: Dry Matte Skin Pores & Vellus Hair",
+      "group": "Film texture",
+      "rule": "dry matte natural human skin texture with crisp visible pores across nose bridge and cheeks, fine peach-fuzz vellus hairs along jawline and forearms, subtle knuckle and lip micro-creases, authentic uneven capillary undertones, and dry tactile cloth fibers",
+      "domain": "general"
+    },
+    {
+      "id": "cam_cooke_anamm_raw_50mm",
+      "label": "🎥 Ultra-Realism 50mm Raw Prime (Micro-Contrast & Shadow Latitude)",
+      "group": "Lens",
+      "rule": "Shot on a sharp 50mm cinema prime lens at f/2.8 with honest edge-to-edge optical resolution, crisp micro-contrast, deep neutral shadow toe, gentle unclipped highlight rolloff, and natural depth falloff",
       "domain": "general"
     }
   ]

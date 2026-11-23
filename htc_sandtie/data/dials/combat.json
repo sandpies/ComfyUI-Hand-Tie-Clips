@@ -152,7 +152,7 @@
       "id": "combat_catfight_hair_grapple",
       "label": "Catfight / Rivalry — Collar & Hair Grapple -> Floor Roll -> Dominant Straddle Pin",
       "group": "Grappling, Wrestling & Catfight",
-      "rule": "Frame a visceral medium shot keeping both women's expressive faces, torsos, and hands clearly in view. In Beat 1, <Subject 1> and <Subject 2> lunge together chest-to-chest, grabbing tight fistfuls of each other's collars and hair in a heated, trash-talking grapple (`(DIALOGUE) ... <d>[furious, bratty rivalry snarl] Get your hands off me, bitch—!!</d>`). in Beat 2, <Subject 1> twists and shoves <Subject 2> down onto the floor, rolling on top to straddle her waist and pinning both of her wrists down overhead against the surface. in Beat 3, <Subject 1> leans low over the pinned rival before turning her head to smirk victoriously straight into the camera lens (`(DIALOGUE) ... <d>[breathless, triumphant queen smirk] Look who's on top now~!! Stay pinned!!</d>`).",
+      "rule": "Frame a visceral medium shot keeping both women's expressive faces, torsos, and hands clearly in view. In Beat 1, <Subject 1> on screen-left and <Subject 2> on screen-right lunge together chest-to-chest, grabbing tight fistfuls of each other's collars and hair in a heated, trash-talking grapple (`(DIALOGUE) ... <d>[furious, bratty rivalry snarl] Get your hands off me, bitch—!!</d>`). in Beat 2, <Subject 1> twists and shoves <Subject 2> down onto the floor, rolling on top to straddle her waist and pinning both of her wrists down overhead against the surface. in Beat 3, <Subject 1> leans low over the pinned rival before turning her head to smirk victoriously straight into the camera lens (`(DIALOGUE) ... <d>[breathless, triumphant queen smirk] Look who's on top now~!! Stay pinned!!</d>`).",
       "aspect_best": "16:9",
       "aspect_badge": "🖥️ 16:9",
       "aspect_tip": "🖥️ BEST RESOLUTION: 16:9 Landscape (1344×768) — Widescreen horizontal arena fits the hero plus flanking/rushing goons, wide sword/elemental arcs, and lateral combat travel without side-clipping.",
@@ -176,7 +176,7 @@
       "id": "combat_john_wick_car_spin",
       "label": "Gun-Fu — Center-Axis Relock Twin-Pistol Spin -> Muzzle Flash & Brass -> Tactical Reload",
       "group": "Gun-Fu, Tactical & Firearms",
-      "rule": "Frame a sleek, high-contrast medium shot in neon-lit shadow. In Beat 1, <Subject 1> holds twin semi-automatic pistols canted at 45 degrees in a close-chest Center-Axis Relock stance, firing a crisp double-tap that erupts in bright orange muzzle flashes and sends gleaming brass shell casings spinning through the air. in Beat 2, <Subject 1> pivots 180 degrees in a fluid John Wick spin while extending one arm to fire two more booming shots through swirling gunsmoke (`(DIALOGUE) ... <d>[focused, ice-cold tactical exhale] Clear left... clear right!!</d>`). in Beat 3, <Subject 1> flicks empty magazines out, slams fresh mags home with a metallic clack, racks the slide against their belt, and levels the smoking barrel dead at the camera lens (`(DIALOGUE) ... <d>[cold, lethal deadpan] One bullet left... and it has your name on it.</d>`).",
+      "rule": "Frame a sleek, high-contrast medium shot in neon-lit shadow. In Beat 1, <Subject 1> holds twin semi-automatic pistols canted at 45 degrees in a close-chest tight chest-high close-quarters pistol guard stance, firing a crisp double-tap that erupts in bright orange muzzle flashes and sends gleaming brass shell casings spinning through the air. in Beat 2, <Subject 1> pivots 180 degrees in a fluid John Wick spin while extending one arm to fire two more booming shots through swirling gunsmoke (`(DIALOGUE) ... <d>[focused, ice-cold tactical exhale] Clear left... clear right!!</d>`). in Beat 3, <Subject 1> flicks empty magazines out, slams fresh mags home with a metallic clack, racks the slide against their belt, and levels the smoking barrel dead at the camera lens (`(DIALOGUE) ... <d>[cold, lethal deadpan] One bullet left... and it has your name on it.</d>`).",
       "aspect_best": "16:9",
       "aspect_badge": "🖥️ 16:9",
       "aspect_tip": "🖥️ BEST RESOLUTION: 16:9 Landscape (1344×768) — Widescreen horizontal arena fits the hero plus flanking/rushing goons, wide sword/elemental arcs, and lateral combat travel without side-clipping.",
@@ -428,7 +428,7 @@
       "id": "combat_1v1_parry_elbow_sweep_finisher",
       "label": "🥋 Field-Craft 1v1 Combo: Forearm Parry -> Spinning Back-Elbow -> Leg Sweep Knockdown",
       "group": "Martial Arts & Hand-to-Hand",
-      "rule": "Stage a crisp, micro-clocked 1v1 hand-to-hand exchange with clear onset, contact, and recoil: in Beat 1, <Subject 2> lunges in with a straight right punch, and the lead of <Subject 1> left forearm slaps the wrist aside off-line. in Beat 2, <Subject 1> pivots 180 degrees on their front ball of the foot and drives a point-blank spinning back-elbow squarely into the jaw of <Subject 2>, snapping their head sideways with a spray of sweat. in Beat 3, <Subject 1> drops low and sweeps their rear shin across the ankles of <Subject 2>, sending <Subject 2> crashing flat onto the floor while <Subject 1> holds a low combat guard.",
+      "rule": "Stage a crisp, micro-clocked 1v1 hand-to-hand exchange with clear onset, contact, and recoil: in Beat 1, <Subject 2> lunges in with a straight right punch, and the lead left forearm of <Subject 1> slaps the wrist aside off-line. in Beat 2, <Subject 1> pivots 180 degrees on their front ball of the foot and drives a point-blank spinning back-elbow squarely into the jaw of <Subject 2>, snapping their head sideways with a spray of sweat. in Beat 3, <Subject 1> drops low and sweeps their rear shin across the ankles of <Subject 2>, sending <Subject 2> crashing flat onto the floor while <Subject 1> holds a low combat guard.",
       "aspect_best": "16:9",
       "aspect_badge": "🖥️ 16:9",
       "aspect_tip": "🖥️ BEST RESOLUTION: 16:9 Landscape (1344×768) — Widescreen horizontal arena fits the hero plus flanking/rushing goons, wide sword/elemental arcs, and lateral combat travel without side-clipping.",
@@ -452,7 +452,7 @@
       "id": "combat_thigh_headscissor_hurricanrana",
       "label": "🤼 Black Widow Flying Headscissor Takedown -> Ground Armbar Pin",
       "group": "Grappling, Wrestling & Catfight",
-      "rule": "Stage an acrobatic femme-fatale grappling takedown: in Beat 1, <Subject 1> sprints forward, leaps onto the shoulders of <Subject 2>, and clamps both toned thighs tightly around the neck of <Subject 2>. in Beat 2, <Subject 1> whips her torso backward in a twisting hurricanrana arch that flips <Subject 2> head-over-heels onto the mat with a heavy thud. in Beat 3, <Subject 1> locks the arm of <Subject 2> between her thighs on the floor and glares into the lens with a breathless smirk.",
+      "rule": "Stage an acrobatic femme-fatale grappling takedown: in Beat 1, <Subject 1> sprints from screen-left toward <Subject 2> standing screen-right, leaps onto the shoulders of <Subject 2>, and clamps both toned thighs tightly around the neck of <Subject 2>. in Beat 2, <Subject 1> whips her torso backward in a twisting flying thigh-scissors headlock flip that flips <Subject 2> head-over-heels onto the mat with a heavy thud. in Beat 3, <Subject 1> locks the arm of <Subject 2> between her thighs on the floor and glares into the lens with a breathless smirk.",
       "aspect_best": "16:9",
       "aspect_badge": "🖥️ 16:9",
       "aspect_tip": "🖥️ BEST RESOLUTION: 16:9 Landscape (1344×768) — Widescreen horizontal arena fits the hero plus flanking/rushing goons, wide sword/elemental arcs, and lateral combat travel without side-clipping.",
@@ -488,7 +488,7 @@
       "id": "combat_tactical_knife_disarm_reversal",
       "label": "🗡️ Close-Quarters Knife Disarm, Wrist-Lock & Throat-Edge Hold",
       "group": "Katana, Sword & Melee",
-      "rule": "Stage a razor-sharp close-quarters knife reversal: in Beat 1, <Subject 2> slashes forward with a steel combat knife, and <Subject 1> steps inside the arc, trapping the wrist of <Subject 2> with both hands. in Beat 2, <Subject 1> twists the wrist sharply until the knife drops, catches the falling handle mid-air in a reverse-grip, and spins behind <Subject 2>. in Beat 3, <Subject 1> holds the gleaming blade edge steady just beneath the chin of <Subject 2> while locking eyes with the camera.",
+      "rule": "Stage a razor-sharp close-quarters knife reversal: in Beat 1, <Subject 2> on screen-right slashes forward toward <Subject 1> on screen-left with a steel combat knife, and <Subject 1> steps inside the arc, trapping the wrist of <Subject 2> with both hands. in Beat 2, <Subject 1> twists the wrist sharply until the knife drops, catches the falling handle mid-air in a reverse-grip, and spins behind <Subject 2>. in Beat 3, <Subject 1> holds the gleaming blade edge steady just beneath the chin of <Subject 2> while locking eyes with the camera.",
       "aspect_best": "9:16",
       "aspect_badge": "📱 9:16",
       "aspect_tip": "📱 BEST RESOLUTION: 9:16 Portrait (768×1344) — Vertical Y-axis stunt/combat (high kicks, uppercuts, sky drops, towering avatars, or tight stairwell/elevator quarters) stacks cleanly in 9:16.",
@@ -833,30 +833,6 @@
       "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Gives opening stance, impact VFX, and heroic finish clean breathing room."
     },
     {
-      "id": "combat_anime2real_spiderverse_comic_halftone_smash",
-      "label": "💥 Mixed-Reality Slop: Photoreal Fighter + Comic Halftone Dots, Chromatic Split & 'POW/WHAM' Frames",
-      "group": "00 · Anime-to-Real-Life (Anime2Real) & Mixed-Reality VFX",
-      "rule": "Stage a Spider-Verse style Mixed-Reality Live-Action + Comic-Book pop-art fight: keep <Subject 1> live-action photorealistic while every punch and kick triggers Ben-Day halftone dot explosions, RGB chromatic-aberration split frames, and bold 3D comic-book action lettering in the air! In Beat 1, <Subject 1> dodges a goon's swing as jagged yellow spider-sense lightning lines flash around their head. in Beat 2, <Subject 1> lands a leaping uppercut that bursts with a halftone neon impact star and floating comic lettering. in Beat 3, <Subject 1> lands in a low crouch as comic ink speed-lines frame the shot.",
-      "aspect_best": "16:9",
-      "aspect_badge": "🖥️ 16:9",
-      "aspect_tip": "🖥️ BEST RESOLUTION: 16:9 Landscape (1344×768) — Widescreen horizontal arena fits the hero plus flanking/rushing goons, wide sword/elemental arcs, and lateral combat travel without side-clipping.",
-      "domain": "combat_action",
-      "duration_best": "10-14 s",
-      "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Gives opening stance, impact VFX, and heroic finish clean breathing room."
-    },
-    {
-      "id": "combat_anime2real_retro_arcade_hitstop_healthbar_ko",
-      "label": "🕹️ Mixed-Reality Slop: Street Fighter Hit-Stop Freeze, Pixel Sparks & Floating 'K.O.!' Hologram",
-      "group": "00 · Anime-to-Real-Life (Anime2Real) & Mixed-Reality VFX",
-      "rule": "Stage a live-action fighting-game Mixed-Reality combo with arcade HUD VFX: in Beat 1, <Subject 1> chains a rapid three-hit punch-kick combo into a goon while glowing neon combo-counter numbers (`3 HITS!`) and pixel hit-sparks pop in mid-air beside every strike. in Beat 2, <Subject 1> unleashes a flaming rising uppercut with a brief 3-frame hit-stop impact flash that launches the goon off their feet. in Beat 3, a glowing holographic `K.O.!` banner flashes in the air behind <Subject 1> as they cross their arms in a victory pose.",
-      "aspect_best": "16:9",
-      "aspect_badge": "🖥️ 16:9",
-      "aspect_tip": "🖥️ BEST RESOLUTION: 16:9 Landscape (1344×768) — Widescreen horizontal arena fits the hero plus flanking/rushing goons, wide sword/elemental arcs, and lateral combat travel without side-clipping.",
-      "domain": "combat_action",
-      "duration_best": "10-14 s",
-      "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Gives opening stance, impact VFX, and heroic finish clean breathing room."
-    },
-    {
       "id": "combat_goons_elevator_close_quarters_4man_beatdown",
       "label": "🛗 1-vs-4 Glass Elevator Brawl: Elbow-Clinch-Headbutt Clearing 4 Goons in Cramped Box + Heavy SFX",
       "group": "00 · 1-vs-Many Invented Goons & SFX Brawls",
@@ -977,18 +953,6 @@
       "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Gives opening stance, impact VFX, and heroic finish clean breathing room."
     },
     {
-      "id": "combat_goons_squad_raid_s1_s9_back_to_back_boss_brawl",
-      "label": "⚔️ Multi-Hero Squad Raid (S1–S9 vs Goons) — Synchronized Team Combo, Ally Assist Toss & Simultaneous Finisher",
-      "group": "00 · 1-vs-Many Invented Goons & SFX Brawls",
-      "rule": "Stage a high-octane multi-hero team brawl uniting <Subject 1> and <Subject 2> with allied squad mates against a swarm of black-masked tactical goons with heavy punch, blade, and shockwave impacts audible throughout: in Beat 1, <Subject 1> and <Subject 2> fight back-to-back at center frame, parrying batons and trading crisp cross-counters. in Beat 2, <Subject 2> drops to one knee to launch <Subject 1> and allied fighters into a soaring vaulted flying kick that scatters the flanking goons. in Beat 3, the entire hero squad lands in a synchronized V-formation stance as the defeated goons crash to the floor.",
-      "aspect_best": "16:9",
-      "aspect_badge": "🖥️ 16:9",
-      "aspect_tip": "🖥️ BEST RESOLUTION: 16:9 Landscape (1344×768) — Widescreen arena fits multiple cast heroes (S1–S9) and surrounding goons without crowding.",
-      "domain": "combat_action",
-      "duration_best": "10-14 s",
-      "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Gives opening stance, impact VFX, and heroic finish clean breathing room."
-    },
-    {
       "id": "combat_goons_subway_train_car_corridor_clear",
       "label": "🚇 1-vs-4 Subway Train Car Brawl: Grab Overhead Strap for Two-Footed Dropkick, Window Smash & Pole Spin Kick",
       "group": "00 · 1-vs-Many Invented Goons & SFX Brawls",
@@ -1037,7 +1001,7 @@
       "id": "combat_s1_s2_wing_chun_trapping_exchange",
       "label": "🥊 S1 vs S2: Close-Quarters Wing Chun Pak-Sao Trap & Rapid Forearm Exchange -> Rib Palm Strike",
       "group": "00 · Partner / Two-Subject Combat Interactions (S1 vs S2 & Tag-Team)",
-      "rule": "Frame a tight torso-to-hips two-shot of <Subject 1> on frame left and <Subject 2> on frame right locked at elbow range in lightning-fast Wing Chun hand trapping: in Beat 1, <Subject 1> deflects the snapping of <Subject 2> lead jab aside with a sharp open-palm pak-sao slap. in Beat 2, <Subject 1> slips under a counter hook and slaps both forearms down in a crisp chi-sao bridge. in Beat 3, <Subject 1> drives an explosive open-palm strike straight into the ribs of <Subject 2> with sweat droplets misting backward off the impact.",
+      "rule": "Frame a tight torso-to-hips two-shot of <Subject 1> on frame left and <Subject 2> on frame right locked at elbow range in lightning-fast Wing Chun hand trapping: in Beat 1, <Subject 1> deflects the snapping lead jab of <Subject 2> aside with a sharp open-palm open-palm forearm slap parry. in Beat 2, <Subject 1> slips under a counter hook and slaps both forearms down in a crisp forearm-to-forearm trapping bridge. in Beat 3, <Subject 1> drives an explosive open-palm strike straight into the ribs of <Subject 2> with sweat droplets misting backward off the impact.",
       "domain": "combat_action",
       "duration_best": "10-14 s",
       "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Gives opening stance, impact VFX, and heroic finish clean breathing room."
@@ -1055,7 +1019,7 @@
       "id": "combat_s1_s2_gun_disarm_wrist_lock_reversal",
       "label": "🔫 S1 vs S2: Point-Blank Pistol Grab -> Wrist-Twist Disarm -> Reverse Wall Pin",
       "group": "00 · Partner / Two-Subject Combat Interactions (S1 vs S2 & Tag-Team)",
-      "rule": "Stage a close-range point-blank disarm reversal: in Beat 1, <Subject 2> aims a matte-black pistol inches from the chest of <Subject 1> while <Subject 1> snaps the lead hand onto the pistol slide to push the barrel off-line and clamps the other hand over the wrist of <Subject 2>. in Beat 2, <Subject 1> pivots inside the arm of <Subject 2> in a tight kote-gaeshi wrist twist wrenching the pistol free into the own palm of <Subject 1>. in Beat 3, <Subject 1> spins <Subject 2> shoulders-first into the concrete pillar behind them and levels the captured pistol under the chin of <Subject 2>.",
+      "rule": "Stage a close-range point-blank disarm reversal: in Beat 1, <Subject 2> on screen-right aims a matte-black pistol across at <Subject 1> on screen-left inches from the chest of <Subject 1> while <Subject 1> snaps the lead hand onto the pistol slide to push the barrel off-line and clamps the other hand over the wrist of <Subject 2>. in Beat 2, <Subject 1> pivots inside the arm of <Subject 2> in a tight inward-twisting kote-gaeshi wrist lock wrenching the pistol free into the own palm of <Subject 1>. in Beat 3, <Subject 1> spins <Subject 2> shoulders-first into the concrete pillar behind them and levels the captured pistol under the chin of <Subject 2>.",
       "domain": "combat_action",
       "duration_best": "10-14 s",
       "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Gives opening stance, impact VFX, and heroic finish clean breathing room."
@@ -1073,7 +1037,7 @@
       "id": "combat_s1_s2_balcony_railing_struggle_flip",
       "label": "🌆 S1 vs S2: Glass Balcony Grapple -> Counter Hip-Throw Over Sofa -> Standoff Aim",
       "group": "00 · Partner / Two-Subject Combat Interactions (S1 vs S2 & Tag-Team)",
-      "rule": "Stage a penthouse glass-balcony struggle beside glowing city bokeh: in Beat 1, <Subject 1> and <Subject 2> lock collar-and-wrist beside a tall glass railing as <Subject 2> shoves <Subject 1> hard backward. in Beat 2, <Subject 1> plants a heel inside the stance of <Subject 2>, twists hips deep beneath the center of <Subject 2> of gravity, and launches <Subject 2> in a high judo harai-goshi arc over a low leather sofa. in Beat 3, <Subject 1> draws a sleek sidearm smoothly into a calm tactical standoff aim.",
+      "rule": "Stage a penthouse glass-balcony struggle beside glowing city bokeh: in Beat 1, <Subject 1> on screen-left and <Subject 2> on screen-right lock collar-and-wrist beside a tall glass railing as <Subject 2> shoves <Subject 1> hard backward. in Beat 2, <Subject 1> plants a heel inside the stance of <Subject 2>, twists hips deep beneath the center of gravity of <Subject 2>, and launches <Subject 2> in a high judo sweeping hip-throw arc over a low leather sofa. in Beat 3, <Subject 1> draws a sleek sidearm smoothly into a calm tactical standoff aim.",
       "domain": "combat_action",
       "duration_best": "10-14 s",
       "duration_tip": "⏱ BEST LENGTH: 10–14 s (241–345f) — Gives opening stance, impact VFX, and heroic finish clean breathing room."
@@ -1172,7 +1136,7 @@
       "id": "combat_env_rain_puddle_shockwave_sweep",
       "label": "💧 Wet Alley Stunt: Rain-Flooded Asphalt Low Spinning Sweep Sending Neon Water Sheets Across Lens",
       "group": "Environmental, Prop & Parkour Combat Interactions",
-      "rule": "Set the camera inches above rain-flooded black asphalt reflecting blazing pink and cyan neon signs: in Beat 1, <Subject 1> drops low into a coiled capoeira-style crouch facing a rushing attacker. in Beat 2, <Subject 1> whips a razor-sharp spinning sweep kick slicing through an inch-deep puddle to knock the attacker off balance. in Beat 3, a glowing silver-and-magenta arc of backlit water droplets sprays past the lens as <Subject 1> springs cleanly back to guard.",
+      "rule": "Set the camera inches above rain-flooded black asphalt reflecting blazing pink and cyan neon signs: in Beat 1, <Subject 1> drops low into a coiled hand-planted spinning hand-planted spinning capoeira sweep sweep-style crouch facing a rushing attacker. in Beat 2, <Subject 1> whips a razor-sharp spinning sweep kick slicing through an inch-deep puddle to knock the attacker off balance. in Beat 3, a glowing silver-and-magenta arc of backlit water droplets sprays past the lens as <Subject 1> springs cleanly back to guard.",
       "domain": "combat_action",
       "duration_best": "8-12 s",
       "duration_tip": "⏱ BEST LENGTH: 8–12 s (192–294f) — Crisp 3-beat combat exchange."
@@ -1417,7 +1381,7 @@
       "domain": "combat_action",
       "aspect_best": "16:9",
       "duration_best": "10-14 s",
-      "rule": "Frame a crisp wide-medium two-shot: in Beat 1, <Subject 1> lunges forward with a gleaming katana while <Subject 2> whips a hardwood bo-staff in a two-handed diagonal parry sending sparks flying. in Beat 2, <Subject 1> ducks smoothly beneath the sweeping of <Subject 2> horizontal staff spin. in Beat 3, <Subject 1> steps inside guard stopping the katana edge cleanly an inch from the collar of <Subject 2>."
+      "rule": "Frame a crisp wide-medium two-shot: in Beat 1, <Subject 1> lunges from screen-left with a gleaming katana while <Subject 2> whips a hardwood bo-staff in a two-handed diagonal parry sending sparks flying. in Beat 2, <Subject 1> ducks smoothly beneath the sweeping horizontal staff spin of <Subject 2>. in Beat 3, <Subject 1> steps inside guard stopping the katana edge cleanly an inch from the collar of <Subject 2>."
     },
     {
       "id": "action_s1_s2_back_to_back_reload_sweep",
@@ -1426,7 +1390,7 @@
       "domain": "combat_action",
       "aspect_best": "16:9",
       "duration_best": "8-12 s",
-      "rule": "Orbit smoothly 180 degrees around <Subject 1> and <Subject 2> standing shoulder-to-shoulder back-to-back: in Beat 1, both drop spent pistol magazines simultaneously with crisp metallic clatter. in Beat 2, slap fresh mags home in unison and rack slides. in Beat 3, step outward into mirrored two-handed firing stances sweeping opposing corridors."
+      "rule": "Orbit smoothly 180 degrees around <Subject 1> and <Subject 2> standing back-to-back (<Subject 1> facing screen-left, <Subject 2> facing screen-right): in Beat 1, both drop spent pistol magazines simultaneously with crisp metallic clatter. in Beat 2, slap fresh mags home in unison and rack slides. in Beat 3, step outward into mirrored two-handed firing stances sweeping opposing corridors."
     },
     {
       "id": "action_parkour_stairwell_railing_drop",
@@ -1445,7 +1409,7 @@
       "aspect_best": "16:9",
       "duration_best": "12-15 s",
       "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Millisecond-paced multi-beat choreography needs 12–15 s for clean impact & reload.",
-      "rule": "Millisecond-paced continuous gun-fu choreography: At 00:00.000-00:01.800, <Subject 1> advances down a narrow corridor in tight Center-Axis Relock pistol stance, firing two crisp double-taps as muzzle flashes strobe across walls and brass casings ping onto marble. At 00:01.800-00:04.400, an attacker lunges from a side doorway swinging a combat knife—<Subject 1> blocks the wrist with the locked-back empty pistol slide, pivots inward with a brutal hip throw, and drives two close-range shots into the flank. At 00:04.400-00:08.200, <Subject 1> snatches the dropped knife mid-spin, deflects a second attacker's baton, executes a rapid chest-slash into a collar-pull knee strike, and drops the empty magazine. At 00:08.200-00:12.000, <Subject 1> slaps a fresh magazine home, racks the slide with one sharp metallic clack, and pivots smoothly down the hall in steady tactical aim."
+      "rule": "Millisecond-paced continuous gun-fu choreography: At 00:00.000-00:01.800, <Subject 1> advances down a narrow corridor in tight tight chest-high close-quarters canted pistol stance, firing two crisp double-taps as muzzle flashes strobe across walls and brass casings ping onto marble. At 00:01.800-00:04.400, an attacker lunges from a side doorway swinging a combat knife—<Subject 1> blocks the wrist with the locked-back empty pistol slide, pivots inward with a brutal hip throw, and drives two close-range shots into the flank. At 00:04.400-00:08.200, <Subject 1> snatches the dropped knife mid-spin, deflects a second attacker's baton, executes a rapid chest-slash into a collar-pull knee strike, and drops the empty magazine. At 00:08.200-00:12.000, <Subject 1> slaps a fresh magazine home, racks the slide with one sharp metallic clack, and pivots smoothly down the hall in steady tactical aim."
     },
     {
       "id": "uber_fight_raid_corridor_silat_1v5",
@@ -1715,7 +1679,7 @@
       "aspect_best": "16:9",
       "duration_best": "12-15 s",
       "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Fire vs ice volumetric steam explosion.",
-      "rule": "Fast blow-for-blow elemental Fire vs Ice duel anchoring <Subject 1> left and <Subject 2> right: At 00:00.000-00:02.400, fighting starts immediately as <Subject 1> launches a blazing spiral flame-whip straight forward while <Subject 2> snaps a translucent ice shield up across frost-rimed stone throwing glowing orange-and-cyan sparks. At 00:02.400-00:06.000, <Subject 2> thrusts twin jagged ice lances forward in rapid lunges while <Subject 1> vaults overhead ducking shards and whipping a spinning fire heel-kick across the guard of <Subject 2> amidst hissing white steam. At 00:06.000-00:09.600, camera zooms rapidly inward as both burst through the steam cloud clashing the roaring of <Subject 1> magma uppercut directly against the frozen of <Subject 2> lance in an ultimate orange-and-cyan shockwave sphere. At 00:09.600-00:12.500, shockwave wind blasts steam clear as both skid backward across cracked icy stone holding poised ready stances."
+      "rule": "Fast blow-for-blow elemental Fire vs Ice duel anchoring <Subject 1> left and <Subject 2> right: At 00:00.000-00:02.400, fighting starts immediately as <Subject 1> launches a blazing spiral flame-whip straight forward while <Subject 2> snaps a translucent ice shield up across frost-rimed stone throwing glowing orange-and-cyan sparks. At 00:02.400-00:06.000, <Subject 2> thrusts twin jagged ice lances forward in rapid lunges while <Subject 1> vaults overhead ducking shards and whipping a spinning fire heel-kick across the guard of <Subject 2> amidst hissing white steam. At 00:06.000-00:09.600, camera zooms rapidly inward as both burst through the steam cloud clashing the roaring magma uppercut of <Subject 1> directly against the frozen lance of <Subject 2> in an ultimate orange-and-cyan shockwave sphere. At 00:09.600-00:12.500, shockwave wind blasts steam clear as both skid backward across cracked icy stone holding poised ready stances."
     },
     {
       "id": "uber_fight_shadow_dagger_assassin_mirror_hall",
@@ -1735,7 +1699,7 @@
       "aspect_best": "16:9",
       "duration_best": "12-15 s",
       "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Stillness tension into blinding single-draw arc.",
-      "rule": "Millisecond-paced samurai bridge iaido showdown: At 00:00.000-00:03.200, six armed Ronin surround <Subject 1> on a mist-shrouded cedar bridge, <Subject 1> stands poised with mist drifting past and wind rippling sleeves while left thumb rests silently on the katana guard. At 00:03.200-00:06.000, the Ronin charge—<Subject 1> explodes into a blinding low-draw horizontal arc, dashing seamlessly past three blades and slicing bamboo hats cleanly in mid-air. At 00:06.000-00:09.400, <Subject 1> pivots into a crisp overhead deflection, sweeps the fourth attacker's legs off wet planks, and halts at the bridge crest. At 00:09.400-00:12.500, <Subject 1> flicks mist droplets off steel and sheaths the katana smoothly with a crisp click."
+      "rule": "Millisecond-paced samurai bridge single-motion scabbard sword-draw showdown: At 00:00.000-00:03.200, six armed Ronin surround <Subject 1> on a mist-shrouded cedar bridge, <Subject 1> stands poised with mist drifting past and wind rippling sleeves while left thumb rests silently on the katana guard. At 00:03.200-00:06.000, the Ronin charge—<Subject 1> explodes into a blinding low-draw horizontal arc, dashing seamlessly past three blades and slicing bamboo hats cleanly in mid-air. At 00:06.000-00:09.400, <Subject 1> pivots into a crisp overhead deflection, sweeps the fourth attacker's legs off wet planks, and halts at the bridge crest. At 00:09.400-00:12.500, <Subject 1> flicks mist droplets off steel and sheaths the katana smoothly with a crisp click."
     },
     {
       "id": "uber_fight_ninja_kunai_smoke_bomb_rooftop",
@@ -1775,7 +1739,7 @@
       "aspect_best": "16:9",
       "duration_best": "12-15 s",
       "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Ground grappling transitions and slam.",
-      "rule": "Millisecond-paced technical MMA grappling scramble: At 00:00.000-00:02.600, <Subject 1> shoots a lightning double-leg takedown driving <Subject 2> onto the padded octagon mat with a heavy thud. At 00:02.600-00:06.200, <Subject 2> hooks legs upward locking a tight triangle choke around the neck of <Subject 1> and shoulder—<Subject 1> postures upright fighting the wrist grip. At 00:06.200-00:09.800, <Subject 1> hoists <Subject 2> chest-high, slams <Subject 2> cleanly back to the canvas to break the lock, passes side-control, and snaps into a crisp spinning armbar. At 00:09.800-00:12.500, <Subject 2> taps rapidly on the hip of <Subject 1> as <Subject 1> releases immediately."
+      "rule": "Millisecond-paced technical MMA grappling scramble: At 00:00.000-00:02.600, <Subject 1> shoots from screen-left in a lightning double-leg takedown driving <Subject 2> on screen-right onto the padded octagon mat with a heavy thud. At 00:02.600-00:06.200, <Subject 2> hooks legs upward locking a tight triangle choke around the neck of <Subject 1> and shoulder—<Subject 1> postures upright fighting the wrist grip. At 00:06.200-00:09.800, <Subject 1> hoists <Subject 2> chest-high, slams <Subject 2> cleanly back to the canvas to break the lock, passes side-control, and snaps into a crisp spinning armbar. At 00:09.800-00:12.500, <Subject 2> taps rapidly on the hip of <Subject 1> as <Subject 1> releases immediately."
     },
     {
       "id": "uber_fight_parkour_crane_girder_fistfight",
@@ -1845,7 +1809,7 @@
       "aspect_best": "16:9",
       "duration_best": "12-15 s",
       "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — Two-subject synchronized tag-team relay.",
-      "rule": "Millisecond-paced S1 + S2 synchronized tag-team action: At 00:00.000-00:02.400, brass elevator doors slide open revealing armed guards—<Subject 1> slides low sweeping two guards' ankles while <Subject 2> vaults over the back of <Subject 1>. At 00:02.400-00:06.000, <Subject 2> lands firing twin pistol shots left and right while <Subject 1> pops up disarming a rifleman and tossing him into the spinning of <Subject 2> elbow. At 00:06.000-00:09.500, both stand back-to-back in the marble lobby reloading in crisp unison before launching synchronized finishing kicks at the final two guards. At 00:09.500-00:12.500, both nod briefly and stride briskly toward the glass exit."
+      "rule": "Millisecond-paced S1 + S2 synchronized tag-team action: At 00:00.000-00:02.400, brass elevator doors slide open revealing armed guards—<Subject 1> slides low sweeping two guards' ankles while <Subject 2> vaults over the back of <Subject 1>. At 00:02.400-00:06.000, <Subject 2> lands firing twin pistol shots left and right while <Subject 1> pops up disarming a rifleman and tossing him into the spinning elbow of <Subject 2>. At 00:06.000-00:09.500, both stand back-to-back in the marble lobby reloading in crisp unison before launching synchronized finishing kicks at the final two guards. At 00:09.500-00:12.500, both nod briefly and stride briskly toward the glass exit."
     },
     {
       "id": "uber_fight_boss_phase2_aura_eruption_clash",
@@ -1891,7 +1855,7 @@
       "domain": "combat_action",
       "aspect_best": "16:9",
       "duration_best": "12-15 s",
-      "rule": "One unbroken fast-paced lateral fight shot keeping <Subject 1> on the left and <Subject 2> on the right with fast reactive camera tracking: At 00:00.000-00:02.600, battle starts immediately as <Subject 2> sprints forward, jumps onto the stainless steel lab table, and launches a flying side-kick at the head of <Subject 1>, <Subject 1> ducks low under the flying boot while camera drops fast, <Subject 2> lands right and <Subject 1> throws rapid jab-cross punches hitting the face of <Subject 2>. At 00:02.600-00:05.600, <Subject 1> checks a low kick, slips a right hook, and snaps a high front kick into the jaw of <Subject 2>, <Subject 2> bounces off the far counter, leaps high off the metal edge throwing a second jump kick over the crouch of <Subject 1>, lands low, and whips a crouching spinning leg sweep that throws bright floor sparks as <Subject 1> jumps straight over the leg of <Subject 2>. At 00:05.600-00:09.000, camera whips fast sideways tracking both fighters trading sharp punches and palm blocks center frame before locking into a tight collar clinch, <Subject 1> twists hips and throws <Subject 2> hard across the room onto the floor with wall sparks flying. At 00:09.000-00:12.400, <Subject 2> scrambles up swinging a wide punch, <Subject 1> ducks inside and camera zooms fast inward onto the ultimate of <Subject 1> heavy chest thrust-kick that blasts <Subject 2> airborne backward straight through the glass containment chamber doorway in a bright orange electrical explosion. At 00:12.400-00:15.000, <Subject 2> crashes hard onto broken glass inside the smoking chamber as bright sparks rain down and camera pulls fast wide around <Subject 1> standing victorious on the left ready to move."
+      "rule": "One unbroken fast-paced lateral fight shot keeping <Subject 1> on the left and <Subject 2> on the right with fast reactive camera tracking: At 00:00.000-00:02.600, battle starts immediately as <Subject 2> sprints forward, jumps onto the stainless steel lab table, and launches a flying side-kick at the head of <Subject 1>, <Subject 1> ducks low under the flying boot while camera drops fast, <Subject 2> lands right and <Subject 1> throws rapid jab-cross punches hitting the face of <Subject 2>. At 00:02.600-00:05.600, <Subject 1> checks a low kick, slips a right hook, and snaps a high front kick into the jaw of <Subject 2>, <Subject 2> bounces off the far counter, leaps high off the metal edge throwing a second jump kick over the crouch of <Subject 1>, lands low, and whips a crouching spinning leg sweep that throws bright floor sparks as <Subject 1> jumps straight over the leg of <Subject 2>. At 00:05.600-00:09.000, camera whips fast sideways tracking both fighters trading sharp punches and palm blocks center frame before locking into a tight collar clinch, <Subject 1> twists hips and throws <Subject 2> hard across the room onto the floor with wall sparks flying. At 00:09.000-00:12.400, <Subject 2> scrambles up swinging a wide punch, <Subject 1> ducks inside and camera zooms fast inward onto the ultimate heavy chest thrust-kick of <Subject 1> that blasts <Subject 2> airborne backward straight through the glass containment chamber doorway in a bright orange electrical explosion. At 00:12.400-00:15.000, <Subject 2> crashes hard onto broken glass inside the smoking chamber as bright sparks rain down and camera pulls fast wide around <Subject 1> standing victorious on the left ready to move."
     },
     {
       "id": "uber_fight_jedi_sith_midair_force_clash",

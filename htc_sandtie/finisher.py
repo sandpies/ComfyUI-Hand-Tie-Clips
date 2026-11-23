@@ -196,6 +196,15 @@ def _clean_inside_d(text: str) -> str:
         inner = _EMOJI_STRIP_RX.sub("", parts[i])
         inner = _dlg.sanitize_gluck(inner)
         inner = inner.replace("\u201c", "'").replace("\u201d", "'").replace('"', "'")
+        # Convert em/en dashes & double-hyphens inside <d> to commas so H3 does not stutter on pauses
+        inner = re.sub(r"\s*[\u2014\u2013]+\s*|\s*--\s*", ", ", inner)
+        # Convert stray ellipses inside <d> (preserving Mmmph... hmm from sanitize_gluck)
+        inner = re.sub(r"(?<!Mmmph)(?:\.\.\.|…)\s*(?=[!?])", "", inner)
+        inner = re.sub(r"(?<!Mmmph)(?:\.\.\.|…)(?=\s*</d>)", ".", inner)
+        inner = re.sub(r"(?<!Mmmph)(?:\.\.\.|…)\s*", ", ", inner)
+        inner = re.sub(r",\s*,+", ",", inner)
+        inner = re.sub(r"([\]])\s*,\s*", r"\1 ", inner)
+        inner = re.sub(r"\s{2,}", " ", inner)
         parts[i] = inner
     return "".join(parts)
 
@@ -1093,7 +1102,7 @@ def finish_block(
                 s1_line = m_s1_line.group(1)
                 key_words = [w.lower() for w in re.findall(r"[A-Za-z]{4,}", f"{p_name_fin} {p_rule_fin}") if w.lower() not in ("room", "with", "from", "that", "this", "high", "small", "wall", "walls", "floor", "dark", "warm", "soft")]
                 if key_words and not any(kw in cur_desc.lower() for kw in key_words[:5]):
-                    light_opts_fin = _cat.resolve_dial_opts("cinema", flavors.get("light"))
+                    light_opts_fin = _cat.resolve_dial_opts("light", flavors.get("light"))
                     light_opt_fin = light_opts_fin[0] if light_opts_fin else None
                     light_clause = f" under {sanitize_additive_rule(light_opt_fin['rule'])}" if (light_opt_fin and light_opt_fin.get("rule")) else ""
                     new_s1_line = re.sub(r"^(\[Shot 1\][ \t]*)", lambda m: f"{m.group(1)}Inside {p_name_fin.lower()} ({p_rule_fin}){light_clause}: ", s1_line, count=1)
@@ -1403,14 +1412,18 @@ def build_pass2_audit_checklist(
         for sp in [p for p in (lab.get("pictures") or []) if p.get("subject") == s_n]:
             s_desc = str(sp.get("desc") or "").strip()
             eth = _refs.extract_ethnicity_phrase(s_desc, brief=brief)
+            full_anchor = _refs.extract_identity_anchor_summary(s_desc, brief=brief, cap=220)
             if eth:
                 if s_n == 1 and rear_scene and not mirror_p2:
                     eth_r = _refs.strip_front_facial_features_for_rear(eth)
-                    checks.append(f"RACIAL LOCK (<Subject {s_n}>): Name as `{eth}` in headers; in `[Shot 1]` use rear-visible `{eth_r}` only while keeping face turned forward away from the camera.")
+                    rear_anchor = _refs.strip_front_facial_features_for_rear(full_anchor) if full_anchor else eth_r
+                    extra_r = f" (keep rear-visible hair/build/style `{rear_anchor}`)" if (rear_anchor and rear_anchor.lower() != eth_r.lower()) else ""
+                    checks.append(f"RACIAL LOCK (<Subject {s_n}>): Name as `{eth}` in headers{extra_r}; in `[Shot 1]` use rear-visible `{eth_r}` only while keeping face turned forward away from the camera.")
                 else:
-                    checks.append(f"RACIAL LOCK (<Subject {s_n}>): Name explicitly as `{eth}` in `subject_definitions:`, `summary:`, `retention_analysis:`, and `[Shot 1]`.")
+                    extra_f = f" plus exact medium/style, face/eye geometry, marks, build, and hair (`{full_anchor}`)" if (full_anchor and full_anchor.lower() != eth.lower()) else ""
+                    checks.append(f"RACIAL LOCK (<Subject {s_n}>): Name explicitly as `{eth}` in `subject_definitions:`, `summary:`, `retention_analysis:`, and `[Shot 1]`{extra_f}.")
             elif s_desc:
-                checks.append(f"SHEET LOCK (<Subject {s_n}>): Preserve character anchor from {sp['label']} ({s_desc[:140]}).")
+                checks.append(f"SHEET LOCK (<Subject {s_n}>): Preserve style and character anchor from {sp['label']} ({(full_anchor or s_desc)[:180]}).")
 
     ward_opts = _cat.resolve_dial_opts("wardrobe", ward_p2_str)
     if ward_opts:
@@ -1424,7 +1437,10 @@ def build_pass2_audit_checklist(
                 pairs.append(f"<Subject {sn}>={wl}")
             checks.append(f"SPLIT WARDROBE LOCK: Keep assigned outfits ({', '.join(pairs)}) consistent on their assigned subjects across every beat.")
         else:
-            w_clean = re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]+", "", ward_opts[0]["label"]).strip()
+            w_clean = " -> ".join(
+                re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]+", "", wo["label"]).strip()
+                for wo in ward_opts
+            )
             checks.append(f"WARDROBE LOCK: Keep the selected attire ({w_clean}) consistent across EVERY beat, preserving any explicit displacement state.")
 
     place_opts = _cat.resolve_dial_opts("place", flavors.get("place"))
@@ -1457,7 +1473,8 @@ def build_pass2_audit_checklist(
         elif any(x.startswith(("stage_", "multi_pos_")) for x in _cat.parse_multi_ids(exp_p2_str)):
             checks.append("MULTI-SHOT POSITION & ANGLE CHECK: Ensure every `[Shot N]` cut states camera distance/angle, screen-left/right placement, sticky displaced clothes, and exact hand/body contact.")
     if tree is not None and getattr(tree, "shots", None):
-        n_sh = len(tree.shots)
+        plan_sh_n = len(re.findall(r"(?m)^\s*\[\s*Shot\s+\d+\s*\]", str(plan or "")))
+        n_sh = plan_sh_n if plan_sh_n >= 1 else len(tree.shots)
         if n_sh >= 2:
             checks.append(f"SHOT-TREE CUT COUNT LOCK: Preserve all {n_sh} `[Shot N]` sections (`[Shot 1]` .. `[Shot {n_sh}]`) at their chronological cut timestamps.")
         for sh_i in tree.shots:

@@ -196,7 +196,7 @@ def compute_shot_topology(
     eid = eids[0] if eids else ""
 
     max_seq_picks = max(len(cids), len(eids), 1)
-    for k_dial in ("style", "combat", "place", "wardrobe", "character", "pose", "fetish", "era", "tv_show", "light", "colour", "lens", "fx", "talkstyle", "accent", "ambience", "music"):
+    for k_dial in ("combat", "place", "wardrobe", "pose", "fetish"):
         if get_dial_mode(flavors, k_dial, "sequence") == "sequence":
             max_seq_picks = max(max_seq_picks, len(parse_multi_ids(flavors.get(k_dial))))
 
@@ -321,7 +321,7 @@ def compute_shot_topology(
         return len(nums) if len(nums) >= 2 else 0
 
     rule_shot_count = 0
-    if not is_single_continuous_ask and max_seq_picks <= 1 and asked_shots == 0:
+    if not is_single_continuous_ask and asked_shots == 0:
         for dk in ("explicit", "combat", "pose"):
             dopts = _cat.resolve_dial_opts(dk, flavors.get(dk))
             if len(dopts) == 1:
@@ -348,9 +348,26 @@ def compute_shot_topology(
     )
 
     # 3. Explicit millisecond `At MM:SS.mmm-MM:SS.mmm` rules (e.g. Uber Fights)
+    viral_cut_cams = {
+        "multi_angle_action_close", "multi_position_3cut_intimate", "multi_angle_orbit_arc_cut",
+        "coverage_match_on_action", "table_two_shot_profile_to_single",
+        "shot_reverse", "whip_pan_transition", "match_cut_motion",
+        "cam_viral_dutch_90roll_wipe_cuts", "cam_beat_drop_punch_wide_combo", "cam_palm_cover_lens_reveal_snap",
+        "cam_whip_pan_beat_snap_cut", "graphic_match_cut", "smash_cut_contrast",
+        "cam_distant_wide_master_to_hardcut_closeup",
+    }
+    three_shot_cams = {
+        "multi_angle_action_close", "multi_position_3cut_intimate", "multi_angle_orbit_arc_cut",
+        "shot_reverse", "cam_viral_dutch_90roll_wipe_cuts", "cam_beat_drop_punch_wide_combo",
+    }
+    cam_seq_mode = get_dial_mode(flavors, "camera", "sequence") == "sequence"
+    exp_seq_mode = get_dial_mode(flavors, "explicit", "sequence") == "sequence"
+    place_ids = parse_multi_ids(flavors.get("place"))
+    place_seq_n = len(place_ids) if (len(place_ids) >= 2 and get_dial_mode(flavors, "place", "sequence") == "sequence") else 0
+
     ms_spans: list[tuple[float, float]] = []
     ms_cuts: list[int] = []
-    if max_seq_picks <= 1 and asked_shots == 0:
+    if asked_shots == 0:
         for dk in ("explicit", "combat", "pose"):
             opts = _cat.resolve_dial_opts(dk, flavors.get(dk))
             if len(opts) == 1:
@@ -373,6 +390,22 @@ def compute_shot_topology(
         raw_durs = [max(0.4, b - a) for a, b in ms_spans]
         scaled_spans = _allocate_weighted_spans(0.0, T, raw_durs, min_seg=0.4)
         cut_set = set(ms_cuts) if not is_single_continuous_ask else set()
+        # If the ms_rule is a single unbroken sequence (0 explicit cuts) AND a multi-cut camera or multi-place sequence is active,
+        # inject shot cuts cleanly along the existing ms_spans so camera cuts & BPM choreography both hold!
+        if not cut_set and not is_single_continuous_ask and len(scaled_spans) >= 2:
+            want_cam_shots = 0
+            if place_seq_n >= 2:
+                want_cam_shots = min(4, place_seq_n)
+            elif len(cids) >= 2 and cam_seq_mode:
+                want_cam_shots = min(4, len(cids))
+            elif any(c in viral_cut_cams for c in cids):
+                want_cam_shots = 3 if any(c in three_shot_cams for c in cids) else 2
+            if want_cam_shots >= 2:
+                k_cuts = min(want_cam_shots, len(scaled_spans))
+                for s_k in range(1, k_cuts):
+                    b_cut = (s_k * len(scaled_spans)) // k_cuts
+                    if 0 < b_cut < len(scaled_spans):
+                        cut_set.add(b_cut)
         shots_ms: list[dict] = []
         cur_beats: list[dict] = []
         shot_idx = 1
@@ -402,23 +435,13 @@ def compute_shot_topology(
         return _pack_result("combat" if is_combat_scene else ("dance" if is_dance_scene else "cinema"), shots_ms, "ms_rule")
 
     # 4. Multi-shot topology (`stage_*`, `multi_pos_*`, `asked_shots`, multi-cam sequences)
-    viral_cut_cams = {
-        "multi_angle_action_close", "multi_position_3cut_intimate", "multi_angle_orbit_arc_cut",
-        "coverage_match_on_action", "table_two_shot_profile_to_single",
-        "shot_reverse", "whip_pan_transition", "match_cut_motion",
-        "cam_viral_dutch_90roll_wipe_cuts", "cam_beat_drop_punch_wide_combo", "cam_palm_cover_lens_reveal_snap",
-        "cam_whip_pan_beat_snap_cut", "graphic_match_cut", "smash_cut_contrast",
-        "cam_distant_wide_master_to_hardcut_closeup",
-    }
-    cam_seq_mode = get_dial_mode(flavors, "camera", "sequence") == "sequence"
-    exp_seq_mode = get_dial_mode(flavors, "explicit", "sequence") == "sequence"
-    three_shot_cams = {"multi_angle_action_close", "multi_position_3cut_intimate", "multi_angle_orbit_arc_cut"}
-    if rule_shot_count == 0 and not is_single_continuous_ask and len(cids) == 1 and cids[0] in three_shot_cams and asked_shots == 0:
+    if rule_shot_count == 0 and not is_single_continuous_ask and len(cids) == 1 and cids[0] in ("multi_angle_action_close", "multi_position_3cut_intimate", "multi_angle_orbit_arc_cut") and asked_shots == 0:
         rule_shot_count = 3
     multi_cut_cam = (
         (len(cids) >= 2 and cam_seq_mode)
         or any(c in viral_cut_cams for c in cids)
         or (is_multi_pos and (exp_seq_mode or len(eids) <= 1 or exp_has_cuts))
+        or place_seq_n >= 2
         or asked_shots >= 2
         or rule_shot_count >= 2
     )
@@ -430,9 +453,11 @@ def compute_shot_topology(
             n_shots = asked_shots
         elif any(e.startswith(("multi_pos_", "stage_")) for e in eids) or exp_has_cuts:
             n_shots = max(2, min(4, len(eids) if len(eids) >= 2 else 3))
+        elif place_seq_n >= 2:
+            n_shots = min(4, place_seq_n)
         elif len(cids) >= 2 and cam_seq_mode:
             n_shots = min(4, len(cids))
-        elif any(c in ("multi_angle_action_close", "multi_position_3cut_intimate", "multi_angle_orbit_arc_cut", "shot_reverse", "cam_viral_dutch_90roll_wipe_cuts", "cam_beat_drop_punch_wide_combo", "cam_palm_cover_lens_reveal_snap") for c in cids):
+        elif any(c in three_shot_cams for c in cids):
             n_shots = 3
         else:
             n_shots = 2
@@ -755,14 +780,20 @@ def camera_trajectory_plan(
             f"COMBAT WHIP-TO-ULTIMATE ZOOM LAW: Dart fast laterally with punches ({ts_list[0]}), drop low on sweeps and tilt steeply up on mid-air clashes ({mid_ts}), snap-zoom tightly inward onto the signature ultimate attack ({ts_list[-2] if n >= 3 else ts_list[-1]}), and whip wide across crash debris ({ts_list[-1]})."
         )
 
-    if has_bg_plate and cid:
-        return f"BACKGROUND PLATE CAMERA BOOST: A standalone set plate is wired, so execute the `{cid}` motion with large amplitude across {', '.join(ts_list)} so camera travel stays crisp and unmistakable."
+    if has_bg_plate and cid and cid not in (
+        "handheld", "static_close", "oner", "copilot_hand_tie_calm_join",
+        "finger_follow_macro", "macro_lens", "portrait_vertical_stack",
+    ):
+        return f"BACKGROUND PLATE CAMERA BOOST: A standalone set plate is wired, so execute the `{cid}` motion with large amplitude across the full shot so camera travel stays crisp and unmistakable."
 
     return ""
 
 
 def fx_trajectory_plan(fx_opt: dict | None, light_opt: dict | None, spans: list[tuple[float, float]], fx_timing: str = "delayed_mid") -> str:
     if not fx_opt or not spans or len(spans) < 2 or fx_timing == "from_start":
+        return ""
+    fx_id_l = str(fx_opt.get("id") or "").lower()
+    if fx_id_l.startswith(("fx_ultrareal_", "fx_vhs_", "fx_anamorphic_")) or fx_id_l in ("fx_raindrop_on_camera_glass", "fx_golden_dust_motes_sunbeam"):
         return ""
     ts_list = [f"At {stamp(a)}-{stamp(b)}" for a, b in spans]
     mid_idx = max(1, len(ts_list) // 2)

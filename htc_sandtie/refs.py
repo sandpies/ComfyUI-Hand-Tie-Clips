@@ -355,10 +355,14 @@ def load_ref_bank() -> list[dict]:
             by_key[fk] = entry
             cleaned_items.append(entry)
 
-        # Seed unbanked image scans from vision cache
+        # Seed unbanked image scans from vision cache (newest prompt schema first)
         vcache = _load_vision_cache()
         if isinstance(vcache, dict) and vcache:
-            for k, desc_val in sorted(vcache.items()):
+            def _vcache_sort_key(kv):
+                ks = str(kv[0])
+                ver = 0 if ks.startswith("refscan_v6|") else (1 if ks.startswith("refscan_v5|") else (2 if ks.startswith("refscan_v4|") else 3))
+                return (ver, ks)
+            for k, desc_val in sorted(vcache.items(), key=_vcache_sort_key):
                 if not isinstance(desc_val, str) or not desc_val.strip():
                     continue
                 parts = str(k).split("|")
@@ -711,12 +715,38 @@ def extract_ethnicity_phrase(text: str, brief: str = "") -> str:
     return ""
 
 
+def extract_identity_anchor_summary(text: str, brief: str = "", cap: int = 240) -> str:
+    """Return the full distinctive person anchor (style, race/gender, actual eyes/face/marks, build, hair) before `Wearing`."""
+    raw = str(text or "").strip()
+    if not raw:
+        return extract_ethnicity_phrase("", brief=brief)
+    m_anc = re.search(r"Anchor:\s*(.+)", raw, re.I)
+    body = m_anc.group(1).strip() if m_anc else raw
+    body = re.split(r"(?:\.\s*|\s+)Wearing\s+", body, maxsplit=1, flags=re.I)[0].strip(" .;")
+    body = re.sub(r"\s{2,}", " ", body).strip()
+    if not body:
+        return extract_ethnicity_phrase(raw, brief=brief)
+    if len(body) > cap:
+        cut = body[:cap].rsplit(", ", 1)[0]
+        body = cut.strip(" ,;.") if len(cut) >= 32 else body[:cap].rsplit(" ", 1)[0].strip(" ,;.")
+    return body
+
+
 def strip_front_facial_features_for_rear(eth_phrase: str) -> str:
     s = str(eth_phrase or "").strip()
     if not s:
         return s
-    s = re.sub(r",?\s*\b(?:and\s+)?(?:dark|almond|bright|large|expressive|narrow|deep[- ]set|soft)?\s*(?:almond\s+)?eyes\b", "", s, flags=re.I)
-    s = re.sub(r",?\s*\b(?:and\s+)?(?:soft\s+|sharp\s+|delicate\s+|defined\s+)?(?:East\s+Asian|Southeast\s+Asian|South\s+Asian|Asian|Caucasian|Latina|Black)?\s*facial\s+features\b", "", s, flags=re.I)
+    s = re.sub(
+        r",?\s*\b(?:and\s+)?(?:[a-z-]+\s+){0,4}"
+        r"(?:almond|round(?:ed)?|hooded|monolid|double[- ]lid|upturned|downturned|wide[- ]set|close[- ]set|deep[- ]set|bright|dark|large|narrow|expressive|hazel|amber|green|blue|grey|gray|brown)\s+"
+        r"(?:[a-z-]+\s+){0,2}eyes?\b",
+        "",
+        s,
+        flags=re.I,
+    )
+    s = re.sub(r",?\s*\b(?:and\s+)?(?:[a-z-]+\s+){0,3}(?:eye\s+geometry|eyebrows?|brows?|eyeliner|lashes|nose(?:\s+bridge|\s+tip)?|lips?|cheekbones?|jawline|chin|dimples?|freckles?)\b", "", s, flags=re.I)
+    s = re.sub(r",?\s*\b(?:and\s+)?(?:soft\s+|sharp\s+|delicate\s+|defined\s+)?(?:East\s+Asian|Southeast\s+Asian|South\s+Asian|Asian|Caucasian|Latina|Latino|Black|Middle\s+Eastern)?\s*facial\s+features\b", "", s, flags=re.I)
+    s = re.sub(r",\s*,+", ",", s)
     s = re.sub(r",?\s*\b(?:with|and)\s*$", "", s.strip(" ,;"), flags=re.I)
     return re.sub(r"\s{2,}", " ", s).strip(" ,;")
 

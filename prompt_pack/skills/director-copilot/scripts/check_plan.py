@@ -806,6 +806,26 @@ def main():
     elif conts:
         print(f"  shots {conts}: does the first sentence MOVE from the previous shot's last pose?")
     print("  every plate: is it shot from the same camera angle the beat asks for?")
+    # Camera placement mix, as information (camera.md "Place the camera"). Not a lint:
+    # the numbers separate a safe piece from a bold one, but slow pieces can earn safe framing.
+    _subs = [x for s in shots for x in re.split(r"(?i)\bcuts? to\b", s.get("beat") or "")]
+    if _subs:
+        _safe = (r"(?i)\bmedium shot\b|\beye[- ]level\b|\beye line\b|\bchest height\b|\bwaist up\b"
+                 r"|\bfrom (?:the )?front\b")
+        _slow = r"(?i)\bslow(?:ly)?\b|\bholds? dead still\b|\bgently\b|\bsmoothly\b"
+        _bold = (r"(?i)\blying on\b|\bon the (?:floor|ground|asphalt|road)\b"
+                 r"|\bfrom (?:the )?(?:floor|ground|asphalt|below|above|low|air)\b|\bground level\b"
+                 r"|\boverhead\b|\btop[- ]down\b|\bfixed to\b|\bmounted\b|\bstrapped\b|\bwhips?\b"
+                 r"|\bcrash\w*\b|\bsnaps?\b|\bskids?\b|\bon (?:each|the) beat\b|\bthrough (?:the|a)\b"
+                 r"|\bdutch\b|\btilted\b|\bfrom behind\b|\bover (?:his|her|their) shoulder\b|\bpov\b"
+                 r"|\bextreme close\b|\bspins?\b|\bswoops?\b|\bslams?\b|\bjolts?\b")
+        _n = len(_subs)
+        _ps = 100 * sum(bool(re.search(_safe, x)) and not re.search(_bold, x) for x in _subs) // _n
+        _pl = 100 * sum(bool(re.search(_slow, x)) for x in _subs) // _n
+        _pb = 100 * sum(bool(re.search(_bold, x)) for x in _subs) // _n
+        print(f"  camera placement over {_n} shots: {_pb}% bold, {_ps}% medium/eye-level/front only, "
+              f"{_pl}% slow or still. High energy? Most hops want one bold placement, "
+              f"and slow/still well under half.")
     if not ran:
         sys.exit(2)
 

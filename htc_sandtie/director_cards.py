@@ -318,6 +318,7 @@ REAR_EXPLICIT_IDS = {
     "cont_yacht_shower_rinse_to_sunpad_doggy",
     "cont_yoga_mat_splits_stretch_to_prone_entry",
     "toy_thrusting_machine_all_fours_handsfree",
+    "ass_worship_cheek_spread_pov",
 }
 
 MIXED_ORIENTATION_EXPLICIT_IDS = {
@@ -982,7 +983,7 @@ def playbook_matches(brief: str, explicit_id: str = "") -> list[dict]:
     return hits[:2]
 
 
-def format_playbook_directive(entry: dict, *, has_camera_or_explicit: bool = False, has_subject_or_wardrobe: bool = False) -> str:
+def format_playbook_directive(entry: dict, *, has_camera_or_explicit: bool = False, has_subject_or_wardrobe: bool = False, has_brief: bool = False) -> str:
     title = entry.get("title") or "Specialty"
     bits = []
     if entry.get("shooting") and not has_camera_or_explicit:
@@ -991,7 +992,7 @@ def format_playbook_directive(entry: dict, *, has_camera_or_explicit: bool = Fal
         bits.append(f"Styling: {entry['styling']}")
     if entry.get("vocab"):
         bits.append(f"Textures/Verbs: {entry['vocab']}")
-    if entry.get("phrases"):
+    if entry.get("phrases") and not has_brief:
         bits.append(f"Line vibe: {entry['phrases'][0]}")
     return f"PLAYBOOK MODULE ({title}): " + " ".join(bits)
 

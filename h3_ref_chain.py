@@ -6282,11 +6282,16 @@ class HandTieClips:
                     "tooltip": ("Adds a little noise to the join, another way to stop detail building up. "
                                 "Try 0.05; 0 is off."),
                 }),
-                "tone_compensate": (_tone.MODES, {
+                "tone_compensate": (_tone.CHAIN_MODES, {
                     "default": "off",
                     "tooltip": ("Evens out colour/brightness drift between hops. anchor locks whole chain "
                                 "tone; chroma holds Lab color balance/saturation while keeping face brightness "
-                                "untouched; frame_shift / gain_bias / lut smooth each join; off leaves hops as rendered."),
+                                "untouched; anchor and chroma also fade out the colour step at each continuation "
+                                "join; frame_shift / gain_bias / lut smooth each join; off leaves hops as rendered."
+                                + (" anchor+carry (experimental, motion_context): anchor, and each continuation also "
+                                   "starts from frames pulled back to its scene's first hop, so drift stops feeding the "
+                                   "next hop; a restart or tone=rebase starts a new scene."
+                                   if _tone.CARRY_LISTED else "")),
                 }),
                 # ---------------------------------------------------------
                 # APPEND-ONLY ZONE. `widgets_values` in a saved workflow is a
@@ -6852,7 +6857,9 @@ class HandTieClips:
                     "default": "",
                     "tooltip": ("For dialogue_lock: a timed line recording (empty = H3 drafts lines). "
                                 "Or with master_audio_file set and dialogue_lock=off: set 'auto:vocals' (or "
-                                "a vocal stem file) to lip-sync H3 to isolated vocals while keeping the full mix in the MP4."),
+                                "a vocal stem file) to lip-sync H3 to isolated vocals while keeping the full mix in the MP4. "
+                                "auto:vocals needs torchaudio's HDemucs weights fetched once (never downloaded "
+                                "by the pack; see docs/MODELS.md), else it falls back to the full mix."),
                 }),
                 # APPENDED 2026-10-28, LAST widgets. Open-H3-Regenerate-2K LoRA selector + seed + cond.
                 "upsample_redraw": (_regen2k_lora_choices(), {
@@ -7376,7 +7383,7 @@ class HandTieClips:
         # Same rule, same reason: checked on the queue, by filename, before any
         # media is loaded. A chain that cannot reach its anchor should say so in
         # a second rather than nine hops later.
-        if (str(tone_compensate) == "anchor" and float(tone_anchor) > 0.0
+        if (str(tone_compensate) in ("anchor", _tone.CARRY_MODE) and float(tone_anchor) > 0.0
                 and str(tone_anchor_ref) == "still"
                 and not str(start_image_file or "").strip()):
             raise ValueError(
@@ -8240,6 +8247,8 @@ class HandTieClips:
         # them seams. The node that writes the frames is the only thing that
         # knows for certain, so it says so on `info`.
         seam_marks = []
+        drift_scene_first = []   # one bool per written hop: True where a scene starts (drift meter)
+        carry_ref = None         # anchor+carry: channel stats of the current scene's first hop
         hop_motion_scores = []
         master_wav = None
         sr = None
@@ -8265,6 +8274,11 @@ class HandTieClips:
                   f"renorm={pin_renorm_mode} "
                   f"noise={pin_noise_v:.3f}", flush=True)
         tone_mode = str(tone_compensate)
+        # anchor+carry runs as anchor everywhere tone_mode is read; carry_on adds
+        # the latent pull on the motion_context hand-off (latents.carry_pull).
+        carry_on = tone_mode == _tone.CARRY_MODE
+        if carry_on:
+            tone_mode = "anchor"
         tone_on = tone_mode != "off" and tone_mode in _tone.MODES
         if tone_on:
             print(f"[{TAG}] tone compensation: {tone_mode} "
@@ -9774,8 +9788,11 @@ class HandTieClips:
                     # its key was byte-identical. Hop 1 has no pin, so it still
                     # survives every tone switch, which is the half of that
                     # claim that was always true.
-                    "tone": ((tone_mode, round(float(tone_anchor), 4),
-                              str(tone_anchor_ref)) if not hop_is_start else None),
+                    # carry: this hop starts from a pulled pin, so its pixels
+                    # differ; appended only when on, so every old key holds.
+                    "tone": (((tone_mode, round(float(tone_anchor), 4),
+                               str(tone_anchor_ref)) + (("carry",) if carry_on else ()))
+                             if not hop_is_start else None),
                     # Same rule. `_attach_pin_to_qwen` runs only when this hop
                     # has a predecessor pin, so a restart (hop_is_start) is
                     # keyed like hop 1: the setting cannot reach its pixels.
@@ -11357,6 +11374,9 @@ class HandTieClips:
                         print(f"[{TAG}] hop {i + 1} tone: {anchor_note}",
                               flush=True)
 
+            # Drift meter: which hops start a scene (measured against themselves).
+            drift_scene_first.append(bool(
+                i == 0 or hop_restart or str(shot.get("tone") or "") == "rebase"))
             if not hop_trims:
                 keep_n = int(imgs.shape[0])
                 if write_pos + keep_n > total_frames:
@@ -11471,6 +11491,13 @@ class HandTieClips:
                 # follow a cut is gone: the user saw it fix nothing (11-05).
                 if SEAM_BRIDGE and str((shot.get("directives") or {}).get("join") or "") != "hard_cut":
                     _bridge_motion_seam(master_imgs, int(write_pos), int(keep_n))
+                # Seam ramp under `anchor`/`chroma`: the touching frame pair still
+                # disagrees after the overlap-average match; remove that step from
+                # this hop's head only (tone.seam_ramp). A hard cut keeps its change.
+                if anchor_on and str((shot.get("directives") or {}).get("join") or "") != "hard_cut":
+                    _seam_note = _tone.seam_ramp(master_imgs, int(write_pos), int(keep_n))
+                    if _seam_note:
+                        print(f"[{TAG}] hop {i + 1} seam ramp: {_seam_note}", flush=True)
                 write_pos += keep_n
                 head_n = _audio_samples(overlap_n, sr)
                 master_wav = _xfade_keep(
@@ -11539,6 +11566,24 @@ class HandTieClips:
             if (MC_PIN_ENCODED and not ht and i + 1 < n and prev_sampled is not None
                     and str(pin_mech) in ("auto", "motion_context")):
                 prev_sampled = _encoded_pin(prev_sampled, imgs, vae, i + 1)
+            # anchor+carry: the pixel anchor above repaints the master, but the next
+            # continuation is pinned from this latent. Pull it to the scene's first
+            # hop so the drift stops compounding. A scene starts at hop 1, a restart
+            # or tone=rebase; tone=free hands its latent on as rendered.
+            if (carry_on and not ht and not windowed and i + 1 < n
+                    and prev_sampled is not None):
+                _ct = str(shot.get("tone") or "")
+                if i == 0 or hop_restart or _ct == "rebase" or carry_ref is None:
+                    carry_ref = _latents.channel_stats(prev_sampled)
+                    if carry_ref is not None:
+                        print(f"[{TAG}] hop {i + 1}: carry anchor set from this hop "
+                              "(scene start)", flush=True)
+                elif _ct == "free":
+                    print(f"[{TAG}] hop {i + 1}: tone=free, carry pull skipped", flush=True)
+                else:
+                    prev_sampled, _cnote = _latents.carry_pull(prev_sampled, carry_ref)
+                    if _cnote:
+                        print(f"[{TAG}] hop {i + 1} {_cnote}", flush=True)
             prev_key = hop_key
             _push_preview(
                 unique_id, f"hop {i + 1}/{n} done",
@@ -11885,6 +11930,17 @@ class HandTieClips:
             info += chr(10) + "seams: " + ", ".join(str(f) for f in seam_marks)
         if seam_health_obj is not None:
             info += chr(10) + "seam health: " + seam_health_obj["note"]
+        tone_drift_obj = None
+        if (not dry and master_imgs is not None and seam_marks
+                and len(seam_marks) + 1 == len(drift_scene_first)):
+            try:
+                tone_drift_obj = _tone.drift_report(
+                    master_imgs, [0] + [int(s) for s in seam_marks], drift_scene_first)
+            except Exception as _de:   # a meter must never cost the user the render
+                print(f"[{TAG}] drift meter skipped ({type(_de).__name__}: {_de})", flush=True)
+        if tone_drift_obj is not None:
+            info += (chr(10) + "drift: " + tone_drift_obj["note"]
+                     + chr(10) + "drift per hop: " + tone_drift_obj["table"])
         if motion_overload_obj is not None:
             info += chr(10) + f"motion overload: hop {motion_overload_obj['hop']} {motion_overload_obj['note']}"
         if unpaired_joins:
@@ -11947,6 +12003,7 @@ class HandTieClips:
                   "hops": int(n), "frames": int(master_imgs.shape[0]),
                   "ht_previs_warn": _warn_payload,
                   **({"seam_health": seam_health_obj["note"]} if seam_health_obj else {}),
+                  **({"tone_drift": tone_drift_obj["note"]} if tone_drift_obj else {}),
                   **({"motion_overload": f"hop {motion_overload_obj['hop']} {motion_overload_obj['note']}"}
                      if motion_overload_obj else {}),
                   "done": True})

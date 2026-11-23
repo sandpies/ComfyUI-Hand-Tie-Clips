@@ -188,3 +188,70 @@ def motion_overload_score(video_latent, warn_ratio=2.4):
         "status": status,
         "note": note,
     }
+
+
+# --- carry anchor (tone_compensate = "anchor+carry", 11-22) -----------------
+# The pixel anchor (tone.anchor_pull) repaints each hop's decoded frames, but a
+# motion_context continuation is pinned from the previous hop's SAMPLER latent,
+# so the drift that anchor removed from the master still feeds the next hop.
+# This pulls the carried latent itself back to the scene's first hop: per video
+# channel, the mean all the way and the spread within CARRY_STD_CLAMP. Only the
+# global level per channel moves; frame-to-frame content is untouched. The idea
+# (anchor the carry, not the output, to a source no drift has touched) was
+# measured independently by two community packs; this is HTC's own code.
+CARRY_STRENGTH = 1.0
+CARRY_MATCH_STD = True
+CARRY_STD_CLAMP = (0.85, 1.18)   # the sand_tie tone_lock clamp (walk_night_mv_00004)
+
+
+def _video_5d(lat):
+    """(parts, index of the 5-D video part) of a latent dict, or (None, None)."""
+    ps = from_dict(lat)
+    if not ps:
+        return None, None
+    return (ps, 0) if ps[0].ndim in (4, 5) else (None, None)
+
+
+def channel_stats(lat):
+    """Per-channel (mean [C], std [C]) of a latent dict's video part, float32 CPU. -> tuple or None."""
+    ps, k = _video_5d(lat)
+    if ps is None or k is None:
+        return None
+    v = ps[k]
+    v = (v.unsqueeze(0) if v.ndim == 4 else v).float()
+    dims = (0, 2, 3, 4)
+    return (v.mean(dim=dims).cpu(), v.std(dim=dims).clamp_min(1e-6).cpu())
+
+
+def carry_pull(lat, ref, strength=None, match_std=None, std_clamp=None):
+    """`lat` (a sampler latent dict) with its video part pulled toward `ref` =
+    channel_stats() of the scene's first hop. The audio part is never touched.
+    -> (new dict, note) ; (lat, None) when nothing could be done."""
+    k_s = CARRY_STRENGTH if strength is None else float(strength)
+    m_std = CARRY_MATCH_STD if match_std is None else bool(match_std)
+    lo, hi = CARRY_STD_CLAMP if std_clamp is None else std_clamp
+    ps, k = _video_5d(lat)
+    if ps is None or k is None or ref is None or k_s <= 0.0:
+        return lat, None
+    v0 = ps[k]
+    v = (v0.unsqueeze(0) if v0.ndim == 4 else v0).float()
+    m0, s0 = (t.to(v.device).float() for t in ref)
+    if m0.numel() != v.shape[1]:
+        return lat, None
+    dims = (0, 2, 3, 4)
+    m = v.mean(dim=dims)
+    s = v.std(dim=dims).clamp_min(1e-6)
+    gain = (s0 / s).clamp(lo, hi) if m_std else torch.ones_like(s)
+    shp = (1, -1, 1, 1, 1)
+    target = (v - m.view(shp)) * gain.view(shp) + m0.view(shp)
+    out = v + k_s * (target - v)
+    out = (out.squeeze(0) if v0.ndim == 4 else out).to(dtype=v0.dtype, device=v0.device)
+    new_parts = list(ps)
+    new_parts[k] = out
+    new = dict(lat)
+    new["samples"] = rebuild(lat["samples"], new_parts)
+    shift = float(((m - m0).abs() / s0.clamp_min(1e-6)).mean())
+    note = (f"carry pulled to the scene's first hop (mean gap {shift:.3f} sd"
+            + (f", spread x{float(gain.min()):.2f}-{float(gain.max()):.2f}" if m_std else "")
+            + f", strength {k_s:g})")
+    return new, note

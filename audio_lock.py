@@ -208,7 +208,10 @@ def separate_vocals_driver(wav, sr, *, cache_key=None):
 
     here, _ = _sm._torch_hub_bundle_present("hdemucs_high_trained.pt")
     if not here:
-        return None, "HDEMUCS vocal separator weights are not cached locally (run MV Listen once or supply vocal stem)"
+        return None, ("HDEMUCS vocal separator weights are not cached locally; fetch them once with "
+                      "ComfyUI's python: python -c \"import torchaudio; "
+                      "torchaudio.pipelines.HDEMUCS_HIGH_MUSDB_PLUS.get_model()\" "
+                      "(see docs/MODELS.md), or supply a vocal stem file")
 
     x = force_stereo(wav.detach().float().cpu())
     if cache_key:

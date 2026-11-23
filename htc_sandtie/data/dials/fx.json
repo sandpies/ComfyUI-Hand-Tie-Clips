@@ -278,20 +278,6 @@
       "domain": "combat_action"
     },
     {
-      "id": "vfx_anime2real_spiderverse_halftone_pop",
-      "label": "💥 Mixed-Reality Slop: Spider-Verse Ben-Day Halftone Dots & Chromatic Split Frames",
-      "group": "Action & Blockbuster VFX",
-      "rule": "mixed-reality comic-book pop-art VFX: vibrant Ben-Day halftone dot bursts, RGB chromatic split outlines, and floating 3D comic impact lettering erupt around the live-action subject.",
-      "domain": "combat_action"
-    },
-    {
-      "id": "vfx_anime2real_arcade_hitstop_ko_hud",
-      "label": "🕹️ Mixed-Reality Slop: Arcade Hit-Sparks, Combo Counter & Floating 'K.O.!' Hologram",
-      "group": "Action & Blockbuster VFX",
-      "rule": "mixed-reality fighting-game HUD VFX: neon pixel hit-sparks, a floating holographic combo counter, and a glowing 'K.O.!' banner erupt in 3D space on impact.",
-      "domain": "combat_action"
-    },
-    {
       "id": "vfx_warm_body_oil_pour_stream",
       "label": "🍯 Glistening Stream of Warm Golden Body Oil Pouring Over Skin",
       "group": "Elements",
@@ -537,13 +523,6 @@
       "domain": "wet_pool"
     },
     {
-      "id": "cinemagraph",
-      "label": "Living Still-Motion Isolate",
-      "group": "Optical",
-      "rule": "poised near-still subject framing while hair tips, steam, or curtain edges ripple softly",
-      "domain": "general"
-    },
-    {
       "id": "datamosh",
       "label": "Kinetic Pixel-Melt Transition",
       "group": "Digital",
@@ -565,13 +544,6 @@
       "domain": "general"
     },
     {
-      "id": "feedback",
-      "label": "Infinite Optical Mirror Loop",
-      "group": "Optical",
-      "rule": "cascading luminous frame echoes receding cleanly into depth",
-      "domain": "mirror_vanity"
-    },
-    {
       "id": "hud",
       "label": "Crisp Glass Visor Telemetry Overlay",
       "group": "Digital",
@@ -586,24 +558,10 @@
       "domain": "general"
     },
     {
-      "id": "kaleidoscope",
-      "label": "Symmetrical Prism Mirror Facets",
-      "group": "Optical",
-      "rule": "faceted crystalline prism reflections multiplying warm light highlights cleanly along frame borders",
-      "domain": "mirror_vanity"
-    },
-    {
       "id": "night_vision",
       "label": "Emerald Tactical Low-Light Grain",
       "group": "Digital",
       "rule": "crisp emerald-phosphor low-light surveillance sheen with glowing eyeshine and subtle tube grain",
-      "domain": "general"
-    },
-    {
-      "id": "pixel_dissolve",
-      "label": "Shifting Mosaic Particle Scatter",
-      "group": "Digital",
-      "rule": "crisp geometric pixel blocks dissolving smoothly along motion edges into floating embers",
       "domain": "general"
     },
     {
@@ -621,24 +579,10 @@
       "domain": "general"
     },
     {
-      "id": "slit_scan",
-      "label": "Fluid Slit-Scan Time Ribbon",
-      "group": "Optical",
-      "rule": "hypnotic flowing horizontal light ribbons stretching behind rhythmic movement",
-      "domain": "general"
-    },
-    {
       "id": "thermal",
       "label": "False-Color Heat Signature Map",
       "group": "Digital",
       "rule": "vivid indigo-to-amber-white thermal heat gradient tracing warm skin against cool air",
-      "domain": "general"
-    },
-    {
-      "id": "wigglegram",
-      "label": "3D Stereoscopic Flash Snap",
-      "group": "Optical",
-      "rule": "crisp 35mm flash pop with playful subtle parallax depth shift",
       "domain": "general"
     },
     {
@@ -649,59 +593,10 @@
       "domain": "general"
     },
     {
-      "id": "zoetrope",
-      "label": "Stroboscopic Cyclical Cadence",
-      "group": "Optical",
-      "rule": "crisp stroboscopic flash accents carving rhythmic pose phases cleanly across dark studio air",
-      "domain": "general"
-    },
-    {
       "id": "fx_altered_state_afterimage",
       "label": "🌀 Altered-State Hue Afterimage & Motion Smear Trail",
       "group": "Optical",
       "rule": "dreamlike perceptual smear leaving soft translucent color afterimages trailing gracefully behind turning heads and moving hands",
-      "domain": "general"
-    },
-    {
-      "id": "fx_forced_perspective_scale",
-      "label": "📏 Forced-Perspective Scale Play (Foreground Giant / Background Tiny)",
-      "group": "Optical",
-      "rule": "clever in-camera forced-perspective depth staging placing a near-lens hand or prop at towering scale beside a distant full figure aligned on the same tabletop plane",
-      "domain": "general"
-    },
-    {
-      "id": "fx_object_portal_wormhole",
-      "label": "🚪 Prop / Mirror Wormhole Portal Transition",
-      "group": "Optical",
-      "rule": "seamless spatial portal effect where an ordinary mirror, cabinet door, or bag opens cleanly directly into a contrasting distant location",
-      "domain": "general"
-    },
-    {
-      "id": "fx_photogrammetry_mesh_orbit",
-      "label": "🧊 Photogrammetry Scanned-Mesh Orbit Texture",
-      "group": "Digital",
-      "rule": "tactile 3D photogrammetry scan aesthetic revealing faceted polygon surface micro-glints and crisp captured texture facets as the camera orbits smoothly",
-      "domain": "general"
-    },
-    {
-      "id": "fx_aspect_ratio_expand",
-      "label": "↔️ Dynamic Frame Aspect Expansion (Boxed Matte -> Full Widescreen)",
-      "group": "Optical",
-      "rule": "smoothly widening letterbox side mattes opening from tight claustrophobic framing into full panoramic horizontal space as the beat crescendos",
-      "domain": "general"
-    },
-    {
-      "id": "fx_selfie_twin_mirror_split",
-      "label": "🪞 Arm's-Length Selfie Twin Double-Take",
-      "group": "Digital",
-      "rule": "playful arm's-length wide-angle front-camera framing placing identical twin personas side by side reacting together in crisp candid phone clarity",
-      "domain": "general"
-    },
-    {
-      "id": "fx_sticker_peel_layer",
-      "label": "🏷️ Die-Cut Sticker Peel World Reveal",
-      "group": "Digital",
-      "rule": "glossy die-cut vinyl sticker edge curling smoothly off the frame corner with crisp adhesive sheen to reveal an active live scene underneath",
       "domain": "general"
     },
     {
@@ -745,6 +640,20 @@
       "group": "Optical",
       "domain": "general",
       "rule": "occasional fine raindrops and warm edge condensation beading softly near the periphery of the camera lens glass, refracting distant neon bokeh into glowing orbs"
+    },
+    {
+      "id": "fx_ultrareal_35mm_celluloid_grain",
+      "label": "🎞️ Ultra-Realism Film Grain: Fine 35mm Kodak Vision3 Silver Grain & Gate Texture",
+      "group": "Optical",
+      "domain": "general",
+      "rule": "subtle organic 35mm Kodak Vision3 photochemical film grain shimmering evenly across skin midtones and deep shadows with authentic celluloid frame texture"
+    },
+    {
+      "id": "fx_ultrareal_raw_air_micro_dust",
+      "label": "🌬️ Ultra-Realism Air: Crisp Natural Room Air & Faint Airborne Lint",
+      "group": "Elements",
+      "domain": "general",
+      "rule": "natural candid interior air clarity with faint stray airborne lint motes drifting through directional window light"
     }
   ]
 }

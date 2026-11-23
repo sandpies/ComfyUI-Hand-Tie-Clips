@@ -643,28 +643,9 @@ def register():
         if not conn.get("model"):
             return web.json_response({"ok": False, "error": "No LLM model selected — open LLM Settings and pick one."})
 
-        if role == "background":
-            prompt_txt = _vcv.ROLE_PROMPTS["place"]
-            strip_studio = False
-        elif role == "helper":
-            prompt_txt = _vcv.ROLE_PROMPTS["prop"]
-            strip_studio = False
-        elif role == "wardrobe":
-            prompt_txt = (
-                "CRITICAL RULE: Describe ONLY the garment, outfit layers, and footwear visible (IGNORE any studio background, backdrop, or lighting). "
-                "Start with \"Wearing \" and state exact garment construction, colors, fabrics, patterns, inner/outer layers, straps, closures, and footwear in one crisp sentence under 45 words. "
-                "Never mention age, studio backdrop, or negative words (no, not, never, without)."
-            )
-            strip_studio = True
-        elif role == "style":
-            prompt_txt = (
-                "Describe the visual rendering medium, color palette, lens texture, and lighting style in one concise sentence under 35 words. "
-                "Never use negative words (no, not, never, without)."
-            )
-            strip_studio = False
-        else:
-            prompt_txt = _vcv.ROLE_PROMPTS["subject"]
-            strip_studio = True
+        prompt_key = _vcv.canonical_caption_role(role)
+        strip_studio = prompt_key in ("subject", "auto", "wardrobe", "bodyshape")
+        prompt_txt = _vcv.build_caption_prompt(prompt_key, n_images=len(urls))
 
         content = [{"type": "text", "text": prompt_txt}]
         for u in urls:
@@ -674,12 +655,12 @@ def register():
         try:
             raw = await _llm.complete(
                 conn["server_url"], conn["model"], msgs,
-                schema=None, temperature=0.2,
+                schema=None, temperature=0.35, max_tokens=_vcv.caption_max_tokens(prompt_key),
             )
         except Exception as exc:  # noqa: BLE001
             return web.json_response({"ok": False, "error": f"VLM captioning failed: {exc}"})
 
-        caption = _vcv._clean_desc(raw, 480, strip_studio=strip_studio)
+        caption = _vcv._clean_desc(raw, 860, strip_studio=strip_studio)
         caption = _refmod._clean_desc_text(caption.strip(" \"'"))
         if not caption:
             return web.json_response({"ok": False, "error": "VLM returned an empty caption."})
@@ -1801,48 +1782,54 @@ def register():
             if t_name in ident_tag_set:
                 if mode == "head_swap":
                     look_sys = (
-                        "Describe ONLY the racial/ethnic descent (e.g. East Asian woman, Latina woman, Black woman, Caucasian woman, "
-                        "judged strictly from facial bone structure and eye shape regardless of dyed/cosplay hair), skin tone, "
-                        "facial bone structure, eye shape and color, hair color, and hairstyle of the person in this reference image "
-                        "in one compact noun phrase (18-28 words). NEVER mention background, walls, studio lighting, pose, or clothes/collar. "
-                        "State ONLY what is present using positive words (never write no, not, without, never, or pronouns he, she, they, their). "
-                        "Start with 'an East Asian woman', 'a Latina woman', 'a Black woman', 'a Caucasian woman', 'a woman', or 'a man'."
+                        "Describe ONLY this person's visual rendering style (when stylized such as 2D anime or 3D CGI, else omit photo boilerplate), "
+                        "racial/ethnic profile and gender (e.g. East Asian woman, Latina woman, Black woman, Caucasian woman, Middle Eastern man, judged strictly from facial bone structure regardless of dyed/cosplay hair), "
+                        "actual skin tone/undertone and any distinctive marks (moles, freckles, makeup), individual face/jawline/cheekbone/nose/lip geometry, "
+                        "ACTUAL observed eye shape/lid type/iris color and brow shape (never default to 'almond' or 'dark'), and exact hair color, texture, parting, and cut "
+                        "in one compact noun phrase (26-44 words). NEVER mention background, walls, studio lighting, pose, or clothes/collar. "
+                        "State ONLY what is present using positive words (never write no, not, without, never, or pronouns he, she, him, her, his, they, their). "
+                        "Open directly with the style (if stylized) plus racial/ethnic profile and gender (e.g. 'an East Asian woman', 'a 2D anime Latina woman', 'a Black man')."
                     )
                 elif mode == "face_only":
                     look_sys = (
-                        "Describe ONLY the racial/ethnic descent (judged strictly from facial bone structure and eye shape), "
-                        "skin tone, facial bone structure, eye shape and color, nose, lips, and jawline of the person in this reference image "
-                        "in one compact noun phrase (15-25 words). NEVER mention hair, clothing, background, studio lighting, or pose. "
-                        "State ONLY what is present using positive words (never write no, not, without, never, or pronouns he, she, they, their). "
-                        "Start with 'an East Asian woman', 'a Latina woman', 'a woman', or 'a man'."
+                        "Describe ONLY this person's visual rendering style (when stylized such as 2D anime or 3D CGI), "
+                        "racial/ethnic profile and gender (judged strictly from facial bone structure), actual skin tone/undertone and marks (freckles, moles, makeup), "
+                        "individual face shape, jawline, cheekbones, nose bridge/tip, lips, eyebrows, and ACTUAL observed eye shape/lid type/iris color "
+                        "(never default to 'almond' or 'dark') in one compact noun phrase (22-38 words). NEVER mention hair, clothing, background, studio lighting, or pose. "
+                        "State ONLY what is present using positive words (never write no, not, without, never, or pronouns he, she, him, her, his, they, their). "
+                        "Open directly with the style (if stylized) plus racial/ethnic profile and gender."
                     )
                 else:
                     cloth_clause = (
                         ""
                         if has_ward_override
-                        else ", and exact visible clothing/outfit worn (colors, cut, fabric — if lower body is cropped out, describe ONLY visible upper garments without inventing lower clothes)"
+                        else ", and exact visible clothing/outfit worn (cut, layers, fabrics, colors — if lower body is cropped out, describe ONLY visible upper garments without inventing lower clothes)"
                     )
                     look_sys = (
-                        "Describe ONLY the physical appearance of the person in this reference image in one compact noun phrase (25-45 words): "
-                        "explicit racial/ethnic descent (judged strictly from facial bone structure and eye shape regardless of dyed/cosplay hair), "
-                        "skin tone, facial bone structure, eye shape and color, hair color and hairstyle, body build" + cloth_clause
-                        + ". NEVER mention the photo's background, studio walls, lighting, camera angle, or static pose. "
-                        "State ONLY what is present using positive words (never write no, not, without, never, or pronouns he, she, they, their). "
-                        "Start with 'an East Asian woman', 'a Latina woman', 'a Black woman', 'a Caucasian woman', 'a woman', or 'a man'."
+                        "Describe ONLY the physical appearance and rendering style of this person in one compact noun phrase (35-65 words): "
+                        "visual medium/style (if stylized such as 2D anime, 3D CGI, or illustration), explicit racial/ethnic profile and gender "
+                        "(judged strictly from facial bone structure regardless of dyed/cosplay hair), actual skin tone/undertone and distinctive marks or makeup, "
+                        "individual face/jaw/nose/lip geometry, ACTUAL observed eye geometry/lid type/iris color and brow shape (never default to 'almond' or 'dark'), "
+                        "honest body build/silhouette (curvy hourglass, full/modest bust, waist taper, wide/narrow hips, muscularity, or slender frame — never default to 'slim'/'petite' when curvy), and exact hair color, length, texture, bangs/sidelocks, and hairstyle" + cloth_clause
+                        + ". NEVER mention the photo's background, studio walls, lighting, camera angle, or static pose, and never list absent items ('no jewelry', 'no tattoos'). "
+                        "State ONLY what is present using positive words (never write no, not, without, never, or pronouns he, she, him, her, his, they, their). "
+                        "Open directly with the style (if stylized) plus racial/ethnic profile and gender."
                     )
-                cache_scope = f"{mode}|ward={int(has_ward_override)}"
+                cache_scope = f"v3|{mode}|ward={int(has_ward_override)}"
             elif t_name == background_tag and background == "picture":
                 look_sys = (
-                    "Describe ONLY the room, architecture, key furniture, surface materials, and lighting of this background setting image "
-                    "in one compact noun phrase (20-35 words). State ONLY what is present using positive words (never mention people, pronouns, or negations)."
+                    "Describe ONLY the rendering style (if stylized), room/environment, foreground-to-background layout, key furniture, surface materials, "
+                    "and light direction/color temperature of this background setting image in one compact noun phrase (25-45 words). "
+                    "State ONLY what is present using positive words (never mention people, pronouns, or negations)."
                 )
-                cache_scope = "bg_plate"
+                cache_scope = "v3|bg_plate"
             elif t_name == wardrobe_tag:
                 look_sys = (
-                    "Describe ONLY the clothing, garment cut, fabric, colors, and footwear shown in this wardrobe reference image "
-                    "in one compact noun phrase (15-30 words). State ONLY what is present using positive words (never mention face, hair, background, pronouns, or negations)."
+                    "Describe ONLY the rendering style (if stylized), garment silhouette, inner/outer layers, fabric drape/sheen/knit, colors, straps/closures, "
+                    "and footwear shown in this wardrobe reference image in one compact noun phrase (20-40 words). "
+                    "State ONLY what is present using positive words (never mention face, hair, background, pronouns, or negations)."
                 )
-                cache_scope = "ward_plate"
+                cache_scope = "v3|ward_plate"
             else:
                 continue
 
@@ -1871,12 +1858,12 @@ def register():
                     ]
                     raw_look = await _llm.complete(
                         conn["server_url"], conn["model"], look_msg,
-                        temperature=0.12, max_tokens=160,
+                        temperature=0.3, max_tokens=260,
                     )
                     clean_look = " ".join(str(raw_look or "").split()).strip(" .\"'")
                     try:
                         from .htc_sandtie import vision_cv as _vcv
-                        clean_look = _vcv._clean_desc(clean_look, cap=260, strip_studio=(t_name in ident_tag_set))
+                        clean_look = _vcv._clean_desc(clean_look, cap=460, strip_studio=(t_name in ident_tag_set))
                     except Exception:
                         pass
                     clean_look = _planner.scrub_swap_negations(

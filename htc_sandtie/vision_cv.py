@@ -21,51 +21,99 @@ def _cache_file() -> str:
 
 ROLE_PROMPTS = {
     "subject": (
-        "CRITICAL RULE: Focus 100% on the person/character. COMPLETELY IGNORE any black, dark grey, charcoal, white, or plain studio background, backdrop, void, floor, walls, or studio lighting — do NOT mention any background or studio environment! "
-        "Write two sentences about the person ONLY (check all panels and zoomed inset crops if this is a reference sheet): "
-        "Sentence 1 must start with \"Anchor: \" followed immediately by their exact racial/ethnic descent, facial bone structure, eye shape, and skin tone "
-        "(e.g. 'East Asian woman with fair porcelain skin, soft East Asian facial features, and dark almond eyes', 'Southeast Asian woman with warm golden-tan skin and Southeast Asian facial features', "
-        "'South Asian woman', 'Black woman with deep rich brown skin', 'Latina woman', 'Middle Eastern woman', 'Caucasian woman' — "
-        "determine racial/ethnic descent strictly from facial bone structure and features in the face/inset panels, even when they wear dyed bright red, ginger-orange, blonde, pastel, or cosplay hair), "
-        "followed by their exact hair colour, length, and style (plus facial hair if any), "
-        "any worn jewellery, choker, hair clip, headband, glasses, or claw nails, and any visible tattoos, text tattoos, "
-        "body markings, piercings, or horns including those shown in close-up inset panels. "
-        "Sentence 2 must start with \"Wearing \" and state their exact garment construction and layers head-to-toe: "
-        "specify whether it is a one-piece (bodysuit, swimsuit, leotard, dress) or two-piece (crop top, sports bra, "
-        "shorts, bikini), any layered inner/outer pieces, and exact strap/closure details (spaghetti straps, wide tank "
-        "straps, halter neck tie, button placket, waist band, socks, footwear). "
-        "Never mention age, body weight, background, studio backdrop, or lighting, and never use negative words (no, not, never, without). "
-        "Under 65 words total. Answer with the two sentences only."
+        "CRITICAL RULE: Focus 100% on the person/character. Completely disregard any black, dark grey, charcoal, white, or plain studio background, backdrop, void, floor, walls, or studio lighting — mention zero background or studio environment! "
+        "Reply with EXACTLY TWO sentences (never three or more, and NEVER use pronouns she, he, her, his, they, their): "
+        "Sentence 1 MUST be ONE single comma-separated noun-phrase sentence starting with \"Anchor: \" giving: "
+        "1) visual medium/style (e.g. photorealistic live-action, 2D cel-shaded anime, digital illustration, 3D CGI render, vintage film photo); "
+        "2) racial/ethnic profile and gender (e.g. East Asian woman, Southeast Asian man, South Asian woman, Black woman, Latina woman, Middle Eastern man, Caucasian woman, Mixed-race woman — judge strictly from facial bone structure even under dyed or cosplay hair); "
+        "3) actual skin tone/undertone plus any visible freckles, beauty marks/moles with exact placement, dimples, scars, or blush/makeup; "
+        "4) actual face shape and bone structure (jawline, chin, cheekbones, nose bridge/tip, lip fullness/shape); "
+        "5) ACTUAL observed eye geometry and iris color (check close-up insets — never default to 'almond' or 'dark': state round, hooded, monolid, deep double-lid, upturned, wide-set, exact iris tint e.g. pale lavender-grey/amber/hazel/espresso, eyeliner/lashes, and brow thickness/arch); "
+        "6) honest body build and silhouette from full-body views (never default to 'slim' or 'petite' when curvy — explicitly note curvy hourglass, full/modest bust, narrow waist, wide/narrow hips, athletic muscular, lean, or petite frame); "
+        "7) exact hair color/roots, length (chin, shoulder, mid-back, waist), bangs/sidelocks, parting, texture, facial hair, plus any worn glasses shape, jewelry, choker, headwear, nails, tattoos, piercings, or horns. "
+        "Sentence 2 MUST ALWAYS be present whenever clothing, swimwear, or footwear is visible: start with \"Wearing \" (or \"Unclothed\" when bare) and list head-to-toe garment construction, inner/outer layers, cut-outs, ties/straps/closures, fabrics, colors, hosiery, and footwear/bare feet. "
+        "Never guess numeric age or body weight, never list absent items (never write 'no jewelry', 'no tattoos', etc.), never use negative words (no, not, never, without, none, lacking), and stay under 110 words total."
     ),
     "auto": (
-        "CRITICAL RULE: If this image contains ANY person, character, model, face, or body (including a portrait, lookbook photo, or multi-panel character reference/turnaround sheet on a black, dark grey, charcoal, or white background), focus 100% on the PERSON and COMPLETELY IGNORE the background, studio backdrop, walls, floor, void, and studio lighting! "
-        "When a person is present, write two sentences about the person ONLY: "
-        "Sentence 1 must start with \"Anchor: \" followed immediately by their exact racial/ethnic descent, facial bone structure, eye shape, and skin tone "
-        "(judge ethnicity strictly from facial bone structure and features, even when they have dyed red, ginger-orange, blonde, silver, or cosplay hair), "
-        "then their exact hair colour, length, and style, plus any jewellery, choker, headband, glasses, nails, tattoos, or body markings across all inset panels. "
-        "Sentence 2 must start with \"Wearing \" and state their exact garment construction and layers head-to-toe (never mention the background or studio lighting). "
-        "ONLY if the image contains ZERO people and shows an actual architectural room, street, landscape, or film set, start with \"Set: \" and describe the indoor/outdoor setting, surfaces, materials, colours, key objects, and lighting in under 45 words. "
-        "ONLY if it shows a standalone object or wearable prop alone with zero people, start with \"Prop: \" and describe its shape, material, colour, and texture in one sentence. "
-        "Never use negative words (no, not, never, without)."
+        "CRITICAL RULE: If this image contains ANY person, character, model, face, or body (including a portrait, lookbook photo, or multi-panel character reference/turnaround sheet on a black, dark grey, charcoal, or white background), focus 100% on the PERSON and completely disregard the background, studio backdrop, walls, floor, void, and studio lighting! "
+        "When a person is present, reply with EXACTLY TWO sentences (never use pronouns she, he, her, his, they, their): "
+        "Sentence 1 MUST be ONE single comma-separated noun-phrase sentence starting with \"Anchor: \" giving visual medium/style, racial/ethnic profile and gender (judged from facial bone structure even under dyed/cosplay hair), "
+        "actual skin tone/undertone and marks/makeup, face/jaw/nose/lip geometry, ACTUAL eye geometry/lid type/iris color and brow shape (never default to 'almond' or 'dark'), "
+        "honest full-body silhouette/build (explicitly noting bust, waist, hips, muscularity, or slender frame rather than defaulting to 'slim'/'petite'), exact hair color/length/bangs/sidelocks/texture, plus glasses, jewelry, nails, tattoos, or horns. "
+        "Sentence 2 MUST ALWAYS start with \"Wearing \" (or \"Unclothed\" when bare) and list head-to-toe garments, layers, cut-outs, straps/ties, fabrics, colors, and footwear/bare feet (mention zero background or studio lighting). "
+        "ONLY if the image contains ZERO people and shows an actual architectural room, street, landscape, or film set, start with \"Set: \" and describe the rendering style, indoor/outdoor spatial layout (foreground/midground/background), surfaces, materials, key objects, lighting direction/color temperature, and plate camera height/angle in under 65 words. "
+        "ONLY if it shows a standalone object or wearable prop alone with zero people, start with \"Prop: \" and describe its visual style, silhouette, material/finish, colors, and surface details in under 40 words. "
+        "Never list absent items and never use negative words (no, not, never, without, none, lacking)."
     ),
     "place": (
-        "Describe this place as a film set: whether indoors or outdoors, surfaces and materials, colours, key objects "
-        "and furniture, and the light and time of day. Focus strictly on the environment and architecture, and never use negative words (no, not, "
-        "never, without, empty). One concise paragraph under 45 words."
+        "Describe this place as a film set: visual medium/style if stylized, indoor/outdoor setting, foreground/midground/background layout, "
+        "surfaces and materials, colors, key furniture and props, lighting direction/color temperature/time of day, and plate camera angle/height. "
+        "Focus strictly on the environment and architecture, and never use negative words (no, not, never, without, empty). "
+        "One concrete paragraph under 65 words."
     ),
     "prop": (
-        "Describe only this object or wearable prop: exact shape, material, colour, surface texture, and details. "
-        "Focus strictly on the object itself, and never use negative words (no, not, never, without). "
-        "One short sentence under 30 words."
+        "Describe only this object or wearable prop: visual style/medium if stylized, exact silhouette, material/finish, colors, "
+        "markings or engravings, and surface wear/details. Focus strictly on the object itself, and never use negative words (no, not, never, without). "
+        "One crisp sentence under 40 words."
+    ),
+    "wardrobe": (
+        "CRITICAL RULE: Describe ONLY the garments, accessories, and footwear visible (completely disregard the wearer's face/identity and any studio background, backdrop, or lighting). "
+        "Open with rendering style if non-photorealistic (e.g. 2D anime or 3D CGI), then start with \"Wearing \" and state exact garment silhouette/fit, "
+        "inner and outer layers, fabric drape/sheen/knit/pattern, colors, necklines, straps, closures, hosiery, and footwear in under 60 words. "
+        "Never mention age, studio backdrop, or negative words (no, not, never, without)."
+    ),
+    "style": (
+        "Describe ONLY the visual style of this reference: exact rendering medium (photorealistic 35mm, glossy editorial digital, 2D cel-shaded anime, painterly illustration, 3D CGI render), "
+        "linework or grain/lens texture, color palette and grading curve, contrast, and signature lighting aesthetic in under 50 words. "
+        "Never use negative words (no, not, never, without)."
+    ),
+    "bodyshape": (
+        "CRITICAL RULE: Describe ONLY the body build, proportions, and visual style (disregarding studio backdrop, walls, lighting, and specific face/garment identity). "
+        "State rendering style, stature/frame proportions honestly (curvy hourglass, full/modest bust, narrow waist, wide/narrow hips, athletic muscular, lean, or slender — never default to 'slim'/'petite' when curvy), shoulder-to-waist-to-hip silhouette, and skin tone/undertone in under 50 words. "
+        "Never guess numeric age/weight or use negative words (no, not, never, without)."
+    ),
+    "pose_motion": (
+        "Describe ONLY the physical pose, stance, weight distribution, spine/hip tilt, arm/hand placement, head angle/gaze, and implied motion across frames in under 45 words. "
+        "Disregard the subject's identity, garments, and background, and never use negative words (no, not, never, without)."
     ),
     "frame": (
-        "This picture is the opening frame of a video. Open with the medium and style (e.g. live-action cinematic, "
-        "2D anime, 3D render), then state each person's exact racial/ethnic descent, facial features, and skin tone alongside their hair colour "
-        "(e.g. 'an East Asian woman with fair porcelain skin and vibrant red hair'), what they are wearing, their exact posture and hand placement, "
-        "the room/place, the lighting, and the camera framing. Never mention age or body weight, and "
-        "never use negative words (no, not, never, without). One paragraph under 65 words."
+        "This picture is the opening frame of a video. Open with the exact visual medium and rendering style (e.g. live-action cinematic, "
+        "2D cel-shaded anime, 3D CGI render), then state each person's racial/ethnic profile, gender, actual skin tone/marks, and specific facial/eye/brow geometry and build alongside their exact hair color/style "
+        "(observing true eye and face shape rather than generic defaults), what they are wearing, their exact posture, screen position, and hand placement, "
+        "the room/place, the lighting direction/color, and the camera framing. Never guess numeric age or body weight, and "
+        "never use negative words (no, not, never, without). One concrete paragraph under 85 words."
     ),
 }
+
+
+def canonical_caption_role(role: str) -> str:
+    r = str(role or "subject").strip().lower()
+    if r == "background":
+        return "place"
+    if r == "helper":
+        return "prop"
+    if r in ("identity", "generic", ""):
+        return "subject"
+    return r if r in ROLE_PROMPTS else "subject"
+
+
+def build_caption_prompt(role: str, n_images: int = 1) -> str:
+    key = role if role in ROLE_PROMPTS else canonical_caption_role(role)
+    base = ROLE_PROMPTS[key]
+    if int(n_images or 1) >= 2:
+        if key == "subject":
+            base += (
+                " Multiple look frames from the same subject asset are attached: capture the shared rendering style, racial/ethnic profile, gender, "
+                "specific eye/facial traits, skin marks, build, and hair consistent across all frames, and state clothing only where outfits match across frames."
+            )
+        else:
+            base += " Multiple frames from the same asset are attached: synthesize the consistent traits shared across all frames."
+    return base
+
+
+def caption_max_tokens(role: str) -> int:
+    key = role if role in ROLE_PROMPTS else canonical_caption_role(role)
+    return 440 if key in ("subject", "auto", "frame") else 280
 
 VIDEO_EXTRACTOR_SYSTEM = """You are the SandTie Choreography & Camera Vision Extractor for MiniMax H3.
 You are given chronological Shot-by-Shot Storyboard Contact Strips of a reference video clip.
@@ -177,19 +225,39 @@ def scrub_sheet_leaks(text: str, strip: bool = True) -> str:
     return t.strip() if strip else t
 
 
-def _clean_desc(text: str, cap: int = 420, strip_studio: bool = False) -> str:
+def _clean_desc(text: str, cap: int = 860, strip_studio: bool = False) -> str:
     t = re.sub(r"[*#_`>]+", "", text or "")
     t = re.sub(r"^(?:based on|here is|here's|sure|certainly|in this (?:image|picture|frame))[^:.]*[:.]\s*", "", t, flags=re.I)
     t = " ".join(t.split()).strip()
     if strip_studio or t.lower().startswith("anchor:"):
         t = _STUDIO_SCAN_SENT_RX.sub(" ", t)
     t = scrub_sheet_leaks(t)
-    t = re.sub(r"\b(?:with\s+)?no\s+(?:visible\s+)?(?:tattoos?|markings?|jewell?ery|accessories)\b[,.]?", "", t, flags=re.I)
-    t = re.sub(r"\bwithout\s+any\s+[^,.;]+", "", t, flags=re.I)
+    # Strip negative-absence clauses ("and no visible jewelry or piercings", "with no tattoos", "without any accessories", "lacking markings")
+    for _ in range(3):
+        t_next = re.sub(
+            r"(?:,\s*(?:and\s+|with\s+)?|\s+(?:and|with)\s+)?\b(?:no|without|lacking|free\s+of|devoid\s+of)\s+(?:visible\s+|any\s+)?[^,.;!?\n]+",
+            "",
+            t,
+            flags=re.I,
+        )
+        t_next = re.sub(
+            r"(?:,\s*(?:and\s+)?|\s+and\s+)?\b(?:not|never)\s+(?:wearing|showing|having|featuring)\s+[^,.;!?\n]+",
+            "",
+            t_next,
+            flags=re.I,
+        )
+        if t_next == t:
+            break
+        t = t_next
+    t = re.sub(r",\s*,+", ",", t)
+    t = re.sub(r"(?:,\s*|\s+(?:and|with)\s*)([.;!?]|$)", r"\1", t, flags=re.I)
+    t = re.sub(r"\.\s*\.", ".", t)
     t = " ".join(t.split()).strip()
     if len(t) > cap:
         cut = t[:cap].rsplit(". ", 1)[0]
-        t = cut + ("." if not cut.endswith(".") else "")
+        if len(cut) < max(80, cap // 3) or "Wearing " in t[len(cut):cap]:
+            cut = t[:cap].rsplit(", ", 1)[0]
+        t = cut.rstrip(" ,;") + ("." if not cut.rstrip(" ,;").endswith(".") else "")
     return t
 
 
@@ -208,46 +276,48 @@ def is_studio_backdrop_scan(text: str) -> bool:
     )
 
 
+async def scan_reference_urls(urls: list[str], role: str, complete_fn, *, cache_key: str = "") -> str:
+    clean_urls = [str(u).strip() for u in (urls or []) if str(u or "").strip()]
+    if not clean_urls:
+        return ""
+    rkey = role if role in ROLE_PROMPTS else canonical_caption_role(role)
+    strip_studio = rkey in ("subject", "auto", "wardrobe", "bodyshape")
+    if cache_key:
+        cache = _load_cache()
+        hit = cache.get(cache_key)
+        if isinstance(hit, str) and hit.strip() and not (strip_studio and is_studio_backdrop_scan(hit)):
+            return _clean_desc(hit, 860, strip_studio=strip_studio)
+    content = [{"type": "text", "text": build_caption_prompt(rkey, n_images=len(clean_urls))}]
+    for u in clean_urls:
+        content.append({"type": "image_url", "image_url": {"url": u}})
+    max_tok = caption_max_tokens(rkey)
+    raw = await complete_fn([{"role": "user", "content": content}], schema=None, temperature=0.35, max_tokens=max_tok)
+    cleaned = _clean_desc(raw, 860, strip_studio=strip_studio)
+    if rkey == "auto" and is_studio_backdrop_scan(cleaned):
+        content_subj = [{"type": "text", "text": build_caption_prompt("subject", n_images=len(clean_urls))}]
+        for u in clean_urls:
+            content_subj.append({"type": "image_url", "image_url": {"url": u}})
+        raw_subj = await complete_fn([{"role": "user", "content": content_subj}], schema=None, temperature=0.35, max_tokens=440)
+        cleaned = _clean_desc(raw_subj, 860, strip_studio=True)
+    if cache_key and cleaned and not (strip_studio and is_studio_backdrop_scan(cleaned)):
+        _save_cache(cache_key, cleaned)
+    return cleaned
+
+
 async def scan_reference_file(path: str, role: str, complete_fn) -> str:
     if not path or not os.path.isfile(path):
         return ""
-    role = role if role in ROLE_PROMPTS else "subject"
+    rkey = role if role in ROLE_PROMPTS else canonical_caption_role(role)
+    strip_studio = rkey in ("subject", "auto", "wardrobe", "bodyshape")
     mtime = int(os.path.getmtime(path))
     cache = _load_cache()
-    key = f"refscan_v4|{os.path.abspath(path)}|{mtime}|{role}"
+    key = f"refscan_v6|{os.path.abspath(path)}|{mtime}|{rkey}"
     hit = cache.get(key)
-    if not (isinstance(hit, str) and hit.strip()):
-        v3_hit = cache.get(f"refscan_v3|{os.path.abspath(path)}|{mtime}|{role}")
-        if not v3_hit and role == "auto":
-            v3_hit = cache.get(f"refscan_v3|{os.path.abspath(path)}|{mtime}|subject")
-        if isinstance(v3_hit, str) and v3_hit.strip() and not is_studio_backdrop_scan(v3_hit):
-            hit = v3_hit
-    if isinstance(hit, str) and hit.strip() and not is_studio_backdrop_scan(hit):
-        return _clean_desc(hit, 480, strip_studio=(role in ("subject", "auto")))
+    if isinstance(hit, str) and hit.strip() and not (strip_studio and is_studio_backdrop_scan(hit)):
+        return _clean_desc(hit, 860, strip_studio=strip_studio)
     try:
-        data_url = encode_image_mp(path, mp=2.5 if role in ("subject", "auto", "frame") else 1.2)
-        msgs = [{
-            "role": "user",
-            "content": [
-                {"type": "text", "text": ROLE_PROMPTS[role]},
-                {"type": "image_url", "image_url": {"url": data_url}},
-            ],
-        }]
-        raw = await complete_fn(msgs, schema=None, temperature=0.2, max_tokens=240)
-        cleaned = _clean_desc(raw, 480, strip_studio=(role in ("subject", "auto")))
-        if role == "auto" and is_studio_backdrop_scan(cleaned):
-            msgs_subj = [{
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": ROLE_PROMPTS["subject"]},
-                    {"type": "image_url", "image_url": {"url": data_url}},
-                ],
-            }]
-            raw_subj = await complete_fn(msgs_subj, schema=None, temperature=0.2, max_tokens=240)
-            cleaned = _clean_desc(raw_subj, 480, strip_studio=True)
-        if cleaned and not is_studio_backdrop_scan(cleaned):
-            _save_cache(key, cleaned)
-        return cleaned
+        data_url = encode_image_mp(path, mp=2.5 if rkey in ("subject", "auto", "frame") else 1.5)
+        return await scan_reference_urls([data_url], rkey, complete_fn, cache_key=key)
     except Exception as exc:
         print(f"[HandTieClips-SandTie] vision scan skipped ({os.path.basename(path)}): {exc}", flush=True)
         return ""

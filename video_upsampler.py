@@ -656,7 +656,8 @@ FACE_PASS_TIP = (
     "The small-face close-up re-draw (faces about 280 px tall or less in the output). "
     "auto = with regen2k only, as before. on = also under ic: there only faces under "
     "about 220 px, at most 2, drawn by Regen2K (ic keeps larger faces well and costs "
-    "more). off = never, which saves its time.")
+    "more). off = never, which saves its time. Needs opencv-python; the YuNet face "
+    "detector (232 KB) downloads itself once.")
 
 
 def face_pass_on(face_pass, method, denoise):

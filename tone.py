@@ -39,6 +39,16 @@ import torch
 
 TAG = "HTCTone"
 MODES = ["off", "frame_shift", "gain_bias", "lut", "anchor", "chroma"]
+# The chain node's list. "anchor+carry" = anchor, plus the carried latent of a
+# motion_context continuation pulled to its scene's first hop (latents.carry_pull).
+# Chain-only: HTCToneCompensate works on pictures and has no carry.
+# NOT LISTED (11-22): the same-seed 5-hop A/B held chroma
+# (-13% -> -5% by hop 5) but the user saw B's hops shift MORE than plain anchor,
+# and decoded texture rose (+39% vs +24% at hop 4). The code stays; run() still
+# honours the value, so a saved graph carrying it keeps working. Flip to list it.
+CARRY_MODE = "anchor+carry"
+CARRY_LISTED = False
+CHAIN_MODES = MODES + ([CARRY_MODE] if CARRY_LISTED else [])
 
 # --- anchor mode ------------------------------------------------------------
 # The other three modes are seam-LOCAL: they measure the denoiser's tone bias on
@@ -83,6 +93,15 @@ ANCHOR_MAX_SHIFT = 0.06  # hard cap per hop, in 0..1 units (~15/255, ~6 Lab unit
 ANCHOR_RAMP = 48         # frames to reach full correction (2 s at 24 fps)
 ANCHOR_MAX_GAIN = 0.15   # hard cap on the L* spread correction, as a ratio
 ANCHOR_STAT_FRAMES = 24  # frames sampled when measuring a hop (0 = all of them)
+# Seam ramp (11-22, CARRY_AB): the seam match above works on the 22-frame overlap's
+# averages, so the two frames that touch at a join can still disagree; on a 5-hop
+# run that left a 1-frame b* snap of 0.37-0.70 against 0.04 for an ordinary frame.
+# The ramp measures that exact pair and removes the step from the INCOMING hop,
+# fading out over SEAM_RAMP frames. It never touches the previous hop's frames
+# (the old pixel seam bridge did, and smeared camera moves backwards over the join).
+SEAM_RAMP = 24          # frames over which the removed step fades out (1 s at 24 fps)
+SEAM_MAX_STEP = 3.0     # Lab units; a bigger jump at the cut is content, left alone
+SEAM_MIN_STEP = 0.05    # Lab units; below this there is nothing to fix
 # Pixels converted to Lab at once. The conversion needs several full-size
 # intermediates (X, Y, Z, then f() of each), so a 362-frame 1344x768 hop done in
 # one go would ask for tens of gigabytes it does not need. Chunking holds the
@@ -633,6 +652,149 @@ def seam_health_report(frames, seam_marks, radius=2):
         "status": status,
         "note": note,
     }
+
+
+# --- drift meter (11-22) -----------------------------------------------------
+# One set of numbers for every chain A/B: each hop against the FIRST hop of its
+# scene (hop 1, a restart, or tone=rebase), so an intended new look is never
+# counted as drift. Colour and light in CIE Lab on a small copy; texture as the
+# tools/texture_probe.py mid band (Gaussian 1.0 - 2.5 px) on a native-resolution
+# centre crop -- downscaling first would erase the very band that ratchets --
+# divided by the crop's mean luma, so an exposure change is not read as texture.
+# Reads a handful of frames per hop, so a disk-backed master stays cheap.
+DRIFT_FRAMES_PER_HOP = 5
+DRIFT_TEX_CROP = 384
+DRIFT_SIGMAS = (1.0, 2.5)
+
+
+def _drift_blur(g, sigma):
+    import torch.nn.functional as F  # noqa: PLC0415
+    r = max(1, int(round(3.0 * sigma)))
+    x = torch.arange(-r, r + 1, dtype=torch.float32)
+    k = torch.exp(-(x * x) / (2.0 * sigma * sigma))
+    k = k / k.sum()
+    y = g.unsqueeze(1)
+    y = F.conv2d(F.pad(y, (r, r, 0, 0), mode="reflect"), k.view(1, 1, 1, -1))
+    y = F.conv2d(F.pad(y, (0, 0, r, r), mode="reflect"), k.view(1, 1, -1, 1))
+    return y.squeeze(1)
+
+
+def _drift_hop_stats(frames, a, b):
+    """(L*, C*, mid-band texture / luma) of frames [a, b), from a few frames in its middle 80 %."""
+    span = b - a
+    if span < 1:
+        return None
+    lo = a + int(span * 0.1)
+    hi = max(lo + 1, a + int(span * 0.9))
+    n = min(DRIFT_FRAMES_PER_HOP, hi - lo)
+    idx = sorted({lo + int(round(j * (hi - lo - 1) / max(1, n - 1))) for j in range(n)})
+    sl = torch.stack([frames[i] for i in idx]).float().clamp(0.0, 1.0)   # [k,H,W,3]
+    h, w = int(sl.shape[1]), int(sl.shape[2])
+    small = sl
+    if max(h, w) > 256:
+        sc = 256.0 / float(max(h, w))
+        small = torch.nn.functional.interpolate(
+            sl.movedim(-1, 1), size=(max(16, int(round(h * sc))), max(16, int(round(w * sc)))),
+            mode="bilinear", align_corners=False).movedim(1, -1)
+    lab = _srgb_to_lab(small)
+    big_l = float(lab[..., 0].mean())
+    big_c = float((lab[..., 1].pow(2) + lab[..., 2].pow(2)).sqrt().mean())
+    c = min(DRIFT_TEX_CROP, h, w)
+    y0, x0 = (h - c) // 2, (w - c) // 2
+    crop = sl[:, y0:y0 + c, x0:x0 + c]
+    g = (crop * torch.tensor([0.2126, 0.7152, 0.0722])).sum(dim=-1)
+    tex = None
+    if c >= 4 * int(round(3.0 * DRIFT_SIGMAS[1])):
+        mid = (_drift_blur(g, DRIFT_SIGMAS[0]) - _drift_blur(g, DRIFT_SIGMAS[1])).abs().mean()
+        tex = float(mid) / max(1e-4, float(g.mean()))
+    return big_l, big_c, tex
+
+
+def seam_ramp(frames, seam, keep_n, ramp=SEAM_RAMP, max_step=SEAM_MAX_STEP,
+              min_step=SEAM_MIN_STEP):
+    """Remove the colour step at a continuation join, in place, on the incoming side.
+
+    `frames` is the master [N, H, W, 3] in 0..1; `seam` the index of the incoming
+    hop's first kept frame; `keep_n` how many frames that hop contributes. The Lab
+    mean step between frames `seam - 1` and `seam` is subtracted from the incoming
+    frames with a smoothstep weight that is 1 at the cut and 0 after `ramp` frames.
+    Frames before `seam` are never written. Returns a note, or "" when skipped
+    (step too small, or any channel over `max_step`: a real change at the cut).
+    """
+    seam, keep_n = int(seam), int(keep_n)
+    if frames is None or seam < 1 or keep_n < 2 or seam >= int(frames.shape[0]):
+        return ""
+    a = _srgb_to_lab(frames[seam - 1].float()).reshape(-1, 3).mean(0)
+    b = _srgb_to_lab(frames[seam].float()).reshape(-1, 3).mean(0)
+    step = b - a
+    big = float(step.abs().max())
+    if big < float(min_step):
+        return ""
+    if big > float(max_step):
+        return ("skipped: step L%+.2f a%+.2f b%+.2f is over %.1f, a change in the shot"
+                % (float(step[0]), float(step[1]), float(step[2]), float(max_step)))
+    r = max(1, min(int(ramp), keep_n, int(frames.shape[0]) - seam))
+    for k in range(r):
+        t = k / float(r)
+        w = 1.0 - (3.0 * t * t - 2.0 * t * t * t)
+        f = frames[seam + k]
+        lab = _srgb_to_lab(f.float()) - step.to(f.device) * w
+        frames[seam + k] = _lab_to_srgb(lab).to(frames.dtype)
+    return ("removed L%+.2f a%+.2f b%+.2f at the cut, faded over %d frames"
+            % (float(step[0]), float(step[1]), float(step[2]), r))
+
+
+def drift_report(frames, hop_starts, scene_first):
+    """Per-hop drift against the first hop of each scene.
+
+    `hop_starts`: master frame index where each hop begins (hop 1 = 0).
+    `scene_first`: one bool per hop, True where a scene starts. -> dict or None."""
+    if frames is None or not hop_starts:
+        return None
+    n = int(frames.shape[0])
+    starts = [int(s) for s in hop_starts]
+    flags = list(scene_first or [])
+    flags = (flags + [False] * len(starts))[:len(starts)]
+    flags[0] = True
+    rows, ref = [], None
+    for k, a in enumerate(starts):
+        b = starts[k + 1] if k + 1 < len(starts) else n
+        st = _drift_hop_stats(frames, a, min(b, n))
+        if st is None:
+            continue
+        if flags[k] or ref is None:
+            ref = st
+            rows.append({"hop": k + 1, "ref": True})
+            continue
+        L, C, T = st
+        rL, rC, rT = ref
+        rows.append({
+            "hop": k + 1, "ref": False,
+            "dL": round(L - rL, 2),
+            "chroma_pct": round(100.0 * (C - rC) / max(1e-3, rC), 1),
+            "texture_pct": (round(100.0 * (T - rT) / max(1e-6, rT), 1)
+                            if T is not None and rT is not None else None),
+        })
+    meas = [r for r in rows if not r["ref"]]
+    if not meas:
+        return None
+    w_c = max(meas, key=lambda r: abs(r["chroma_pct"]))
+    w_t = max(meas, key=lambda r: abs(r["texture_pct"] or 0.0))
+    w_l = max(meas, key=lambda r: abs(r["dL"]))
+
+    def _cell(r):
+        if r["ref"]:
+            return f"h{r['hop']} ref"
+        t = "" if r["texture_pct"] is None else f" T{r['texture_pct']:+.0f}%"
+        return f"h{r['hop']} C{r['chroma_pct']:+.0f}%{t} L{r['dL']:+.1f}"
+
+    note = (f"worst chroma h{w_c['hop']} {w_c['chroma_pct']:+.1f}%, "
+            + (f"texture h{w_t['hop']} {w_t['texture_pct']:+.1f}%, "
+               if w_t["texture_pct"] is not None else "")
+            + f"L* h{w_l['hop']} {w_l['dL']:+.1f} (each hop vs its scene's first hop)")
+    return {"hops": rows, "note": note, "table": " | ".join(_cell(r) for r in rows),
+            "worst_chroma_pct": w_c["chroma_pct"],
+            "worst_texture_pct": w_t["texture_pct"], "worst_dL": w_l["dL"]}
 
 
 def compensate(source, target, mode, overlap=DEFAULT_OVERLAP, lut_bins=64):

@@ -134,17 +134,34 @@ From your `ComfyUI/custom_nodes/` folder:
 git clone https://github.com/sandpies/ComfyUI-Hand-Tie-Clips.git
 ```
 
-1. **Restart ComfyUI** and hard-refresh your browser (`Ctrl+Shift+R`). Zero pip dependencies.
+1. **Restart ComfyUI** and hard-refresh your browser (`Ctrl+Shift+R`). Zero pip dependencies for the chain; a few optional features use extra packages (see [What each feature needs](#what-each-feature-needs)).
 2. Drag **`workflows/HandTieClips_Starter.json`** onto ComfyUI and point the loaders at your MiniMax H3 ref2va checkpoint, text encoder, and VAEs.
 3. In **REFS**, drop your character photo onto Row 1 and give it a tag like `@maya`.
 4. In **SCRIPT**, write one beat per shot card and press **Queue**.
+
+### What each feature needs
+
+The Starter note lists the files a plain chain run loads. Everything else is optional; **[`docs/MODELS.md`](docs/MODELS.md)** gives every file, link and folder.
+
+| Feature | Needs |
+|---|---|
+| **Upsample** (RUN tab) | Latent upscaler (`latent_upscale_models`) + Regen2K LoRA; `ic` adds the IC + HyperFlow LoRAs on the plain ref2va DiT |
+| **WRITE, SandTie (STANDARD), Studio lyrics** | A local language model on any OpenAI-compatible server (LM Studio, llama.cpp, Ollama, KoboldCpp, vLLM…), loaded with **16k+ context**; a **vision** model for Eye Scan and start-image reading |
+| **SWAP tab** | Viggle Remake `swap` + `edit` LoRAs (`loras`) |
+| **RefMod Sheet → Single Shot, Studio asset images** | One Image Forge engine: Qwen-Image 2.1 (+ Viggle Turbo LoRA), MOSS-Image, MiniMax-H3-Image or P-H3-Image. The tab marks which ones it finds and names what is missing. |
+| **RefMod cut-outs** | SAM in `models/sams` (+ `segment_anything`), or `pip install rembg` |
+| **RefMod Shots → Sheet, beat editor, steering dials** | Nothing to download (dials are built on first use with `clip` wired) |
+| **Studio song generation** | YuE2 nodes + `yue2_3b_int8_convrot` (`checkpoints`); SheetSage2 for song → sheet |
+| **Lip-sync `auto:vocals`, song Listen, `dialogue_lock` drafts** | HDemucs and/or Whisper, fetched once by hand (the pack never downloads them) |
+| **`face_pass`** | YuNet (232 KB, downloads itself) + `opencv-python` |
+| **`hand_tie` previs** | Any `qwen3vl_4b` / `qwen3vl_8b` text encoder |
 
 <details>
 <summary>Recommended Companion Packs & Optional Models</summary>
 
 | Component | Where to Get It |
 |---|---|
-| **Turbo / SLA / AdaLN Nodes** | [ComfyUI-PlagueKind-Nodes](https://github.com/PlagueKind/ComfyUI-PlagueKind-Nodes) & [ComfyUI-KJNodes](https://github.com/kijai/ComfyUI-KJNodes) |
+| **Turbo LoRAs / live preview** | Sparse attention, AdaLN fix and LoRA loading are built in since 4.0. [ComfyUI-KJNodes](https://github.com/kijai/ComfyUI-KJNodes) for `taeh3` previews; [ComfyUI-PlagueKind-Nodes](https://github.com/PlagueKind/ComfyUI-PlagueKind-Nodes) still works if your graphs use it |
 | **Upscaler LoRA & Standalone Pack** | [sandpies/ComfyUI-H3-Video-Upsampler (HF)](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler) · [GitHub](https://github.com/sandpies/ComfyUI-H3-Video-Upsampler) |
 | **Latent Upscaler Weights (3D / 2D)** | [LBH-123-AI/Minimax_h3_latent_Upscaler](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) (`models/latent_upscale_models/`) |
 | **Hand-Tie Previs Compiler (`models/text_encoders/`)** | [`qwen3vl_4b_fp8_scaled.safetensors` (5.2 GB)](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors) · [`silveroxides/K2Q (4B)`](https://huggingface.co/silveroxides/K2Q/tree/main/qwen3vl_4b) · [`qwen3vl_8b_int8_convrot.safetensors` (9.3 GB)](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors) |

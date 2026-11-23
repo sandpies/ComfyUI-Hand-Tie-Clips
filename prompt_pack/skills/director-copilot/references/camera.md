@@ -230,6 +230,16 @@ pull-back release, a silhouette to end.
 ## Across the film
 
 - Get closer as tension rises, release with a wide. No two hops in a row with the same move.
+- **Place the camera, don't just move it.** A film can use seven different moves and still play
+  safe: if most shots sit at medium, eye level or chest height, framed from the front, and drift
+  slowly or hold dead still, it reads as zoom in, slide sideways, zoom in. Varying the move word
+  doesn't fix that. What lifts a piece is where the camera physically is: lying on the floor,
+  fixed to a body, up in the air, behind a shoulder, seen through something. Snap moves landing
+  on the beat (whip off a sign, skid to a stop, lens snaps in) do the same. On a high-energy
+  piece, give most hops at least one shot like that, and write it as a screenplay moment (what
+  the camera is doing in the story), not as a lens setting. Slow, level framing is a choice for
+  a slow piece (a noir walk), never the default. Stillness alone is not the problem: the same
+  bold placements at 75% slow or still still played dull.
 - End on a tease held 2-3 s, not a tidy pull back to nothing. Rhyme images (the same insert at
   the start and the end).
 - Under SLA Heavy the plate fixes the opening view: a move that starts elsewhere says so first; an

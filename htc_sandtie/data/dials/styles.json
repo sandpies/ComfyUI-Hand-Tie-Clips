@@ -131,13 +131,6 @@
       "domain": "general"
     },
     {
-      "id": "wong_kar_wai_step_neon",
-      "label": "🏮 Wong Kar-Wai Neon Melancholy ( Lush Emerald/Amber + Step-Printed Motion Blur)",
-      "group": "Film looks",
-      "rule": "Wong Kar-Wai arthouse cinema look: saturated emerald greens, tungsten golds, and crimson neon reflections with dreamy step-printed motion trails and cigarette smoke.",
-      "domain": "general"
-    },
-    {
       "id": "denis_villeneuve_brutalist",
       "label": "🏜️ Villeneuve Brutalist IMAX (70mm Scale, Atmospheric Dust & Monolithic Light)",
       "group": "Film looks",
@@ -185,13 +178,6 @@
       "group": "00 · Official H3 & Astro Cinema Looks",
       "rule": "viral Anime-to-Real-Life (Anime2Real) mixed-reality cinematography: the actors, skin pores, hair, and environment are 100% live-action photorealistic cinema, while weapon swings, auras, and elemental powers manifest as hyper-detailed, physically-lit ufotable-style elemental VFX (water dragons, solar fire arcs, plasma lightning, and glowing ink slashes) that cast real interactive colored light and reflections across the live-action set.",
       "domain": "combat_action"
-    },
-    {
-      "id": "semireal_cosplay_cg_slop",
-      "label": "✨ Viral AI Semi-Realism (2.5D Porcelain Cosplay + Hyper-Real Elemental Glow)",
-      "group": "00 · Official H3 & Astro Cinema Looks",
-      "rule": "viral AI semi-realism cosplay aesthetic: flawless luminous porcelain skin with subsurface scattering, jewel-like anime eyes, silky physics-driven hair strands, and high-contrast volumetric elemental glow against a gritty photorealistic background.",
-      "domain": "general"
     },
     {
       "id": "ufotable_hybrid_2d3d_cinema",
@@ -348,13 +334,6 @@
       "domain": "general"
     },
     {
-      "id": "style_cubist",
-      "label": "🔷 Analytic Cubist Painted Planes (Overlapping Geometric Facets)",
-      "group": "Drawn",
-      "rule": "Analytic Cubist oil painting in fluid motion, reconstructing subjects and architecture out of crisp overlapping painted geometric planes, ochre-slate facets, and fragmented edges.",
-      "domain": "general"
-    },
-    {
       "id": "style_art_nouveau",
       "label": "🌿 Ornate Art Nouveau Lithograph (Whiplash Curves & Botanical Gold)",
       "group": "Drawn",
@@ -488,13 +467,6 @@
       "domain": "general"
     },
     {
-      "id": "viral_broken_mirror_shards",
-      "label": "🪞 Viral Look — Broken Mirror Shards (Fractured Multi-Angle Faces)",
-      "group": "00 · Viral & Experimental Looks",
-      "rule": "fractured cracked-silver mirror composition splitting the subject's reflection across sharp angled mirror shards, each shard catching a subtly offset gaze or moment in crisp silver-edged glass",
-      "domain": "mirror_vanity"
-    },
-    {
       "id": "viral_ink_riot_calligraphy",
       "label": "🖌️ Viral Look — Ink Riot (Liquid Calligraphy Blooming Around Subject)",
       "group": "00 · Viral & Experimental Looks",
@@ -523,38 +495,10 @@
       "domain": "general"
     },
     {
-      "id": "viral_action_figure_blister",
-      "label": "🧸 Viral Look — Collectible Action-Figure Toy Diorama (Glossy Molded Joints)",
-      "group": "00 · Viral & Experimental Looks",
-      "rule": "miniature collectible vinyl action-figure aesthetic: crisp articulated plastic joints, satin painted outfit textures, miniature diorama base, and bright tabletop studio rim lighting",
-      "domain": "general"
-    },
-    {
       "id": "viral_flash_comic_halftone",
       "label": "💥 Viral Look — Flash-Strobe Comic Ink & Pop Halftone",
       "group": "00 · Viral & Experimental Looks",
       "rule": "punchy bold graphic comic ink outlines fused with hard white strobe impact bursts, vibrant CMYK halftone dot shading, and dynamic speed streaks",
-      "domain": "general"
-    },
-    {
-      "id": "viral_marble_living_statue",
-      "label": "🏛️ Viral Look — Veined Carrara Marble Living Sculpture",
-      "group": "00 · Viral & Experimental Looks",
-      "rule": "classical carved white Carrara marble texture with subtle blue-grey mineral veining and cool museum gallery light animating seamlessly as a breathing sculpture",
-      "domain": "general"
-    },
-    {
-      "id": "viral_origami_folded_world",
-      "label": "🦢 Viral Look — Crisp Origami Paper-Crease Sculpture World",
-      "group": "00 · Viral & Experimental Looks",
-      "rule": "geometric folded origami paper aesthetic built from crisp triangular creases, matte colored cardstock planes, and physical paper shadows moving in rhythmic unfolds",
-      "domain": "general"
-    },
-    {
-      "id": "viral_lost_in_book_portal",
-      "label": "📖 Viral Look — Open-Book Page Portal (Weather & Ink Rising Off Paper)",
-      "group": "00 · Viral & Experimental Looks",
-      "rule": "tactile close foreground of an open hardcover book whose textured paper pages open like a dimensional threshold with mist, light, and miniature scene motion rising out of the gutter",
       "domain": "general"
     },
     {
@@ -661,6 +605,27 @@
       "group": "Film looks",
       "domain": "general",
       "rule": "Classic black-and-white 35mm silver-gelatin editorial cinema: rich velvet blacks, luminous silvery skin midtones, crisp sculpted rim-light separation, and fine classic film grain."
+    },
+    {
+      "id": "style_ultrareal_matte_35mm",
+      "label": "🎞️ Ultra-Realism: Raw 35mm Matte Skin & Tactile Cinema",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "domain": "general",
+      "rule": "raw candid 35mm live-action cinema photography: dry matte natural skin with visible pores across cheeks and nose, fine peach-fuzz vellus hairs, subtle lip and knuckle micro-creases, natural uneven capillary undertones, stray flyaway hairs, and tactile matte cloth weave"
+    },
+    {
+      "id": "style_ultrareal_raw_sensor_doc",
+      "label": "📷 Ultra-Realism: Raw Full-Frame Sensor (Matte Skin & Candid Detail)",
+      "group": "00 · Official H3 & Astro Cinema Looks",
+      "domain": "general",
+      "rule": "raw full-frame digital cinema photography: crisp optical detail showing real facial pores, fine eye and smile-line creases, distinct individual eyebrow strands, dry matte skin with subtle natural T-zone variation, and honest matte cotton and wool weave"
+    },
+    {
+      "id": "style_ultrareal_16mm_verite",
+      "label": "📽️ Ultra-Realism: Raw 16mm Indie Documentary (Candid Texture)",
+      "group": "Film looks",
+      "domain": "general",
+      "rule": "raw handheld 16mm documentary cinema: tactile unvarnished skin pores and natural blemishes, stray wind-blown hair strands, honest everyday cloth creases, and grounded candid presence"
     }
   ]
 }

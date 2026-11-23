@@ -387,7 +387,7 @@
       "label": "Motivated Practical Table & Sconce Lamps",
       "group": "Light · Warm, Practical & Boudoir",
       "rule": "warm shaded practical lamps visible in frame creating intimate glowing pools of light amidst rich room shadow",
-      "domain": "wet_pool"
+      "domain": "general"
     },
     {
       "id": "firelight",
@@ -500,6 +500,27 @@
       "group": "Light · Natural, Daylight & Golden Hour",
       "domain": "general",
       "rule": "Huge diffused overcast skylight washing evenly across the scene with gentle, natural shadow falloff and true-to-life skin and fabric color fidelity."
+    },
+    {
+      "id": "light_ultrareal_north_window_matte",
+      "label": "🪟 Ultra-Realism: Soft North Window Daylight (Matte Falloff)",
+      "group": "Light · Natural, Daylight & Golden Hour",
+      "domain": "general",
+      "rule": "raw overcast north-facing window daylight entering from one side: dry matte diffuse skin reflectance, gentle penumbra shadow transitions across the cheek, natural inverse-square falloff into shaded room corners, and small crisp window eye catchlights"
+    },
+    {
+      "id": "light_ultrareal_raking_texture",
+      "label": "📐 Ultra-Realism: Grazing Side-Key Light (Micro-Relief)",
+      "group": "Light · 00 Signature & Moody Cinema",
+      "domain": "general",
+      "rule": "low-angle 45-degree raking side key light grazing across skin and cloth: crisp micro-shadow relief across surface texture and woven threads, balanced by subtle natural wall bounce in the shadow half"
+    },
+    {
+      "id": "light_ultrareal_single_practical_raw",
+      "label": "💡 Ultra-Realism: Single Practical Room Lamp (True Falloff)",
+      "group": "Light · Warm, Practical & Boudoir",
+      "domain": "general",
+      "rule": "one bare practical tungsten room lamp as the sole light source in a dim room: warm natural brightness decaying smoothly across contours with dry matte reflectance and rich deep shadow density across background walls"
     }
   ]
 }

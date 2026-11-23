@@ -53,6 +53,9 @@ def _build_ref_thumb(src_path: str, width: int = 128) -> str | None:
         return None
 
 
+_WAKE_LOCKS: dict = {}
+
+
 async def ensure_writer_ready(_llm, auto_wake: bool = True) -> tuple[bool, str]:
     conn = _llm.load_conn()
     backend = _llm.backend_name(conn.get("backend"))
@@ -60,17 +63,30 @@ async def ensure_writer_ready(_llm, auto_wake: bool = True) -> tuple[bool, str]:
         return True, "running"
     if backend != "ninfer" or not auto_wake:
         return False, f"{_llm.active_label()} is not running."
-    ok, msg = await _llm.start_process_async(name="ninfer")
-    if not ok:
-        return False, msg
-    for _ in range(50):
-        await asyncio.sleep(1.5)
+    loop = asyncio.get_running_loop()
+    lock = _WAKE_LOCKS.get(loop)
+    if lock is None:
+        lock = asyncio.Lock()
+        _WAKE_LOCKS[loop] = lock
+    async with lock:
         if await _llm.server_running_async("ninfer"):
-            return True, "auto-started nInfer"
-        err = _llm.startup_error("ninfer")
-        if err:
-            return False, f"nInfer stopped during startup: {err}"
-    return False, "nInfer did not answer within 75s after auto-start."
+            return True, "running"
+        pids_before = _llm.find_server_pids("ninfer") if hasattr(_llm, "find_server_pids") else []
+        if len(pids_before) == 1:
+            already_loading = True
+        else:
+            already_loading = False
+            ok, msg = await _llm.start_process_async(name="ninfer")
+            if not ok:
+                return False, msg
+        for wait_i in range(80):
+            await asyncio.sleep(1.5)
+            if await _llm.server_running_async("ninfer"):
+                return True, ("running" if already_loading else "auto-started nInfer")
+            if wait_i >= 1 and hasattr(_llm, "find_server_pids") and not _llm.find_server_pids("ninfer"):
+                err = _llm.startup_error("ninfer")
+                return False, f"nInfer exited during startup{': ' + err if err else '.'}"
+        return False, "nInfer did not answer within 120s after startup."
 
 
 def _wait_for_ninfer_exit(timeout_ms: int = 2500) -> int:
@@ -236,14 +252,18 @@ def register_sandtie_routes(instance, web) -> None:
         try:
             conn = _llm.load_conn()
             running = await _llm.server_running_async(conn.get("backend"))
+            loading = (not running) and bool(
+                hasattr(_llm, "find_server_pids") and _llm.find_server_pids(conn.get("backend"))
+            )
             lite = str(request.query.get("lite") or "").strip().lower() in ("1", "true", "yes")
             payload = {
                 "ok": True,
                 "running": running,
+                "loading": loading,
                 "backend": conn.get("backend") or "lmstudio",
                 "backend_label": _llm.backend_spec(conn.get("backend"))["label"],
                 "model": conn.get("model") or "",
-                "startup_error": "" if running else _llm.startup_error(conn.get("backend")),
+                "startup_error": "" if (running or loading) else _llm.startup_error(conn.get("backend")),
             }
             if not lite:
                 payload["catalog"] = _cat.ui_catalog()
@@ -401,29 +421,43 @@ def register_sandtie_routes(instance, web) -> None:
                     if rm_mod is None or rm_mod.resolve(raw_file) is None:
                         return web.json_response({"ok": False, "error": f"Could not resolve RefMod: {raw_file}"})
                     urls = await asyncio.get_running_loop().run_in_executor(
-                        None, lambda: rm_mod.vision_data_urls(raw_file, max_images=2, max_side=1024)
+                        None, lambda: rm_mod.vision_data_urls(raw_file, max_images=4, max_side=1024)
                     )
                     if not urls:
                         return web.json_response({"ok": False, "error": f"RefMod {raw_file} has no kept look photos to Eye Scan."})
-                    prompt_key = role if role in _vcv.ROLE_PROMPTS else "subject"
-                    content = [{"type": "text", "text": _vcv.ROLE_PROMPTS[prompt_key]}]
-                    for u in urls:
-                        content.append({"type": "image_url", "image_url": {"url": u}})
-                    raw_scan = await complete_fn([{"role": "user", "content": content}], schema=None, temperature=0.2, max_tokens=260)
-                    scanned = _vcv._clean_desc(raw_scan, 480, strip_studio=(prompt_key in ("subject", "auto")))
+                    rm_meta = await asyncio.get_running_loop().run_in_executor(
+                        None, lambda: rm_mod.read_meta(rm_mod.resolve(raw_file)) or {}
+                    )
+                    rm_role_raw = str(body.get("refmod_role") or rm_meta.get("role") or "").strip().lower()
+                    if rm_role_raw in ("wardrobe", "style", "bodyshape", "pose_motion", "background", "helper"):
+                        prompt_key = _vcv.canonical_caption_role(rm_role_raw)
+                    elif role in ("place", "prop", "subject", "auto", "wardrobe", "style", "bodyshape", "pose_motion"):
+                        prompt_key = _vcv.canonical_caption_role(role)
+                    else:
+                        prompt_key = _vcv.canonical_caption_role(rm_role_raw)
                     fname = _refs._clean_ref_file(raw_file, "refmod")
+                    rm_path = rm_mod.resolve(raw_file)
+                    rm_mtime = int(os.path.getmtime(rm_path)) if (rm_path and os.path.isfile(rm_path)) else 0
+                    rm_ck = f"refscan_v6|refmod:{fname}|{rm_mtime}|{prompt_key}"
+                    scanned = await _vcv.scan_reference_urls(urls, prompt_key, complete_fn, cache_key=rm_ck)
                     src_save = "refmod"
                 else:
                     fname = os.path.basename(raw_file)
                     fpath = _media.resolve(fname)
                     if not fpath or not os.path.isfile(fpath):
                         return web.json_response({"ok": False, "error": f"Could not resolve image in h3_refs: {fname}"})
-                    scanned = await _vcv.scan_reference_file(fpath, role if role in ("subject", "place", "prop") else "auto", complete_fn)
+                    img_role = role if role in _vcv.ROLE_PROMPTS else "auto"
+                    scanned = await _vcv.scan_reference_file(fpath, img_role, complete_fn)
+                    prompt_key = img_role
                     src_save = "image"
                 if not scanned:
                     return web.json_response({"ok": False, "error": "Eye Scan returned empty description."})
                 import re
-                cleaned = _refs.clean_subject_scan_desc(scanned) if role == "subject" else re.sub(r"^(?:Set|Prop):\s*", "", scanned, flags=re.I).strip()
+                cleaned = (
+                    _refs.clean_subject_scan_desc(scanned)
+                    if prompt_key in ("subject", "wardrobe", "bodyshape", "auto") and not scanned.lower().startswith(("set:", "prop:"))
+                    else re.sub(r"^(?:Set|Prop):\s*", "", scanned, flags=re.I).strip()
+                )
                 existing = _refs.find_ref_bank_entry(file_name=fname, source=src_save) or {}
                 saved_payload = {
                     "id": body.get("id") or existing.get("id") or "",

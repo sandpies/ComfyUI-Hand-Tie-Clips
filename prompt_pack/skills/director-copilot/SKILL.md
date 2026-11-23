@@ -65,6 +65,10 @@ reads once the blocking is right is [performance](references/performance.md). An
 
 ## Before anything else
 
+0. Know your pipeline ([pipelines](references/pipelines.md)): `agent` (you run the scripts),
+   `local-agent` (a local model that runs the scripts, in small steps), or `local-chat` (no
+   commands: the user is your hands in ComfyUI). Steps 1-4 below are for the first two; in
+   `local-chat` the user does them from what you tell them.
 1. Find the pack: a folder like `ComfyUI-Hand-Tie-Clips` holding `h3_ref_chain.py`, normally in
    `<ComfyUI>/custom_nodes/`. The scripts find it when the skill sits inside it; else `--htc <path>`.
 2. Find ComfyUI's own Python (`<ComfyUI>/venv/Scripts/python.exe`, `.venv/bin/python`,
@@ -80,7 +84,7 @@ Do them in order; read the page named on a stage before doing it. A film skips 2
 
 | # | Stage | You produce | Then wait for |
 |---|---|---|---|
-| 1 | Brief | form, genre, mood, length, cast, aspect, what exists already, **one take or many places** ([join mode](#one-take-or-many-places)) | anything missing |
+| 1 | Brief | form, genre, mood, length, cast, aspect, what exists already, **one take or many places** ([join mode](#one-take-or-many-places)), **the pipeline** ([pipelines](references/pipelines.md)) | anything missing |
 | 2 | Song (MV) | lyrics with section tags, if the song does not exist yet ([song](references/song.md)) | the song file |
 | 3 | Measure (MV) | tempo, downbeats, section table with times and lyrics ([song](references/song.md)) | the user's ear on the table |
 | 4 | Story & cast | MV: one-line story, a place per section, who sings what, what everyone else does ([story](references/story_cast_plates.md)). Film: the turns with hop numbers and running time, the viewer pass, cast and voices ([film](references/film.md)) | approval |
@@ -321,7 +325,9 @@ held; your own frame stats can move a rule down, never up.
 
 **Nothing reaches the user unchecked.** Every plan, graph and paste text, retakes included, goes
 through `check_plan.py --map` and these questions first; the hand-over says the check ran and
-lists every flag left with its reason. A "no" is a fix before the user spends the render.
+lists every flag left with its reason. A "no" is a fix before the user spends the render. In
+`local-chat` with no terminal, the script cannot run: answer these questions per hop in writing,
+say the script check did not run, and read the dry run ([pipelines](references/pipelines.md#local-chat)).
 
 1. Does every shot's view match a plate on its hop, or is it close with its background named?
    Open each plate image now (the gate refuses the check until you have) and ask for every shot:
@@ -346,8 +352,13 @@ lists every flag left with its reason. A "no" is a fix before the user spends th
 
 ## If you are a small or local model
 
+Your pipeline is `local-agent` or `local-chat`; [pipelines](references/pipelines.md) says how
+each one reads, writes, checks and remembers. In both:
+
 - Follow the stages and the hard rules literally, as checklists. Do not skip a stop point.
-- Run `check_plan.py` after every edit to a plan, and fix every error before showing the user.
+- Keep the [project state](references/pipelines.md#the-project-state) current at every stop, and
+  copy fixed phrases out of it instead of retyping them.
+- Write and check one hop at a time.
 - Keep JSON strict: double quotes, no trailing commas, no comments.
 - When a script fails, show the exact error and command; never guess numbers.
 - Never call a plan valid if `check_plan.py` printed `SKIPPED` for part 1.

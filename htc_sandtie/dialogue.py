@@ -64,7 +64,7 @@ def should_suppress_dialogue(
         combined = f"{brief or ''}\n{plan or ''}\n{plan_hint}"
         has_speech_ask = bool(
             re.search(
-                r"\b(?:say\w*|speak\w*|talk\w*|whisper\w*|tell\w*|ask\w*|taunt\w*|mock\w*|count\w*|joi|cei|sph|findom|dialogue|monologue)\b",
+                r"\b(?:say\w*|speak\w*|talk\w*|whisper\w*|tell\w*|ask\w*|taunt\w*|mock\w*|count\w*|teas\w*|flirt\w*|argu\w*|complain\w*|confess\w*|beg\w*|plead\w*|greet\w*|mutter\w*|murmur\w*|answer\w*|repl\w*|shout\w*|yell\w*|explain\w*|narrat\w*|sing\w*|banter\w*|joi|cei|sph|findom|dialogue|monologue)\b",
                 combined,
                 re.I,
             )
@@ -82,41 +82,80 @@ def should_suppress_dialogue(
 
 _ARC_FALLBACKS = {
     0: [
-        "Come closer—right here on the edge.",
+        "Come closer, right here on the edge.",
         "Keep your eyes right on mine.",
-        "Don't hold back—take your time right here.",
-        "Right there—stay close while I pull this off.",
+        "Don't hold back, take your time right here.",
+        "Right there, stay close while I pull this off.",
+        "Wait right there, let me look at you first.",
+        "Move in slowly, keep your hands right on my waist.",
+        "Stay still for a second while I get comfortable.",
+        "Come sit beside me, don't look away yet.",
+        "Look up at me while you hold me close.",
+        "Lean in a little more, I want you right here.",
     ],
     1: [
-        "Mmm, right like that—keep going just like that.",
-        "Faster—don't stop now, keep that exact pace.",
-        "Ah—right there, stay deep just like that.",
-        "Feel how wet and tight this is—keep thrusting.",
+        "Mmm, right like that, keep going just like that.",
+        "Faster, don't stop now, keep that exact pace.",
+        "Ah, right there, stay deep just like that.",
+        "Feel how wet and tight this is, keep thrusting.",
+        "Yes, right at that angle, keep your grip firm.",
+        "Don't slow down yet, keep moving smooth and steady.",
+        "Oh, that spot right there, keep pushing deep.",
+        "Hold onto my hips and keep that exact rhythm.",
+        "Mmm, so warm, stay deep and keep going.",
+        "Keep watching my face while you drive deeper.",
     ],
     2: [
-        "Yes—right there, keep going until we finish together.",
-        "Mmmph—don't pull back now, stay all the way inside.",
-        "Right there—so deep, don't stop.",
-        "Catch your breath right here—stay pressed tight against me.",
+        "Yes, right there, keep going until we finish together.",
+        "Mmmph, don't pull back now, stay all the way inside.",
+        "Right there, so deep, don't stop.",
+        "Catch your breath right here, stay pressed tight against me.",
+        "Just like that, hold me tight right through the end.",
+        "Stay right against me while everything settles.",
+        "Mmm, stay close and breathe with me for a moment.",
+        "Don't let go yet, stay pressed skin to skin.",
+        "Right there, hold steady until my breath slows down.",
+        "Stay right here beside me, don't move away yet.",
     ],
 }
 
 
 _SFW_ARC_FALLBACKS = {
     0: [
-        "Hold on—did you see that by the window?",
+        "Hold on, did you see that by the window?",
         "Wait a second, let me finish setting this down first.",
-        "You made it right on time—come take a look at this.",
+        "You made it right on time, come take a look at this.",
+        "Look at the street lights coming on outside.",
+        "Before we start, tell me what you heard earlier.",
+        "Take a seat right across from me for a minute.",
+        "Did you bring the folder you mentioned this morning?",
+        "Hang on, check the corner table over there first.",
+        "You look exhausted, sit down and catch your breath.",
+        "Listen closely for a second before anyone walks in.",
     ],
     1: [
-        "Keep moving forward—we only get one clean shot at this.",
+        "Keep moving forward, we only get one clean shot at this.",
         "Look closely at what changed since earlier.",
-        "Wait—did you hear that right down the hall?",
+        "Wait, did you hear that right down the hall?",
+        "That explains why nobody answered the door before.",
+        "Stay sharp, keep your eyes on the far entrance.",
+        "I told you we should have checked this room sooner.",
+        "Watch how the light catches the edge of the glass.",
+        "Keep talking, I want to hear the rest of your plan.",
+        "Hold steady right there, let me check the lock.",
+        "You were right about that detail from the beginning.",
     ],
     2: [
         "Alright, that settles it. Let's head out.",
-        "Good—now we know exactly where things stand.",
+        "Good, now we know exactly where things stand.",
         "There it is. Right where we left it.",
+        "Okay, we got what we came for, let's go.",
+        "That works for me, see you out front in five.",
+        "Everything looks clear now, keep pace beside me.",
+        "Leave it right there on the counter and let's move.",
+        "Finally, that was the piece we were missing.",
+        "Perfect, keep that quiet until we reach the car.",
+        "Sounds good, lead the way down the stairs.",
     ],
 }
 
@@ -126,84 +165,132 @@ _NATIVE_SFW_FALLBACKS = {
         "ちょっと待って、今の見た？",
         "そのまま動かないで、こっちを見て。",
         "ほら、やっと見つかったよ。",
+        "静かにして、向こうから足音が聞こえる。",
+        "先にこれを確認してから出かけよう。",
+        "よし、これで準備は全部整ったね。",
     ],
     "Korean": [
         "잠깐만, 방금 창밖 봤어?",
         "이리 와 봐, 지금부터가 진짜야.",
         "좋아, 이제 다음으로 넘어가자.",
+        "조용히 해 봐, 복도 쪽에서 소리 났어.",
+        "방금 네가 말한 게 바로 이거였구나.",
+        "자, 이제 자리 정리하고 바로 나가자.",
     ],
     "Mandarin": [
         "等一下，你刚才看到窗外了吗？",
         "先别动，仔细看看这里。",
         "好了，现在全都清楚了。",
+        "小声点，走廊那边好像有动静。",
+        "把桌上的东西拿好，我们马上走。",
+        "行，就按刚才说好的办吧。",
     ],
     "Spanish": [
         "Espera un segundo, ¿viste eso por la ventana?",
         "Ven aquí, quédate justo en este lugar.",
         "Perfecto, ahora seguimos adelante juntos.",
+        "Escucha bien, alguien acaba de abrir la puerta.",
+        "Ten cuidado con el vidrio sobre la mesa.",
+        "Listo, ya tenemos todo lo que vinimos a buscar.",
     ],
     "French": [
         "Attends une seconde, tu as vu ça par la fenêtre ?",
         "Viens plus près, regarde bien ce qui change.",
         "Très bien, maintenant on peut y aller.",
+        "Écoute un instant, on dirait des pas dehors.",
+        "Pose ton manteau ici et assieds-toi vite.",
+        "Parfait, on garde ça entre nous pour ce soir.",
     ],
     "Russian": [
         "Подожди секунду, ты видел это у окна?",
         "Подойди ближе и смотри прямо сюда.",
         "Хорошо, теперь всё встало на свои места.",
+        "Тише, послушай, там в коридоре кто-то идёт.",
+        "Возьми ключи со стола и пойдём быстрее.",
+        "Отлично, именно этого нам и не хватало.",
     ],
     "Portuguese": [
         "Espera um segundo, você viu aquilo na janela?",
         "Chega mais perto e olha bem para isso.",
         "Perfeito, agora está tudo no lugar.",
+        "Escuta bem, tem alguém subindo a escada agora.",
+        "Deixa a bolsa na cadeira e vem ver isto.",
+        "Ótimo, já podemos sair antes que escureça.",
     ],
     "Italian": [
         "Aspetta un attimo, hai visto fuori dalla finestra?",
         "Vieni più vicino e guarda qui con calma.",
         "Perfetto, adesso è tutto molto chiaro.",
+        "Ascolta bene, si sente qualcuno nel corridoio.",
+        "Appoggia pure le chiavi sul tavolo davanti a te.",
+        "Benissimo, ora possiamo uscire con calma.",
     ],
 }
 
 _NATIVE_NSFW_FALLBACKS = {
     "Japanese": [
         "もっと近くに来て、目をそらさないで。",
-        "あっ、そこ…そのまま止めないで動かして。",
-        "だめ、奥まで入って…このまま離さないで。",
+        "あっ、そこ、そのまま止めないで動かして。",
+        "だめ、奥まで入って、このまま離さないで。",
+        "ゆっくり息を整えて、もっと腰を寄せて。",
+        "そのままの手つきで、リズムを崩さないで。",
+        "いいよ、最後までしっかり抱きしめていて。",
     ],
     "Korean": [
         "더 가까이 와 봐, 내 눈만 바라봐.",
-        "아, 거기… 멈추지 말고 계속 움직여 줘.",
+        "아, 거기, 멈추지 말고 계속 움직여 줘.",
         "좋아, 끝까지 들어온 채로 안아 줘.",
+        "서두르지 말고, 지금 이 속도 그대로 맞춰 줘.",
+        "내 허리를 꽉 잡고 조금만 더 깊게 와 줘.",
+        "숨 고르면서 이대로 내 품에 기대 있어.",
     ],
     "Mandarin": [
         "再靠近一点，看着我的眼睛别移开。",
         "嗯，就这样别停，保持这个节奏继续。",
         "好深，就这样紧紧贴在一起别松开。",
+        "慢一点，让我先适应你现在的力道。",
+        "抓稳我的腰，按刚才那个角度继续。",
+        "别急着抽开，就这样抱着我喘口气。",
     ],
     "Spanish": [
         "Acércate más, mírame directo a los ojos.",
         "Así, sigue moviéndote despacio sin parar.",
         "Quédate bien adentro, pegado contra mí.",
+        "Sujétame fuerte de la cintura y no pierdas el ritmo.",
+        "Un poco más lento, quédate justo en ese punto.",
+        "Respira conmigo así, pegado piel con piel.",
     ],
     "French": [
         "Approche-toi encore, garde les yeux sur moi.",
         "Oui, comme ça, continue exactement ce rythme.",
         "Reste tout au fond, serré contre moi.",
+        "Serre mes hanches un peu plus fort maintenant.",
+        "Ne change rien, garde exactement cette cadence.",
+        "Reste contre ma peau le temps de reprendre souffle.",
     ],
     "Russian": [
         "Подойди ближе и смотри прямо мне в глаза.",
         "Вот так, не останавливайся, двигайся глубже.",
         "Останься внутри до самого конца, прижмись ко мне.",
+        "Держи меня крепче за талию и не сбивай ритм.",
+        "Чуть медленнее, вот так прямо в точку.",
+        "Не отпускай меня ещё минуту, дыши рядом.",
     ],
     "Portuguese": [
         "Chega mais perto, olha direto nos meus olhos.",
         "Isso, continua nesse ritmo sem parar agora.",
         "Fica bem fundo assim, colado em mim.",
+        "Segura firme na minha cintura e mantém essa cadência.",
+        "Devagar desse jeito, não muda o ângulo agora.",
+        "Fica aqui bem junto enquanto a respiração acalma.",
     ],
     "Italian": [
         "Avvicinati ancora, tienimi gli occhi addosso.",
         "Sì, proprio così, continua con questo ritmo.",
         "Resta tutto dentro, stretto contro di me.",
+        "Stringimi forte sui fianchi e non perdere il passo.",
+        "Più piano così, resta esattamente su quel punto.",
+        "Resta stretto contro di me finché non riprendi fiato.",
     ],
 }
 
@@ -297,24 +384,36 @@ def pick_beat_dialogue_cues(
                 pb_phrases.append(str(p).strip())
 
     out: list[str] = []
+    used: set[str] = set()
+
+    def _pick_unique(pool_list: list[str], step: int) -> str:
+        n_p = len(pool_list)
+        for off in range(n_p):
+            cand = pool_list[(h_idx + step + off) % n_p]
+            if cand not in used:
+                used.add(cand)
+                return cand
+        return pool_list[(h_idx + step) % n_p]
+
     for b in range(max(1, n_beats)):
         arc_b = 0 if b == 0 else (2 if b == n_beats - 1 else 1)
         if target_lang != "English":
             native_pool = (_NATIVE_NSFW_FALLBACKS if is_sexual_scene else _NATIVE_SFW_FALLBACKS).get(target_lang)
             if native_pool:
-                out.append(native_pool[b % len(native_pool)])
+                out.append(_pick_unique(native_pool, b))
                 continue
         if b < len(pb_phrases):
+            used.add(pb_phrases[b])
             out.append(pb_phrases[b])
         elif is_sexual_scene:
             pool = _ARC_FALLBACKS[arc_b]
-            line = pool[(h_idx + b) % len(pool)]
+            line = _pick_unique(pool, b * 3)
             if small_words and b == 0:
                 tok = small_words[h_idx % len(small_words)]
                 if len(tok) <= 32 and tok.lower() not in line.lower():
-                    line = f"{tok.rstrip('.!~')} — {line[0].lower() + line[1:]}"
+                    line = f"{tok.rstrip('.!~')}, {line[0].lower() + line[1:]}"
             out.append(line)
         else:
             pool = _SFW_ARC_FALLBACKS[arc_b]
-            out.append(pool[(h_idx + b) % len(pool)])
+            out.append(_pick_unique(pool, b * 3))
     return out

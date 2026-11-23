@@ -360,9 +360,16 @@ export function createTrimBar({ kind = "audio", name, get, set, onChange,
         head.style.left = `${pct(t)}%`;
     });
 
+    // The playhead loop runs ONLY while the media plays. It used to reschedule
+    // itself forever, so every trim bar on the canvas woke the page at the
+    // display's refresh rate even with nothing playing (fans spinning up).
     function tick() {
-        if (secs > 0 && !media.paused) head.style.left = `${pct(media.currentTime)}%`;
-        raf = requestAnimationFrame(tick);
+        raf = 0;
+        if (secs > 0) head.style.left = `${pct(media.currentTime)}%`;
+        if (!media.paused) raf = requestAnimationFrame(tick);
+    }
+    function startTick() {
+        if (!raf) raf = requestAnimationFrame(tick);
     }
 
     /** If the stored window cannot fit this file, write the fallback the
@@ -439,9 +446,11 @@ export function createTrimBar({ kind = "audio", name, get, set, onChange,
         if (secs > 0 && (media.currentTime < a || media.currentTime >= outOf())) {
             try { media.currentTime = a; } catch { /* ignore */ }
         }
+        startTick();
     });
+    // One last paint so the head rests where playback stopped.
+    media.addEventListener("pause", startTick);
 
-    raf = requestAnimationFrame(tick);
     render();
 
     function destroy() {

@@ -549,55 +549,121 @@ def startup_error(name=None, tail_bytes=65536):
     return ""
 
 
+_START_LOCKS = {}
+
+
+def find_server_pids(name=None):
+    """Return active PIDs for the writer binary (`ninfer-serve.exe`), without spawning shells."""
+    import os
+    n = str(name or backend_name(CONN.get("backend")))
+    exe = _server_exe(n)
+    spec_exe = dict(SERVER_EXES).get(n)
+    if not exe and not spec_exe:
+        return []
+    image = os.path.basename(exe or spec_exe).lower()
+    pids = []
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        TH32CS_SNAPPROCESS = 0x00000002
+        INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
+
+        class PROCESSENTRY32(ctypes.Structure):
+            _fields_ = [("dwSize", wintypes.DWORD),
+                        ("cntUsage", wintypes.DWORD),
+                        ("th32ProcessID", wintypes.DWORD),
+                        ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
+                        ("th32ModuleID", wintypes.DWORD),
+                        ("cntThreads", wintypes.DWORD),
+                        ("th32ParentProcessID", wintypes.DWORD),
+                        ("pcPriClassBase", ctypes.c_long),
+                        ("dwFlags", wintypes.DWORD),
+                        ("szExeFile", ctypes.c_char * 260)]
+
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        k32.CloseHandle.argtypes = [wintypes.HANDLE]
+        snap = k32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+        if not snap or snap == INVALID_HANDLE_VALUE:
+            return []
+        pe = PROCESSENTRY32()
+        pe.dwSize = ctypes.sizeof(PROCESSENTRY32)
+        try:
+            ok = k32.Process32First(snap, ctypes.byref(pe))
+            while ok:
+                proc_name = (pe.szExeFile or b"").decode("latin-1", "ignore").lower()
+                if proc_name == image and pe.th32ProcessID:
+                    pids.append(int(pe.th32ProcessID))
+                ok = k32.Process32Next(snap, ctypes.byref(pe))
+        finally:
+            k32.CloseHandle(snap)
+    except Exception:
+        pass
+    return pids
+
+
+def free_comfy_vram_if_idle():
+    """Release ComfyUI's idle cached models before loading a 27B writer so nInfer fits in VRAM."""
+    try:
+        import server as _srv
+        inst = getattr(getattr(_srv, "PromptServer", None), "instance", None)
+        pq = getattr(inst, "prompt_queue", None)
+        if pq is not None:
+            running = getattr(pq, "currently_running", None) or {}
+            queued = getattr(pq, "queue", None) or ()
+            if len(running) > 0 or len(queued) > 0:
+                return False
+    except Exception:
+        pass
+    try:
+        import comfy.model_management as _mm
+        _mm.unload_all_models()
+        _mm.soft_empty_cache()
+        print(f"[{TAG}] freed idle ComfyUI VRAM before starting writer", flush=True)
+        return True
+    except Exception:
+        return False
+
+
 async def start_process_async(model_file=None, name=None, ctx_size=None):
-    """The route-handler version of start_process. Awaits its own probe.
-
-    start_process() opens with a liveness probe so a second click does not
-    launch a second 27B, and that probe is blocking. Called straight from an
-    aiohttp handler -- which is where the Start button reaches it -- it put a
-    full timeout on the event loop before the spawn even began, and then the
-    handler called server_running() again to build its reply. Two stalls for
-    one click.
-
-    The duplicate-27B guard is the reason this cannot simply be dropped, so it
-    is done here on the loop instead.
-    """
+    """The route-handler version of start_process. Awaits its own probe and serializes concurrent wakes."""
+    import asyncio
     n = backend_name(name or CONN.get("backend"))
-    if await server_running_async(n):
-        return True, f"{backend_spec(n)['label']} is already running."
-    return start_process(model_file=model_file, name=n, already_checked=True, ctx_size=ctx_size)
+    loop = asyncio.get_running_loop()
+    lock = _START_LOCKS.get(loop)
+    if lock is None:
+        lock = asyncio.Lock()
+        _START_LOCKS[loop] = lock
+    async with lock:
+        if await server_running_async(n):
+            return True, f"{backend_spec(n)['label']} is already running."
+        pids = find_server_pids(n)
+        if len(pids) == 1:
+            return True, f"{backend_spec(n)['label']} is already loading (pid {pids[0]}); waiting for it to listen."
+        if len(pids) >= 2:
+            print(f"[{TAG}] detected {len(pids)} stacked {n} processes ({pids}); stopping before clean start", flush=True)
+            await loop.run_in_executor(None, stop_process, n)
+        if n == "ninfer" and shares_this_gpu((CONN.get("servers") or {}).get(n, {}).get("server_url") or backend_spec(n)["default_base"]):
+            await loop.run_in_executor(None, free_comfy_vram_if_idle)
+        return start_process(model_file=model_file, name=n, already_checked=True, ctx_size=ctx_size)
 
 
 def start_process(model_file=None, name=None, already_checked=False, ctx_size=None):
-    """Start the writer server for this backend. Returns (ok, message).
-
-    Explicit only: called from the panel's button and from the route that
-    button posts to. Nothing queues a render, and nothing saves a setting, and
-    a request for a plan does not -- a plan request with the server down says
-    so and names the button, because silently spending 30 s loading a 27B in
-    response to a mis-click is its own own kind of cost.
-
-    `already_checked=True` means the caller has just awaited the liveness probe
-    and knows the answer. Without it the guard below runs -- and the guard is
-    BLOCKING, so calling this from an aiohttp handler put a socket timeout on
-    the event loop. That is what produced
-
-        RuntimeWarning: coroutine 'server_running_async' was never awaited
-
-    on every Start click: `asyncio.run()` raised RuntimeError because a loop was
-    already running, the coroutine it was handed was never awaited, and the
-    guard silently answered "not running". The answer happened to be right,
-    because the async wrapper had already asked and found the same thing, but
-    the guard was doing nothing at all -- which is the worst state for the one
-    check that stops a second 27B.
-
-    Never raises. It is called from a route handler and from a button.
-    """
+    """Start the writer server for this backend. Returns (ok, message)."""
     import os
     import subprocess
     n = backend_name(name or CONN.get("backend"))
     if not already_checked and server_running(n):
         return True, f"{backend_spec(n)['label']} is already running."
+    pids = find_server_pids(n)
+    if len(pids) == 1:
+        return True, f"{backend_spec(n)['label']} is already loading (pid {pids[0]}); waiting for it to listen."
+    if len(pids) >= 2:
+        print(f"[{TAG}] detected {len(pids)} stacked {n} processes ({pids}); stopping before clean start", flush=True)
+        stop_process(n)
+    if not already_checked and n == "ninfer" and shares_this_gpu((CONN.get("servers") or {}).get(n, {}).get("server_url") or backend_spec(n)["default_base"]):
+        free_comfy_vram_if_idle()
     exe = _server_exe(n)
     if not exe:
         return False, (f"No {backend_spec(n)['label']} binary found. Put ninfer-serve.exe in "
@@ -1395,6 +1461,8 @@ async def models(base_url):
                 native = await _get(session, "/api/v0/models")
             except Exception:
                 native = None
+            if native is None:
+                _CTX_NO_NATIVE.add(base)
             if native is not None:
                 rows = native.get("data") if isinstance(native, dict) else native
                 out = []
@@ -1409,6 +1477,9 @@ async def models(base_url):
                     out.append({"id": str(mid),
                                 "loaded": str((m or {}).get("state") or "")
                                 == "loaded"})
+                    _lc = (m or {}).get("loaded_context_length")
+                    if isinstance(_lc, (int, float)) and _lc > 0:
+                        _CTX_LOADED[(base, str(mid))] = int(_lc)
                 if out:
                     # Loaded first, then alphabetical: the one that will work
                     # without a wait should be the one the eye lands on.
@@ -1579,6 +1650,9 @@ async def complete_stream(base_url, model, messages, *, schema=None,
     if not model:
         raise LLMError("no model is selected -- open Settings in the panel")
     url = base + "/v1/chat/completions"
+    _fit = fit_error(messages, await known_context(base, model), model)
+    if _fit:
+        raise LLMError(_fit)
 
     async with aiohttp.ClientSession() as session:
         body = _chat_body(model, messages, schema=schema,
@@ -1677,6 +1751,9 @@ async def complete(base_url, model, messages, *, schema=None,
     if not model:
         raise LLMError("no model is selected -- open Settings in the panel")
     url = base + "/v1/chat/completions"
+    _fit = fit_error(messages, await known_context(base, model), model)
+    if _fit:
+        raise LLMError(_fit)
 
     async with aiohttp.ClientSession() as session:
         body = _chat_body(model, messages, schema=schema,
@@ -1734,6 +1811,76 @@ async def complete(base_url, model, messages, *, schema=None,
                 return _content(data, max_tokens=max_tokens)
 
             raise
+
+
+# -- Does the turn fit the model's context? ---------------------------------
+#
+# A turn longer than the loaded context does not always fail. LM Studio can be
+# set to cut the middle of an over-long prompt and answer anyway, and a 16k model
+# handed WRITE's ~12k-token system prompt plus a brief then writes a confident
+# plan from a fragment of the rules. `_cut_off` explains an overflow AFTER the
+# reply; this refuses BEFORE the call, when the context is known: nInfer's is the
+# one this pack started it with, LM Studio reports `loaded_context_length` on
+# `/api/v0/models`. Unknown servers are never refused.
+#
+# The estimate is deliberately LOW (4 characters a token, a modest figure per
+# picture), so it refuses only a turn that clearly cannot fit with room to
+# answer. A borderline turn still goes out, and `_cut_off` covers it.
+FIT_CHARS_PER_TOKEN = 4
+FIT_IMAGE_TOKENS = 512
+FIT_REPLY_FLOOR = 1024
+_CTX_LOADED = {}        # (base, model id) -> loaded context, from /api/v0/models
+_CTX_NO_NATIVE = set()  # bases with no /api/v0/models: never asked again
+
+
+def estimate_tokens(messages):
+    """A low estimate of a chat turn's prompt tokens."""
+    chars, pics = 0, 0
+    for m in messages or []:
+        c = (m or {}).get("content")
+        if isinstance(c, str):
+            chars += len(c)
+        elif isinstance(c, list):
+            for part in c:
+                part = part or {}
+                if part.get("type") == "image_url":
+                    pics += 1
+                else:
+                    chars += len(str(part.get("text") or ""))
+    return chars // FIT_CHARS_PER_TOKEN + pics * FIT_IMAGE_TOKENS
+
+
+def fit_error(messages, ctx, model=""):
+    """'' when the turn fits `ctx` with room to answer, else what to change."""
+    if not ctx:
+        return ""
+    est = estimate_tokens(messages)
+    if est + FIT_REPLY_FLOOR <= int(ctx):
+        return ""
+    want = 1 << max(14, (est * 2 + 4096 - 1).bit_length())
+    who = f"{model} is" if model else "the model is"
+    return (f"this request is about {est} tokens before the model can answer, and "
+            f"{who} loaded with a {int(ctx)}-token context, so the server would cut "
+            f"the prompt and answer from a fragment of it. Raise the context length "
+            f"in {active_label()} to at least {want}.")
+
+
+async def known_context(base_url, model):
+    """The context the server is running `model` with, or None when unknown."""
+    base = normalise_base(base_url)
+    if not base:
+        return None
+    for name, entry in (CONN.get("servers") or {}).items():
+        if (backend_name(name) == "ninfer" and isinstance(entry, dict)
+                and normalise_base(entry.get("server_url") or "") == base):
+            return _server_ctx_size("ninfer")
+    if base in _CTX_NO_NATIVE:
+        return None
+    try:
+        await models(base)
+    except Exception:
+        return None
+    return _CTX_LOADED.get((base, str(model or "")))
 
 
 def has_images(messages):

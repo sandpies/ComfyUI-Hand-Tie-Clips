@@ -36,10 +36,14 @@ together to infer what kind of film the user is making:
   placed there deliberately. Inspect each attached photograph (and any existing
   `desc`, `subject`, `retention`, or `voice` attribute on `<rail>`):
   - **People (`subject: 1, 2, ...`):** Give each distinct person their own
-    subject number (`1`, `2`, ...) and fill `subjects.N` from the photograph
-    (`name` as a plain noun phrase like `"the young woman"`, `locked` for face,
-    hair and build, `context` for wardrobe colors and garments ONLY — never a
-    pose or a room).
+    subject number (`1`, `2`, ...) and fill `subjects.N` directly from the
+    photograph (`name` as a plain noun phrase like `"the cook"`, `locked` for
+    visual medium/style when stylized, racial/ethnic profile and gender,
+    actual eye shape/lid/iris color, face/jaw/nose/lip geometry, skin
+    undertone/marks, body frame, and exact hair cut/texture — describe what
+    makes *this* face distinct rather than generic `"the same face"` or canned
+    eye/skin defaults — and `context` for wardrobe colors and garments ONLY,
+    never a pose or a room).
   - **Likeness vs. wardrobe plates:** When two plates show the same person, the
     portrait/head shot is the likeness plate (`retention: "fully_preserved"`,
     scheduled on every hop `[1..N]`) and the full-body outfit shot is the
@@ -48,12 +52,13 @@ together to infer what kind of film the user is making:
   - **Key props (`retention: "prop"`, no `subject`):** one object alone on a
     plain backdrop; its shape, material and colour carry over wherever the
     action puts it, and it never counts as a place.
-  - **Places (`retention: "reference"`, no `subject`):** Read the
-    visible architecture, surfaces, lighting and props in each setting photo.
-    When multiple place plates are on the rail, structure the hops as a journey
-    between them — finish the departure at the end of hop K and open hop K+1 in
-    the new place with `join: match_cut` or `hard_cut` (unless the chain is
-    hand-tied, which stays in one continuous space).
+  - **Places (`retention: "reference"`, no `subject`):** Read the visible
+    rendering style, architecture, foreground-to-background layout, surfaces,
+    lighting direction/color and props in each setting photo. When multiple place
+    plates are on the rail, structure the hops as a journey between them —
+    finish the departure at the end of hop K and open hop K+1 in the new place
+    with `join: match_cut` or `hard_cut` (unless the chain is hand-tied, which
+    stays in one continuous space).
   - **Voice bindings (`voice=...` on `<rail>`):** A character with a bound voice
     clip is equipped to speak. Give them natural spoken lines when the brief
     calls for a vlog, dialogue or monologue; keep hops wordless with a specific
@@ -600,15 +605,15 @@ inside the line, and the beat says the person shouts it.
   "refs": [
     {"tag": "hero_face", "file": "face.jpg", "subject": 1,
      "retention": "fully_preserved", "shots": [1, 4],
-     "desc": "head-and-shoulders, even light"},
+     "desc": "live-action headshot, Southeast Asian woman, warm olive-tan skin, square jaw, hooded brown eyes, short wavy dark hair"},
     {"tag": "kitchen", "file": "kitchen_wide.jpg",
      "retention": "reference", "shots": [1, 2, 3],
-     "desc": "wide shot of the counter and window"}
+     "desc": "wide shot of steel prep counter foreground, tiled wall and left window"}
   ],
   "subjects": {
     "1": {"name": "the cook",
-          "locked": "the same face, the same short dark hair",
-          "context": "the apron stays tied over the grey t-shirt"}
+          "locked": "Southeast Asian woman, warm olive-tan skin, square jaw, hooded brown eyes, beauty mark on left cheekbone, short wavy dark hair",
+          "context": "the charcoal canvas apron stays tied over the faded grey t-shirt"}
   }
 }
 ```

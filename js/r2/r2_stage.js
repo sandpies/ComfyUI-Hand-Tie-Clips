@@ -396,8 +396,13 @@ export function createStage(node, { getShots, getActive, onSelect } = {}) {
             show(active());
             return;
         }
-        if (st.hop + 1 < currentShots().length) {
-            pick(st.hop + 1);
+        // Issue #2: advance only into a hop that has a rendered clip. A
+        // mid-run chain has later hops "not cached yet"; play() on one of
+        // those starts the storyboard timer and keeps scrubbing through
+        // placeholders, so stop on the last rendered clip instead.
+        const next = st.hop + 1;
+        if (next < currentShots().length && hopKey(node, next)) {
+            pick(next);
             play();
         } else {
             stop();
