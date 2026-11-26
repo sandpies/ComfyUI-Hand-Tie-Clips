@@ -56,7 +56,10 @@ export function createStage(node, { getShots, getActive, onSelect } = {}) {
     popPhone.type = "button";
     popPhone.title = "Open the phone view in a small window and copy its link for your phone";
     popPhone.addEventListener("click", async () => {
-        window.open(`${MONITOR_PAGE}?view=phone`, "htc_monitor_phone", "popup,width=430,height=900");
+        // Opened synchronously (a pop-up after an await is blocked), then pointed
+        // at the LAN address once known: the window's address bar then shows the
+        // link that works on a phone, not 127.0.0.1 (which is the phone itself).
+        const win = window.open(`${MONITOR_PAGE}?view=phone`, "htc_monitor_phone", "popup,width=430,height=900");
         let link = null;
         let why = "";
         try {
@@ -64,6 +67,9 @@ export function createStage(node, { getShots, getActive, onSelect } = {}) {
             link = st?.links?.lan ? `${st.links.lan}${MONITOR}?view=phone` : null;
             if (!link) why = "start ComfyUI with --listen to open it on your phone";
         } catch (e) { why = "monitor not reachable"; }
+        if (link && win && !globalThis.HTC_MONITOR_PAGE) {
+            try { win.location.href = link; } catch (e) { /* the window stays on the local page */ }
+        }
         if (link) {
             try { await navigator.clipboard.writeText(link); why = "link copied"; }
             catch (e) { why = link; }

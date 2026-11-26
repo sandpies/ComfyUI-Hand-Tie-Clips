@@ -169,8 +169,8 @@ def run_state(max_age_h=36.0):
 
 def links(port=None, listen=None):
     """Where this page can be opened from. `lan` is None when ComfyUI listens on
-    loopback only (no --listen), so a phone cannot reach it. No packet is sent:
-    connecting a UDP socket only asks the OS which interface routes outward."""
+    loopback only (no --listen), so a phone cannot reach it. Nothing goes on the
+    network: the address comes from the machine's own name lookup."""
     import socket
     try:
         from comfy.cli_args import args  # noqa: PLC0415
@@ -184,14 +184,15 @@ def links(port=None, listen=None):
     if not loopback:
         ip = next((h for h in hosts if h not in ("0.0.0.0", "::") and ":" not in h), None)
         if ip is None:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            # The machine's own addresses by name lookup (no socket opened): the
+            # first private IPv4 is the one a phone on the same network can reach.
             try:
-                s.connect(("10.255.255.255", 1))
-                ip = s.getsockname()[0]
+                addrs = socket.gethostbyname_ex(socket.gethostname())[2]
             except OSError:
-                ip = None
-            finally:
-                s.close()
+                addrs = []
+            private = [a for a in addrs if a.startswith(("192.168.", "10."))
+                       or (a.startswith("172.") and 16 <= int(a.split(".")[1]) <= 31)]
+            ip = (private or [None])[0]
         if ip:
             lan = f"http://{ip}:{port}"
     return {"lan": lan, "port": port, "listen": listen}
@@ -257,6 +258,9 @@ h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0 0 12px}
 .btn:focus-visible{outline:2px solid var(--run)}
 .err{color:var(--bad);font:13px var(--mono)}
 .err[hidden]{display:none}
+.phonelink{margin:12px 0 0;font:13px var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.phonelink[hidden]{display:none}
+.phonelink b{color:var(--fg);font-weight:600;user-select:all}
 @media (prefers-reduced-motion:reduce){.seg.now{animation:none}}
 /* ?view=desktop: full-width wall; the open hop plays in a sticky column on the right. */
 body.desktop main{max-width:none;padding-block:22px 40px;gap:20px}
@@ -274,6 +278,7 @@ body.desktop h1{font-size:clamp(28px,3.2vw,44px)}
     <p class="eyebrow">Hand-Tie-Clips · render monitor</p>
     <h1 id="title"><span class="t">Waiting</span><br>for a render</h1>
     <p class="sub" id="sub">Each tile starts looping as soon as its hop is finished. Tap one to watch it with sound. Updates every 15 s.</p>
+    <p class="phonelink" id="phonelink" hidden></p>
   </header>
   <section class="state" aria-live="polite">
     <span id="pill" class="pill idle">IDLE</span>
@@ -337,6 +342,11 @@ function tile(n){
 async function poll(){
   try{ const r=await fetch("/h3_ref_chain/monitor/state",{cache:"no-store"}); S=await r.json(); $("err").hidden=true; }
   catch(e){ $("err").hidden=false; $("err").textContent="Can't reach ComfyUI. Is it running, and (from another device) started with --listen?"; return; }
+  const L=S.links||{}, local=/^(127\.|localhost$|\[?::1)/.test(location.hostname);
+  const pl=$("phonelink");
+  if(local&&L.lan){pl.hidden=false;pl.replaceChildren("On your phone (same Wi-Fi), open: ");const b=document.createElement("b");b.textContent=L.lan+location.pathname+"?view=phone";pl.append(b);}
+  else if(local&&L.listen&&L.listen!=="demo"){pl.hidden=false;pl.textContent="To watch on your phone, start ComfyUI with --listen (start-listen.bat).";}
+  else pl.hidden=true;
   const of=S.of||0, hops=S.hops||[], last=hops.length?hops[hops.length-1].hop:0, running=!!S.running;
   const busy=running&&last<of;
   const title=S.title||"";

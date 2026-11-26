@@ -58,6 +58,9 @@ h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0 0 12px}
 .btn:focus-visible{outline:2px solid var(--run)}
 .err{color:var(--bad);font:13px var(--mono)}
 .err[hidden]{display:none}
+.phonelink{margin:12px 0 0;font:13px var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.phonelink[hidden]{display:none}
+.phonelink b{color:var(--fg);font-weight:600;user-select:all}
 @media (prefers-reduced-motion:reduce){.seg.now{animation:none}}
 /* ?view=desktop: full-width wall; the open hop plays in a sticky column on the right. */
 body.desktop main{max-width:none;padding-block:22px 40px;gap:20px}
@@ -75,6 +78,7 @@ body.desktop h1{font-size:clamp(28px,3.2vw,44px)}
     <p class="eyebrow">Hand-Tie-Clips · render monitor</p>
     <h1 id="title"><span class="t">Waiting</span><br>for a render</h1>
     <p class="sub" id="sub">Each tile starts looping as soon as its hop is finished. Tap one to watch it with sound. Updates every 15 s.</p>
+    <p class="phonelink" id="phonelink" hidden></p>
   </header>
   <section class="state" aria-live="polite">
     <span id="pill" class="pill idle">IDLE</span>
@@ -138,6 +142,11 @@ function tile(n){
 async function poll(){
   try{ const r=await fetch("/h3_ref_chain/monitor/state",{cache:"no-store"}); S=await r.json(); $("err").hidden=true; }
   catch(e){ $("err").hidden=false; $("err").textContent="Can't reach ComfyUI. Is it running, and (from another device) started with --listen?"; return; }
+  const L=S.links||{}, local=/^(127\.|localhost$|\[?::1)/.test(location.hostname);
+  const pl=$("phonelink");
+  if(local&&L.lan){pl.hidden=false;pl.replaceChildren("On your phone (same Wi-Fi), open: ");const b=document.createElement("b");b.textContent=L.lan+location.pathname+"?view=phone";pl.append(b);}
+  else if(local&&L.listen&&L.listen!=="demo"){pl.hidden=false;pl.textContent="To watch on your phone, start ComfyUI with --listen (start-listen.bat).";}
+  else pl.hidden=true;
   const of=S.of||0, hops=S.hops||[], last=hops.length?hops[hops.length-1].hop:0, running=!!S.running;
   const busy=running&&last<of;
   const title=S.title||"";
