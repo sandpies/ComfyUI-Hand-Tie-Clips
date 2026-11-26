@@ -10,6 +10,7 @@ header h1{font-size:16px;margin:0} header a{color:#74c0fc;margin-right:12px} hea
 #stage{margin:12px;border:1px solid #2a2c31;border-radius:8px;padding:12px;background:#0d0e10;min-height:760px}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#25262b;border:1px solid #444;padding:9px 16px;border-radius:6px;opacity:0;transition:.2s;pointer-events:none}
 #toast.on{opacity:1}
+#stage > .h3e-root{height:auto;overflow:visible}
 </style></head><body>
 <header><h1>SandTie PromptRig (H3)</h1>
 <span><a href="./">Hand Tie Clips</a><a href="sandtie.html">SandTie PromptRig</a>
@@ -50,6 +51,9 @@ if (await ready()) {
   const { mountSandTieStandalone } = await import("./extensions/htc/editor/sandtie_ui.js");
   const node = makeNode("SandTiePromptRig", "SandTie PromptRig (H3)", nodes.sandtie, [1200, 800]);
   const stage = document.getElementById("stage"); stage.textContent = "";
-  mountSandTieStandalone(node, stage, { onSyncOutputs: () => window.__demoToast("Prompt synced to the node's output.") });
+  // The node mounts the rig inside its card (.h3st-node-card.h3e-root), which is where the
+  // --h3-* palette lives; mounted on a bare div every panel background is transparent.
+  const host = document.createElement("div"); host.className = "h3st-node-card h3e-root"; stage.appendChild(host);
+  mountSandTieStandalone(node, host, { onSyncOutputs: () => window.__demoToast("Prompt synced to the node's output.") });
 }
 </script></body></html>
