@@ -42,8 +42,61 @@ SCALARS = ("INT", "FLOAT", "STRING", "BOOLEAN")
 SLA_LEVELS = ("Off", "Light", "Medium", "Heavy Enforcement")
 
 
+V3_WIDGETS = {"Int": "INT", "Float": "FLOAT", "String": "STRING", "Boolean": "BOOLEAN",
+              "Combo": "COMBO", "MultiCombo": "COMBO"}
+
+
+def _v3_schema_items(src, cls_name):
+    """[(name, type, seed_slot)] from a V3 class's define_schema, read by AST (no ComfyUI
+    import). None when the class has no define_schema (a V1 node)."""
+    import ast
+    tree = ast.parse(src)
+    cdef = next((n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == cls_name), None)
+    if cdef is None:
+        return None
+    fn = next((b for b in cdef.body if isinstance(b, ast.FunctionDef) and b.name == "define_schema"), None)
+    if fn is None:
+        return None
+    inputs = None
+    for node in ast.walk(fn):
+        if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "Schema":
+            inputs = next((k.value for k in node.keywords if k.arg == "inputs"), None)
+    if not isinstance(inputs, (ast.List, ast.Tuple)):
+        raise SystemExit(f"build_graph: {cls_name}.define_schema inputs are not a literal list; "
+                         "cannot map widget slots")
+    out = []
+    for call in inputs.elts:
+        f = getattr(call, "func", None)
+        if (isinstance(call, ast.Call) and isinstance(f, ast.Attribute) and f.attr == "Input"
+                and isinstance(f.value, ast.Call)):
+            continue  # io.Custom("TYPE").Input(...): a socket, takes no widget slot
+        if not (isinstance(call, ast.Call) and isinstance(f, ast.Attribute) and f.attr == "Input"
+                and isinstance(f.value, ast.Attribute)) or not call.args \
+                or not isinstance(call.args[0], ast.Constant):
+            raise SystemExit(f"build_graph: unreadable input in {cls_name}.define_schema "
+                             f"at line {getattr(call, 'lineno', '?')}")
+        kind = f.value.attr
+        kw = {k.arg: k.value for k in call.keywords}
+        socketless = isinstance(kw.get("force_input"), ast.Constant) and kw["force_input"].value is True
+        if kind in V3_WIDGETS and not socketless:
+            cag = kw.get("control_after_generate")
+            seed = isinstance(cag, ast.Constant) and bool(cag.value)
+            out.append((call.args[0].value, V3_WIDGETS[kind], seed))
+    return out
+
+
 def widget_names(pack):
     src = (pack / "h3_ref_chain.py").read_text(encoding="utf-8")
+    v3 = _v3_schema_items(src, "HandTieClips")
+    if v3 is not None:
+        names, types = [], {}
+        for n, t, seed in v3:
+            names.append(n)
+            types[n] = t
+            if seed or n == "seed":
+                names.append("control_after_generate")
+                types["control_after_generate"] = "COMBO"
+        return names, types
     i = src.index("def INPUT_TYPES")
     body = src[i:src.index("RETURN_TYPES", i)]
     items = re.findall(r'^\s{8,16}"([a-z_0-9]+)":\s*\(\s*(\[|"[A-Z_]+"|[A-Za-z_\.\(\)]+)', body, re.M)
@@ -91,6 +144,10 @@ def coerce(kind, raw):
 def save_prefix_slot(pack):
     """Index of filename_prefix among HTCSaveVideo's widgets (sockets take no slot)."""
     src = (pack / "save_video.py").read_text(encoding="utf-8")
+    v3 = _v3_schema_items(src, "HTCSaveVideo")
+    if v3 is not None:
+        widgets = [n for n, _t, _s in v3]
+        return widgets.index("filename_prefix") if "filename_prefix" in widgets else None
     i = src.index("class HTCSaveVideo")
     body = src[src.index("def INPUT_TYPES", i):src.index("RETURN_TYPES", i)]
     items = re.findall(r'^\s{12,20}"([a-z_0-9]+)":\s*\(\s*(\[|"[A-Z_]+"|[A-Za-z_\.\(\)]+)', body, re.M)

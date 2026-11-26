@@ -1201,10 +1201,10 @@
     },
     {
       "id": "finger_command_tilt",
-      "label": "Beckon Finger Follow Tilt",
+      "label": "Beckon Hand Follow Tilt",
       "group": "Handheld",
       "aspect_best": "9:16",
-      "rule": "follow an extended beckoning hand and raised fingers smoothly as they lead the viewer's gaze up to a knowing smirk",
+      "rule": "follow an extended beckoning hand smoothly as it leads the viewer's gaze up to a knowing smirk",
       "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."
@@ -1231,10 +1231,10 @@
     },
     {
       "id": "finger_follow_macro",
-      "label": "Macro Fingertip Trace Follow",
+      "label": "Close Hand Trace Follow",
       "group": "Tracking",
       "aspect_best": "9:16",
-      "rule": "tight close tracking following a gliding fingertip tracing along collarbone, jawline, or silk fabric",
+      "rule": "close tracking following one hand gliding slowly along collarbone, jawline, or silk fabric, the face kept in frame",
       "domain": "general",
       "duration_best": "6-12 s",
       "duration_tip": "⏱ BEST LENGTH: 6–12 s (141–294f) — Standard H3 motion window (minimum 124f / 5.2s for clear camera travel)."

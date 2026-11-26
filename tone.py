@@ -36,6 +36,7 @@ auto-crops to the tail.
 from __future__ import annotations
 
 import torch
+from comfy_api.latest import io
 
 TAG = "HTCTone"
 MODES = ["off", "frame_shift", "gain_bias", "lut", "anchor", "chroma"]
@@ -864,7 +865,7 @@ def compensate(source, target, mode, overlap=DEFAULT_OVERLAP, lut_bins=64):
     return out, note
 
 
-class HTCToneCompensate:
+class _HTCToneCompensateImpl:
     """Undo the denoiser's tone bias on a generated H3 segment.
 
     Wire it between two hand-chained H3 generations: `source` is the previous
@@ -877,33 +878,6 @@ class HTCToneCompensate:
     this node is for hand-built chains, and for A/B-ing the correction.
     """
 
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "source": ("IMAGE", {"tooltip": "The earlier clip."}),
-                "target": ("IMAGE", {"tooltip": "The clip to correct."}),
-                "mode": (MODES, {
-                    "default": "frame_shift",
-                    "tooltip": ("How to correct tone drift: frame_shift smooths brightness/RGB per frame; "
-                                "chroma locks Lab color balance/saturation while leaving brightness untouched; "
-                                "gain_bias & lut match contrast curve; anchor locks chain-wide."),
-                }),
-                "overlap": ("INT", {
-                    "default": DEFAULT_OVERLAP, "min": 1, "max": 4096,
-                    "tooltip": "Frames the two clips share at the join. 22 matches the chain's default.",
-                }),
-                "lut_bins": ("INT", {
-                    "default": 64, "min": 16, "max": 512,
-                    "tooltip": "Detail of the tone curve in lut mode.",
-                }),
-            }
-        }
-
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("images",)
-    FUNCTION = "run"
-    CATEGORY = "Hand Tie Clips"
 
     def run(self, source, target, mode, overlap, lut_bins):
         out, note = compensate(source, target, mode, overlap, lut_bins)
@@ -912,6 +886,55 @@ class HTCToneCompensate:
         return (out,)
 
 
+class HTCToneCompensate(io.ComfyNode, _HTCToneCompensateImpl):
+    """V3 schema for HTCToneCompensate; the implementation lives in _HTCToneCompensateImpl.
+
+    Also inherits _HTCToneCompensateImpl so existing callers of the V1 API (HTCToneCompensate().run(...),
+    HTCToneCompensate.<helper>) keep working; core sees only the V3 hooks below."""
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id='HTCToneCompensate',
+            display_name='H3 Tone Compensate',
+            category="Hand Tie Clips",
+            inputs=[
+                io.Image.Input('source', tooltip="The earlier clip."),
+                io.Image.Input('target', tooltip="The clip to correct."),
+                io.Combo.Input(
+                    'mode',
+                    options=MODES,
+                    default="frame_shift",
+                    tooltip="How to correct tone drift: frame_shift smooths brightness/RGB per frame; "
+                                "chroma locks Lab color balance/saturation while leaving brightness untouched; "
+                                "gain_bias & lut match contrast curve; anchor locks chain-wide.",
+                ),
+                io.Int.Input(
+                    'overlap',
+                    default=DEFAULT_OVERLAP,
+                    min=1,
+                    max=4096,
+                    tooltip="Frames the two clips share at the join. 22 matches the chain's default.",
+                ),
+                io.Int.Input(
+                    'lut_bins',
+                    default=64,
+                    min=16,
+                    max=512,
+                    tooltip="Detail of the tone curve in lut mode.",
+                ),
+            ],
+            outputs=[
+                io.Image.Output(display_name='images'),
+            ],
+        )
+
+    @classmethod
+    def execute(cls, **kwargs):
+        result = _HTCToneCompensateImpl().run(**kwargs)
+        if isinstance(result, dict):
+            return io.NodeOutput.from_dict(result)
+        return io.NodeOutput(*result) if result is not None else io.NodeOutput()
 
 
 # -- pre-rename ids ----------------------------------------------------------
@@ -924,7 +947,15 @@ class HTCToneCompensate:
 
 
 class _LegacyH3ToneCompensate(HTCToneCompensate):
-    DEPRECATED = True
+    """Old node id 'H3ToneCompensate': same node as HTCToneCompensate, kept so old workflows load."""
+
+    @classmethod
+    def define_schema(cls):
+        schema = super().define_schema()
+        schema.node_id = 'H3ToneCompensate'
+        schema.display_name = 'H3ToneCompensate'
+        schema.is_deprecated = True
+        return schema
 
 
 NODE_CLASS_MAPPINGS = {

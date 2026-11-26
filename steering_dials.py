@@ -23,6 +23,7 @@ import threading
 from typing import Any
 
 import torch
+from comfy_api.latest import io
 
 TAG = "HTCSteeringDials"
 
@@ -59,7 +60,7 @@ BUILTIN_DIAL_RECIPES: dict[str, dict[str, Any]] = {
         "neg_label": "Freeze / Still",
         "pos_label": "Dynamic / Fast",
         "pairs": "\n".join([
-            "{subject} stands perfectly still, posing steadily in place. ||| {subject} moves briskly across the scene, stepping and gesturing energetically.",
+            "{subject} stands perfectly still, posing steadily in place. ||| {subject} moves briskly across the scene, stepping and turning energetically.",
             "{subject} sits calmly without shifting posture. ||| {subject} leaps up, pivots cleanly, and sweeps arms through space.",
             "{subject} holds a quiet, stationary stance facing forward. ||| {subject} strides rapidly past frame with dynamic full-body momentum.",
         ]),
@@ -71,7 +72,7 @@ BUILTIN_DIAL_RECIPES: dict[str, dict[str, Any]] = {
         "pairs": "\n".join([
             "{subject} keeps a flat, neutral, stoic face with unmoving eyebrows and relaxed lips. ||| {subject} reacts with vivid facial acting, raised expressive eyebrows, bright widening eyes, and dynamic mouth expression.",
             "{subject} holds a calm, unreadable deadpan gaze straight ahead. ||| {subject} shifts rapidly from an amused grin to surprised wide eyes and an expressive smirk.",
-            "{subject} shows minimal restrained emotion in the eyes and cheeks. ||| {subject} radiates rich charismatic facial emotion with animated brow and cheek movement.",
+            "{subject} shows minimal restrained emotion in the eyes and brows. ||| {subject} radiates rich charismatic facial emotion with animated brows, eyes, and mouth.",
             "! {subject} speaks in a quiet low voice. ||| {subject} speaks in a loud booming voice.",
         ]),
     },
@@ -91,7 +92,7 @@ BUILTIN_DIAL_RECIPES: dict[str, dict[str, Any]] = {
         "pos_label": "Alive / Kinetic Air",
         "pairs": "\n".join([
             "{subject} stands in still air with motionless hair, fabric, and quiet background. ||| {subject} blinks naturally and breathes visibly as hair, fabric, dust motes, and background lights move continuously.",
-            "{subject} rests in a static room with still curtains and steady light. ||| {subject} shifts weight naturally with subtle hand micro-business while air, steam, and light drift behind.",
+            "{subject} rests in a static room with still curtains and steady light. ||| {subject} shifts weight naturally and breathes while hair, air, steam, and light drift behind.",
         ]),
     },
     "sound": {
@@ -776,70 +777,9 @@ def _parse_rack_json(raw: str) -> list[tuple[str, str, float, bool]]:
     return out
 
 
-class HTCSteeringDials:
+class _HTCSteeringDialsImpl:
     """Apply signed steering dial vectors to MiniMax H3 (`Motion / Expr / Energy + Rack`)."""
 
-    CATEGORY = "Hand Tie Clips"
-    RETURN_TYPES = ("MODEL", "STRING")
-    RETURN_NAMES = ("model", "info")
-    FUNCTION = "apply"
-    DESCRIPTION = (
-        "Clean-room MIT steering dials for MiniMax H3. Steers Motion, Expression, "
-        "Energy, and Mood vectors directly in H3's prompt space with float64 order-independent "
-        "addition and optional Blocks 0-24 voice-safe protection."
-    )
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        choices = dial_choices()
-        return {
-            "required": {
-                "model": ("MODEL", {
-                    "tooltip": "MiniMax-H3 model to steer in prompt space (chains cleanly before or after HTCTokenLoRA / HTCSparseAttention).",
-                }),
-                "motion": ("FLOAT", {
-                    "default": 0.0, "min": -2.5, "max": 2.5, "step": 0.05,
-                    "tooltip": "Motion energy steering (-2 calmer/held <-> +2 dynamic action). Uses htc_motion or h3_motion dial; auto-synthesizes if CLIP is wired.",
-                }),
-                "expression": ("FLOAT", {
-                    "default": 0.0, "min": -2.5, "max": 2.5, "step": 0.05,
-                    "tooltip": "Facial expression steering (-2 stoic/restrained <-> +2 vivid/expressive). Auto-synthesizes htc_expression.safetensors if CLIP is wired.",
-                }),
-                "energy": ("FLOAT", {
-                    "default": 0.0, "min": -2.5, "max": 2.5, "step": 0.05,
-                    "tooltip": "Vocal & dramatic intensity steering (-2 soft/hushed <-> +2 high-energy delivery). Auto-synthesizes htc_energy.safetensors if CLIP is wired.",
-                }),
-                "mood_dial": (choices, {
-                    "default": NONE,
-                    "tooltip": "Optional custom .safetensors dial vector from models/loras/dials/ (e.g. a dial created by HTC Make Steering Dial).",
-                }),
-                "mood_strength": ("FLOAT", {
-                    "default": 0.0, "min": -2.5, "max": 2.5, "step": 0.05,
-                    "tooltip": "Signed strength for mood_dial (-2.5 pushes toward A side, +2.5 pushes toward B side; 0 = off).",
-                }),
-                "scope": (list(SCOPE_MODES), {
-                    "default": SCOPE_MODES[0],
-                    "tooltip": (
-                        "Where the steering vector applies in H3's 50 DiT blocks: "
-                        "blocks_0_24 (voice safe) steers early composition/motion blocks and leaves blocks 25-49 untouched for clean voice & skin; "
-                        "all_blocks shifts the refined prompt once across the whole stack."
-                    ),
-                }),
-            },
-            "optional": {
-                "clip": ("CLIP", {
-                    "tooltip": "Optional H3 CLIP (Qwen3-VL). Only needed once to auto-mint missing built-in Motion/Expression/Energy/Sound .safetensors dials.",
-                }),
-                "rack_json": ("STRING", {
-                    "default": "[]", "multiline": False,
-                    "tooltip": "JSON list of extra stacked dial rows managed by the node's Dial Rack & Map panel (supports 'hold': true QR projection).",
-                }),
-                "sound": ("FLOAT", {
-                    "default": 0.0, "min": -2.5, "max": 2.5, "step": 0.05,
-                    "tooltip": "Acoustic & foley richness steering (-2.5 hushed quiet air <-> +2.5 vivid crisp foley). Auto-synthesizes htc_sound.safetensors if CLIP is wired; pair with All-50 scope and prompt overall_soundscape for strongest audio shift.",
-                }),
-            },
-        }
 
     def apply(
         self,
@@ -895,59 +835,112 @@ class HTCSteeringDials:
         return (patched, summary)
 
 
-class HTCMakeSteeringDial:
-    """Clean-room MIT prompt-pair steering vector builder (`models/loras/dials/*.safetensors`)."""
+class HTCSteeringDials(io.ComfyNode, _HTCSteeringDialsImpl):
+    """V3 schema for HTCSteeringDials; the implementation lives in _HTCSteeringDialsImpl.
 
-    CATEGORY = "Hand Tie Clips"
-    RETURN_TYPES = ("STRING", "STRING")
-    RETURN_NAMES = ("dial_file", "report")
-    FUNCTION = "build"
-    OUTPUT_NODE = True
-    DESCRIPTION = (
-        "Build a compact ~14 KB H3 steering dial from `A ||| B` prompt pairs, `+w/-w` prompt sets, or `(words:w)` weighted spans "
-        "(supports `{subject}` expansion and `!` / `![group]` hold orthogonalization). Saves to models/loras/dials/."
-    )
+    Also inherits _HTCSteeringDialsImpl so existing callers of the V1 API (HTCSteeringDials().apply(...),
+    HTCSteeringDials.<helper>) keep working; core sees only the V3 hooks below."""
 
     @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "clip": ("CLIP", {
-                    "tooltip": "MiniMax-H3 text encoder (Qwen3-VL) used to encode each contrast prompt pair.",
-                }),
-                "model": ("MODEL", {
-                    "tooltip": "MiniMax-H3 model whose token_refiner + condition_proj project the prompt pair difference into a compact ~14 KB dial.",
-                }),
-                "recipe": (["custom", "motion", "expression", "energy", "life", "sound"], {
-                    "default": "expression",
-                    "tooltip": "Pick a built-in contrast recipe (motion, expression, energy, life, sound) or custom to use pairs_text below.",
-                }),
-                "dial_name": ("STRING", {
-                    "default": "htc_expression", "multiline": False,
-                    "tooltip": "Output filename saved in models/loras/dials/ (.safetensors added automatically).",
-                }),
-                "neg_label": ("STRING", {
-                    "default": "Stoic / Calm", "multiline": False,
-                    "tooltip": "Human label shown on the negative (-1) end of this dial in HTC Steering Dials.",
-                }),
-                "pos_label": ("STRING", {
-                    "default": "Vivid / Expressive", "multiline": False,
-                    "tooltip": "Human label shown on the positive (+1) end of this dial in HTC Steering Dials.",
-                }),
-                "pairs_text": ("STRING", {
-                    "multiline": True,
-                    "default": BUILTIN_DIAL_RECIPES["expression"]["pairs"],
-                    "tooltip": (
-                        "Contrast prompt pairs (`negative A ||| positive B`), `+w`/`-w` prompt sets, or `(words:w)` weighted spans. "
-                        "Supports `{subject}` expansion and `!` / `![group]` hold lines to project out unwanted traits (like motion or voice loudness)."
-                    ),
-                }),
-                "debias": ("BOOLEAN", {
-                    "default": True,
-                    "tooltip": "Orthogonalize the dial direction against any '! hold' lines and remove shared prompt drift so only the target trait moves.",
-                }),
-            }
-        }
+    def define_schema(cls):
+        choices = dial_choices()
+        return io.Schema(
+            node_id='HTCSteeringDials',
+            display_name='HTC Steering Dials (H3)',
+            category="Hand Tie Clips",
+            description="Clean-room MIT steering dials for MiniMax H3. Steers Motion, Expression, "
+                "Energy, and Mood vectors directly in H3's prompt space with float64 order-independent "
+                "addition and optional Blocks 0-24 voice-safe protection.",
+            inputs=[
+                io.Model.Input(
+                    'model',
+                    tooltip="MiniMax-H3 model to steer in prompt space (chains cleanly before or after HTCTokenLoRA / HTCSparseAttention).",
+                ),
+                io.Float.Input(
+                    'motion',
+                    default=0.0,
+                    min=-2.5,
+                    max=2.5,
+                    step=0.05,
+                    tooltip="Motion energy steering (-2 calmer/held <-> +2 dynamic action). Uses htc_motion or h3_motion dial; auto-synthesizes if CLIP is wired.",
+                ),
+                io.Float.Input(
+                    'expression',
+                    default=0.0,
+                    min=-2.5,
+                    max=2.5,
+                    step=0.05,
+                    tooltip="Facial expression steering (-2 stoic/restrained <-> +2 vivid/expressive). Auto-synthesizes htc_expression.safetensors if CLIP is wired.",
+                ),
+                io.Float.Input(
+                    'energy',
+                    default=0.0,
+                    min=-2.5,
+                    max=2.5,
+                    step=0.05,
+                    tooltip="Vocal & dramatic intensity steering (-2 soft/hushed <-> +2 high-energy delivery). Auto-synthesizes htc_energy.safetensors if CLIP is wired.",
+                ),
+                io.Combo.Input(
+                    'mood_dial',
+                    options=choices,
+                    default=NONE,
+                    tooltip="Optional custom .safetensors dial vector from models/loras/dials/ (e.g. a dial created by HTC Make Steering Dial).",
+                ),
+                io.Float.Input(
+                    'mood_strength',
+                    default=0.0,
+                    min=-2.5,
+                    max=2.5,
+                    step=0.05,
+                    tooltip="Signed strength for mood_dial (-2.5 pushes toward A side, +2.5 pushes toward B side; 0 = off).",
+                ),
+                io.Combo.Input(
+                    'scope',
+                    options=list(SCOPE_MODES),
+                    default=SCOPE_MODES[0],
+                    tooltip="Where the steering vector applies in H3's 50 DiT blocks: "
+                        "blocks_0_24 (voice safe) steers early composition/motion blocks and leaves blocks 25-49 untouched for clean voice & skin; "
+                        "all_blocks shifts the refined prompt once across the whole stack.",
+                ),
+                io.Clip.Input(
+                    'clip',
+                    optional=True,
+                    tooltip="Optional H3 CLIP (Qwen3-VL). Only needed once to auto-mint missing built-in Motion/Expression/Energy/Sound .safetensors dials.",
+                ),
+                io.String.Input(
+                    'rack_json',
+                    optional=True,
+                    default="[]",
+                    multiline=False,
+                    tooltip="JSON list of extra stacked dial rows managed by the node's Dial Rack & Map panel (supports 'hold': true QR projection).",
+                ),
+                io.Float.Input(
+                    'sound',
+                    optional=True,
+                    default=0.0,
+                    min=-2.5,
+                    max=2.5,
+                    step=0.05,
+                    tooltip="Acoustic & foley richness steering (-2.5 hushed quiet air <-> +2.5 vivid crisp foley). Auto-synthesizes htc_sound.safetensors if CLIP is wired; pair with All-50 scope and prompt overall_soundscape for strongest audio shift.",
+                ),
+            ],
+            outputs=[
+                io.Model.Output(display_name='model'),
+                io.String.Output(display_name='info'),
+            ],
+        )
+
+    @classmethod
+    def execute(cls, **kwargs):
+        result = _HTCSteeringDialsImpl().apply(**kwargs)
+        if isinstance(result, dict):
+            return io.NodeOutput.from_dict(result)
+        return io.NodeOutput(*result) if result is not None else io.NodeOutput()
+
+
+class _HTCMakeSteeringDialImpl:
+    """Clean-room MIT prompt-pair steering vector builder (`models/loras/dials/*.safetensors`)."""
+
 
     def build(
         self,
@@ -987,6 +980,81 @@ class HTCMakeSteeringDial:
             f"agreement={rep['pair_agreement']}, debias_removed={rep['debias_removed']})"
         )
         return (rep["file"], msg)
+
+
+class HTCMakeSteeringDial(io.ComfyNode, _HTCMakeSteeringDialImpl):
+    """V3 schema for HTCMakeSteeringDial; the implementation lives in _HTCMakeSteeringDialImpl.
+
+    Also inherits _HTCMakeSteeringDialImpl so existing callers of the V1 API (HTCMakeSteeringDial().build(...),
+    HTCMakeSteeringDial.<helper>) keep working; core sees only the V3 hooks below."""
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id='HTCMakeSteeringDial',
+            display_name='HTC Make Steering Dial (H3)',
+            category="Hand Tie Clips",
+            description="Build a compact ~14 KB H3 steering dial from `A ||| B` prompt pairs, `+w/-w` prompt sets, or `(words:w)` weighted spans "
+                "(supports `{subject}` expansion and `!` / `![group]` hold orthogonalization). Saves to models/loras/dials/.",
+            is_output_node=True,
+            inputs=[
+                io.Clip.Input(
+                    'clip',
+                    tooltip="MiniMax-H3 text encoder (Qwen3-VL) used to encode each contrast prompt pair.",
+                ),
+                io.Model.Input(
+                    'model',
+                    tooltip="MiniMax-H3 model whose token_refiner + condition_proj project the prompt pair difference into a compact ~14 KB dial.",
+                ),
+                io.Combo.Input(
+                    'recipe',
+                    options=["custom", "motion", "expression", "energy", "life", "sound"],
+                    default="expression",
+                    tooltip="Pick a built-in contrast recipe (motion, expression, energy, life, sound) or custom to use pairs_text below.",
+                ),
+                io.String.Input(
+                    'dial_name',
+                    default="htc_expression",
+                    multiline=False,
+                    tooltip="Output filename saved in models/loras/dials/ (.safetensors added automatically).",
+                ),
+                io.String.Input(
+                    'neg_label',
+                    default="Stoic / Calm",
+                    multiline=False,
+                    tooltip="Human label shown on the negative (-1) end of this dial in HTC Steering Dials.",
+                ),
+                io.String.Input(
+                    'pos_label',
+                    default="Vivid / Expressive",
+                    multiline=False,
+                    tooltip="Human label shown on the positive (+1) end of this dial in HTC Steering Dials.",
+                ),
+                io.String.Input(
+                    'pairs_text',
+                    multiline=True,
+                    default=BUILTIN_DIAL_RECIPES["expression"]["pairs"],
+                    tooltip="Contrast prompt pairs (`negative A ||| positive B`), `+w`/`-w` prompt sets, or `(words:w)` weighted spans. "
+                        "Supports `{subject}` expansion and `!` / `![group]` hold lines to project out unwanted traits (like motion or voice loudness).",
+                ),
+                io.Boolean.Input(
+                    'debias',
+                    default=True,
+                    tooltip="Orthogonalize the dial direction against any '! hold' lines and remove shared prompt drift so only the target trait moves.",
+                ),
+            ],
+            outputs=[
+                io.String.Output(display_name='dial_file'),
+                io.String.Output(display_name='report'),
+            ],
+        )
+
+    @classmethod
+    def execute(cls, **kwargs):
+        result = _HTCMakeSteeringDialImpl().build(**kwargs)
+        if isinstance(result, dict):
+            return io.NodeOutput.from_dict(result)
+        return io.NodeOutput(*result) if result is not None else io.NodeOutput()
 
 
 NODE_CLASS_MAPPINGS = {

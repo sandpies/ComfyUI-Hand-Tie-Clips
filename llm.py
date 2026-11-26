@@ -61,7 +61,7 @@ BACKENDS = {
     # LM Studio: the default, because it is what this pack shipped against and
     # every existing htc_llm.json holds one of these addresses.
     "lmstudio": {
-        "label": "LM Studio",
+        "label": "Local server",
         "default_base": "http://127.0.0.1:1234",
         # LM Studio loads a model by GUI action, so "whatever is loaded" is a
         # real state and the model box can be left empty.
@@ -339,7 +339,7 @@ def _resolve_ninfer_model(model_arg, exe):
             if cand.lower().endswith(".gguf"):
                 return "", (
                     f"nInfer cannot load GGUF files ({os.path.basename(cand)}). "
-                    "Select a .ninfer v3 artifact, or switch Writer mode to LM Studio for GGUF."
+                    "Select a .ninfer v3 artifact, or switch Writer mode to Local server for GGUF."
                 )
             return cand, ""
         if cand and os.path.isdir(cand):
@@ -349,7 +349,7 @@ def _resolve_ninfer_model(model_arg, exe):
             if has_gguf:
                 return "", (
                     f"No .ninfer model found in {cand} (found .gguf — nInfer only runs "
-                    ".ninfer v3 artifacts; use LM Studio for GGUF)."
+                    ".ninfer v3 artifacts; use Local server for GGUF)."
                 )
             return "", f"No .ninfer model file found inside folder: {cand}"
         if not cand:
@@ -367,7 +367,7 @@ def _resolve_ninfer_model(model_arg, exe):
     if has_gguf:
         return "", (
             f"No .ninfer model found in {default_mdir} (found .gguf — nInfer only runs "
-            ".ninfer v3 artifacts; use LM Studio for GGUF)."
+            ".ninfer v3 artifacts; use Local server for GGUF)."
         )
     return "", (
         f"No .ninfer model file found in {default_mdir}. "
@@ -1203,7 +1203,7 @@ def _start_hint():
     n = backend_name(CONN.get("backend"))
     if n == "ninfer":
         return "Press Start writer in this panel."
-    return "Start it in LM Studio's Developer tab."
+    return "Start your local server (LM Studio, llama-server, Ollama, KoboldCpp, vLLM) and load a model."
 
 
 # Windows socket errors that all mean the same thing to the person at the

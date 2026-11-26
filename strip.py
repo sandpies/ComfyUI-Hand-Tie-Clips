@@ -40,6 +40,92 @@ CLIP_H = 360           # preview clip height, px
 SEAM_SECONDS = 2.0     # each side of a join
 AUDIO_RATE = 48000     # AAC-friendly; the cache's own rate is resampled
 
+# Preview builds (hop + seam clips) run on their own small pool. Unbounded, a
+# wall of 14 tiles started 14 FFV1 decodes + 14 all-core x264 encodes at once:
+# measured 11-26, first tile 10.9 s and the machine pegged; two wide, first
+# tile 1.7 s, the whole wall in about the same total time.
+PREVIEW_WORKERS = 2
+ENCODE_THREADS = "2"   # x264 threads per preview encode
+# Off: a background build holds the hop's .mkv open, and on Windows a cache clear or
+# retake of that hop then fails (WinError 32; check_timeline/check_wtake caught it
+# 11-26). It also competes with a render for CPU. The pool + on-screen-only loading
+# carry the speed-up; turn this on only with a lock-safe store.
+PREWARM = False        # build a hop's preview in the background when the hop is cached
+_POOL = None
+_POOL_LOCK = threading.Lock()
+_PENDING = {}           # path -> Future, so a request joins a build already queued
+
+
+def preview_pool():
+    global _POOL
+    with _POOL_LOCK:
+        if _POOL is None:
+            from concurrent.futures import ThreadPoolExecutor
+            _POOL = ThreadPoolExecutor(PREVIEW_WORKERS, thread_name_prefix="htc-preview")
+        return _POOL
+
+
+def hop_clip_name(key):
+    return "hop_" + key
+
+
+def preview_path(hs, name):
+    d = os.path.join(hs.root, "previews")
+    os.makedirs(d, exist_ok=True)
+    return os.path.join(d, name + ".mp4")
+
+
+def build_hop_clip(hs, key, path):
+    """One cached hop, whole, with its audio, as a small MP4 at `path`."""
+    frames = hs.frames(key, CLIP_H)
+    sound = hs.audio(key)
+    if frames is None or sound is None:
+        return False
+    encode_clip(frames, sound[0], sound[1], path, fps=hs.fps)
+    return True
+
+
+def submit_preview(path, build):
+    """Queue `build(path) -> bool` on the preview pool once per path; returns the Future.
+    A path already on disk resolves at once; a path already queued returns that build."""
+    from concurrent.futures import Future
+    pool = preview_pool()
+    with _POOL_LOCK:
+        fut = _PENDING.get(path)
+        if fut is not None:
+            return fut
+        if os.path.exists(path):
+            fut = Future()
+            fut.set_result(True)
+            return fut
+
+        def job():
+            try:
+                return bool(os.path.exists(path) or build(path))
+            finally:
+                with _POOL_LOCK:
+                    _PENDING.pop(path, None)
+        fut = pool.submit(job)
+        _PENDING[path] = fut
+        return fut
+
+
+def prewarm_hop(hs, key):
+    """Queue this hop's preview so the timeline/wall finds it ready. Never raises."""
+    if not PREWARM:
+        return
+    try:
+        path = preview_path(hs, hop_clip_name(key))
+        fut = submit_preview(path, lambda p: build_hop_clip(hs, key, p))
+
+        def _report(f):
+            exc = f.exception()
+            if exc is not None:
+                print(f"[HandTieClips] preview prewarm for hop {key[:8]} failed: {exc!r}", flush=True)
+        fut.add_done_callback(_report)
+    except Exception as exc:  # noqa: BLE001 -- a preview must never cost a render
+        print(f"[HandTieClips] preview prewarm for hop {key[:8]} not queued: {exc!r}", flush=True)
+
 
 def _frames_u8(imgs):
     """[N,H,W,3] -> uint8 numpy. uint8 passes through (`HopStore.frames`);
@@ -173,7 +259,7 @@ def encode_clip(imgs, wav, sr, path, fps=FPS, height=CLIP_H):
         vs = container.add_stream("libx264", rate=int(fps))
         vs.width, vs.height = tw, th
         vs.pix_fmt = "yuv420p"
-        vs.options = {"crf": "26", "preset": "veryfast"}
+        vs.options = {"crf": "26", "preset": "veryfast", "threads": ENCODE_THREADS}
         audio = _mono_or_stereo(wav) if wav is not None else None
         a_s = None
         if audio is not None and audio.shape[-1] > 0:

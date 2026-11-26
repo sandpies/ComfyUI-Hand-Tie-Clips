@@ -43,6 +43,18 @@ CACHE_DIRNAME = "h3_ref_chain_hops"
 CACHE_LOCATIONS = ("temp", "user")
 
 
+def _prewarm_preview(hs, key):
+    """Queue the timeline preview of a just-cached hop (strip.PREWARM). Never raises."""
+    try:
+        if __package__:
+            from . import strip as _strip  # noqa: PLC0415
+        else:
+            import strip as _strip  # noqa: PLC0415
+        _strip.prewarm_hop(hs, key)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[{TAG}] preview prewarm skipped for hop {key[:8]}: {exc!r}", flush=True)
+
+
 def cache_root(location="temp"):
     """The hop cache folder for `location` ("temp" or "user")."""
     import folder_paths  # noqa: PLC0415
@@ -421,6 +433,7 @@ class HopStore:
                      "written": time.time()})
         with open(self._p(key, META_EXT), "w", encoding="utf-8") as fh:
             json.dump(info, fh, indent=1)
+        _prewarm_preview(self, key)
         return info
 
     # -- a sampled take waiting for its decode ----------------------------
@@ -573,7 +586,10 @@ class HopStore:
         out = {}
         container = av.open(self._p(key, VIDEO_EXT))
         try:
-            for i, frame in enumerate(container.decode(container.streams.video[0])):
+            vstream = container.streams.video[0]
+            vstream.thread_type = "AUTO"   # FFV1 slices: ~30% faster on 2 threads
+            vstream.thread_count = 2
+            for i, frame in enumerate(container.decode(vstream)):
                 if i >= n:
                     break
                 if want is not None and i not in want:

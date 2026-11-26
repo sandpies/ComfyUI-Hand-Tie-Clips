@@ -93,6 +93,7 @@ def build_system_prompt(
 
     out.append("")
     out.append("## 2. KINETIC STAGING, CAMERA & CONTINUITY")
+    out.append("- **Hands & Cheeks:** Each hand gets one job per beat, stated once (a palm, fist, arm or shoulder move); no finger-by-finger choreography (finger-guns, finger-frames, pinky-to-thumb waves, tutting) unless the shot is a close-up about the hands -- it renders as tangled fingers. Cheeks keep their own colour: no blush or flush unless the brief asks.")
     out.append("- **Action -> Contact -> Secondary Reaction:** Write concrete visible physics—screen-left/right placement, hand grips, body orientation, cloth/hair/spark recoil, and practical light.")
     if need_3d_geom or nsfw:
         out.append("- **3D Geometry (Prompt Description Is King):** Never rely on pose/move shorthand (`cowgirl`, `against the wall`, `mounted`, `kote-gaeshi`, `waacking`, etc.)—spell out camera distance showing support surfaces, vertical vs horizontal orientation, head/chest/hip facing vectors (zero contradictory lens stares on face-to-face poses), exact knee/foot/hand anchors, and physical turns before side-switches. On `cont_*` single takes, bridge shifts step-by-step; keep two subjects' assigned poses and timing distinct.")
@@ -1703,9 +1704,12 @@ async def run_sandtie_write(
     lines += ["- " + fl for fl in flavor_lines]
     if has_extracted:
         if extracted_video.get("cuts") and not str(flavors.get("camera") or "").strip():
-            lines.append("- EXTRACTED CUT & CAMERA LOCK: Preserve every `[Shot N]` hard cut boundary, camera move/roll/zoom, crop scale, and subject visibility from the extracted choreography verbatim rather than smoothing cuts into one take.")
+            lines.append("- EXTRACTED CUT & CAMERA LOCK: Preserve every `[Shot N]` hard cut boundary, transition type, camera move/roll/zoom, crop scale, and subject visibility from the extracted choreography verbatim rather than smoothing cuts into one take.")
         if extracted_video.get("cast"):
             lines.append(f"- Extracted Source Cast Layout: {extracted_video['cast']}")
+        if (extracted_video.get("made_of") or extracted_video.get("style")) and not _cat.resolve_dial_opts("style", flavors.get("style")):
+            style_hint = " — ".join(p for p in (extracted_video.get("made_of"), extracted_video.get("style")) if p)
+            lines.append(f"- Extracted Visual Medium / Style Hint (when no style dial overrides): {style_hint}")
         if extracted_video.get("music") and not _cat.resolve_dial_opts("music", flavors.get("music")):
             lines.append(f"- Extracted Clip Music Hint (use in `non_diegetic_music:` if suitable): {extracted_video['music']}")
         if extracted_video.get("room") and not _cat.resolve_dial_opts("place", flavors.get("place")) and not any(p.get("subject") is None and not _refs.is_studio_backdrop_text(p.get("desc") or "") for p in (lab.get("pictures") or [])) and not brief:

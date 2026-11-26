@@ -376,7 +376,11 @@ These are not style preferences. They are how this model fails.
     readable change when the moment turns. Whip turns and leans toward the lens
     flip eyelines across the next join. In the last seconds before a join, hands
     rest on something and the body holds its pose: "stays", "keeps", "rests",
-    "holds". Name each action with a concrete verb (pivots, sinks, grips and
+    "holds". Each hand gets one job per beat, stated once: a palm, fist, arm or
+    shoulder move, not finger-by-finger choreography (finger-guns, finger-frames,
+    pinky-to-thumb waves, tutting), which renders as tangled fingers. Fingers are
+    the subject only when the shot is a close-up about them. Cheeks keep their own
+    colour: never write a blush or flush unless the story turns on it. Name each action with a concrete verb (pivots, sinks, grips and
     lifts, sets down with a click); "interacts", "reacts" and "moves" leave the
     choice to the renderer. Bind simultaneous actions with `and / while / as / ;`
     and keep `then` for what comes after, never `"they/them"` for one person. A

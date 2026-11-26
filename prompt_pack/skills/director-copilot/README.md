@@ -50,17 +50,21 @@ or pass `--htc <path>` to each script. The scripts import the pack's own modules
 | `fit_cuts.py` | hop lengths + `master_audio_start_s` so every cut lands on a downbeat |
 | `check_plan.py` | the node's own validator, then the lints learned from renders (`--no-mv` for a film) |
 | `build_graph.py` | writes the plans and settings into a saved workflow by widget name |
+| `transitions.py` | dips to black or white and flashes on a rendered film |
+| `post.py` | finish pass: measure cuts, kicks and soundtrack offset; cue sheet; kinetic text and fx burned onto the film (needs ffmpeg with libass and opencv; rembg and a YuNet face model optional) |
 
 ## Local models
 
-The skill is written as stages with stop points and numbered rules so a smaller model can follow
-it literally. Give the model a context of 32k+ (16k is the floor for `local-chat`), and a low
+The skill is written as stages with stop points, each naming the pages to read, so a smaller model
+can follow it literally. Rules that `check_plan.py` enforces live in the checker, not in the pages,
+and form rules sit on their own page (`mv.md`, `film.md`, `one_take.md`), so a session reads only
+its own. Give the model a context of 32k+ (16k is the floor for `local-chat`), and a low
 temperature (0.3-0.5) so the JSON stays strict.
 
 - **`local-agent`:** install the folder as for any agent. The model reads `SKILL.md`, then only
   the page or section each stage names, and writes `STATE.md` in the project folder at every
   stop. When its context fills, start a new session; it picks up from `STATE.md`.
-- **`local-chat`:** put `SKILL.md` and `references/pipelines.md` in the system prompt (about 10k
+- **`local-chat`:** put `SKILL.md` and `references/pipelines.md` in the system prompt (about 8k
   tokens). The model asks for each further page when a stage needs it; paste it in. Keep the
   `PROJECT STATE` block it prints at every stop, and start a new chat with it at stages 4, 8
   and 11. If you can open a terminal, run the `check_plan.py` command it gives you and paste

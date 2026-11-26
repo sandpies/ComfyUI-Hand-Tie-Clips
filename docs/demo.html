@@ -1,44 +1,195 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hand Tie Clips 4.0 · Interactive Demo</title><link rel="icon" href="data:,">
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hand Tie Clips Demo</title>
+<meta name="description" content="What every Hand Tie Clips feature does and where it lives, with the real editor to try in your browser.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
-:root{color-scheme:dark}
-body{margin:0;background:#141517;color:#e8e8e8;font:15px/1.55 system-ui,sans-serif}
-.wrap{max-width:1080px;margin:0 auto;padding:28px 18px 60px}
-h1{font-size:26px;margin:0 0 6px} p.sub{color:#9aa0a6;margin:0 0 26px}
-a{color:#74c0fc}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:34px}
-.card{display:block;background:#1d1e22;border:1px solid #2e3036;border-radius:10px;padding:18px 20px;text-decoration:none;color:inherit;transition:border-color .15s}
-.card:hover{border-color:#e4ff3a}
-.card h2{margin:0 0 6px;font-size:18px;color:#e4ff3a} .card p{margin:0;color:#c9ccd1;font-size:14px}
-.card .go{display:inline-block;margin-top:12px;font-weight:600;color:#e8e8e8}
-h3{font-size:16px;margin:30px 0 12px;letter-spacing:.03em}
-figure{margin:0 0 22px} figure img{width:100%;border-radius:8px;border:1px solid #2e3036;display:block}
-figcaption{color:#9aa0a6;font-size:13px;margin-top:6px}
-.links{margin-top:30px;color:#9aa0a6;font-size:14px}
-</style></head><body><div class="wrap">
-<h1>Hand Tie Clips 4.0</h1>
-<p class="sub">Try the node's editor in your browser before installing. These pages run the node's real 4.0 interface code with sample data; anything that would render a video or call your local writer explains that instead.</p>
-<div class="cards">
-  <a class="card" href="live/index.html">
-    <h2>H3 Ref2VA Chain · Control Room</h2>
-    <p>Script, Refs, Studio, RefMod, Timeline, Media, Write, Swap, Standard and Run, with a three-hop sample film.</p>
-    <span class="go">Open the editor →</span>
-  </a>
-  <a class="card" href="live/sandtie.html">
-    <h2>SandTie PromptRig (H3)</h2>
-    <p>The single-generation prompt rig: dials, Reference Bible and the Instant CPU Tie writer (press <em>CPU Tie</em> to see a real compiled prompt).</p>
-    <span class="go">Open the rig →</span>
-  </a>
-</div>
-<h3>Screenshots from ComfyUI</h3>
-<figure><img loading="lazy" src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/v4-control-room-dock.png?v=4.0" alt="The Control Room docked at the bottom of the ComfyUI canvas">
-<figcaption>The Control Room docked under the graph: script on the left, the hop timeline on the right.</figcaption></figure>
-<figure><img loading="lazy" src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/v4-starter-stack.png?v=4.0" alt="The Starter workflow's model chain with HTC Sparse Attention">
-<figcaption>The Starter's model chain: HTC Sparse Attention and H3 Token LoRA, built in.</figcaption></figure>
-<figure><img loading="lazy" src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/v4-sandtie-steering-nodes.png?v=4.0" alt="SandTie PromptRig, AdaLN LoRA Fix and Steering Dials nodes">
-<figcaption>SandTie PromptRig with its 11 aspect ratios, the AdaLN LoRA Fix, and Steering Dials.</figcaption></figure>
-<figure><img loading="lazy" src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/v4-starter-graph.png?v=4.0" alt="The full Starter workflow">
-<figcaption>The whole Starter workflow on the canvas.</figcaption></figure>
-<p class="links"><a href="https://github.com/sandpies/ComfyUI-Hand-Tie-Clips">GitHub</a> · <a href="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips">Hugging Face</a> · <a href="https://github.com/sandpies/ComfyUI-SandTie-PromptRig">SandTie PromptRig</a></p>
-</div></body></html>
+:root{
+  --bg:#0c0d10; --panel:#15171c; --panel2:#1b1e25; --line:#2a2e37; --fg:#eceef2; --muted:#9aa1ad;
+  --accent:#e4ff3a; --ink:#0c0d10;
+  --sans:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--sans)}
+a{color:var(--accent)}
+.wrap{max-width:1160px;margin:0 auto;padding:0 16px}
+/* hero */
+.hero{padding:56px 0 34px;display:grid;gap:22px}
+.eyebrow{font:700 12px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0}
+h1{font-size:clamp(40px,7vw,78px);line-height:.95;margin:0;letter-spacing:-.02em;text-wrap:balance}
+h1 span{color:var(--accent)}
+.lede{max-width:62ch;color:#c7ccd6;font-size:18px;margin:0}
+.cta{display:flex;flex-wrap:wrap;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:10px;font-weight:700;text-decoration:none;
+  border:1px solid var(--line);color:var(--fg);background:var(--panel)}
+.btn.main{background:var(--accent);color:var(--ink);border-color:var(--accent)}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible,.chip:focus-visible,.card:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* the chain animation */
+.chain{display:flex;align-items:center;gap:0;margin-top:8px;overflow:hidden}
+.hop{flex:1 1 0;min-width:0;height:64px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);position:relative;overflow:hidden;
+  display:grid;place-items:center;font:700 12px var(--mono);color:var(--muted)}
+.hop::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(228,255,58,.22),transparent);
+  transform:translateX(-100%);animation:sweep 5s ease-in-out infinite;animation-delay:calc(var(--i)*.9s)}
+.knot{width:22px;height:4px;background:var(--accent);flex:none;border-radius:2px;box-shadow:0 0 12px var(--accent);opacity:.25;
+  animation:tie 5s ease-in-out infinite;animation-delay:calc(var(--i)*.9s + .55s)}
+@keyframes sweep{0%,10%{transform:translateX(-100%)}35%,100%{transform:translateX(100%)}}
+@keyframes tie{0%,8%{opacity:.25}14%,24%{opacity:1}40%,100%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.hop::before,.knot{animation:none}.knot{opacity:1}}
+.chainnote{font:12px var(--mono);color:var(--muted);margin:6px 0 0}
+/* sections */
+section{padding:30px 0}
+h2{font-size:clamp(24px,3.4vw,34px);margin:0 0 6px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 18px;max-width:70ch}
+/* recipes */
+.recipes{display:flex;flex-wrap:wrap;gap:10px}
+.chip{font:600 14px var(--sans);padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--ink);border-color:var(--accent)}
+.recipe{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:16px 20px}
+.recipe[hidden]{display:none}
+.recipe ol{margin:0;padding-left:22px;display:grid;gap:6px}
+/* feature map */
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.tools input{flex:1 1 220px;min-width:0;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:15px var(--sans)}
+.chip .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);margin-right:7px;vertical-align:0}
+.count{font:12px var(--mono);color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:11px;padding:16px 18px 18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card.lit{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.card[hidden]{display:none}
+.card h3{margin:0;font-size:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.new{font:700 10px var(--mono);letter-spacing:.08em;background:var(--accent);color:var(--ink);padding:2px 7px;border-radius:4px}
+.where{font:600 12px var(--mono);color:var(--c)}
+.card p{margin:0;color:#c7ccd6;font-size:15px}
+.find{font-size:13px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px;margin-top:auto}
+.find b{color:var(--fg);font-weight:600}
+.empty{color:var(--muted)}
+/* shots */
+details{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px 18px}
+summary{cursor:pointer;font-weight:700}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px;margin-top:14px}
+figure{margin:0} figure img{width:100%;height:auto;border-radius:8px;border:1px solid var(--line);display:block}
+figcaption{color:var(--muted);font-size:13px;margin-top:6px}
+footer{padding:30px 0 50px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);margin-top:20px}
+</style></head><body>
+<main class="wrap">
+  <header class="hero">
+    <p class="eyebrow">ComfyUI custom nodes · MiniMax H3</p>
+    <h1>Hand <span>Tie</span> Clips</h1>
+    <p class="lede">Ties short MiniMax H3 generations into long videos — music videos, short films, vlogs — with the picture
+      and the sound carried across every join. Below: what each feature does, and where to find it.</p>
+    <div class="cta">
+      <a class="btn main" href="live/index.html">Try the Control Room →</a>
+      <a class="btn" href="live/sandtie.html">Try SandTie PromptRig →</a>
+    </div>
+    <div>
+      <div class="chain" aria-hidden="true">
+        <div class="hop" style="--i:0">hop 1</div><div class="knot" style="--i:0"></div>
+        <div class="hop" style="--i:1">hop 2</div><div class="knot" style="--i:1"></div>
+        <div class="hop" style="--i:2">hop 3</div><div class="knot" style="--i:2"></div>
+        <div class="hop" style="--i:3">hop 4</div>
+      </div>
+      <p class="chainnote">Each hop starts from where the last one ended. The demos run the node's real interface on sample data; nothing renders in your browser.</p>
+    </div>
+  </header>
+
+  <section aria-labelledby="want">
+    <h2 id="want">I want to…</h2>
+    <p class="sub">Pick one. The steps appear here and the features you need light up below.</p>
+    <div class="recipes" id="recipes"><button class="chip" type="button" data-r="mv" aria-pressed="false">Make a music video</button><button class="chip" type="button" data-r="film" aria-pressed="false">Make a short film or scene</button><button class="chip" type="button" data-r="one" aria-pressed="false">Make one great clip</button><button class="chip" type="button" data-r="fix" aria-pressed="false">Fix one bad hop</button><button class="chip" type="button" data-r="big" aria-pressed="false">Make it bigger &amp; sharper</button><button class="chip" type="button" data-r="fast" aria-pressed="false">Make it faster</button><button class="chip" type="button" data-r="watch" aria-pressed="false">Watch from my phone</button></div>
+    <div class="recipe" data-r="mv" hidden><ol><li>Studio: drop the song in, get a treatment, plates and cast sheets.</li><li>Refs: add the sheets and plates you generated.</li><li>Write (or Script): one hop per section of the song.</li><li>Run: join mode auto, song lock on. Queue.</li><li>Watch the wall; retake any hop that misses.</li></ol></div><div class="recipe" data-r="film" hidden><ol><li>Refs: your cast and the places they stand in.</li><li>Write: describe the scene; the writer drafts the shots.</li><li>Script: read every beat, fix what you would not shoot.</li><li>Run, then check each join on the Timeline.</li></ol></div><div class="recipe" data-r="one" hidden><ol><li>SandTie PromptRig: pick your dials and write the prompt.</li><li>Prompt Only → wire the prompt into the stock H3 node.</li><li>Steering Dials if the motion or mood needs a nudge.</li></ol></div><div class="recipe" data-r="fix" hidden><ol><li>Timeline: find the hop.</li><li>Script: rewrite that beat.</li><li>render hop: only that hop re-renders; the rest come from the cache.</li></ol></div><div class="recipe" data-r="big" hidden><ol><li>Short chain: upsample = on in the Run tab.</li><li>Long video: the Video Upsampler (file to file) workflow.</li><li>Save Video with frame gen for 48 fps.</li></ol></div><div class="recipe" data-r="fast" hidden><ol><li>Turbo LoRA at 8 steps (the target regime).</li><li>SLA+ and H3 Cache in the model chain.</li><li>Re-runs reuse cached hops and encoded prompts.</li></ol></div><div class="recipe" data-r="watch" hidden><ol><li>Start ComfyUI with --listen.</li><li>Timeline → ▦ wall → 📱 phone: the link is copied.</li><li>Open it on the phone (same Wi-Fi or Tailscale; never port-forward).</li></ol></div>
+  </section>
+
+  <section aria-labelledby="map">
+    <h2 id="map">Every feature, in one place</h2>
+    <p class="sub">29 features. <span class="new">NEW</span> marks what arrived after 4.0.</p>
+    <div class="tools">
+      <input id="q" type="search" placeholder="Search: song, phone, LoRA, faster…" aria-label="Search features">
+      <button class="chip" type="button" data-area="all" aria-pressed="true">All</button>
+      <button class="chip" type="button" data-area="new" aria-pressed="false">New</button>
+      <button class="chip" type="button" data-area="make" aria-pressed="false" style="--c:#e4ff3a"><span class="dot"></span>Make</button><button class="chip" type="button" data-area="write" aria-pressed="false" style="--c:#7cc4ff"><span class="dot"></span>Write</button><button class="chip" type="button" data-area="look" aria-pressed="false" style="--c:#ff8fd8"><span class="dot"></span>Look &amp; sound</button><button class="chip" type="button" data-area="speed" aria-pressed="false" style="--c:#5ef2c1"><span class="dot"></span>Speed</button><button class="chip" type="button" data-area="upscale" aria-pressed="false" style="--c:#ffb347"><span class="dot"></span>Upscale &amp; save</button><button class="chip" type="button" data-area="watch" aria-pressed="false" style="--c:#c9a7ff"><span class="dot"></span>Watch</button>
+      <span class="count" id="count" aria-live="polite"></span>
+    </div>
+    <div class="grid" id="grid"><article class="card" data-id="chain" style="--c:#e4ff3a"><span class="where">Node</span><h3>H3 Ref2VA Chain</h3><p>Strings MiniMax H3 generations (“hops”) into one long clip. Each hop picks up where the last one ended, picture and sound together.</p><p class="find"><b>Find it:</b> Load the Starter workflow, or Add Node → Hand Tie Clips → H3 Ref2VA Chain.</p></article>
+<article class="card" data-id="joins" style="--c:#e4ff3a"><span class="where">Run tab → pin_mech</span><h3>Join modes</h3><p>How hop N+1 grabs hop N. auto (the default) hands over the last frames as a latent (Motion-Context). sand_tie renders a take as one long piece. hand_tie steers hops from a quick low-res previs: experimental, and the least consistent of the three.</p><p class="find"><b>Find it:</b> Leave it on auto unless you are testing.</p></article>
+<article class="card" data-id="song" style="--c:#e4ff3a"><span class="where">Media tab → master_audio_file</span><h3>Song lock</h3><p>Give the chain your song. Every hop is timed against it, so the music runs straight through a music video instead of restarting at each join.</p><p class="find"><b>Find it:</b> Media tab: pick the song, drag the bar to where the video starts.</p></article>
+<article class="card" data-id="cache" style="--c:#e4ff3a"><span class="where">Run tab → cache_hops</span><h3>Hop cache &amp; retakes</h3><p>Finished hops are kept. Change one beat and re-queue: only that hop (and what follows it) renders again.</p><p class="find"><b>Find it:</b> Run tab: cache_hops = on. Timeline: pick a hop, render hop.</p></article>
+<article class="card" data-id="studio" style="--c:#e4ff3a"><span class="where">Control Room → Studio</span><h3>MV Studio <span class="new">NEW</span></h3><p>From a song to a plan: a treatment (the idea, the hook, the worlds), location plates and cast sheets to generate, all in one place. New: the treatment leads, and you choose the sheet backdrop.</p><p class="find"><b>Find it:</b> Studio tab. The Sheets: dropdown picks black, gray or white backdrops.</p></article>
+<article class="card" data-id="refs" style="--c:#e4ff3a"><span class="where">Control Room → Refs</span><h3>References</h3><p>Name your cast, places, props and voices once; beats call them as @name. Each row sets how large the text model sees that picture.</p><p class="find"><b>Find it:</b> Refs tab. Drop pictures in, give each a short @name.</p></article>
+<article class="card" data-id="refmod" style="--c:#e4ff3a"><span class="where">Control Room → RefMod</span><h3>RefMod &amp; sheet stitcher <span class="new">NEW</span></h3><p>Turn several stills of one character or look into a single reference. The stitcher packs stills into one sheet in the browser; Lossless keeps every pixel 1:1.</p><p class="find"><b>Find it:</b> RefMod tab → Shots → Sheet.</p></article>
+<article class="card" data-id="media" style="--c:#e4ff3a"><span class="where">Control Room → Media</span><h3>Any frame rate in <span class="new">NEW</span></h3><p>Reference clips at 25, 30 or 60 fps are re-timed to H3&#x27;s 24 fps on the way in, so motion and lip sync line up.</p><p class="find"><b>Find it:</b> Nothing to set: it happens when a clip is loaded.</p></article>
+<article class="card" data-id="swap" style="--c:#e4ff3a"><span class="where">Control Room → Swap</span><h3>Swap <span class="new">NEW</span></h3><p>Put your character into an existing video. The clip is read by the vision model and rewritten as a plan with your cast in it.</p><p class="find"><b>Find it:</b> Swap tab: load the video, pick who goes in.</p></article>
+<article class="card" data-id="script" style="--c:#7cc4ff"><span class="where">Control Room → Script</span><h3>Script <span class="new">NEW</span></h3><p>The shot plan: one row per hop, what the camera sees and hears. New: a JSON drawer to paste or copy the whole plan.</p><p class="find"><b>Find it:</b> Script tab; the JSON drawer is at the bottom.</p></article>
+<article class="card" data-id="write" style="--c:#7cc4ff"><span class="where">Control Room → Write</span><h3>Write (local AI writer)</h3><p>Describe the idea; a writer running on your own PC drafts the shot plan, asks what it needs, and edits on request. Any OpenAI-compatible local server works (LM Studio, llama-server, Ollama, KoboldCpp, vLLM), or nInfer.</p><p class="find"><b>Find it:</b> Write tab → writer settings: pick Local server and its address, or nInfer.</p></article>
+<article class="card" data-id="standard" style="--c:#7cc4ff"><span class="where">Control Room → Standard</span><h3>Standard</h3><p>The single-clip writer inside the chain node: one prompt, written to H3&#x27;s official six-field format.</p><p class="find"><b>Find it:</b> Standard tab.</p></article>
+<article class="card" data-id="sandtie" style="--c:#7cc4ff"><span class="where">Node</span><h3>SandTie PromptRig <span class="new">NEW</span></h3><p>A prompt rig for one H3 generation: dials for camera, light, look and action, a Reference Bible, and a writer — your local LLM, or Instant CPU Tie with no GPU at all. Outputs a prompt for the stock H3 node, or the conditioning itself. New: SOUND dial, Ultra-Realism looks, Extract Beats from a video.</p><p class="find"><b>Find it:</b> Add Node → Hand Tie Clips → SandTie PromptRig (H3). Also as its own pack.</p></article>
+<article class="card" data-id="copilot" style="--c:#7cc4ff"><span class="where">Agent skill</span><h3>Director co-pilot</h3><p>A directing partner for your coding agent (Claude Code, Codex, OpenCode or any harness that reads skills): song or story → treatment → shot plan → checked, ready-to-queue graph, then retakes.</p><p class="find"><b>Find it:</b> prompt_pack/skills/director-copilot — copy it into your agent&#x27;s skills folder.</p></article>
+<article class="card" data-id="dials" style="--c:#ff8fd8"><span class="where">Node</span><h3>Steering Dials</h3><p>Push motion, expression, energy and mood up or down without rewriting the prompt. Make Steering Dial builds your own from prompt pairs.</p><p class="find"><b>Find it:</b> Add Node → Hand Tie Clips → HTC Steering Dials (H3).</p></article>
+<article class="card" data-id="tokenlora" style="--c:#ff8fd8"><span class="where">Node</span><h3>H3 Token LoRA</h3><p>One LoRA, separate strengths for the video, the soundtrack, the reference pictures and the prompt — so a look LoRA can stay off the voices.</p><p class="find"><b>Find it:</b> In the Starter&#x27;s model chain.</p></article>
+<article class="card" data-id="adaln" style="--c:#ff8fd8"><span class="where">Node</span><h3>AdaLN LoRA Fix</h3><p>Makes LoRAs trained on the full model work on pruned checkpoints. Token LoRA already does it for you.</p><p class="find"><b>Find it:</b> Only needed with other LoRA loaders.</p></article>
+<article class="card" data-id="sla" style="--c:#5ef2c1"><span class="where">Node</span><h3>SLA+ sparse attention</h3><p>Attention that skips what does not matter. Faster hops; reference protection keeps faces and places held.</p><p class="find"><b>Find it:</b> In the Starter&#x27;s model chain.</p></article>
+<article class="card" data-id="h3cache" style="--c:#5ef2c1"><span class="where">Node</span><h3>H3 Cache</h3><p>Skips sampling steps whose features have barely moved. Built on silveroxides&#x27; cache.</p><p class="find"><b>Find it:</b> Add Node → Hand Tie Clips → H3 Cache, between the model and the chain.</p></article>
+<article class="card" data-id="condcache" style="--c:#5ef2c1"><span class="where">Automatic</span><h3>Prompt encode cache <span class="new">NEW</span></h3><p>Encoded prompts and references are kept on disk, so re-running a plan skips the text model for everything that did not change.</p><p class="find"><b>Find it:</b> Nothing to set.</p></article>
+<article class="card" data-id="v3" style="--c:#5ef2c1"><span class="where">All nodes</span><h3>V3 nodes <span class="new">NEW</span></h3><p>Every node now uses ComfyUI&#x27;s newer node format. Same widgets, same saved workflows; ready for the newer frontend features.</p><p class="find"><b>Find it:</b> Nothing to set. Old workflows load as before.</p></article>
+<article class="card" data-id="upsample" style="--c:#ffb347"><span class="where">Run tab → upsample</span><h3>Upsample in the chain</h3><p>Finish the chain at about 2 MP: H3&#x27;s latent upscaler, then a short re-draw that adds real detail. Fine-tune it with the Upsample Settings node.</p><p class="find"><b>Find it:</b> Run tab: upsample = on.</p></article>
+<article class="card" data-id="vup" style="--c:#ffb347"><span class="where">Node</span><h3>Video Upsampler</h3><p>Upscale any finished clip. The file-to-file version works a piece at a time, so a long video never fills your RAM.</p><p class="find"><b>Find it:</b> Load the Upsample_Video_File workflow.</p></article>
+<article class="card" data-id="save" style="--c:#ffb347"><span class="where">Node</span><h3>Save Video &amp; Load Video (path)</h3><p>Save long clips with the GPU encoder and optional RTX frame generation (24 → 48 fps). Load Video (path) skips ComfyUI&#x27;s 100 MB upload limit.</p><p class="find"><b>Find it:</b> In the upsample workflows.</p></article>
+<article class="card" data-id="preview" style="--c:#c9a7ff"><span class="where">Node</span><h3>Chain Preview</h3><p>Watch hops arrive while the chain renders.</p><p class="find"><b>Find it:</b> Sits on the IMAGE wire before CreateVideo in the Starter.</p></article>
+<article class="card" data-id="timeline" style="--c:#c9a7ff"><span class="where">Control Room → Timeline</span><h3>Timeline</h3><p>Every hop on a strip. Scrub them, play one with sound, and inspect any join exactly as the final video has it.</p><p class="find"><b>Find it:</b> Timeline tab, or the dock under the graph.</p></article>
+<article class="card" data-id="wall" style="--c:#c9a7ff"><span class="where">Timeline → ▦ wall</span><h3>Render wall <span class="new">NEW</span></h3><p>Every finished hop looping at once. Click one to open it.</p><p class="find"><b>Find it:</b> Timeline header: ▦ wall.</p></article>
+<article class="card" data-id="popout" style="--c:#c9a7ff"><span class="where">Timeline → wall</span><h3>Pop-out monitor (browser &amp; phone) <span class="new">NEW</span></h3><p>Open the wall in its own browser tab, or a phone-sized window with a link for your phone. Follows the render live: hop strip, finish time, finished hops looping.</p><p class="find"><b>Find it:</b> Wall header: ⧉ browser / 📱 phone. On a real phone, start ComfyUI with --listen.</p></article>
+<article class="card" data-id="fastpv" style="--c:#c9a7ff"><span class="where">Automatic</span><h3>Faster previews <span class="new">NEW</span></h3><p>Hop previews build two at a time and in the background as each hop finishes, so the wall opens without pinning your CPU.</p><p class="find"><b>Find it:</b> Nothing to set.</p></article></div>
+    <p class="empty" id="empty" hidden>Nothing matches. Try a shorter word.</p>
+  </section>
+
+  <section aria-labelledby="shotsh">
+    <details>
+      <summary id="shotsh">Screenshots from ComfyUI (4.0)</summary>
+      <div class="shots"><figure><img loading="lazy" src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/v4-control-room-dock.png?v=4.0" alt="The Control Room docked under the graph: script on the left, the hop timeline on the right."><figcaption>The Control Room docked under the graph: script on the left, the hop timeline on the right.</figcaption></figure><figure><img loading="lazy" src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/v4-starter-stack.png?v=4.0" alt="The Starter&#x27;s model chain: HTC Sparse Attention and H3 Token LoRA, built in."><figcaption>The Starter&#x27;s model chain: HTC Sparse Attention and H3 Token LoRA, built in.</figcaption></figure><figure><img loading="lazy" src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/v4-sandtie-steering-nodes.png?v=4.0" alt="SandTie PromptRig, the AdaLN LoRA Fix, and Steering Dials."><figcaption>SandTie PromptRig, the AdaLN LoRA Fix, and Steering Dials.</figcaption></figure><figure><img loading="lazy" src="https://media.githubusercontent.com/media/sandpies/ComfyUI-Hand-Tie-Clips/main/docs/img/v4-starter-graph.png?v=4.0" alt="The whole Starter workflow on the canvas."><figcaption>The whole Starter workflow on the canvas.</figcaption></figure></div>
+    </details>
+  </section>
+
+  <footer>
+    <a href="https://github.com/sandpies/ComfyUI-Hand-Tie-Clips">GitHub</a> ·
+    <a href="https://huggingface.co/sandpies/ComfyUI-Hand-Tie-Clips">Hugging Face</a> ·
+    <a href="https://github.com/sandpies/ComfyUI-SandTie-PromptRig">SandTie PromptRig</a>
+  </footer>
+</main>
+<script>
+const FEATS = {"chain": {"title": "H3 Ref2VA Chain", "where": "Node", "what": "Strings MiniMax H3 generations (“hops”) into one long clip. Each hop picks up where the last one ended, picture and sound together.", "find": "Load the Starter workflow, or Add Node → Hand Tie Clips → H3 Ref2VA Chain.", "area": "make", "new": false}, "joins": {"title": "Join modes", "where": "Run tab → pin_mech", "what": "How hop N+1 grabs hop N. auto (the default) hands over the last frames as a latent (Motion-Context). sand_tie renders a take as one long piece. hand_tie steers hops from a quick low-res previs: experimental, and the least consistent of the three.", "find": "Leave it on auto unless you are testing.", "area": "make", "new": false}, "song": {"title": "Song lock", "where": "Media tab → master_audio_file", "what": "Give the chain your song. Every hop is timed against it, so the music runs straight through a music video instead of restarting at each join.", "find": "Media tab: pick the song, drag the bar to where the video starts.", "area": "make", "new": false}, "cache": {"title": "Hop cache & retakes", "where": "Run tab → cache_hops", "what": "Finished hops are kept. Change one beat and re-queue: only that hop (and what follows it) renders again.", "find": "Run tab: cache_hops = on. Timeline: pick a hop, render hop.", "area": "make", "new": false}, "studio": {"title": "MV Studio", "where": "Control Room → Studio", "what": "From a song to a plan: a treatment (the idea, the hook, the worlds), location plates and cast sheets to generate, all in one place. New: the treatment leads, and you choose the sheet backdrop.", "find": "Studio tab. The Sheets: dropdown picks black, gray or white backdrops.", "area": "make", "new": true}, "refs": {"title": "References", "where": "Control Room → Refs", "what": "Name your cast, places, props and voices once; beats call them as @name. Each row sets how large the text model sees that picture.", "find": "Refs tab. Drop pictures in, give each a short @name.", "area": "make", "new": false}, "refmod": {"title": "RefMod & sheet stitcher", "where": "Control Room → RefMod", "what": "Turn several stills of one character or look into a single reference. The stitcher packs stills into one sheet in the browser; Lossless keeps every pixel 1:1.", "find": "RefMod tab → Shots → Sheet.", "area": "make", "new": true}, "media": {"title": "Any frame rate in", "where": "Control Room → Media", "what": "Reference clips at 25, 30 or 60 fps are re-timed to H3's 24 fps on the way in, so motion and lip sync line up.", "find": "Nothing to set: it happens when a clip is loaded.", "area": "make", "new": true}, "swap": {"title": "Swap", "where": "Control Room → Swap", "what": "Put your character into an existing video. The clip is read by the vision model and rewritten as a plan with your cast in it.", "find": "Swap tab: load the video, pick who goes in.", "area": "make", "new": true}, "script": {"title": "Script", "where": "Control Room → Script", "what": "The shot plan: one row per hop, what the camera sees and hears. New: a JSON drawer to paste or copy the whole plan.", "find": "Script tab; the JSON drawer is at the bottom.", "area": "write", "new": true}, "write": {"title": "Write (local AI writer)", "where": "Control Room → Write", "what": "Describe the idea; a writer running on your own PC drafts the shot plan, asks what it needs, and edits on request. Any OpenAI-compatible local server works (LM Studio, llama-server, Ollama, KoboldCpp, vLLM), or nInfer.", "find": "Write tab → writer settings: pick Local server and its address, or nInfer.", "area": "write", "new": false}, "standard": {"title": "Standard", "where": "Control Room → Standard", "what": "The single-clip writer inside the chain node: one prompt, written to H3's official six-field format.", "find": "Standard tab.", "area": "write", "new": false}, "sandtie": {"title": "SandTie PromptRig", "where": "Node", "what": "A prompt rig for one H3 generation: dials for camera, light, look and action, a Reference Bible, and a writer — your local LLM, or Instant CPU Tie with no GPU at all. Outputs a prompt for the stock H3 node, or the conditioning itself. New: SOUND dial, Ultra-Realism looks, Extract Beats from a video.", "find": "Add Node → Hand Tie Clips → SandTie PromptRig (H3). Also as its own pack.", "area": "write", "new": true}, "copilot": {"title": "Director co-pilot", "where": "Agent skill", "what": "A directing partner for your coding agent (Claude Code, Codex, OpenCode or any harness that reads skills): song or story → treatment → shot plan → checked, ready-to-queue graph, then retakes.", "find": "prompt_pack/skills/director-copilot — copy it into your agent's skills folder.", "area": "write", "new": false}, "dials": {"title": "Steering Dials", "where": "Node", "what": "Push motion, expression, energy and mood up or down without rewriting the prompt. Make Steering Dial builds your own from prompt pairs.", "find": "Add Node → Hand Tie Clips → HTC Steering Dials (H3).", "area": "look", "new": false}, "tokenlora": {"title": "H3 Token LoRA", "where": "Node", "what": "One LoRA, separate strengths for the video, the soundtrack, the reference pictures and the prompt — so a look LoRA can stay off the voices.", "find": "In the Starter's model chain.", "area": "look", "new": false}, "adaln": {"title": "AdaLN LoRA Fix", "where": "Node", "what": "Makes LoRAs trained on the full model work on pruned checkpoints. Token LoRA already does it for you.", "find": "Only needed with other LoRA loaders.", "area": "look", "new": false}, "sla": {"title": "SLA+ sparse attention", "where": "Node", "what": "Attention that skips what does not matter. Faster hops; reference protection keeps faces and places held.", "find": "In the Starter's model chain.", "area": "speed", "new": false}, "h3cache": {"title": "H3 Cache", "where": "Node", "what": "Skips sampling steps whose features have barely moved. Built on silveroxides' cache.", "find": "Add Node → Hand Tie Clips → H3 Cache, between the model and the chain.", "area": "speed", "new": false}, "condcache": {"title": "Prompt encode cache", "where": "Automatic", "what": "Encoded prompts and references are kept on disk, so re-running a plan skips the text model for everything that did not change.", "find": "Nothing to set.", "area": "speed", "new": true}, "v3": {"title": "V3 nodes", "where": "All nodes", "what": "Every node now uses ComfyUI's newer node format. Same widgets, same saved workflows; ready for the newer frontend features.", "find": "Nothing to set. Old workflows load as before.", "area": "speed", "new": true}, "upsample": {"title": "Upsample in the chain", "where": "Run tab → upsample", "what": "Finish the chain at about 2 MP: H3's latent upscaler, then a short re-draw that adds real detail. Fine-tune it with the Upsample Settings node.", "find": "Run tab: upsample = on.", "area": "upscale", "new": false}, "vup": {"title": "Video Upsampler", "where": "Node", "what": "Upscale any finished clip. The file-to-file version works a piece at a time, so a long video never fills your RAM.", "find": "Load the Upsample_Video_File workflow.", "area": "upscale", "new": false}, "save": {"title": "Save Video & Load Video (path)", "where": "Node", "what": "Save long clips with the GPU encoder and optional RTX frame generation (24 → 48 fps). Load Video (path) skips ComfyUI's 100 MB upload limit.", "find": "In the upsample workflows.", "area": "upscale", "new": false}, "preview": {"title": "Chain Preview", "where": "Node", "what": "Watch hops arrive while the chain renders.", "find": "Sits on the IMAGE wire before CreateVideo in the Starter.", "area": "watch", "new": false}, "timeline": {"title": "Timeline", "where": "Control Room → Timeline", "what": "Every hop on a strip. Scrub them, play one with sound, and inspect any join exactly as the final video has it.", "find": "Timeline tab, or the dock under the graph.", "area": "watch", "new": false}, "wall": {"title": "Render wall", "where": "Timeline → ▦ wall", "what": "Every finished hop looping at once. Click one to open it.", "find": "Timeline header: ▦ wall.", "area": "watch", "new": true}, "popout": {"title": "Pop-out monitor (browser & phone)", "where": "Timeline → wall", "what": "Open the wall in its own browser tab, or a phone-sized window with a link for your phone. Follows the render live: hop strip, finish time, finished hops looping.", "find": "Wall header: ⧉ browser / 📱 phone. On a real phone, start ComfyUI with --listen.", "area": "watch", "new": true}, "fastpv": {"title": "Faster previews", "where": "Automatic", "what": "Hop previews build two at a time and in the background as each hop finishes, so the wall opens without pinning your CPU.", "find": "Nothing to set.", "area": "watch", "new": true}};
+const RECIPES = {"mv": ["studio", "song", "write", "joins", "wall"], "film": ["refs", "write", "script", "cache", "timeline"], "one": ["sandtie", "dials", "standard"], "fix": ["cache", "script", "timeline"], "big": ["upsample", "vup", "save"], "fast": ["sla", "h3cache", "condcache"], "watch": ["wall", "popout", "fastpv"]};
+const cards = [...document.querySelectorAll(".card")];
+const chips = [...document.querySelectorAll(".tools .chip")];
+const rchips = [...document.querySelectorAll("#recipes .chip")];
+let area = "all", recipe = null;
+function apply() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const lit = new Set(recipe ? RECIPES[recipe] : []);
+  let shown = 0;
+  for (const c of cards) {
+    const f = FEATS[c.dataset.id];
+    const inArea = area === "all" || (area === "new" ? f.new : f.area === area);
+    const hay = (f.title + " " + f.where + " " + f.what + " " + f.find).toLowerCase();
+    const ok = inArea && (!q || q.split(/\s+/).every((w) => hay.includes(w)));
+    c.hidden = !ok; if (ok) shown++;
+    c.classList.toggle("lit", lit.has(c.dataset.id));
+  }
+  document.getElementById("count").textContent = shown + " shown";
+  document.getElementById("empty").hidden = shown > 0;
+}
+chips.forEach((b) => b.addEventListener("click", () => {
+  area = b.dataset.area; chips.forEach((x) => x.setAttribute("aria-pressed", String(x === b))); apply();
+}));
+rchips.forEach((b) => b.addEventListener("click", () => {
+  recipe = recipe === b.dataset.r ? null : b.dataset.r;
+  rchips.forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.r === recipe)));
+  document.querySelectorAll(".recipe").forEach((p) => { p.hidden = p.dataset.r !== recipe; });
+  apply();
+}));
+document.getElementById("q").addEventListener("input", apply);
+apply();
+</script>
+</body></html>

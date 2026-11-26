@@ -46,6 +46,7 @@ import weakref
 
 import torch
 import torch.nn.functional as F
+from comfy_api.latest import io
 
 TAG = "HTCTokenLoRA"
 TARGETS = ("attn.qkv_proj", "attn.out_proj", "mlp.fc1", "mlp.fc2")
@@ -794,9 +795,41 @@ def plan_slots(slots, loaded, other_mode=OTHER_KEYS[0], extra_all=None, disabled
     return specs, patches, lines
 
 
-class HTCTokenLoRA:
+def _v3_inputs_from_v1(io, v1):
+    """V1 INPUT_TYPES dict -> (V3 inputs, hidden), same order. Unknown option = TypeError."""
+    import re as _re
+    rename = {"forceInput": "force_input", "dynamicPrompts": "dynamic_prompts",
+              "defaultInput": "default_input", "rawLink": "raw_link"}
+    by_type = {}
+    for attr in dir(io):
+        t = getattr(getattr(io, attr), "io_type", None)
+        if isinstance(t, str) and hasattr(getattr(io, attr), "Input"):
+            by_type.setdefault(t, getattr(io, attr))
+    inputs = []
+    for group in ("required", "optional"):
+        for name, spec in (v1.get(group) or {}).items():
+            kind = spec[0]
+            opts = dict(spec[1]) if len(spec) > 1 else {}
+            kw = {rename.get(k) or _re.sub(r"(?<!^)(?=[A-Z])", "_", k).lower(): v for k, v in opts.items()}
+            if group == "optional":
+                kw["optional"] = True
+            if isinstance(kind, (list, tuple)):
+                inputs.append(io.Combo.Input(name, options=list(kind), **kw))
+            elif kind == "COMBO":
+                multi = kw.pop("multiselect", False)
+                ctor = io.MultiCombo.Input if multi else io.Combo.Input
+                inputs.append(ctor(name, **kw))
+            elif kind in by_type:
+                inputs.append(by_type[kind].Input(name, **kw))
+            else:
+                inputs.append(io.Custom(kind).Input(name, **kw))
+    hidden = [io.Hidden(v) for v in (v1.get("hidden") or {}).values()]
+    return inputs, hidden
+
+
+class _HTCTokenLoRAImpl:
     @classmethod
-    def INPUT_TYPES(cls):
+    def _v1_input_types(cls):
         import folder_paths
         loras = folder_paths.get_filename_list("loras")
         step = {"step": 0.01}
@@ -846,12 +879,6 @@ class HTCTokenLoRA:
             "strip removes incompatible AdaLN patches while keeping the rest of the LoRA; off skips.")})
         return {"required": req, "optional": opt}
 
-    RETURN_TYPES = ("MODEL",)
-    FUNCTION = "apply"
-    CATEGORY = "Hand Tie Clips"
-    DESCRIPTION = ("Loads H3 LoRAs per kind of token: each slot gives the video, the soundtrack, the "
-                   "reference pictures and the prompt their own strength (video 1, audio 0 keeps the "
-                   "voices on the plain model). Slots A, B, C plus Add LoRA; chain nodes to stack more.")
 
     def apply(self, model, lora_a, a_video, a_audio, a_reference, a_text, a_refiner, a_block_start, a_block_end,
               lora_b, b_video, b_audio, b_reference, b_text, b_refiner, b_block_start, b_block_end,
@@ -919,6 +946,37 @@ class HTCTokenLoRA:
               + (f", stacked with {len(rt.specs) - len(specs)} from an earlier node" if len(rt.specs) > len(specs) else "")
               + ":\n  " + "\n  ".join(lines), flush=True)
         return (m,)
+
+
+class HTCTokenLoRA(io.ComfyNode, _HTCTokenLoRAImpl):
+    """V3 schema for HTCTokenLoRA; the implementation lives in _HTCTokenLoRAImpl.
+
+    Also inherits _HTCTokenLoRAImpl so existing callers of the V1 API (HTCTokenLoRA().apply(...),
+    HTCTokenLoRA.<helper>) keep working; core sees only the V3 hooks below."""
+
+    @classmethod
+    def define_schema(cls):
+        inputs, hidden = _v3_inputs_from_v1(io, _HTCTokenLoRAImpl._v1_input_types())
+        return io.Schema(
+            node_id='HTCTokenLoRA',
+            display_name='H3 Token LoRA (HTC)',
+            category="Hand Tie Clips",
+            description="Loads H3 LoRAs per kind of token: each slot gives the video, the soundtrack, the "
+                "reference pictures and the prompt their own strength (video 1, audio 0 keeps the "
+                "voices on the plain model). Slots A, B, C plus Add LoRA; chain nodes to stack more.",
+            inputs=inputs,
+            outputs=[
+                io.Model.Output(),
+            ],
+            hidden=hidden,
+        )
+
+    @classmethod
+    def execute(cls, **kwargs):
+        result = _HTCTokenLoRAImpl().apply(**kwargs)
+        if isinstance(result, dict):
+            return io.NodeOutput.from_dict(result)
+        return io.NodeOutput(*result) if result is not None else io.NodeOutput()
 
 
 NODE_CLASS_MAPPINGS = {"HTCTokenLoRA": HTCTokenLoRA}

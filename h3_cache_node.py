@@ -21,6 +21,7 @@ is its own sampler call and gets no caching otherwise.
 from __future__ import annotations
 
 from .h3_cache import patch_h3_minimax_cache
+from comfy_api.latest import io
 
 TAG = "HTCH3Cache"
 
@@ -40,55 +41,9 @@ DEFAULTS = dict(reuse_threshold=0.05, start_percent=0.20, end_percent=0.80,
 DEVICE_MODES = ("auto", "cuda", "cpu")
 
 
-class HTCH3Cache:
+class _HTCH3CacheImpl:
     """Reuse MiniMax-H3's whole-block-stack residual across similar steps."""
 
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "model": ("MODEL", {
-                    "tooltip": "The MiniMax H3 model.",
-                }),
-                "reuse_threshold": ("FLOAT", {
-                    "default": DEFAULTS["reuse_threshold"], "min": 0.0, "max": 1.0, "step": 0.01,
-                    "tooltip": ("How much may change before a cached step is refused. Higher is faster and "
-                                "less exact."),
-                }),
-                "start_percent": ("FLOAT", {
-                    "default": DEFAULTS["start_percent"], "min": 0.0, "max": 1.0, "step": 0.01,
-                    "tooltip": "No reuse before this point in sampling. Early steps shape the picture.",
-                }),
-                "end_percent": ("FLOAT", {
-                    "default": DEFAULTS["end_percent"], "min": 0.0, "max": 1.0, "step": 0.01,
-                    "tooltip": "No reuse after this point in sampling. Late steps add detail.",
-                }),
-                "max_steps": ("INT", {
-                    "default": DEFAULTS["max_steps"], "min": 1, "max": 10, "step": 1,
-                    "tooltip": "Most skipped steps in a row. 1 is safest; higher is faster.",
-                }),
-                "device": (list(DEVICE_MODES), {
-                    "default": "auto",
-                    "tooltip": "Where the cache lives. cpu saves video memory.",
-                }),
-                "verbose": ("BOOLEAN", {
-                    "default": False,
-                    "tooltip": "Log each step's cache decision.",
-                }),
-            },
-        }
-
-    RETURN_TYPES = ("MODEL",)
-    FUNCTION = "run"
-    CATEGORY = "Hand Tie Clips"
-    DESCRIPTION = (
-        "Block-stack residual cache for MiniMax-H3: skips re-running the "
-        "transformer stack on steps whose features have barely moved. Patches a "
-        "cloned model only. This is what makes the non-turbo base fast enough "
-        "to recommend. Implementation by silveroxides (ComfyUI-UtilsCollection), "
-        "improved and ported by PlagueKind, redistributed with permission -- "
-        "see THIRD_PARTY_NOTICES.md."
-    )
 
     def run(self, model, reuse_threshold, start_percent, end_percent,
             max_steps, device, verbose):
@@ -114,6 +69,84 @@ class HTCH3Cache:
                   % (TAG, float(reuse_threshold), float(start_percent),
                      float(end_percent), int(max_steps), device), flush=True)
         return (patched,)
+
+
+class HTCH3Cache(io.ComfyNode, _HTCH3CacheImpl):
+    """V3 schema for HTCH3Cache; the implementation lives in _HTCH3CacheImpl.
+
+    Also inherits _HTCH3CacheImpl so existing callers of the V1 API (HTCH3Cache().run(...),
+    HTCH3Cache.<helper>) keep working; core sees only the V3 hooks below."""
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id='HTCH3Cache',
+            display_name='H3 Cache',
+            category="Hand Tie Clips",
+            description="Block-stack residual cache for MiniMax-H3: skips re-running the "
+                "transformer stack on steps whose features have barely moved. Patches a "
+                "cloned model only. This is what makes the non-turbo base fast enough "
+                "to recommend. Implementation by silveroxides (ComfyUI-UtilsCollection), "
+                "improved and ported by PlagueKind, redistributed with permission -- "
+                "see THIRD_PARTY_NOTICES.md.",
+            inputs=[
+                io.Model.Input('model', tooltip="The MiniMax H3 model."),
+                io.Float.Input(
+                    'reuse_threshold',
+                    default=DEFAULTS["reuse_threshold"],
+                    min=0.0,
+                    max=1.0,
+                    step=0.01,
+                    tooltip="How much may change before a cached step is refused. Higher is faster and "
+                                "less exact.",
+                ),
+                io.Float.Input(
+                    'start_percent',
+                    default=DEFAULTS["start_percent"],
+                    min=0.0,
+                    max=1.0,
+                    step=0.01,
+                    tooltip="No reuse before this point in sampling. Early steps shape the picture.",
+                ),
+                io.Float.Input(
+                    'end_percent',
+                    default=DEFAULTS["end_percent"],
+                    min=0.0,
+                    max=1.0,
+                    step=0.01,
+                    tooltip="No reuse after this point in sampling. Late steps add detail.",
+                ),
+                io.Int.Input(
+                    'max_steps',
+                    default=DEFAULTS["max_steps"],
+                    min=1,
+                    max=10,
+                    step=1,
+                    tooltip="Most skipped steps in a row. 1 is safest; higher is faster.",
+                ),
+                io.Combo.Input(
+                    'device',
+                    options=list(DEVICE_MODES),
+                    default="auto",
+                    tooltip="Where the cache lives. cpu saves video memory.",
+                ),
+                io.Boolean.Input(
+                    'verbose',
+                    default=False,
+                    tooltip="Log each step's cache decision.",
+                ),
+            ],
+            outputs=[
+                io.Model.Output(),
+            ],
+        )
+
+    @classmethod
+    def execute(cls, **kwargs):
+        result = _HTCH3CacheImpl().run(**kwargs)
+        if isinstance(result, dict):
+            return io.NodeOutput.from_dict(result)
+        return io.NodeOutput(*result) if result is not None else io.NodeOutput()
 
 
 NODE_CLASS_MAPPINGS = {"HTCH3Cache": HTCH3Cache}

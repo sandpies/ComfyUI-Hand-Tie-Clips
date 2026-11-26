@@ -44,6 +44,13 @@ def _pack_file(rel):
     return os.path.join(here, rel.replace("/", os.sep))
 
 
+def _pack_text(rel):
+    """Writer rules kept as editable text under `prompt_pack/write/` (11-25), so the
+    rules sent to the model can be read and improved without touching this file."""
+    with open(_pack_file(rel), encoding="utf-8") as f:
+        return f.read().rstrip("\n")
+
+
 def system_prompt():
     """The shipped prompt, read from disk rather than copied into this file.
 
@@ -1034,27 +1041,7 @@ def windowed_rules():
 # AV latent, so the take drives every mouth. Learned on DDP, Nodes MV and
 # Headliner (2026-10-03..07): a quoted line pulls the mouth off the take; crew
 # written "lips closed" reads robotic; a 30-45 word beat is a static slideshow.
-MV_RULES = "\n".join([
-    "This is a MUSIC VIDEO cut to the song, which plays under every hop and "
-    "drives every mouth. These rules replace the spoken-word targets of the "
-    "length table:",
-    "1. No <d> lines and no (S1) speaker tags. Say who sings or raps and how "
-    "(\"@x raps fast, eyes on the lens\"); the song supplies the words.",
-    "2. Everyone else reacts with their body -- points, laughs, daps, throws an "
-    "arm round a shoulder -- and the whole crew shouts the hooks together. "
-    "Nobody stands posed.",
-    "3. Every hop has an open, a mid-hop change and a definite end move, and "
-    "uses the top of its word budget on action: a thin beat finishes early and "
-    "idles. Match energy to the section: `intro` builds atmosphere with a slow "
-    "camera move; `verse` focuses on the lead performer's rhythm and movement; "
-    "`chorus` and `drop` hit peak physical energy with dynamic camera motion "
-    "(`orbit`, `push_in`, `handheld`); `bridge` / `breakdown` shifts framing "
-    "or pace; `outro` lands and settles.",
-    "4. `R` hops are bar-aligned cuts (`join: hard_cut` or `match_cut` on hop 2+); "
-    "`C` hops continue the shot before them (`join: continuous`).",
-    "5. The overall_soundscape is the song itself: name the music and the room "
-    "(the bass, the crowd), never a voice saying words.",
-])
+MV_RULES = _pack_text("prompt_pack/write/mv.md")
 
 
 def _format_rail_rows(pinned):
@@ -1089,78 +1076,12 @@ def _format_rail_rows(pinned):
 # cuts nobody had a reason for; the beats were written straight as prose and
 # patched after each render. The sheet is worked out first, shown on the
 # Proposal card, and bound to the beats once accepted (build_thread).
-CONTINUITY_RULES = "\n".join([
-    "Before any beat exists, work out the blocking for the whole chain, the way "
-    "a director and a script supervisor would, and put it in `continuity`:",
-    "- `set_layout`: read every place still (and start image, if attached) as a "
-    "floor plan in screen terms: near->far depth order, left/right landmarks, "
-    "which way furniture faces, open floor vs wall-flush, and missing angles.",
-    "- `spots`: every place a person stands or sits, each as ONE fixed phrase "
-    "giving (1) screen quadrant/side and depth side relative to the camera or "
-    "furniture (e.g. 'on the bottom-left foreground of the counter, her back "
-    "three-quarter to bottom-left of shot, facing @b in top-right' or 'on the "
-    "near side of the low table, between the table and the camera, at frame right'), "
-    "(2) body facing, and (3) eyeline target. Repeat it word for word from that "
-    "camera. Never use vague phrases like 'across the table' or 'by the window'. "
-    "Outfit phrases name the garment's defining cut (neckline, length).",
-    "- `hops`: one row per hop: `hop`, `start` (spot, screen side, facing, "
-    "posture, props held), `action` (what moves on screen), `end` (exact final "
-    "spots, facing, posture, props), `end_framing`. Every `join: continuous` "
-    "hop opens from the previous hop's exact `end`. Before a `motion_context` "
-    "continuation, end on a face at medium or closer with hands at rest, and "
-    "avoid `[Shot 2]` cuts in its first 2 seconds.",
-    "- `cuts`: every `anchor: 'restart'` (paired with `join: 'hard_cut'`) and "
-    "every `[Shot N]` cut inside a hop: `at`, `why` (a look, line, sound, or "
-    "action needing another angle), and `matches`. Sides belong to the camera: "
-    "whenever a cut or restart changes camera angle, re-state EVERY visible "
-    "subject's new screen quadrant, depth, facing, and eyeline for THAT camera. "
-    "A restart opens on a clearly different size or angle than the previous end "
-    "and on an action already starting.",
-    "- Screen direction & barriers: walks away from camera explicitly say 'back "
-    "to the camera'; walks toward camera/someone name where they stop; keep "
-    "exit sides consistent across cuts; name both sides of barriers (glass, "
-    "railings, gates); add 'alone in the frame' in close-ups looking off-frame; "
-    "omit `directives.camera` & `directives.framing` when directing moves or "
-    "[Shot N] cuts directly in the beat.",
-    "- `weak_spots`: any angle the pictures leave out, and the fixed background "
-    "phrase you will name for it every time.",
-])
+CONTINUITY_RULES = _pack_text("prompt_pack/write/continuity.md")
 
 # Adult staging (11-08, from the single-clip writer's laws, turned for chains).
 # Sent only when the brief or plan is sexual or explicit, so every other film
 # keeps a clean turn.
-ADULT_RULES = "\n".join([
-    "This piece is ADULT. Everyone in it is an adult, described as an adult, and "
-    "everything on screen is consensual. Staging laws:",
-    "1. Clothing is a state: a garment moved, bunched or removed keeps one phrase "
-    "in every later shot (\"her skirt bunched at her waist\", \"both nude\"); the "
-    "undress happens on screen, inside a hop.",
-    "2. Name anatomy plainly where it is touched, uncovered or entered, and name "
-    "what is anchored and what alone moves, on which line (forward and back). Each "
-    "stroke has one visible consequence; each hand one job, stated once, then "
-    "\"his hands stay on her hips\".",
-    "3. From behind, shoulders, chest and head stay facing away for the whole "
-    "shot; intensity goes into the spine, hips, hands and feet. A glance back is "
-    "the chin over one shoulder; her face comes from a mirror ahead.",
-    "4. First-person POV: the camera is the viewer's eyes, written as 'my hands at "
-    "the lower corners of the frame'; only the partner is in the frame. A POV "
-    "scene stays POV for all its hops.",
-    "5. A busy mouth carries no line: the face plays it in the cheeks, the head's "
-    "rhythm and an upward gaze. Moans and gasps are sounds in the action or the "
-    "soundscape; both together use (S1,S2).",
-    "6. Anal: open already inside; short strokes on the same line. In every window "
-    "of every hop, from this camera: which opening is which (from behind, the anus "
-    "is the higher opening, nearer her lower back; her pussy the lower one, "
-    "closer to the bed, empty) and the same three sentences: 'The head of his "
-    "erect penis is inside her anus. The head stays buried.' 'The anal ring is "
-    "stretched tautly around the shaft and stays closed around it.' 'Her pussy "
-    "stays visible and stays empty' plus where it sits in this frame. The camera "
-    "holds one position for the shot.",
-    "7. Across hops: a rear position is a restart with the sheets attached (the hop "
-    "before a continuation ends on a face). At a join the bodies keep their rhythm "
-    "on the same line and the camera holds. A cut opens on the same contact "
-    "already moving, from a new size or angle.",
-])
+ADULT_RULES = _pack_text("prompt_pack/write/adult.md")
 
 _ADULT = re.compile(
     r"\b(?:nsfw|explicit|sex(?:ual|y)?|porn\w*|erotic\w*|nude|naked|topless|"
@@ -1175,29 +1096,7 @@ def is_adult(*texts):
     return any(_ADULT.search(str(t or "")) for t in texts)
 
 
-INTENT_INFERENCE_GUIDE = "\n".join([
-    "How to read the user's intent and references:",
-    "- Infer the cast and setting from the references: every person on the rail "
-    "gets a distinct `subject` number (1, 2, ...), a `fully_preserved` likeness "
-    "plate scheduled across every hop they appear in (`shots: [1..N]`), and a "
-    "`subjects.N` entry (`name`, `locked` for face/hair/build, `context` for "
-    "wardrobe colors and garments ONLY -- never a pose or a room). Every place "
-    "plate gets `retention: \"reference\"` and no `subject`; a key prop's own "
-    "picture (one object on a plain backdrop) gets `retention: \"prop\"`.",
-    "- If two plates show the same person, the portrait/head shot is the likeness "
-    "plate (`fully_preserved`, `shots: [1..N]`) and the full-body outfit shot is "
-    "the wardrobe plate (`partially_copy`, `shots: [1]`, with the outfit named "
-    "in `subjects.N.context`).",
-    "- If multiple place plates are present, structure the hops as a journey "
-    "between them: arrive at the boundary at the end of hop K and open hop K+1 "
-    "in the new place with `join: match_cut` or `hard_cut` (unless hand-tied).",
-    "- Match the user's brief: if the brief is short or high-level, use the "
-    "visible props, architecture, lighting and wardrobe in the reference stills "
-    "to build a concrete physical through-line across all hops (Hop 1 establishes "
-    "character, light and space; middle hops develop the action or dialogue; the "
-    "final hop lands on `tail: settle` or `hold`). If the brief gives specific "
-    "dialogue lines or actions, keep the user's exact words and staging.",
-])
+INTENT_INFERENCE_GUIDE = _pack_text("prompt_pack/write/intent.md")
 
 
 def build_user_turn(brief, hops, files, pinned=None, duration=None, pin_mech="",

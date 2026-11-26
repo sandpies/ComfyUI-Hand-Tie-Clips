@@ -261,6 +261,20 @@ export function createScriptPane(node, { onChange, onSelect } = {}) {
     badBox.appendChild(rawEl);
     root.appendChild(badBox);
 
+    /* -- JSON escape hatch (matches Refs tab JSON drawer) ----------------- */
+    const jsonWrap = el("details", "h3e-json-wrap");
+    const jsonSum = el("summary", null, "JSON");
+    jsonSum.title = "The literal shot_plan value. Editing here updates the shots.";
+    jsonWrap.appendChild(jsonSum);
+    const jsonArea = el("textarea", "h3e-json");
+    jsonArea.spellcheck = false;
+    jsonArea.placeholder = '{"shots": [{"id": "s1", "beat": "...", "directives": {"camera": "hold"}}]}';
+    jsonWrap.appendChild(jsonArea);
+    const jsonErr = el("div", "h3e-note h3e-note-error");
+    jsonErr.hidden = true;
+    jsonWrap.appendChild(jsonErr);
+    root.appendChild(jsonWrap);
+
     /* -- solo range helpers ----------------------------------------------- */
     function getRenderRange() {
         return {
@@ -544,6 +558,9 @@ export function createScriptPane(node, { onChange, onSelect } = {}) {
         shots.splice(active, 1);
         active = Math.max(0, Math.min(active, shots.length - 1));
         writePlan(node, shots);
+        if (!shots.length && readPrompt(node).trim()) {
+            mode = "simple";
+        }
         persistActive();
         render();
         onSelect?.(active);
@@ -687,7 +704,7 @@ export function createScriptPane(node, { onChange, onSelect } = {}) {
 
         if (mode === "simple") {
             const ch = Math.max(1, parseInt(widgetByName(node, "chains")?.value, 10) || 1);
-            count.textContent = `${ch} hop${ch === 1 ? "" : "s"} (Simple)`;
+            count.textContent = ch === 1 ? "Standard (1 clip)" : `${ch} hops (Simple)`;
         } else {
             count.textContent = `${shots.length} shot${shots.length === 1 ? "" : "s"}`;
         }
@@ -697,6 +714,7 @@ export function createScriptPane(node, { onChange, onSelect } = {}) {
         chips.hidden = mode !== "shots" || bad;
         simple.hidden = mode !== "simple" || bad;
         badBox.hidden = !bad;
+        jsonWrap.hidden = bad;
         addBtn.hidden = mode !== "shots" || bad;
         modeBox.hidden = bad;
 
@@ -704,6 +722,11 @@ export function createScriptPane(node, { onChange, onSelect } = {}) {
             rawEl.value = rawPlan;
             busy = false;
             return;
+        }
+
+        if (typeof document === "undefined" || document.activeElement !== jsonArea) {
+            jsonArea.value = rawPlan;
+            jsonErr.hidden = true;
         }
 
         if (mode === "simple") {
@@ -776,6 +799,26 @@ export function createScriptPane(node, { onChange, onSelect } = {}) {
         render();
         if (before >= shots.length) active = Math.max(0, shots.length - 1);
     }
+
+    jsonArea.addEventListener("input", () => {
+        const parsed = parsePlan(jsonArea.value);
+        if (parsed === null) {
+            jsonErr.textContent = "Not valid JSON \u2014 the shots view is keeping the last good version.";
+            jsonErr.hidden = false;
+            return;
+        }
+        jsonErr.hidden = true;
+        shots = parsed;
+        if (mode === "simple" && parsed.length) {
+            node.properties ??= {};
+            mode = "shots";
+            node.properties[MODE_PROP] = "shots";
+            delete node.properties[BACKUP_PROP];
+        }
+        writePlan(node, shots);
+        render();
+        onChange?.();
+    });
 
     rawEl.addEventListener("input", () => {
         const w = node.widgets?.find((x) => x.name === "shot_plan");

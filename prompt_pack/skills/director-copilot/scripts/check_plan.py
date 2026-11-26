@@ -347,7 +347,7 @@ def main():
         set_dirs = [k for k in ("camera", "framing") if str(d.get(k) or "").strip()]
         if set_dirs:
             lint.append(f"shot {i}: camera-dropdown: {', '.join(set_dirs)} set on the node. Leave them empty and "
-                        f"write the move in the beat (rule 6); `hold` adds \"holds its position throughout\".")
+                        f"write the move in the beat (SKILL.md, camera in the beat); `hold` adds \"holds its position throughout\".")
         # "the camera arcs / slowly rises / holds"; "toward the camera" is not a camera line.
         if not re.search(r"\bcamera\s+(?:\w+ly\s+)?\w+s\b", beat, re.I):
             lint.append(f"shot {i}: no-camera: the beat never says what the camera does. Write one move "
@@ -445,8 +445,8 @@ def main():
                 lint.append(f"shot {i}: pin-face: shot {i + 1} continues from this ending, but the last sentence "
                             f"(\"{last[:70]}\") puts no face toward the camera.")
 
-    # sand_tie: a take is one video, and what breaks it is the writing (SKILL.md, "One take,
-    # sand_tie"). The node's own parser reads the beats, so this cannot drift from what it renders.
+    # sand_tie: a take is one video, and what breaks it is the writing (references/one_take.md,
+    # "sand_tie"). The node's own parser reads the beats, so this cannot drift from what it renders.
     if str(a.pin_mech) == "sand_tie":
         try:
             take = _htc.import_package_module(pack, "take")

@@ -26,6 +26,7 @@ const ready = async () => {
   }
   return true;
 };
+globalThis.HTC_MONITOR_PAGE = "./monitor.html";   // r2_stage.js pop-out buttons
 const toastEl = document.getElementById("toast");
 window.__demoToast = (t) => { if (!t) return; toastEl.textContent = t; toastEl.classList.add("on");
   clearTimeout(window.__tt); window.__tt = setTimeout(() => toastEl.classList.remove("on"), 3200); };

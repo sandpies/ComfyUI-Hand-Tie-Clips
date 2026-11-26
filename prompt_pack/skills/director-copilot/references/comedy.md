@@ -80,7 +80,7 @@ translated into what a beat can ask H3 for. None of it is render-proven yet; see
 - **Change of tempo gets laughs:** a fast exchange, then one line delivered slowly; a list where
   the last item is said differently.
 - **Callbacks:** an early line, prop or sound comes back near the end with a new meaning. Plant it
-  where the viewer can see it (rule 20).
+  where the viewer can see it (SKILL.md, *plant what pays off*).
 - **The button:** every scene ends on one last small laugh, a line or a look, held 2-3 s before
   the cut (`tail: hold` on a film's last hop).
 - **Escalate:** each turn of the scene is worse than the one before, then the reversal, then the

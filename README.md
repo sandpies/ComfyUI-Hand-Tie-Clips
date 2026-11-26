@@ -162,6 +162,7 @@ The Starter note lists the files a plain chain run loads. Everything else is opt
 | Component | Where to Get It |
 |---|---|
 | **Turbo LoRAs / live preview** | Sparse attention, AdaLN fix and LoRA loading are built in since 4.0. [ComfyUI-KJNodes](https://github.com/kijai/ComfyUI-KJNodes) for `taeh3` previews; [ComfyUI-PlagueKind-Nodes](https://github.com/PlagueKind/ComfyUI-PlagueKind-Nodes) still works if your graphs use it |
+| **Ref2VA Checkpoints (CleanTie / HandTie / SilkTie)** | [sandpies/cleantie-v2Sing-hybrid (HF)](https://huggingface.co/sandpies/cleantie-v2Sing-hybrid) — 8-step baked Ref2VA checkpoints (`bf16`, `int8_minmaxxed` 20.96 GiB, and `w6_g16_hq` 18.39 GiB for 24 GB GPUs) + PureTurbo LoRA |
 | **Upscaler LoRA & Standalone Pack** | [sandpies/ComfyUI-H3-Video-Upsampler (HF)](https://huggingface.co/sandpies/ComfyUI-H3-Video-Upsampler) · [GitHub](https://github.com/sandpies/ComfyUI-H3-Video-Upsampler) |
 | **Latent Upscaler Weights (3D / 2D)** | [LBH-123-AI/Minimax_h3_latent_Upscaler](https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler) (`models/latent_upscale_models/`) |
 | **Hand-Tie Previs Compiler (`models/text_encoders/`)** | [`qwen3vl_4b_fp8_scaled.safetensors` (5.2 GB)](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors) · [`silveroxides/K2Q (4B)`](https://huggingface.co/silveroxides/K2Q/tree/main/qwen3vl_4b) · [`qwen3vl_8b_int8_convrot.safetensors` (9.3 GB)](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors) |

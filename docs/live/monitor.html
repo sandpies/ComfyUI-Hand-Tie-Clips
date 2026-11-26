@@ -1,0 +1,188 @@
+<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Render Monitor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Space+Grotesk:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* One-column render monitor: title, status, a hop strip coloured by place, a grid of hop tiles that
+   start looping as each hop finishes, and a player for one hop with sound. Dark stage look. */
+:root{
+  --bg:#0a0d16; --panel:#121827; --panel2:#0e1320; --line:#243049; --fg:#eef2ff; --muted:#9aa6c4;
+  --run:#3ee6ff; --ok:#9ff03a; --wait:#ffb347; --bad:#ff4d6a; --accent:#ffb347;
+  --display:"Dela Gothic One","Arial Black",Impact,sans-serif; --body:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:1180px;margin:0 auto;padding-block:30px 60px;display:grid;gap:26px}
+.eyebrow{font:600 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(32px,6.5vw,62px);line-height:1;margin:0;text-wrap:balance;word-break:break-word}
+h1 .t{color:var(--accent)}
+.sub{color:var(--muted);margin:10px 0 0;max-width:65ch}
+.state{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center}
+.pill{font:600 13px var(--mono);padding:4px 12px;border-radius:999px;border:1px solid currentColor}
+.pill.run{color:var(--run)} .pill.done{color:var(--ok)} .pill.idle{color:var(--wait)}
+.kv{display:flex;flex-direction:column;gap:2px;min-width:0}
+.kv b{font:600 19px var(--mono);font-variant-numeric:tabular-nums}
+.kv small{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em}
+.strip{display:flex;gap:3px}
+.seg{height:30px;border-radius:3px;background:var(--panel);border:1px solid var(--line);position:relative;overflow:hidden;min-width:0}
+.seg.done{background:var(--c);border-color:var(--c)}
+.seg.now{border-color:var(--c);background:repeating-linear-gradient(135deg,var(--c) 0 5px,transparent 5px 10px);background-size:200% 100%;animation:slide 1.2s linear infinite}
+@keyframes slide{to{background-position:-28px 0}}
+.seg i{position:absolute;inset:auto 0 2px;text-align:center;font:600 9px var(--mono);color:#fff;mix-blend-mode:difference;font-style:normal}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;color:var(--muted);font-size:13px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--c);margin-right:6px;vertical-align:-1px}
+h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;display:flex;flex-direction:column;min-width:0;
+  padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.tile:focus-visible{outline:2px solid var(--run);outline-offset:2px}
+.tile.now{border-color:var(--run)}
+.tile.sel{border-color:var(--accent)}
+.shot{aspect-ratio:16/9;max-width:100%;background:#000;position:relative;display:grid;place-items:center}
+.portrait .shot{aspect-ratio:9/16}
+.shot video{width:100%;height:100%;object-fit:cover;display:block}
+.shot .ph{font:600 12px var(--mono);color:var(--muted)}
+.shot .no{position:absolute;top:7px;left:7px;font:600 11px var(--mono);background:var(--c);color:#0a0d16;padding:1px 7px;border-radius:3px}
+.meta{padding:9px 11px 10px;display:grid;gap:2px}
+.meta b{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta .t{font:12px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.player{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:10px}
+.player[hidden]{display:none}
+.player video{width:100%;max-height:70vh;border-radius:8px;background:#000}
+.phead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.phead b{font-family:var(--display);font-weight:400;font-size:18px}
+.phead .sp{flex:1}
+.btn{font:600 13px var(--body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer}
+.btn:focus-visible{outline:2px solid var(--run)}
+.err{color:var(--bad);font:13px var(--mono)}
+.err[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.seg.now{animation:none}}
+/* ?view=desktop: full-width wall; the open hop plays in a sticky column on the right. */
+body.desktop main{max-width:none;padding-block:22px 40px;gap:20px}
+body.desktop .grid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+body.desktop h1{font-size:clamp(28px,3.2vw,44px)}
+@media (min-width:1100px){
+  body.desktop:has(#player:not([hidden])) main{grid-template-columns:minmax(0,1fr) minmax(380px,38%)}
+  body.desktop main>*{grid-column:1/-1}
+  body.desktop:has(#player:not([hidden])) #hops{grid-column:1;grid-row:4}
+  body.desktop #player{grid-column:2;grid-row:4;position:sticky;top:16px;align-self:start}
+}
+</style></head><body>
+<main>
+  <header>
+    <p class="eyebrow">Hand-Tie-Clips · render monitor</p>
+    <h1 id="title"><span class="t">Waiting</span><br>for a render</h1>
+    <p class="sub" id="sub">Each tile starts looping as soon as its hop is finished. Tap one to watch it with sound. Updates every 15 s.</p>
+  </header>
+  <section class="state" aria-live="polite">
+    <span id="pill" class="pill idle">IDLE</span>
+    <div class="kv"><small>Hop</small><b id="hop">–</b></div>
+    <div class="kv"><small>Per hop</small><b id="per">–</b></div>
+    <div class="kv"><small>Est. finish</small><b id="eta">–</b></div>
+    <div class="kv"><small>Updated</small><b id="upd">–</b></div>
+  </section>
+  <section>
+    <div class="strip" id="strip"></div>
+    <div class="legend" id="legend"></div>
+    <p class="err" id="err" hidden></p>
+  </section>
+  <section class="player" id="player" hidden>
+    <div class="phead"><b id="ptitle">hop</b><span class="sp"></span><button class="btn" id="prev" type="button">◀ prev</button><button class="btn" id="next" type="button">next ▶</button><button class="btn" id="close" type="button">close</button></div>
+    <video id="pvideo" controls playsinline preload="metadata"></video>
+  </section>
+  <section id="hops">
+    <h2>Hops</h2>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+// ?view=desktop | phone (the node's pop-out buttons pass one); otherwise by width.
+const VIEW=new URLSearchParams(location.search).get("view")||(matchMedia("(min-width:1100px)").matches?"desktop":"phone");
+document.body.classList.add(VIEW==="desktop"?"desktop":"phone");
+const PAL=["#4f7dff","#b9f5d0","#d8dcff","#3ee6ff","#ffb347","#ff6fd8","#9ff03a","#ff8a5b","#c9a7ff","#5ef2c1"];
+const hhmm=t=>new Date(t*1000).toTimeString().slice(0,5);
+const tiles=new Map(); let S=null, sel=0;
+const io=("IntersectionObserver" in window)?new IntersectionObserver(es=>{for(const e of es){const v=e.target.querySelector("video");if(!v)continue;
+  if(e.isIntersecting&&!document.hidden)v.play().catch(()=>{});else v.pause();}},{threshold:.15}):null;
+document.addEventListener("visibilitychange",()=>{for(const t of tiles.values()){const v=t.querySelector("video");if(v){document.hidden?v.pause():v.play().catch(()=>{});}} if(!document.hidden) poll();});
+function colours(){const m=new Map();for(const s of (S&&S.shots)||[]){if(s.place&&!m.has(s.place))m.set(s.place,PAL[m.size%PAL.length]);}return m;}
+function colourOf(n){const sh=(S&&S.shots||[])[n-1];const m=colours();return (sh&&m.get(sh.place))||"#9aa6c4";}
+function label(n){const sh=(S&&S.shots||[])[n-1];return sh?sh.id:("hop "+n);}
+function hopOf(n){return ((S&&S.hops)||[]).find(h=>h.hop===n);}
+function openHop(n){
+  const h=hopOf(n); if(!h) return; sel=n;
+  const v=$("pvideo"); v.src="/h3_ref_chain/hop_clip?key="+encodeURIComponent(h.key); v.muted=false;
+  $("ptitle").textContent=n+" · "+label(n); $("player").hidden=false; v.play().catch(()=>{});
+  for(const [k,t] of tiles) t.classList.toggle("sel",k===n);
+  $("player").scrollIntoView({behavior:"smooth",block:"start"});
+}
+$("close").onclick=()=>{const v=$("pvideo");v.pause();v.removeAttribute("src");v.load();$("player").hidden=true;for(const t of tiles.values())t.classList.remove("sel");};
+$("prev").onclick=()=>{for(let n=sel-1;n>=1;n--) if(hopOf(n)) return openHop(n);};
+$("next").onclick=()=>{for(let n=sel+1;n<=(S?S.of:0);n++) if(hopOf(n)) return openHop(n);};
+$("pvideo").addEventListener("ended",()=>$("next").click());
+function tile(n){
+  let t=tiles.get(n); if(t) return t;
+  t=document.createElement("button"); t.type="button"; t.className="tile";
+  const sh=document.createElement("div"); sh.className="shot";
+  const ph=document.createElement("span"); ph.className="ph"; ph.textContent="waiting";
+  const no=document.createElement("span"); no.className="no"; no.textContent=n;
+  const m=document.createElement("div"); m.className="meta";
+  const b=document.createElement("b"); const tt=document.createElement("span"); tt.className="t";
+  m.append(b,tt); sh.append(ph,no); t.append(sh,m); t.onclick=()=>openHop(n);
+  const g=$("grid"); const after=[...tiles.keys()].filter(k=>k>n).sort((a,b)=>a-b)[0];
+  g.insertBefore(t, after?tiles.get(after):null); tiles.set(n,t); io&&io.observe(t); return t;
+}
+async function poll(){
+  try{ const r=await fetch("/h3_ref_chain/monitor/state",{cache:"no-store"}); S=await r.json(); $("err").hidden=true; }
+  catch(e){ $("err").hidden=false; $("err").textContent="Can't reach ComfyUI. Is it running, and (from another device) started with --listen?"; return; }
+  const of=S.of||0, hops=S.hops||[], last=hops.length?hops[hops.length-1].hop:0, running=!!S.running;
+  const busy=running&&last<of;
+  const title=S.title||"";
+  if(title){$("title").replaceChildren();const a=document.createElement("span");a.className="t";a.textContent=title;$("title").append(a,document.createElement("br"),busy?"rendering":(of&&last>=of?"rendered":"render"));document.title=title+" · Render Monitor";}
+  else if(of){$("title").replaceChildren();const a=document.createElement("span");a.className="t";a.textContent=of+" hops";$("title").append(a,document.createElement("br"),busy?"rendering":"rendered");}
+  const portrait=hops.length&&hops[0].h>hops[0].w;
+  $("grid").classList.toggle("portrait",!!portrait);
+  if(hops.length){const h0=hops[0];$("sub").textContent=of+" hops · "+h0.w+"×"+h0.h+" · "+(h0.pin_mech||"chain")+". Each tile starts looping as soon as its hop is finished. Tap one to watch it with sound.";}
+  const pill=$("pill");
+  if(busy){pill.className="pill run";pill.textContent="RENDERING";}
+  else if(of&&last>=of){pill.className="pill done";pill.textContent="DONE";}
+  else {pill.className="pill idle";pill.textContent=running?"RUNNING":"IDLE";}
+  $("hop").textContent=of?(Math.min(last+(busy?1:0),of)+" / "+of):"–";
+  $("upd").textContent=hhmm(S.now);
+  let per=null;
+  if(hops.length>=2){const a=hops[0],b=hops[hops.length-1];const f=hops.slice(1).reduce((x,h)=>x+h.frames,0);per=(b.written-a.written)/Math.max(1,f);}
+  if(per){const avgF=hops.reduce((x,h)=>x+h.frames,0)/hops.length;$("per").textContent=Math.max(1,Math.round(per*avgF/60))+" min";$("eta").textContent=busy?hhmm(S.last_written+per*avgF*(of-last)):(of&&last>=of?"done":"–");}
+  else {$("per").textContent="–";$("eta").textContent=busy?"after hop 2":"–";}
+  const strip=$("strip"); strip.replaceChildren();
+  for(let i=1;i<=of;i++){const d=document.createElement("div");d.className="seg"+(i<=last?" done":(busy&&i===last+1?" now":""));d.style.setProperty("--c",colourOf(i));
+    const sh=(S.shots||[])[i-1]; d.style.flex=(sh&&parseFloat(sh.dur))?parseFloat(sh.dur)+" 1 0":"1 1 0";
+    const k=document.createElement("i");k.textContent=i;d.appendChild(k);d.title=i+" · "+label(i);strip.appendChild(d);}
+  const leg=$("legend"); leg.replaceChildren();
+  for(const [p,c] of colours()){const s=document.createElement("span");s.style.setProperty("--c",c);s.textContent=p;leg.appendChild(s);}
+  for(let i=1;i<=of;i++) tile(i);
+  for(const [n,t] of [...tiles]){ if(n>of){io&&io.unobserve(t);t.remove();tiles.delete(n);} }
+  for(let n=1;n<=of;n++){
+    const t=tiles.get(n), sh=t.querySelector(".shot"), h=hopOf(n), s=(S.shots||[])[n-1];
+    t.style.setProperty("--c",colourOf(n)); t.classList.toggle("now",busy&&n===last+1);
+    t.querySelector(".meta b").textContent=(s&&s.place?s.place+" · ":"")+label(n);
+    if(h){
+      t.querySelector(".meta .t").textContent=hhmm(h.written)+" · "+(h.frames/h.fps).toFixed(1)+" s";
+      if(sh.dataset.key!==h.key){
+        sh.dataset.key=h.key; sh.querySelectorAll("video").forEach(v=>v.remove());
+        const v=document.createElement("video"); v.muted=true; v.loop=true; v.playsInline=true; v.preload="none";
+        v.src="/h3_ref_chain/hop_clip?key="+encodeURIComponent(h.key);
+        sh.insertBefore(v,sh.firstChild); sh.querySelector(".ph").hidden=true;
+        if(!document.hidden) v.play().catch(()=>{});
+      }
+    } else {
+      sh.dataset.key=""; sh.querySelectorAll("video").forEach(v=>v.remove());
+      const ph=sh.querySelector(".ph"); ph.hidden=false; ph.textContent=(busy&&n===last+1)?"rendering…":"waiting";
+      t.querySelector(".meta .t").textContent=s&&s.dur?s.dur:"";
+    }
+  }
+}
+poll(); setInterval(()=>{ if(!document.hidden) poll(); },15000);
+</script></body></html>

@@ -709,15 +709,15 @@ function createSandTieCore(node, {
     const writerModeSel = el("select", "h3e-select");
     writerModeSel.style.marginLeft = "auto";
     writerModeSel.style.maxWidth = "116px";
-    writerModeSel.title = "Writer Connection Mode (LM Studio / nInfer)";
-    for (const [bid, blbl] of [["lmstudio", "LM Studio"], ["ninfer", "nInfer"]]) {
+    writerModeSel.title = "Writer connection: Local server (any OpenAI-compatible: LM Studio, llama-server, Ollama, KoboldCpp, vLLM) or nInfer";
+    for (const [bid, blbl] of [["lmstudio", "Local server"], ["ninfer", "nInfer"]]) {
         const o = el("option", null, blbl);
         o.value = bid;
         writerModeSel.appendChild(o);
     }
     writerModeSel.addEventListener("change", async () => {
         const nextBack = writerModeSel.value;
-        const lbl = nextBack === "ninfer" ? "nInfer" : "LM Studio";
+        const lbl = nextBack === "ninfer" ? "nInfer" : "Local server";
         cfgBackSel.value = nextBack;
         cfgPathRow.hidden = nextBack !== "ninfer";
         statusPill.textContent = `Checking ${lbl}…`;
@@ -751,7 +751,7 @@ function createSandTieCore(node, {
     cfgBackSel.style.maxWidth = "125px";
     cfgBackSel.addEventListener("change", async () => {
         const nextBack = cfgBackSel.value;
-        const lbl = nextBack === "ninfer" ? "nInfer" : "LM Studio";
+        const lbl = nextBack === "ninfer" ? "nInfer" : "Local server";
         writerModeSel.value = nextBack;
         cfgPathRow.hidden = nextBack !== "ninfer";
         statusPill.textContent = `Checking ${lbl}…`;
@@ -2902,7 +2902,7 @@ function createSandTieCore(node, {
             cfgBackSel.textContent = "";
             const backs = Array.isArray(j.backends) && j.backends.length
                 ? j.backends
-                : [{ id: "lmstudio", label: "LM Studio" }, { id: "ninfer", label: "nInfer" }];
+                : [{ id: "lmstudio", label: "Local server" }, { id: "ninfer", label: "nInfer" }];
             for (const b of backs) {
                 const o = el("option", null, b.label || b.id);
                 o.value = b.id;
@@ -2914,7 +2914,7 @@ function createSandTieCore(node, {
             cfgModelInp.value = j.model || "";
             cfgModelInp.placeholder = cfgBackSel.value === "ninfer"
                 ? "model id (auto after Start; blank = auto)"
-                : "model id (optional on LM Studio)";
+                : "model id (optional if your server has one loaded)";
             cfgUnloadChk.checked = j.unload_on_run !== false;
             const curPaths = (j.server_paths && j.server_paths[cfgBackSel.value]) || {};
             const hasProg = (backs.find((b) => b.id === cfgBackSel.value)?.program) || (cfgBackSel.value === "ninfer");
@@ -3121,7 +3121,8 @@ function createSandTieCore(node, {
         if (!j.ok) return say(j.error || "Video extractor failed", "error");
         j._video_file = vf;
         extractedVideoData = j;
-        extractedBadge.textContent = `${j.duration_s}s · ${(j.beats || []).length} beats`;
+        const madeTag = j.made_of ? ` · ${j.made_of}` : "";
+        extractedBadge.textContent = `${j.duration_s}s · ${(j.beats || []).length} beats${madeTag}`;
         extractedBadge.className = "h3st-pill h3st-pill-ok";
         if (j.shot1 || (j.beats || []).length) {
             pushUndoSnapshot();
@@ -3129,7 +3130,7 @@ function createSandTieCore(node, {
             planBox.value = [s1Clean ? `[Shot 1] ${s1Clean}` : "", ...(j.beats || [])].filter(Boolean).join("\n");
             saveDraft();
         }
-        say(`Extracted ${(j.beats || []).length} timed beats from ${vf}.`, "hint");
+        say(`Extracted ${(j.beats || []).length} timed beats (${j.made_of || "live_action"}) from ${vf}.`, "hint");
     }
 
     async function runSandTie(stage) {

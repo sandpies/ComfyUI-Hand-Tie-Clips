@@ -15,6 +15,11 @@ python scripts/build_graph.py TEMPLATE.json OUT.json \
     --save-prefix video/HANDTIECLIPS/<project> --sla-heavy --title "<project> (MV)"
 ```
 
+- **The node's own docs are the authority** (its tooltips and `prompt_pack/SYSTEM_PROMPT.md`).
+  Set every widget you rely on here: a reused graph keeps the last project's `establish` and
+  `prompt`.
+- `--sla-heavy` sets `H3SLAAttention` `reference_protection` to Heavy Enforcement when the graph
+  has that node; MVs and films with sheets want it.
 - **The audit gate:** with `--shot`/`--ref` the script runs `check_plan.py` on the plan with the
   map and writes nothing while any error, warning or lint is unresolved. Errors must be fixed.
   Anything else is fixed or listed in `waivers.json` as `{"match": "text of the line", "why": "the
@@ -38,7 +43,13 @@ python scripts/build_graph.py TEMPLATE.json OUT.json \
 1. `dry_run = on`: builds every prompt without rendering; read them on the node's `info` output.
 2. `render_through = <a few hops>`: a short first render covering the first join, every character
    and the lip sync.
-3. The full run. Give the time up front (a 15 s hop at 576p takes roughly 6-9 minutes on a 32 GB
+3. **Watching from elsewhere.** The node serves a phone-friendly monitor at
+   `http://<pc-ip>:8188/h3_ref_chain/monitor`: hop strip, estimated finish, and each finished hop
+   looping, read from the hop cache (needs `cache_hops=on`; works whoever queued the run). Tell the
+   user it needs ComfyUI started with `--listen`, which opens all of ComfyUI to their home network,
+   and that away from home the safe route is a private network such as Tailscale, never a
+   forwarded port. Inside ComfyUI, the R2 Timeline's "wall" chip shows the same looping tiles.
+4. The full run. Give the time up front (a 15 s hop at 576p takes roughly 6-9 minutes on a 32 GB
    card). Once the user has queued it, it is a pass or a fail; never plan a re-render of the whole
    piece to fix a few seconds.
 

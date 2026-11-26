@@ -690,7 +690,9 @@ def extract_ethnicity_phrase(text: str, brief: str = "") -> str:
     for src in (text or "", brief or ""):
         if not src:
             continue
-        m_anc = re.search(r"Anchor:\s*([^.;]+)", src, re.I)
+        # The identity sentence: marked "Anchor:" by the scanner, or (marker already
+        # stripped by clean_subject_scan_desc) simply the caption's first sentence.
+        m_anc = re.search(r"Anchor:\s*([^.;]+)", src, re.I) or re.match(r"\s*([^.;]+)", src)
         if m_anc:
             anc_body = m_anc.group(1).strip()
             m_eth = _ETHNICITY_RX.search(anc_body)
@@ -778,7 +780,13 @@ def clean_subject_scan_desc(desc: str) -> str:
         t = re.sub(r"^(?:set|prop):\s*", "", t, flags=re.I).strip()
     cleaned = _STUDIO_BACKDROP_RX.sub(" ", t)
     cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
-    return "" if is_studio_backdrop_text(cleaned) else (cleaned or t)
+    if is_studio_backdrop_text(cleaned):
+        return ""
+    # "Anchor:" is the scanner's internal marker (it keeps person captions from being
+    # read as empty-studio scans, vision_cv.is_studio_backdrop_scan). It is not prose:
+    # left in, writers copy it into subject_definitions. Dropped here, after the
+    # studio checks that rely on it; the identity parsers fall back without it.
+    return re.sub(r"\bAnchor:\s*", "", cleaned or t, flags=re.I).strip()
 
 
 def extract_char_name_from_tag(tag: str, box_name: str = "") -> str:

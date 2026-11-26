@@ -21,78 +21,28 @@ import torch
 
 from . import media as _media
 from . import refmod as _refmod
+from comfy_api.latest import io
 
 TAG = "HandTieClips"
 
 
-class HTCRefModBuilder:
-    DEPRECATED = True
+def _v3_accepted(fn, kwargs):
+    """The kwargs a V1 hook's signature accepts (all of them if it takes **kw)."""
+    import inspect as _inspect
+    params = _inspect.signature(fn).parameters
+    if any(p.kind is p.VAR_KEYWORD for p in params.values()):
+        return dict(kwargs)
+    return {k: v for k, v in kwargs.items() if k in params}
 
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "vae": ("VAE", {"tooltip": "The H3 video VAE."}),
-                "name": ("STRING", {"default": "hero",
-                    "tooltip": ("File name for the RefMod under models/refmods. Pick it on a REFS row by "
-                                "this name.")}),
-            },
-            "optional": {
-                "mod_plan": ("STRING", {"default": "", "multiline": True,
-                    "tooltip": "The stills, clip and voice for this RefMod, written by the panel."}),
-                "images": ("IMAGE", {"tooltip": "Optional still to build from, instead of the panel."}),
-                "video": ("IMAGE", {"tooltip": "Optional clip to build from, instead of the panel."}),
-                "max_tokens": ("INT", {"default": 0, "min": 0, "max": 1048576,
-                    "tooltip": ("Memory guard. Above this, near-duplicate frames are dropped. 0 is no "
-                                "limit.")}),
-                "subfolder": ("STRING", {"default": "",
-                    "tooltip": "Optional folder under models/refmods."}),
-                "save": ("BOOLEAN", {"default": True,
-                    "tooltip": "Write the file. Off only reports the name."}),
-                "build": (["stop", "start"], {"default": "stop",
-                    "tooltip": ("start builds the RefMod on this queue. stop leaves it alone, so the chain "
-                                "can run without rebuilding.")}),
-                "description": ("STRING", {"default": "",
-                    "tooltip": ("One sentence describing what the RefMod shows. Fills an empty description "
-                                "on a REFS row.")}),
-                "subject_mask": (["off", "auto_rembg", "auto_sam", "auto"], {"default": "off",
-                    "tooltip": ("auto_rembg or auto_sam cuts the subject out of each source and fills/blurs "
-                                "the background before encoding. A wired mask wins.")}),
-                "background_retention": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0,
-                    "step": 0.05,
-                    "tooltip": "How much background a mask keeps. 0 removes/blurs it; 1 keeps it all."}),
-                "layout": (["separate_pictures", "stacked_video"], {"default": "separate_pictures",
-                    "tooltip": ("separate_pictures (v5 bundle, recommended): each still keeps its own natural "
-                                "aspect ratio and binds as an independent <Picture N> (never eats a <Video> slot). "
-                                "stacked_video: concatenates sources onto one canvas along time.")}),
-                "role": (list(_refmod.CONCEPT_ROLES), {"default": "identity",
-                    "tooltip": "What this RefMod represents (identity, wardrobe, bodyshape, helper, pose_motion, background, style)."}),
-                "default_step_curve": (list(_refmod.STEP_CURVES), {"default": "full",
-                    "tooltip": "Default denoising curve (full, early_lock for helpers/bodyshape, late_detail, fade, mid_peak)."}),
-                "fit_mode": (["crop", "pad", "stretch"], {"default": "crop",
-                    "tooltip": "How mismatched ratios fit a shared video canvas (crop preserves proportions, never squishes)."}),
-                "background_mode": (["blur_bg", "pull_push", "neutral_gray"], {"default": "blur_bg",
-                    "tooltip": "How masked background pixels are handled: blur_bg (zero color halos), pull_push, or neutral_gray."}),
-                "crop_margin": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 2.5, "step": 0.05,
-                    "tooltip": "Optional subject-centered auto-crop margin when masking is active (e.g. 1.6x; 0 = keep full framing)."}),
-                "mask": ("MASK", {"tooltip": ("Optional mask of the subject, white = keep. One for all sources, or one "
-                                              "per source.")}),
-                "audio": ("AUDIO", {"tooltip": "Optional voice/sound reference to embed in a v5 bundle (needs audio_vae)."}),
-                "audio_vae": ("VAE", {"tooltip": "Optional H3 Audio VAE to pre-encode the RefMod voice into a portable v5 bundle."}),
-            },
-        }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("name",)
-    FUNCTION = "build"
+class _HTCRefModBuilderImpl:
+
+
     # Executes on its own, the way PlagueKind's RefMod Save node does.
     # Without this the builder only runs when `name` feeds a node that is
     # itself executed, so a queue with nothing wired to it silently does
     # nothing and reads as "the build did not happen". Safe, because
     # `build=stop` returns before the VAE is touched.
-    OUTPUT_NODE = True
-    CATEGORY = "Hand Tie Clips"
-    DESCRIPTION = "Retired from the node menu — use the RefMod tab inside HandTieClips. Kept for legacy workflows & Studio background builds."
 
     @classmethod
     def IS_CHANGED(cls, mod_plan="", build="stop", **_kw):
@@ -424,6 +374,179 @@ class HTCRefModBuilder:
             return (written,)
         print(f"[{TAG}] RefMod {stem} was not saved (save is off)", flush=True)
         return (_refmod._clean_name(stem),)
+
+
+class HTCRefModBuilder(io.ComfyNode, _HTCRefModBuilderImpl):
+    """V3 schema for HTCRefModBuilder; the implementation lives in _HTCRefModBuilderImpl.
+
+    Also inherits _HTCRefModBuilderImpl so existing callers of the V1 API (HTCRefModBuilder().build(...),
+    HTCRefModBuilder.<helper>) keep working; core sees only the V3 hooks below."""
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id='HTCRefModBuilder',
+            display_name='HTC RefMod Builder',
+            category="Hand Tie Clips",
+            description="Retired from the node menu — use the RefMod tab inside HandTieClips. Kept for legacy workflows & Studio background builds.",
+            is_output_node=True,
+            is_deprecated=True,
+            inputs=[
+                io.Vae.Input('vae', tooltip="The H3 video VAE."),
+                io.String.Input(
+                    'name',
+                    default="hero",
+                    tooltip="File name for the RefMod under models/refmods. Pick it on a REFS row by "
+                                "this name.",
+                ),
+                io.String.Input(
+                    'mod_plan',
+                    optional=True,
+                    default="",
+                    multiline=True,
+                    tooltip="The stills, clip and voice for this RefMod, written by the panel.",
+                ),
+                io.Image.Input(
+                    'images',
+                    optional=True,
+                    tooltip="Optional still to build from, instead of the panel.",
+                ),
+                io.Image.Input(
+                    'video',
+                    optional=True,
+                    tooltip="Optional clip to build from, instead of the panel.",
+                ),
+                io.Int.Input(
+                    'max_tokens',
+                    optional=True,
+                    default=0,
+                    min=0,
+                    max=1048576,
+                    tooltip="Memory guard. Above this, near-duplicate frames are dropped. 0 is no "
+                                "limit.",
+                ),
+                io.String.Input(
+                    'subfolder',
+                    optional=True,
+                    default="",
+                    tooltip="Optional folder under models/refmods.",
+                ),
+                io.Boolean.Input(
+                    'save',
+                    optional=True,
+                    default=True,
+                    tooltip="Write the file. Off only reports the name.",
+                ),
+                io.Combo.Input(
+                    'build',
+                    options=["stop", "start"],
+                    optional=True,
+                    default="stop",
+                    tooltip="start builds the RefMod on this queue. stop leaves it alone, so the chain "
+                                "can run without rebuilding.",
+                ),
+                io.String.Input(
+                    'description',
+                    optional=True,
+                    default="",
+                    tooltip="One sentence describing what the RefMod shows. Fills an empty description "
+                                "on a REFS row.",
+                ),
+                io.Combo.Input(
+                    'subject_mask',
+                    options=["off", "auto_rembg", "auto_sam", "auto"],
+                    optional=True,
+                    default="off",
+                    tooltip="auto_rembg or auto_sam cuts the subject out of each source and fills/blurs "
+                                "the background before encoding. A wired mask wins.",
+                ),
+                io.Float.Input(
+                    'background_retention',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=1.0,
+                    step=0.05,
+                    tooltip="How much background a mask keeps. 0 removes/blurs it; 1 keeps it all.",
+                ),
+                io.Combo.Input(
+                    'layout',
+                    options=["separate_pictures", "stacked_video"],
+                    optional=True,
+                    default="separate_pictures",
+                    tooltip="separate_pictures (v5 bundle, recommended): each still keeps its own natural "
+                                "aspect ratio and binds as an independent <Picture N> (never eats a <Video> slot). "
+                                "stacked_video: concatenates sources onto one canvas along time.",
+                ),
+                io.Combo.Input(
+                    'role',
+                    options=list(_refmod.CONCEPT_ROLES),
+                    optional=True,
+                    default="identity",
+                    tooltip="What this RefMod represents (identity, wardrobe, bodyshape, helper, pose_motion, background, style).",
+                ),
+                io.Combo.Input(
+                    'default_step_curve',
+                    options=list(_refmod.STEP_CURVES),
+                    optional=True,
+                    default="full",
+                    tooltip="Default denoising curve (full, early_lock for helpers/bodyshape, late_detail, fade, mid_peak).",
+                ),
+                io.Combo.Input(
+                    'fit_mode',
+                    options=["crop", "pad", "stretch"],
+                    optional=True,
+                    default="crop",
+                    tooltip="How mismatched ratios fit a shared video canvas (crop preserves proportions, never squishes).",
+                ),
+                io.Combo.Input(
+                    'background_mode',
+                    options=["blur_bg", "pull_push", "neutral_gray"],
+                    optional=True,
+                    default="blur_bg",
+                    tooltip="How masked background pixels are handled: blur_bg (zero color halos), pull_push, or neutral_gray.",
+                ),
+                io.Float.Input(
+                    'crop_margin',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=2.5,
+                    step=0.05,
+                    tooltip="Optional subject-centered auto-crop margin when masking is active (e.g. 1.6x; 0 = keep full framing).",
+                ),
+                io.Mask.Input(
+                    'mask',
+                    optional=True,
+                    tooltip="Optional mask of the subject, white = keep. One for all sources, or one "
+                                              "per source.",
+                ),
+                io.Audio.Input(
+                    'audio',
+                    optional=True,
+                    tooltip="Optional voice/sound reference to embed in a v5 bundle (needs audio_vae).",
+                ),
+                io.Vae.Input(
+                    'audio_vae',
+                    optional=True,
+                    tooltip="Optional H3 Audio VAE to pre-encode the RefMod voice into a portable v5 bundle.",
+                ),
+            ],
+            outputs=[
+                io.String.Output(display_name='name'),
+            ],
+        )
+
+    @classmethod
+    def execute(cls, **kwargs):
+        result = _HTCRefModBuilderImpl().build(**kwargs)
+        if isinstance(result, dict):
+            return io.NodeOutput.from_dict(result)
+        return io.NodeOutput(*result) if result is not None else io.NodeOutput()
+
+    @classmethod
+    def fingerprint_inputs(cls, **kwargs):
+        return _HTCRefModBuilderImpl.IS_CHANGED(**_v3_accepted(_HTCRefModBuilderImpl.IS_CHANGED, kwargs))
 
 
 NODE_CLASS_MAPPINGS = {"HTCRefModBuilder": HTCRefModBuilder}

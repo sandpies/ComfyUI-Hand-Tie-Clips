@@ -1,6 +1,6 @@
 # Pipelines: who does the hands-on work
 
-The stages, stop points, hard rules and [before every render](../SKILL.md#before-every-render)
+The stages, stop points, rules and [before every render](../SKILL.md#before-every-render)
 questions are the same for every model. What changes is **who runs the scripts, how much of the
 skill fits in the model's context, and how work moves between the model and ComfyUI.** A smaller
 model does not get looser rules; it gets smaller steps and the user's hands.
@@ -69,15 +69,15 @@ You can run the scripts; your context and your output length are the limits. Eve
    | Stage | Read |
    |---|---|
    | 2-3 Song, measure | `song.md` |
-   | 4 Story & cast | `story_cast_plates.md` Story, Cast; film: `film.md`; `status.md` "Unproven" only, to pick the two or three rules this piece tests |
+   | 4 Treatment, story & cast | `story_cast_plates.md` Story, Cast; MV: `mv.md` section 1; film: `film.md`; `status.md` "Unproven" only, to pick the two or three rules this piece tests |
    | 5 Plates | `story_cast_plates.md` from "Plates" to the end |
    | 6 Fit | `beats.md` sections 1-2 |
    | 7 Map | `directing.md` "The scene map" |
    | 8 Sheet | `continuity.md` sections 1-7 |
-   | 9 Plans | `beats.md` sections 3-5, `camera.md` "Writing shots" and "Writing the move", `performance.md`; MV: `continuity.md` 8; adult: `adult.md` |
+   | 9 Plans | `beats.md` sections 3-5, `camera.md` "Writing shots" and "Writing the move", `performance.md`; MV: `mv.md` sections 2-3, `continuity.md` 8; one take: `one_take.md`; adult: `adult.md` |
    | 10 Check | `beats.md` section 6 |
    | 11-12 Graph, retakes | `graph_render_retake.md` |
-   | 13 Finish | `camera.md` "Transitions" |
+   | 13 Finish | `post.md`, `camera.md` "Transitions" |
    | any | `techniques.md`: only the heading for the one technique you are looking up |
 
    Find a section by its heading (`rg -n "^## " <page>`) and read from there to the next `## `.
@@ -102,7 +102,7 @@ cannot open files, so they paste each page you need. Your job is to make every r
 short and exact.
 
 **Setup.** The user loads `SKILL.md` and this page as the system prompt (or pastes them as the
-first message). About 10k tokens; give the model at least 16k context, 32k is comfortable.
+first message). About 8k tokens; give the model at least 16k context, 32k is comfortable.
 
 **Every stop ends with a hand-off block,** after what the user reads, and then the state block:
 

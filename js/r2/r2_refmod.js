@@ -238,7 +238,7 @@ export function createRefModPane(node, { onChange } = {}) {
         invalidateRefmods(false);
     });
 
-    const freeVramBtn = button("☕ Free LLM VRAM", "Unload nInfer / LM Studio writer model before running Qwen-Viggle or H3 VAE", async () => {
+    const freeVramBtn = button("☕ Free LLM VRAM", "Unload the local writer model (nInfer or local server) before Qwen-Viggle or H3 VAE", async () => {
         setBanner(extStatus, "Unloading LLM writer from VRAM...", "hint");
         await unloadWriterForGpu();
         setBanner(extStatus, "Writer unloaded — VRAM ready for Qwen-Viggle & RefMod baking.", "hint");

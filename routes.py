@@ -59,6 +59,8 @@ HOP_SPRITE_ROUTE = "/h3_ref_chain/hop_sprite"
 HOP_CACHE_ROUTE = "/h3_ref_chain/hop_cache"
 HOP_CLIP_ROUTE = "/h3_ref_chain/hop_clip"
 SEAM_CLIP_ROUTE = "/h3_ref_chain/seam_clip"
+MONITOR_ROUTE = "/h3_ref_chain/monitor"
+MONITOR_STATE_ROUTE = "/h3_ref_chain/monitor/state"
 MV_CAPS_ROUTE = "/h3_ref_chain/mv/capabilities"
 MV_IDEATE_ROUTE = "/h3_ref_chain/mv/ideate"
 MV_SONGMAP_ROUTE = "/h3_ref_chain/mv/song_map"
@@ -628,7 +630,7 @@ def register():
             else:
                 lbl = _llm.backend_spec(backend)["label"]
                 hint = ("press Start in Studio's LLM bar" if backend == "ninfer"
-                        else "start LM Studio's server and load a model")
+                        else "start your local server and load a model")
                 return web.json_response({"ok": False, "error": f"{lbl} is offline — {hint}."})
 
         try:
@@ -2182,8 +2184,6 @@ def register():
                             headers={"X-Cells": str(hit[1]),
                                      "Cache-Control": "max-age=3600"})
 
-    _clip_locks = {}
-
     async def _serve_clip(name, build, *keys):
         """Encode once into the store's preview folder, then serve the file.
 
@@ -2191,19 +2191,17 @@ def register():
         The folder sits inside the hop store, so it is wiped with it.
         """
         import asyncio
+        from . import strip as _strip
         hs = _hop_store(*keys)
         if hs is None:
             return None
-        out_dir = _os.path.join(hs.root, "previews")
-        _os.makedirs(out_dir, exist_ok=True)
-        path = _os.path.join(out_dir, name + ".mp4")
+        path = _strip.preview_path(hs, name)
         if not _os.path.exists(path):
-            lock = _clip_locks.setdefault(path, asyncio.Lock())
-            async with lock:
-                if not _os.path.exists(path):
-                    ok = await _run(lambda: build(hs, path))
-                    if not ok:
-                        return None
+            # The small preview pool (strip.PREVIEW_WORKERS), shared with the
+            # background prewarm: a wall of tiles queues instead of pegging every core.
+            fut = _strip.submit_preview(path, lambda p: build(hs, p))
+            if not await asyncio.wrap_future(fut):
+                return None
         return web.FileResponse(path, headers={"Content-Type": "video/mp4"})
 
     @instance.routes.get(HOP_CLIP_ROUTE)
@@ -2216,19 +2214,31 @@ def register():
             return web.json_response({"ok": False, "error": "bad key"}, status=400)
 
         def build(hs, path):
-            frames = hs.frames(key, _strip.CLIP_H)
-            sound = hs.audio(key)
-            if frames is None or sound is None:
-                return False
-            _strip.encode_clip(frames, sound[0], sound[1], path, fps=hs.fps)
-            return True
+            return _strip.build_hop_clip(hs, key, path)
 
         try:
-            resp = await _serve_clip("hop_" + key, build, key)
+            resp = await _serve_clip(_strip.hop_clip_name(key), build, key)
         except Exception as exc:  # noqa: BLE001
             print(f"[{TAG}] hop_clip failed for {key[:8]}: {exc!r}", flush=True)
             return web.json_response({"ok": False, "error": str(exc)}, status=500)
         return resp or _missing(f"hop {key[:8]}")
+
+    # -- render monitor: a phone-friendly page that follows a run from the hop cache --
+    # (works whoever queued the run; open http://<pc>:8188/h3_ref_chain/monitor with --listen)
+    @instance.routes.get(MONITOR_ROUTE)
+    async def _monitor_page(request):
+        from . import monitor as _monitor
+        return web.Response(text=_monitor.PAGE, content_type="text/html")
+
+    @instance.routes.get(MONITOR_STATE_ROUTE)
+    async def _monitor_state(request):
+        from . import monitor as _monitor
+        try:
+            out = await _run(_monitor.run_state)
+            out["links"] = _monitor.links()
+        except Exception as exc:  # noqa: BLE001
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+        return web.json_response(out)
 
     @instance.routes.get(SEAM_CLIP_ROUTE)
     async def _seam_clip(request):
@@ -2498,7 +2508,7 @@ def register():
             else:
                 lbl = _llm.backend_spec(backend)["label"]
                 hint = ("press Start in Studio's LLM bar" if backend == "ninfer"
-                        else "start LM Studio's server and load a model")
+                        else "start your local server and load a model")
                 return web.json_response({"ok": False, "error": f"{lbl} is offline — {hint}."})
 
         try:
@@ -2536,6 +2546,7 @@ def register():
                 lyrics_only=bool(body.get("lyrics_only")),
                 existing_style=str(body.get("song_style") or ""),
                 existing_title=str(body.get("title") or ""),
+                backdrop=str(body.get("backdrop") or "black"),
             )
             if not conn.get("keep_warm"):
                 try:

@@ -36,7 +36,44 @@ export function createStage(node, { getShots, getActive, onSelect } = {}) {
         const tab = node._h3R2?.root?.querySelector('[data-r2-tab="timeline"]');
         tab?.click();
     });
-    head.append(fitChip, fpsChip, expandBtn);
+    const wallBtn = el("button", "r2-chip r2-wallbtn", "▦ wall");
+    wallBtn.type = "button";
+    wallBtn.title = "Wall: every rendered hop looping at once (click a tile to open it)";
+    // Pop the wall out into the render monitor page (monitor.py): a browser tab
+    // with the desktop layout, or a phone-sized window. The phone button also
+    // copies the address a phone on the same network can open (needs --listen).
+    const MONITOR = "/h3_ref_chain/monitor";
+    // The offline docs/live demo serves the page beside itself (a pop-out at the
+    // site root would leave its service worker's scope); ComfyUI never sets this.
+    const MONITOR_PAGE = globalThis.HTC_MONITOR_PAGE || MONITOR;
+    const popDesk = el("button", "r2-chip r2-wallbtn r2-popbtn", "\u29c9 browser");
+    popDesk.type = "button";
+    popDesk.title = "Open the wall in a browser tab (desktop layout; click a hop to play it with sound)";
+    popDesk.addEventListener("click", () => {
+        window.open(`${MONITOR_PAGE}?view=desktop`, "htc_monitor_desktop");
+    });
+    const popPhone = el("button", "r2-chip r2-wallbtn r2-popbtn", "\u{1F4F1} phone");
+    popPhone.type = "button";
+    popPhone.title = "Open the phone view in a small window and copy its link for your phone";
+    popPhone.addEventListener("click", async () => {
+        window.open(`${MONITOR_PAGE}?view=phone`, "htc_monitor_phone", "popup,width=430,height=900");
+        let link = null;
+        let why = "";
+        try {
+            const st = await (await fetch(`${MONITOR}/state`)).json();
+            link = st?.links?.lan ? `${st.links.lan}${MONITOR}?view=phone` : null;
+            if (!link) why = "start ComfyUI with --listen to open it on your phone";
+        } catch (e) { why = "monitor not reachable"; }
+        if (link) {
+            try { await navigator.clipboard.writeText(link); why = "link copied"; }
+            catch (e) { why = link; }
+        }
+        popPhone.title = link ? `Phone link: ${link}` : why;
+        const was = "\u{1F4F1} phone";
+        popPhone.textContent = why.length > 34 ? "\u{1F4F1} see tooltip" : `\u{1F4F1} ${why}`;
+        setTimeout(() => { popPhone.textContent = was; }, 3500);
+    });
+    head.append(popDesk, popPhone, wallBtn, fitChip, fpsChip, expandBtn);
     root.appendChild(head);
 
     /* -- body ------------------------------------------------------------- */
@@ -102,6 +139,81 @@ export function createStage(node, { getShots, getActive, onSelect } = {}) {
 
     const film = el("div", "r2-film");
     root.appendChild(film);
+
+    /* -- wall: every cached hop looping, muted; only visible tiles play ---- */
+    const WALL_PROP = "h3_r2_wall";
+    const wall = el("div", "r2-wall");
+    wall.hidden = true;
+    root.insertBefore(wall, film);
+    const wallIO = typeof IntersectionObserver === "function"
+        ? new IntersectionObserver((es) => {
+            for (const e of es) {
+                const v = e.target.querySelector("video");
+                if (!v) continue;
+                // A tile's clip is requested only once it is on screen, so the server
+                // builds the visible ones first instead of the whole wall at once.
+                if (e.isIntersecting && !v.getAttribute("src") && v.dataset.src) v.src = v.dataset.src;
+                if (e.isIntersecting && !document.hidden && !wall.hidden) v.play?.().catch(() => {});
+                else v.pause?.();
+            }
+        }, { root: wall, threshold: 0.15 })
+        : null;
+    function wallVideos() { return Array.from(wall.querySelectorAll("video")); }
+    function wallPauseAll() { wallVideos().forEach((v) => v.pause?.()); }
+    const onVis = () => { if (document.hidden || wall.hidden) wallPauseAll(); else buildWall(); };
+    document.addEventListener("visibilitychange", onVis);
+    function setWall(on) {
+        node.properties ??= {};
+        node.properties[WALL_PROP] = !!on;
+        wall.hidden = !on;
+        body.hidden = !!on;
+        wallBtn.classList.toggle("on", !!on);
+        if (on) { stop(); buildWall(); } else { wallPauseAll(); }
+    }
+    function buildWall() {
+        if (wall.hidden || !root.isConnected) return;
+        const list = currentShots();
+        wall.classList.toggle("portrait", !nodeResolutionInfo(node).isLandscape && !nodeResolutionInfo(node).isSquare);
+        while (wall.children.length > list.length) {
+            const last = wall.lastElementChild;
+            wallIO?.unobserve(last);
+            last.querySelector("video")?.pause?.();
+            last.remove();
+        }
+        list.forEach((s, i) => {
+            let t = wall.children[i];
+            if (!t) {
+                t = el("button", "r2-wtile");
+                t.type = "button";
+                t.append(el("span", "ph", "not rendered"), el("span", "no", String(i + 1)), el("span", "cap"));
+                t.addEventListener("click", () => { setWall(false); pick(i); play(); });
+                wall.appendChild(t);
+                wallIO?.observe(t);
+            }
+            t.querySelector(".no").textContent = String(i + 1);
+            t.querySelector(".cap").textContent = `${s.id || "s" + (i + 1)} · ${durationOf(node, s)}`;
+            t.classList.toggle("sel", i === active());
+            const key = hopKey(node, i);
+            const ph = t.querySelector(".ph");
+            if (key && t.dataset.key !== key) {
+                t.dataset.key = key;
+                t.querySelector("video")?.remove();
+                const v = el("video");
+                v.muted = true; v.loop = true; v.playsInline = true; v.preload = "none";
+                if (wallIO) v.dataset.src = clipURL(key);   // loaded when the tile scrolls into view
+                else { v.src = clipURL(key); if (!document.hidden) v.play?.().catch(() => {}); }
+                t.insertBefore(v, t.firstChild);
+                ph.hidden = true;
+                if (wallIO) { wallIO.unobserve(t); wallIO.observe(t); }  // re-fires for a tile already on screen
+            } else if (!key) {
+                t.dataset.key = "";
+                t.querySelector("video")?.remove();
+                ph.hidden = false;
+                ph.textContent = recState(i) === "queued" ? "not rendered" : "…";
+            }
+        });
+    }
+    wallBtn.addEventListener("click", () => setWall(wall.hidden));
 
     /* -- state ------------------------------------------------------------ */
     const st = { t: 0, hop: 0, playing: false, timer: 0, key: null };
@@ -468,12 +580,16 @@ export function createStage(node, { getShots, getActive, onSelect } = {}) {
         node.properties[RUN_PROP] = rec;
         build();
         show(active());
+        buildWall();
     };
     api.addEventListener("promptQueued", onQueued);
     api.addEventListener("h3_refchain_preview", onPreview);
 
     function destroy() {
         stop();
+        wallPauseAll();
+        wallIO?.disconnect();
+        document.removeEventListener("visibilitychange", onVis);
         api.removeEventListener("promptQueued", onQueued);
         api.removeEventListener("h3_refchain_preview", onPreview);
     }
@@ -481,8 +597,10 @@ export function createStage(node, { getShots, getActive, onSelect } = {}) {
     function render() {
         build();
         show(active());
+        buildWall();
     }
 
+    if (node.properties?.[WALL_PROP]) setWall(true);
     render();
 
     return {

@@ -8,7 +8,7 @@ Folders are under `ComfyUI/models/` unless a row says otherwise.
 
 | What | File | Folder |
 |---|---|---|
-| DiT | [`minimax_h3_ref2va_int8_convrot`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors) | `diffusion_models` |
+| DiT | [`minimax_h3_ref2va_int8_convrot`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors), or the 8-step baked [CleanTie / HandTie / SilkTie](https://huggingface.co/sandpies/cleantie-v2Sing-hybrid) (`silktie_v2Sing_eros_8step_int8_minmaxxed` / `w6_g16_hq` / `bf16`) | `diffusion_models` |
 | Text encoder | [`qwen3vl_32b_minimax_h3_int8_convrot`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors) | `text_encoders` |
 | Video VAE | [`minimax_h3_video_vae_fp16`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/vae/minimax_h3_video_vae_fp16.safetensors) or [`minimax_h3_lynnreal_light_vae_int8_convrot`](https://huggingface.co/Kijai/MiniMax-H3-experimental/blob/main/minimax_h3_lynnreal_light_vae_int8_convrot.safetensors) | `vae` |
 | Audio VAE | [`minimax_h3_audio_vae_fp32`](https://huggingface.co/Comfy-Org/MiniMax-H3/blob/main/vae/minimax_h3_audio_vae_fp32.safetensors) | `vae` |

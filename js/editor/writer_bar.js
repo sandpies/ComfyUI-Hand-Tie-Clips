@@ -301,8 +301,8 @@ function writeThread(t) {
     const url = el("input", "h3e-writer-url");
     url.type = "text";
     url.placeholder = "http://127.0.0.1:1234";
-    url.title = "Any OpenAI-compatible server: LM Studio, llama-server, "
-        + "Ollama, nInfer. The /v1 suffix is added for you.";
+    url.title = "Any OpenAI-compatible server: LM Studio, llama-server, Ollama, KoboldCpp, vLLM, "
+        + "nInfer. The /v1 suffix is added for you.";
     urlRow.appendChild(url);
     const testBtn = button("Test", "Check the server and reload the model list",
         () => loadConn(true));
@@ -952,16 +952,16 @@ if (!list.length) {
             // the Start button right here, and a person following the sentence
             // would go looking for a Developer tab that does not exist.
             const what = conn.backend_label
-                || (conn.backend === "ninfer" ? "nInfer" : "LM Studio");
+                || (conn.backend === "ninfer" ? "nInfer" : "Local server");
             const how = conn.backend === "ninfer"
                 ? `Press Start writer below.`
-                : `Start it in LM Studio's Developer tab.`;
+                : `Start your local server and load a model.`;
             say(!conn.online
                 ? `No server at ${conn.server_url}. ${how}`
                 : conn.any_loaded === false
                     ? `Server is up, but none of its ${list.length} model(s) `
                       + `are loaded. Wait for ${what} to finish loading the `
-                      + `model, or load one in LM Studio.`
+                      + `model, or load one in your server.`
                     : conn.any_loaded == null
                         ? `${what} is answering with ${conn.model || "a model"}. `
                           + `It does not report load state, so a first Write `

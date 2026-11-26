@@ -395,6 +395,25 @@
                 font-family: ui-monospace, Consolas, monospace; color: #d9dde0;
                 background: linear-gradient(transparent, rgba(0,0,0,.78));
                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Wall: every cached hop looping muted in a grid (Timeline "wall" chip). */
+.r2-chip.r2-wallbtn { cursor: pointer; }
+.r2-chip.r2-wallbtn.on { border-color: var(--h3-accent); color: var(--h3-accent); }
+.r2-wall { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 6px;
+           display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; align-content: start; }
+.r2-wall[hidden] { display: none !important; }
+.r2-root .r2-wtile,
+.r2-wtile { position: relative; display: block; padding: 0; border: 1px solid #2c3035; border-radius: 4px; overflow: hidden;
+            background: #0d0e0f; cursor: pointer; aspect-ratio: 16 / 9; max-width: 100%; }
+.r2-wall.portrait .r2-wtile { aspect-ratio: 9 / 16; }
+.r2-wtile video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.r2-wtile .ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--h3-faint); font-size: 10px;
+                font-family: ui-monospace, Consolas, monospace; }
+.r2-wtile .no { position: absolute; top: 3px; left: 3px; font: 700 9px ui-monospace, Consolas, monospace; color: #0d0e0f;
+                background: var(--h3-accent); padding: 0 4px; border-radius: 2px; }
+.r2-wtile .cap { position: absolute; left: 0; right: 0; bottom: 0; font-size: 8.5px; padding: 1px 4px; color: #d9dde0;
+                 font-family: ui-monospace, Consolas, monospace; background: linear-gradient(transparent, rgba(0,0,0,.8));
+                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.r2-wtile.sel { border-color: var(--h3-accent); }
 .r2-root .r2-cell.sel,
 .r2-cell.sel { border-color: var(--h3-accent); box-shadow: inset 0 0 0 1px rgba(232,255,71,.35); }
 .r2-root .r2-cell.locked,

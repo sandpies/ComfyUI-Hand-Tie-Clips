@@ -3,6 +3,65 @@
 User-facing. The files named here are in the repository, not in the installed
 pack — the published package excludes them.
 
+## 4.0.0 hotfixes — 2026-11-17 to 2026-11-26
+
+Six hotfixes on top of 4.0.0, no version change. Saved workflows load as before.
+The newest is first.
+
+### Hotfix 6 — 2026-11-26
+- **All nodes are V3.** Every node now uses ComfyUI's newer node format. Same widgets, same order, same
+  saved workflows: each node was checked to serve exactly what it served before.
+- **Render wall pop-out.** The Timeline's wall has **browser** (the wall in its own tab) and **phone**
+  (a phone-sized window, and a link copied for your phone) buttons. The phone link needs ComfyUI started
+  with `--listen`; at home, the same Wi-Fi is enough.
+- **Faster previews.** Hop previews build two at a time, and the wall only loads the tiles on screen, so
+  opening it no longer pins the CPU.
+- **Writer settings name any local server.** "LM Studio" is now **Local server**: any OpenAI-compatible
+  server works (LM Studio, llama-server, Ollama, KoboldCpp, vLLM), or nInfer. Saved settings keep working.
+- **Less blushing.** The Scribe no longer writes natural cheek colour into reference captions (only
+  applied makeup), the adult expression levels keep "flushed" for the peak only, and the writers are told
+  to leave cheeks alone unless the story asks.
+- **Cleaner hands.** Both writers give each hand one job per beat and avoid finger-by-finger choreography
+  (it renders as tangled fingers). 22 SandTie dance poses and 2 camera moves were reworded from finger
+  level to hand and arm level.
+- **No "Anchor:" in captions.** Reference captions reach the Bible, the UI and the prompt without the
+  scanner's "Anchor:" marker.
+- **Steering dials:** the Expression, Motion and Life wording no longer pulls towards cheeks or busy hands.
+  Dial files you already made keep the old wording until you make them again.
+- **Starter workflow** uses join mode `auto` (it shipped `hand_tie_mc`, the least consistent of the three).
+- **Demo pages** rebuilt: every feature on one page, with what it does and where to find it.
+
+### Hotfix 5 — 2026-11-23
+- **Seam ramp** under `tone_compensate` anchor / chroma removes the colour step at a continuation join.
+- **Drift meter** per hop on `info` and the preview card.
+- **Writer:** refuses a turn that cannot fit the loaded context and names the size to set; one nInfer at a
+  time, and VRAM freed before it starts.
+- **SandTie:** ultra-realism dials and two built-in combos, multi-lens stacking, FX from frame 0.
+- **Preview** stops on the last rendered hop instead of running into unrendered ones (#2).
+- **Docs:** `docs/MODELS.md` lists the files each optional feature needs.
+
+### Upsampler progress bar — 2026-11-20
+- One progress bar for the whole re-draw, not one per sampler call (#7).
+
+### Hotfix 4 — 2026-11-20
+- **SandTie:** Shot-Tree + StateLedger writer, a SOUND dial, steering dial upgrades.
+- **WRITE:** structured writer stages only where the server supports them, more forgiving JSON reading,
+  RefMod rows accepted by the plan checker.
+- **Script tab:** the JSON drawer is back.
+
+### Hotfix 3 — 2026-11-18
+- **Swap:** the clip is read with a vision bundle (motion, cuts, camera) and rewritten with your cast.
+- **Media:** reference clips at other frame rates are re-timed to 24 fps.
+- **SandTie:** Extract Beats v2, a cast-aware Surprise Roll and more built-in combos.
+- **RefMod:** the sheet stitcher gains a Lossless (1:1 pixels) layout.
+
+### Hotfixes 1 & 2 and fixes before them — 2026-11-17 to 2026-11-18
+- **Prompt encode cache:** encoded prompts and references are kept on disk and reused after a restart.
+- **Upsampler:** `face_pass` (auto / on / off) for small faces, and the soundtrack is padded instead of
+  cut short.
+- **RefMod:** a sheet stitcher packs stills into one character sheet in the browser.
+- **SandTie:** combat and speedster presets staged blow by blow; catalog fixes.
+
 ## 4.0.0 — 2026-11-16
 
 ### New

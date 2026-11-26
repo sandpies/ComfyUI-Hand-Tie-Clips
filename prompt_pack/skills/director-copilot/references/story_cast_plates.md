@@ -20,11 +20,12 @@
 
 Per character, decide and write down:
 - **Ref:** a character sheet (several views on a plain backdrop) or a full-body photo, one ref,
-  whole. A sheet in a busy scene bleeds that scene into every hop; ask for a plain backdrop.
+  whole, desc `"character reference sheet"`. A sheet in a busy scene bleeds that scene into every
+  hop; ask for a plain backdrop.
 - **One-sided details agree in every view** (an earring, a scar). In a front view the character's
   left is on the picture's right. Send the sheet back with the exact fix before using it; plain
   symmetric designs avoid the problem.
-- **Sings:** which sections (faceless, or a mask with no jaw: none; a jaw mask can sing, SKILL.md rule 24). **Job:** what they do when not singing.
+- **Sings:** which sections (faceless, or a mask with no jaw: none; a jaw mask can sing, [mv](mv.md#3-the-songs-rules)). **Job:** what they do when not singing.
 - `ref_plan.subjects`: `name` (a short description, not a real name), `locked` (face and hair
   traits; ethnicity and age first: "a young East Asian woman, ..."), `context` (wardrobe as prose,
   never a pose or place; sent on every hop). The same for a person seen only in a photo.
@@ -55,7 +56,7 @@ state the story uses plus any part a hand works.
   place.
 - **No:** a continuation in the same place; a passing moment; a close prop unless people are
   framed around it; a moving view the plate cannot match (a car at speed: words instead).
-- When unsure, fewer. A wrong-angle plate does more harm than none (rule 2).
+- When unsure, fewer. A wrong-angle plate does more harm than none (SKILL.md, *plate from the camera*).
 
 ### Write the camera first, then the plate
 
@@ -91,7 +92,7 @@ prompt from that exact viewpoint.
 - **Every prompt stands alone:** never "the same room". Repeat every feature that must match in
   both prompts, and expect two generations of one place to differ anyway.
 
-Check each prompt against its beat's camera line before handing it over (rule 2).
+Check each prompt against its beat's camera line before handing it over (SKILL.md, *plate from the camera*).
 
 ### What to hand the user
 

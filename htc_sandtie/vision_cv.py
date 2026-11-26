@@ -26,7 +26,7 @@ ROLE_PROMPTS = {
         "Sentence 1 MUST be ONE single comma-separated noun-phrase sentence starting with \"Anchor: \" giving: "
         "1) visual medium/style (e.g. photorealistic live-action, 2D cel-shaded anime, digital illustration, 3D CGI render, vintage film photo); "
         "2) racial/ethnic profile and gender (e.g. East Asian woman, Southeast Asian man, South Asian woman, Black woman, Latina woman, Middle Eastern man, Caucasian woman, Mixed-race woman — judge strictly from facial bone structure even under dyed or cosplay hair); "
-        "3) actual skin tone/undertone plus any visible freckles, beauty marks/moles with exact placement, dimples, scars, or blush/makeup; "
+        "3) actual skin tone/undertone plus any visible freckles, beauty marks/moles with exact placement, dimples, scars, or clearly applied makeup (lipstick, eyeliner, eyeshadow) -- never natural cheek colour, blush or flush; "
         "4) actual face shape and bone structure (jawline, chin, cheekbones, nose bridge/tip, lip fullness/shape); "
         "5) ACTUAL observed eye geometry and iris color (check close-up insets — never default to 'almond' or 'dark': state round, hooded, monolid, deep double-lid, upturned, wide-set, exact iris tint e.g. pale lavender-grey/amber/hazel/espresso, eyeliner/lashes, and brow thickness/arch); "
         "6) honest body build and silhouette from full-body views (never default to 'slim' or 'petite' when curvy — explicitly note curvy hourglass, full/modest bust, narrow waist, wide/narrow hips, athletic muscular, lean, or petite frame); "
@@ -115,6 +115,12 @@ def caption_max_tokens(role: str) -> int:
     key = role if role in ROLE_PROMPTS else canonical_caption_role(role)
     return 440 if key in ("subject", "auto", "frame") else 280
 
+MADE_OF_LABELS = (
+    "live_action", "ai_video", "cg_3d", "anim_2d", "code_render",
+    "screen_capture", "still_motion", "static_hold", "stop_motion",
+    "film_footage", "avatar",
+)
+
 VIDEO_EXTRACTOR_SYSTEM = """You are the SandTie Choreography & Camera Vision Extractor for MiniMax H3.
 You are given chronological Shot-by-Shot Storyboard Contact Strips of a reference video clip.
 - Each image (`IMAGE 1 — ...`, `IMAGE 2 — ...`, ...) shows sequential numbered frames (`#1`, `#2`, `#3`, ...) with exact timestamps in seconds across that shot or sub-beat window.
@@ -127,13 +133,16 @@ CRITICAL EXTRACTION LAWS:
 4. CHECK HORIZON & CAMERA ROLL FIRST: Inspect sky/water/horizon, walls, and floor lines before describing body posture. When the horizon or room lines sit tilted or vertical (`Dutch tilt` or `90-degree sideways camera roll`), state the camera roll explicitly while describing the subject's true posture relative to gravity (standing upright in a sideways-rolled frame, rather than falsely claiming they lie flat).
 5. SEPARATE APPEARANCE FROM CHOREOGRAPHY: Keep hair color, skin tone, ethnicity, and clothing descriptions inside `"cast"` and `"outfit"` ONLY (never inside `"shot1"` or `"beats"`, except brief physical garment/prop handling if touched during a move).
 6. KINETIC PROSE & STRICTLY POSITIVE WORDING: Translate motion speeds into natural kinematic prose (never emit Hz numbers or negative words like no/not/never/without anywhere). Describe skeletal joint action cleanly, adding `'with a natural, soft jiggle'` only during visible active bounces or shimmies.
-7. LOCK SHOT 1 & MANDATORY TIMESTAMPS:
+7. CLASSIFY MEDIUM & LOCK SHOT 1 / TIMESTAMPS:
+   - Set `"made_of"` to the single best-fitting production medium (`live_action`, `ai_video`, `cg_3d`, `anim_2d`, `code_render`, `screen_capture`, `still_motion`, `static_hold`, `stop_motion`, `film_footage`, or `avatar`), and put rendering medium/palette/lighting into `"style"`.
    - In `"shot1"`, write a clean plain sentence (WITHOUT any `[Shot 1]` prefix) locking `0.00s`: camera scale/angle/horizon, visible `<Subject N>` placement, body orientation (`facing straight forward`, `three-quarter front view`, `side profile facing screen-right`), and starting left/right arm + hand placement.
    - In `"beats"`, emit the exact `[Shot N] At MM:SS.mmm, ...` and `At MM:SS.mmm-MM:SS.mmm, ...` timestamps from the Mandatory Beat Skeleton below.
 
 Reply with ONLY a valid JSON object matching this exact shape (without markdown fences):
 {
   "name": "Short descriptive title (4-7 words)",
+  "made_of": "live_action",
+  "style": "Rendering medium, lens/texture, palette, and lighting aesthetic in 1 concise sentence.",
   "cast": "<Subject 1>: brief visual role/hair anchor; <Subject 2>: brief visual role/hair anchor (or 'Solo <Subject 1>')",
   "outfit": "Wearing ...",
   "room": "The exact setting and lighting visible in the frames",
@@ -143,6 +152,25 @@ Reply with ONLY a valid JSON object matching this exact shape (without markdown 
 %(beats_skeleton)s
   ],
   "music": "Upbeat 120 BPM track with crisp percussion and clean bassline."
+}"""
+
+STRIP_PASS1_SYSTEM = """You are a frame-accurate video breakdown analyst. Inspect ONLY the attached storyboard strip(s) in chronological order (`#1 -> #2 -> #3 -> ...`).
+Describe strictly what is visible and moving across those frames using 100% positive phrasing (no negative words like no/not/never/without).
+Reply with ONLY a valid JSON object:
+{
+  "made_of": "one of: live_action, ai_video, cg_3d, anim_2d, code_render, screen_capture, still_motion, static_hold, stop_motion, film_footage, avatar",
+  "style": "visual rendering medium, palette, and lighting",
+  "cast_notes": "distinct people visible (appearance/hair/position, e.g. person A in red, person B in black)",
+  "outfit_notes": "visible garments and footwear",
+  "room_notes": "visible setting and lighting",
+  "segments": [
+    {
+      "label": "exact IMAGE / SHOT / BEAT header",
+      "shot_size": "extreme_close_up / close_up / medium / wide / extreme_wide / top_down / pov",
+      "camera_move": "camera scale, horizon roll, and movement",
+      "action": "chronological #1->#N progression of visible subjects, posture, limb/hand paths, and gaze"
+    }
+  ]
 }"""
 
 
@@ -330,6 +358,7 @@ def _fmt_mmss(t_sec: float) -> str:
 
 
 def _summarize_flow_rows(rows: list) -> tuple[str, str, list[float]]:
+    import math
     import numpy as np
     if not rows:
         return "LOCKED / STATIC CAMERA", "LOW SUBJECT MOTION / HELD POSE", []
@@ -355,7 +384,19 @@ def _summarize_flow_rows(rows: list) -> tuple[str, str, list[float]]:
         cam_bits.append("TILT/DROP DOWN")
     if abs(best_roll) >= 10.0:
         cam_bits.append(f"ROLL/SPIN ({best_roll:+.0f} deg/s)")
-    cam_desc = " + ".join(cam_bits) if cam_bits else "LOCKED / STATIC CAMERA"
+
+    jitter = 0.0
+    speed_mean = 0.0
+    if len(rows) >= 3:
+        dtx = np.diff([r[1] for r in rows])
+        dty = np.diff([r[2] for r in rows])
+        jitter = float(np.mean(np.hypot(dtx, dty)))
+        speed_mean = float(np.mean([math.hypot(r[1], r[2]) for r in rows]))
+    is_handheld = jitter >= 0.065 and (jitter >= 0.55 * speed_mean or jitter >= 0.11)
+    if is_handheld:
+        cam_desc = f"HANDHELD ({' + '.join(cam_bits)})" if cam_bits else "HANDHELD CAMERA"
+    else:
+        cam_desc = " + ".join(cam_bits) if cam_bits else "LOCKED / STATIC CAMERA"
 
     fg_mean = float(np.mean([r[6] for r in rows]))
     fg_peak_row = max(rows, key=lambda r: r[6])
@@ -366,6 +407,13 @@ def _summarize_flow_rows(rows: list) -> tuple[str, str, list[float]]:
         e_desc = f"ACTIVE CHOREOGRAPHY (peak ~{fg_peak_row[0]:.2f}s)"
     elif fg_mean >= 0.075 or fg_peak_row[6] >= 0.12:
         e_desc = f"MODERATE MOTION (peak ~{fg_peak_row[0]:.2f}s)"
+    elif fg_mean < 0.025 and fg_peak_row[6] < 0.045:
+        if cam_bits:
+            e_desc = "STILL IMAGE PAN/ZOOM (0% subject motion)"
+        elif not is_handheld:
+            e_desc = "STATIC HOLD / FROZEN FRAME (0% motion)"
+        else:
+            e_desc = "MINIMAL MOTION / HELD POSE"
     else:
         e_desc = "MINIMAL MOTION / HELD POSE"
     return cam_desc, e_desc, peak_ts
@@ -373,7 +421,7 @@ def _summarize_flow_rows(rows: list) -> tuple[str, str, list[float]]:
 
 def _scan_video_cv(video_path: str, in_sec: float = 0.0, out_sec: float = 0.0,
                    max_seconds: float = 15.0, min_dur: float = 1.5):
-    """Dual-evidence hard-cut detector + ~15 Hz IRLS affine flow scanner."""
+    """Dual-evidence hard-cut + fade/flash/dissolve detector & ~15 Hz IRLS affine flow scanner."""
     import math
     import cv2
     import numpy as np
@@ -402,6 +450,8 @@ def _scan_video_cv(video_path: str, in_sec: float = 0.0, out_sec: float = 0.0,
 
     frame_thumbs: list = []
     all_diffs: list[float] = [0.0]
+    all_hists: list = []
+    all_lumas: list[float] = []
     prev_small = None
     last_active_t = raw_dur
     dark_streak = 0
@@ -415,6 +465,11 @@ def _scan_video_cv(video_path: str, in_sec: float = 0.0, out_sec: float = 0.0,
         thumb_u8 = cv2.resize(frame, (fw, fh), interpolation=cv2.INTER_AREA)
         small = thumb_u8.astype(np.float32)
         bright = float(np.mean(small))
+        all_lumas.append(bright / 255.0)
+        hsv = cv2.cvtColor(thumb_u8, cv2.COLOR_BGR2HSV)
+        hist = cv2.calcHist([hsv], [0, 1, 2], None, [16, 8, 8], [0, 180, 0, 256, 0, 256])
+        cv2.normalize(hist, hist, 1.0, 0.0, cv2.NORM_L1)
+        all_hists.append(hist)
         if prev_small is not None:
             diff = float(np.mean(np.abs(small - prev_small)))
             all_diffs.append(diff)
@@ -429,11 +484,20 @@ def _scan_video_cv(video_path: str, in_sec: float = 0.0, out_sec: float = 0.0,
         prev_small = small
 
     cap.release()
-    actual_span = max(0.1, round(len(frame_thumbs) / fps, 2)) if frame_thumbs else raw_dur
+    if not frame_thumbs:
+        return {
+            "fps": fps, "n_frames": n_frames, "w": w, "h": h, "total_dur": total_dur,
+            "t0": t0, "start_f": start_f, "dur": 0.0, "cut_times": [], "cuts_meta": [], "frame_flows": [],
+        }
+
+    actual_span = max(0.1, round(len(frame_thumbs) / fps, 2))
     dur = max(min(min_dur, actual_span), min(max_seconds, round(last_active_t, 2)))
     active_max_f = min(len(all_diffs), len(frame_thumbs), max(1, int(round(dur * fps))))
 
-    cut_cands: list[tuple[float, float]] = []
+    luma_arr = np.asarray(all_lumas[:active_max_f], dtype=np.float32)
+    sm_luma = np.convolve(luma_arr, np.ones(5, dtype=np.float32) / 5.0, mode="same") if luma_arr.size >= 5 else luma_arr
+
+    cut_cands: list[tuple[float, float, str]] = []
     for f_i in range(1, max(1, active_max_f - 1)):
         t_s = round(f_i / fps, 3)
         if t_s < 0.25 or t_s > dur - 0.25:
@@ -456,13 +520,68 @@ def _scan_video_cv(video_path: str, in_sec: float = 0.0, out_sec: float = 0.0,
             is_cut = (d > 15.5 and ratio > 1.48 and (bhat >= 0.19 or corr16 < 0.42)) or (d > 26.0 and ratio >= 2.60)
             if is_cut:
                 score = (d / 20.0) + bhat * 2.2 + max(0.0, 0.5 - corr16)
+                lo0, hi0 = max(0, f_i - 3), min(len(sm_luma), f_i + 4)
+                c_type = "cut"
+                if lo0 < hi0:
+                    if float(sm_luma[lo0:hi0].min()) < 0.07:
+                        c_type = "fade"
+                    elif float(sm_luma[lo0:hi0].max()) > 0.92 and bhat < 0.55:
+                        c_type = "flash"
                 if cut_cands and (t_s - cut_cands[-1][0]) < 0.36:
                     if (t_s - cut_cands[-1][0]) < 0.18 and score > cut_cands[-1][1]:
-                        cut_cands[-1] = (round(t_s, 2), score)
+                        cut_cands[-1] = (round(t_s, 2), score, c_type)
                 else:
-                    cut_cands.append((round(t_s, 2), score))
+                    cut_cands.append((round(t_s, 2), score, c_type))
 
-    cut_times = [ct for ct, _ in cut_cands]
+    # Smoothed FPS-invariant (~0.20s stride) dissolve / crossfade plateau detector
+    if active_max_f >= 10:
+        stride = max(2, int(round(0.20 * fps)))
+        cut_f_set = {int(round(ct * fps)) for ct, _, _ in cut_cands}
+        bhat_stride = np.zeros(active_max_f, dtype=np.float32)
+        for f_i in range(stride, active_max_f):
+            if any((f_i - stride) < cf <= f_i for cf in cut_f_set):
+                continue
+            bhat_stride[f_i] = float(cv2.compareHist(all_hists[f_i - stride], all_hists[f_i], cv2.HISTCMP_BHATTACHARYYA))
+        b_valid = bhat_stride[stride:]
+        med_b = float(np.median(b_valid)) if b_valid.size >= 3 else 0.0
+        t_lo = max(0.26, min(0.55, med_b + 0.22))
+        plateau = np.convolve(bhat_stride, np.ones(5, dtype=np.float32) / 5.0, mode="same")
+        in_block, block_start = False, 0
+        min_dissolve_frames = max(5, int(round(0.20 * fps)))
+        for f_i in range(stride, active_max_f - 1):
+            if plateau[f_i] > t_lo and not in_block:
+                in_block, block_start = True, f_i
+            elif plateau[f_i] <= t_lo and in_block:
+                in_block = False
+                if (f_i - block_start) >= min_dissolve_frames:
+                    # Center the transition inside the dissolve (accounting for the lookback stride)
+                    t_mid = round(max(0.25, (((block_start + f_i) // 2) - stride // 2) / fps), 2)
+                    ta_b, tb_b = (block_start - stride) / fps - 0.35, f_i / fps + 0.35
+                    if 0.25 <= t_mid <= dur - 0.25 and not any(ta_b <= ct <= tb_b for ct, _, _ in cut_cands):
+                        pk = float(np.max(plateau[block_start:f_i]))
+                        lo_l = max(0, block_start - stride - 2)
+                        hi_l = min(len(sm_luma), f_i + 2)
+                        if lo_l < hi_l and float(sm_luma[lo_l:hi_l].min()) < 0.07:
+                            cut_cands.append((t_mid, pk, "fade"))
+                        else:
+                            cut_cands.append((t_mid, pk, "dissolve"))
+        if in_block and (active_max_f - 1 - block_start) >= min_dissolve_frames:
+            t_mid = round(max(0.25, (((block_start + active_max_f) // 2) - stride // 2) / fps), 2)
+            ta_b = (block_start - stride) / fps - 0.35
+            if 0.25 <= t_mid <= dur - 0.25 and not any(ct >= ta_b for ct, _, _ in cut_cands):
+                cut_cands.append((t_mid, float(np.max(plateau[block_start:active_max_f])), "dissolve"))
+
+    cut_cands.sort(key=lambda x: x[0])
+    dedup_cands: list[tuple[float, float, str]] = []
+    for ct, sc, typ in cut_cands:
+        if dedup_cands and (ct - dedup_cands[-1][0]) < 0.36:
+            if sc > dedup_cands[-1][1]:
+                dedup_cands[-1] = (ct, sc, typ)
+        else:
+            dedup_cands.append((ct, sc, typ))
+
+    cut_times = [ct for ct, _, _ in dedup_cands]
+    cuts_meta = [{"t": ct, "type": typ, "score": round(sc, 3)} for ct, sc, typ in dedup_cands]
     flow_step = max(1, int(round(fps / 15.0)))
     yy_g, xx_g = np.mgrid[0:fh, 0:fw]
     nx_g = (xx_g + 0.5) / float(fw) - 0.5
@@ -506,7 +625,8 @@ def _scan_video_cv(video_path: str, in_sec: float = 0.0, out_sec: float = 0.0,
 
     return {
         "fps": fps, "n_frames": n_frames, "w": w, "h": h, "total_dur": total_dur,
-        "t0": t0, "start_f": start_f, "dur": dur, "cut_times": cut_times, "frame_flows": frame_flows,
+        "t0": t0, "start_f": start_f, "dur": dur, "cut_times": cut_times,
+        "cuts_meta": cuts_meta, "frame_flows": frame_flows,
     }
 
 
@@ -544,15 +664,27 @@ def _grab_exact_frames_rgb(video_path: str, frame_indices: list[int]) -> dict[in
     return out
 
 
+def _cut_label(c_type: str) -> tuple[str, str, str]:
+    t = str(c_type or "cut").lower()
+    if t == "fade":
+        return "FADE", "fade in to", "fade"
+    if t == "dissolve":
+        return "DISSOLVE", "dissolve to", "dissolve"
+    if t == "flash":
+        return "FLASH CUT", "flash cut to", "flash"
+    return "HARD CUT", "hard cut to", "cut"
+
+
 def build_swap_vision_bundle(video_path: str, start: float = 0.0, end: float = 0.0, max_seconds: float = 15.0) -> dict:
     """Build SWAP-optimized OpenCV vision package: 1 crisp anchor IN frame + 1-2 timestamped sequence strips + telemetry."""
-    import cv2
     from PIL import Image, ImageDraw, ImageFont
 
     scan = _scan_video_cv(video_path, in_sec=start, out_sec=end, max_seconds=max_seconds, min_dur=0.4)
     fps, n_frames = scan["fps"], scan["n_frames"]
     w, h, t0, dur = scan["w"], scan["h"], scan["t0"], scan["dur"]
     cut_times, frame_flows = scan["cut_times"], scan["frame_flows"]
+    cuts_meta = scan.get("cuts_meta") or [{"t": ct, "type": "cut"} for ct in cut_times]
+    cut_type_by_seg = {i + 2: str(m.get("type") or "cut") for i, m in enumerate(cuts_meta)}
     has_cuts = len(cut_times) > 0
 
     bounds = [0.0] + cut_times + [dur] if has_cuts else [0.0, dur]
@@ -584,13 +716,14 @@ def build_swap_vision_bundle(video_path: str, start: float = 0.0, end: float = 0
             longest = max(segments, key=lambda x: (x[2] - x[1]) / float(seg_counts[x[0]]))
             seg_counts[longest[0]] += 1
 
-    samples = []  # (t_rel, seg_id, is_cut_entry, f_idx)
+    samples = []  # (t_rel, seg_id, cut_lbl_or_empty, f_idx)
     seg_telem_lines = []
     for sid, ta, tb in segments:
         seg_len = max(0.1, tb - ta)
         win_rows = [r for r in frame_flows if (ta + 0.03) < r[0] < (tb - 0.02)] or [r for r in frame_flows if ta <= r[0] <= tb]
         cam_desc, e_desc, peak_ts = _summarize_flow_rows(win_rows)
-        cut_tag = f" [CUT AT {ta:.2f}s]" if (has_cuts and sid > 1) else ""
+        c_lbl, _, _ = _cut_label(cut_type_by_seg.get(sid, "cut"))
+        cut_tag = f" [{c_lbl} AT {ta:.2f}s]" if (has_cuts and sid > 1) else ""
         lbl = f"Shot {sid}" if has_cuts else "Clip"
         seg_telem_lines.append(f"  - {lbl} ({ta:.2f}s–{tb:.2f}s){cut_tag}: camera [{cam_desc}] | action [{e_desc}]")
 
@@ -622,7 +755,7 @@ def build_swap_vision_bundle(video_path: str, start: float = 0.0, end: float = 0
                 ts_here.append(round(tu, 2))
         for j, tr in enumerate(ts_here):
             f_no = min(n_frames - 1, max(0, int(round((t0 + tr) * fps))))
-            samples.append((tr, sid, bool(has_cuts and sid > 1 and j == 0), f_no))
+            samples.append((tr, sid, (c_lbl if (has_cuts and sid > 1 and j == 0) else ""), f_no))
 
     anchor_f = min(n_frames - 1, max(0, int(round(t0 * fps))))
     need_frames = [anchor_f] + [s[3] for s in samples]
@@ -656,7 +789,7 @@ def build_swap_vision_bundle(video_path: str, start: float = 0.0, end: float = 0
         ta_c, tb_c = chunk[0][0], chunk[-1][0]
         draw.rectangle([0, 0, cols * thumb_w, hdr_h], fill=(28, 56, 110))
         draw.text((10, 6), f"SEQUENCE {s_idx}/{len(chunks)} ({ta_c:.2f}s -> {tb_c:.2f}s of {dur:.2f}s)", fill=(255, 250, 130), font=font_big)
-        for idx_c, (tr, sid, is_cut, f_no) in enumerate(chunk):
+        for idx_c, (tr, sid, cut_tag_lbl, f_no) in enumerate(chunk):
             im = decoded.get(f_no)
             if im is None:
                 continue
@@ -664,7 +797,7 @@ def build_swap_vision_bundle(video_path: str, start: float = 0.0, end: float = 0
             r_i, c_i = idx_c // cols, idx_c % cols
             x0, y0 = c_i * thumb_w, hdr_h + 1 + r_i * cell_h
             bar_col = shot_palette[(sid - 1) % len(shot_palette)] if has_cuts else (26, 28, 38)
-            tag = " [CUT]" if is_cut else (" [IN]" if (s_idx == 1 and idx_c == 0) else (" [OUT]" if (s_idx == len(chunks) and idx_c == n_c - 1) else ""))
+            tag = f" [{cut_tag_lbl}]" if cut_tag_lbl else (" [IN]" if (s_idx == 1 and idx_c == 0) else (" [OUT]" if (s_idx == len(chunks) and idx_c == n_c - 1) else ""))
             draw.rectangle([x0, y0, x0 + thumb_w - 2, y0 + cell_hdr_h], fill=bar_col)
             draw.text((x0 + 6, y0 + 2), f"{tr:.2f}s{tag}", fill=(205, 255, 210), font=font_sub)
             canvas.paste(im_r, (x0, y0 + cell_hdr_h + 1))
@@ -675,7 +808,8 @@ def build_swap_vision_bundle(video_path: str, start: float = 0.0, end: float = 0
         )
 
     global_cam, global_e, _ = _summarize_flow_rows(frame_flows)
-    cuts_desc = (f"{len(cut_times)} hard cut(s) at {', '.join(f'{c:.2f}s' for c in cut_times)}"
+    cuts_str = ", ".join(f"{m['t']:.2f}s ({m['type']})" for m in cuts_meta)
+    cuts_desc = (f"{len(cut_times)} transition(s) at {cuts_str}"
                  if has_cuts else "continuous single shot (0 hard cuts)")
     telem_hdr = f"[CLIP TIMELINE & CAMERA MOTION]\nWindow: {dur:.2f}s | {cuts_desc} | Overall camera: [{global_cam}] | Energy: [{global_e}]"
     telemetry = telem_hdr + ("\n" + "\n".join(seg_telem_lines) if len(seg_telem_lines) > 1 else "")
@@ -686,21 +820,27 @@ def build_swap_vision_bundle(video_path: str, start: float = 0.0, end: float = 0
         "telemetry": telemetry,
         "duration_s": dur,
         "cut_times": cut_times,
+        "cuts_meta": cuts_meta,
     }
 
 
-def build_opencv_video_strips(video_path: str, in_sec: float = 0.0, out_sec: float = 0.0, max_seconds: float = 15.0):
-    import cv2
-    import numpy as np
+def _build_strips_bundle(video_path: str, in_sec: float = 0.0, out_sec: float = 0.0, max_seconds: float = 15.0) -> dict:
     from PIL import Image, ImageDraw, ImageFont
 
     scan = _scan_video_cv(video_path, in_sec=in_sec, out_sec=out_sec, max_seconds=max_seconds, min_dur=1.5)
     fps, n_frames = scan["fps"], scan["n_frames"]
     w, h, t0, dur = scan["w"], scan["h"], scan["t0"], scan["dur"]
     cut_times, frame_flows = scan["cut_times"], scan["frame_flows"]
+    cuts_meta = scan.get("cuts_meta") or [{"t": ct, "type": "cut"} for ct in cut_times]
+    cut_type_by_seg = {i + 2: str(m.get("type") or "cut") for i, m in enumerate(cuts_meta)}
     has_cuts = len(cut_times) > 0
 
-    cap = cv2.VideoCapture(video_path)
+    if dur <= 0.0 or n_frames <= 0:
+        return {
+            "strips": [], "dur": 0.0, "cut_times": [], "cuts_meta": [],
+            "telemetry_str": "", "beats_skeleton_str": "", "strip_headers": [], "strip_meta": [],
+        }
+
     if has_cuts:
         bounds = [0.0] + cut_times + [dur]
         segments = [(i + 1, round(bounds[i], 3), round(bounds[i + 1], 3)) for i in range(len(bounds) - 1)]
@@ -744,24 +884,13 @@ def build_opencv_video_strips(video_path: str, in_sec: float = 0.0, out_sec: flo
                 n_f = 3 if w_len <= 1.35 else 4
             strip_specs.append((len(strip_specs) + 1, seg_id, p_i + 1, n_parts, w_a, w_b, n_f, p_i == 0))
 
-    try:
-        font_big = ImageFont.truetype("arialbd.ttf", 20)
-        font_sub = ImageFont.truetype("arialbd.ttf", 16)
-    except Exception:
-        font_big = font_sub = None
-
-    shot_palette = [(25, 55, 115), (155, 25, 50), (20, 100, 75), (135, 70, 15), (80, 35, 125), (20, 95, 120), (125, 30, 90), (55, 95, 30)]
-    strips, strip_headers, telemetry_lines, skeleton_items = [], [], [], []
-
+    # Pre-plan exact timestamps & frame indices across ALL strips so we decode in one sequential pass (zero B-frame seek drift)
+    strip_plans = []
+    all_need_frames: list[int] = []
     for img_id, seg_id, part_i, part_tot, w_a, w_b, n_f, is_shot_start in strip_specs:
         w_len = max(0.15, w_b - w_a)
         win_rows = [r for r in frame_flows if (w_a + 0.035) < r[0] < (w_b - 0.025)] or [r for r in frame_flows if w_a <= r[0] <= w_b]
         cam_desc, e_desc, peak_ts = _summarize_flow_rows(win_rows)
-
-        part_lbl = f"SHOT {seg_id}" if has_cuts else f"BEAT {img_id}"
-        if has_cuts and part_tot > 1:
-            part_lbl = f"SHOT {seg_id} (Part {part_i}/{part_tot})"
-        cut_prefix = f" [HARD CUT AT {w_a:.2f}s]" if (has_cuts and seg_id > 1 and is_shot_start) else ""
 
         pad = min(0.055, w_len * 0.12)
         t_start = w_a + pad
@@ -782,6 +911,27 @@ def build_opencv_video_strips(video_path: str, in_sec: float = 0.0, out_sec: flo
             if sample_ts and t_u <= sample_ts[-1] + 0.04:
                 t_u = min(t_end, sample_ts[-1] + 0.05)
             sample_ts.append(round(t_u, 2))
+        frame_nos = [min(n_frames - 1, max(0, int(round((t0 + ts) * fps)))) for ts in sample_ts]
+        all_need_frames.extend(frame_nos)
+        strip_plans.append((img_id, seg_id, part_i, part_tot, w_a, w_b, n_f, is_shot_start, w_len, cam_desc, e_desc, peak_ts, sample_ts, frame_nos))
+
+    decoded_frames = _grab_exact_frames_rgb(video_path, all_need_frames)
+
+    try:
+        font_big = ImageFont.truetype("arialbd.ttf", 20)
+        font_sub = ImageFont.truetype("arialbd.ttf", 16)
+    except Exception:
+        font_big = font_sub = None
+
+    shot_palette = [(25, 55, 115), (155, 25, 50), (20, 100, 75), (135, 70, 15), (80, 35, 125), (20, 95, 120), (125, 30, 90), (55, 95, 30)]
+    strips, strip_headers, telemetry_lines, skeleton_items, strip_meta = [], [], [], [], []
+
+    for img_id, seg_id, part_i, part_tot, w_a, w_b, n_f, is_shot_start, w_len, cam_desc, e_desc, peak_ts, sample_ts, frame_nos in strip_plans:
+        part_lbl = f"SHOT {seg_id}" if has_cuts else f"BEAT {img_id}"
+        if has_cuts and part_tot > 1:
+            part_lbl = f"SHOT {seg_id} (Part {part_i}/{part_tot})"
+        c_lbl, c_verb, c_raw = _cut_label(cut_type_by_seg.get(seg_id, "cut"))
+        cut_prefix = f" [{c_lbl} AT {w_a:.2f}s]" if (has_cuts and seg_id > 1 and is_shot_start) else ""
 
         cols = 3 if n_f == 6 else n_f
         rows_g = 2 if n_f == 6 else 1
@@ -792,16 +942,14 @@ def build_opencv_video_strips(video_path: str, in_sec: float = 0.0, out_sec: flo
         canvas = Image.new("RGB", (cols * thumb_w, row_banner_h + rows_g * cell_h), (14, 14, 18))
         draw = ImageDraw.Draw(canvas)
         hdr_col = shot_palette[(seg_id - 1) % len(shot_palette)]
-        cut_str = " [HARD CUT]" if (has_cuts and seg_id > 1 and is_shot_start) else (" [OPENING SHOT]" if img_id == 1 else " [CONTINUATION]")
+        cut_str = f" [{c_lbl}]" if (has_cuts and seg_id > 1 and is_shot_start) else (" [OPENING SHOT]" if img_id == 1 else " [CONTINUATION]")
         draw.rectangle([0, 0, cols * thumb_w, row_banner_h], fill=hdr_col)
         draw.text((10, 6), f"{part_lbl} ({_fmt_mmss(w_a)} - {_fmt_mmss(w_b)}){cut_str}", fill=(255, 250, 120), font=font_big)
 
-        for c_i, t_sec in enumerate(sample_ts):
-            f_no = min(n_frames - 1, max(0, int(round((t0 + t_sec) * fps))))
-            cap.set(cv2.CAP_PROP_POS_FRAMES, f_no)
-            ok, frame = cap.read()
-            if ok and frame is not None:
-                im = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).resize((thumb_w, thumb_h), Image.Resampling.LANCZOS)
+        for c_i, (t_sec, f_no) in enumerate(zip(sample_ts, frame_nos)):
+            im_src = decoded_frames.get(f_no)
+            if im_src is not None:
+                im = im_src.resize((thumb_w, thumb_h), Image.Resampling.LANCZOS)
                 r_idx = c_i // cols
                 c_col = c_i % cols
                 x0 = c_col * thumb_w
@@ -813,17 +961,24 @@ def build_opencv_video_strips(video_path: str, in_sec: float = 0.0, out_sec: flo
                 canvas.paste(im, (x0, fy0 + frame_hdr_h + 1))
 
         strips.append(canvas)
-        strip_headers.append(f"IMAGE {img_id} — {part_lbl} ({_fmt_mmss(w_a)} to {_fmt_mmss(w_b)}){cut_str} | {cam_desc} | {e_desc}")
+        hdr_line = f"IMAGE {img_id} — {part_lbl} ({_fmt_mmss(w_a)} to {_fmt_mmss(w_b)}){cut_str} | {cam_desc} | {e_desc}"
+        strip_headers.append(hdr_line)
         peak_note = f" | Peak action near {', '.join(f'{pt:.2f}s' for pt in peak_ts)}" if peak_ts else ""
-        telemetry_lines.append(
+        tel_line = (
             f"  • IMAGE {img_id} -> {part_lbl} ({_fmt_mmss(w_a)}–{_fmt_mmss(w_b)}, dur={w_len:.2f}s, {n_f} frames #1..#{n_f}){cut_prefix}: "
             f"[{cam_desc}] | [{e_desc}{peak_note}] — Inspect frames #1..#{n_f} in order and report exact visible framing/horizon, "
             f"who is in shot (`<Subject 1>`, `<Subject 2>`, or detail insert), and chronological step/pose/hand transitions."
         )
+        telemetry_lines.append(tel_line)
+        strip_meta.append({
+            "img_id": img_id, "seg_id": seg_id, "part_lbl": part_lbl, "w_a": w_a, "w_b": w_b,
+            "cam_desc": cam_desc, "e_desc": e_desc, "transition": c_raw if (has_cuts and seg_id > 1 and is_shot_start) else "",
+            "header": hdr_line, "telemetry": tel_line,
+        })
 
         if has_cuts and seg_id > 1 and is_shot_start:
             skeleton_items.append(
-                f'    "[Shot {seg_id}] At {_fmt_mmss(w_a)}, hard cut to <state camera scale/angle/horizon roll, which `<Subject N>` (or body detail) appears, screen-left/right placement, and starting pose>."'
+                f'    "[Shot {seg_id}] At {_fmt_mmss(w_a)}, {c_verb} <state camera scale/angle/horizon roll, which `<Subject N>` (or body detail) appears, screen-left/right placement, and starting pose>."'
             )
         if n_f == 6:
             w_mid = round(0.5 * (w_a + w_b), 3)
@@ -838,8 +993,21 @@ def build_opencv_video_strips(video_path: str, in_sec: float = 0.0, out_sec: flo
                 f'    "At {_fmt_mmss(w_a)}-{_fmt_mmss(w_b)}, <trace {part_lbl} across frames #1-#{n_f}: camera movement, visible subject(s) & staggered/asymmetric actions, footwork/kicks/crouches/pivots, left/right hand shapes, and gaze>."'
             )
 
-    cap.release()
-    return strips, dur, cut_times, "\n".join(telemetry_lines), ",\n".join(skeleton_items), strip_headers
+    return {
+        "strips": strips,
+        "dur": dur,
+        "cut_times": cut_times,
+        "cuts_meta": cuts_meta,
+        "telemetry_str": "\n".join(telemetry_lines),
+        "beats_skeleton_str": ",\n".join(skeleton_items),
+        "strip_headers": strip_headers,
+        "strip_meta": strip_meta,
+    }
+
+
+def build_opencv_video_strips(video_path: str, in_sec: float = 0.0, out_sec: float = 0.0, max_seconds: float = 15.0):
+    b = _build_strips_bundle(video_path, in_sec=in_sec, out_sec=out_sec, max_seconds=max_seconds)
+    return b["strips"], b["dur"], b["cut_times"], b["telemetry_str"], b["beats_skeleton_str"], b["strip_headers"]
 
 
 VIDEO_EXTRACT_SCHEMA = {
@@ -848,6 +1016,8 @@ VIDEO_EXTRACT_SCHEMA = {
     "required": ["name", "cast", "outfit", "room", "summary", "shot1", "beats", "music"],
     "properties": {
         "name": {"type": "string"},
+        "made_of": {"type": "string"},
+        "style": {"type": "string"},
         "cast": {"type": "string"},
         "outfit": {"type": "string"},
         "room": {"type": "string"},
@@ -855,6 +1025,33 @@ VIDEO_EXTRACT_SCHEMA = {
         "shot1": {"type": "string"},
         "beats": {"type": "array", "items": {"type": "string"}},
         "music": {"type": "string"},
+    },
+}
+
+STRIP_PASS1_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["made_of", "style", "cast_notes", "outfit_notes", "room_notes", "segments"],
+    "properties": {
+        "made_of": {"type": "string"},
+        "style": {"type": "string"},
+        "cast_notes": {"type": "string"},
+        "outfit_notes": {"type": "string"},
+        "room_notes": {"type": "string"},
+        "segments": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["label", "shot_size", "camera_move", "action"],
+                "properties": {
+                    "label": {"type": "string"},
+                    "shot_size": {"type": "string"},
+                    "camera_move": {"type": "string"},
+                    "action": {"type": "string"},
+                },
+            },
+        },
     },
 }
 
@@ -897,8 +1094,11 @@ def parse_lenient_json_obj(raw: str) -> dict | None:
     txt = str(raw or "").strip()
     if not txt:
         return None
-    # Strip <think>...</think> blocks if any
+    # Strip <think>...</think> blocks, plus orphaned closing </think> prefix if opening tag was omitted
     txt = re.sub(r"<think>[\s\S]*?</think>", "", txt, flags=re.I).strip()
+    m_think_end = re.search(r"</think>", txt, flags=re.I)
+    if m_think_end:
+        txt = txt[m_think_end.end():].strip()
 
     candidates = [txt]
     for blk in re.findall(r"```(?:json)?\s*([\s\S]*?)```", txt, flags=re.I):
@@ -939,33 +1139,178 @@ def _clean_extracted_shot1(text: str) -> str:
     return s
 
 
+def _normalize_made_of(raw_val: str, telemetry_str: str = "") -> str:
+    v = re.sub(r"[^a-z0-9_]+", "_", str(raw_val or "").strip().lower()).strip("_")
+    aliases = {
+        "live": "live_action", "real": "live_action", "photoreal": "live_action", "photorealistic": "live_action",
+        "ai": "ai_video", "aigc": "ai_video", "3d": "cg_3d", "cgi": "cg_3d", "cg": "cg_3d",
+        "2d": "anim_2d", "anime": "anim_2d", "animation": "anim_2d", "cartoon": "anim_2d",
+        "motion_graphics": "code_render", "ken_burns": "still_motion", "still": "static_hold",
+        "talking_head": "avatar", "film": "film_footage",
+    }
+    v = aliases.get(v, v)
+    if v in MADE_OF_LABELS:
+        return v
+    low_t = str(telemetry_str or "").lower()
+    if "still image pan/zoom" in low_t:
+        return "still_motion"
+    if "static hold / frozen frame" in low_t:
+        return "static_hold"
+    return "live_action" if v == "" else v
+
+
+def render_extracted_video_md(res: dict) -> str:
+    """Render a compact VIDEO.md-style reverse-engineering report for an extracted clip."""
+    if not isinstance(res, dict):
+        return ""
+    dur = float(res.get("duration_s") or 0.0)
+    cuts = res.get("transitions") or [{"t": c, "type": "cut"} for c in (res.get("cuts") or [])]
+    made_of = res.get("made_of") or "live_action"
+    trans_str = ", ".join(f"{c.get('type', 'cut')}@{float(c.get('t', 0)):.2f}s" for c in cuts) or "continuous"
+    lines = [
+        "---",
+        f"name: {res.get('name') or 'Extracted Clip'}",
+        f"duration: {dur:.2f}s",
+        f"made_of: {made_of}",
+        f"transitions: {len(cuts)} ({trans_str})",
+        "---",
+        "",
+    ]
+    if res.get("style"):
+        lines.append(f"- **Style:** {res['style']}")
+    if res.get("cast"):
+        lines.append(f"- **Cast:** {res['cast']}")
+    if res.get("outfit"):
+        lines.append(f"- **Outfit:** {res['outfit']}")
+    if res.get("room"):
+        lines.append(f"- **Setting:** {res['room']}")
+    if res.get("summary"):
+        lines.append(f"- **Summary:** {res['summary']}")
+    if res.get("shot1") or res.get("beats"):
+        lines.append("")
+        lines.append("## Beats")
+        if res.get("shot1"):
+            lines.append(f"- `[Shot 1]` {res['shot1']}")
+        for b in res.get("beats") or []:
+            lines.append(f"- {b}")
+    return "\n".join(lines)
+
+
 def _scrub_extracted_result(res: dict) -> dict:
     out = dict(res)
-    for k in ("cast", "outfit", "room", "summary", "music"):
+    for k in ("cast", "outfit", "room", "summary", "music", "style"):
         if k in out and isinstance(out[k], str):
             out[k] = scrub_sheet_leaks(out[k])
+    out["made_of"] = _normalize_made_of(out.get("made_of") or "", out.get("telemetry") or "")
     out["shot1"] = _clean_extracted_shot1(out.get("shot1") or "")
     out["beats"] = [scrub_sheet_leaks(str(b).strip()) for b in (out.get("beats") or []) if scrub_sheet_leaks(str(b).strip())]
+    out["video_md"] = render_extracted_video_md(out)
     return out
 
 
-async def extract_video_to_plan(video_path: str, complete_fn, in_sec: float = 0.0, out_sec: float = 0.0, max_seconds: float = 15.0) -> dict:
+async def _extract_json_with_repair(complete_fn, user_msg: dict, schema: dict, *, max_tokens: int = 3600) -> tuple[dict | None, str]:
+    from .. import planner as _pl
+    raw = await complete_fn([user_msg], schema=schema, temperature=0.2, max_tokens=max_tokens)
+    obj = _pl._parse_obj(raw)
+    if not isinstance(obj, dict):
+        obj = _parse_lenient_json_obj(raw)
+    if not isinstance(obj, dict):
+        repair_msgs = [
+            user_msg,
+            {"role": "assistant", "content": str(raw or "")},
+            {"role": "user", "content": "Your previous reply had invalid JSON syntax (such as a missing comma or unescaped quote). Return ONLY the fixed valid JSON object matching the exact schema, with no extra prose."},
+        ]
+        try:
+            raw2 = await complete_fn(repair_msgs, schema=schema, temperature=0.1, max_tokens=max_tokens)
+            obj = _pl._parse_obj(raw2) or _parse_lenient_json_obj(raw2)
+            if isinstance(obj, dict):
+                raw = raw2
+        except Exception:
+            pass
+    return (obj if isinstance(obj, dict) else None), str(raw or "")
+
+
+async def _extract_two_pass(complete_fn, strips, strip_headers, strip_meta, prompt_txt: str) -> dict | None:
+    """Per-batch visual breakdown -> text synthesis (bounds vision tokens for 16k servers & long multi-cut clips)."""
+    batch_size = 3
+    notes = []
+    for start_i in range(0, len(strips), batch_size):
+        b_strips = strips[start_i:start_i + batch_size]
+        b_hdrs = strip_headers[start_i:start_i + batch_size]
+        b_meta = strip_meta[start_i:start_i + batch_size]
+        content = []
+        for idx, st_im in enumerate(b_strips):
+            hdr = b_hdrs[idx] if idx < len(b_hdrs) else f"IMAGE {start_i + idx + 1}"
+            content.append({"type": "text", "text": f"=== {hdr} ==="})
+            content.append({"type": "image_url", "image_url": {"url": encode_pil_mp(st_im, mp=1.15)}})
+        tel_block = "\n".join(m.get("telemetry") or "" for m in b_meta if m.get("telemetry"))
+        content.append({"type": "text", "text": f"{STRIP_PASS1_SYSTEM}\n\nTELEMETRY FOR THESE STRIPS:\n{tel_block}"})
+        obj_p1, _ = await _extract_json_with_repair(complete_fn, {"role": "user", "content": content}, STRIP_PASS1_SCHEMA, max_tokens=1800)
+        if isinstance(obj_p1, dict):
+            notes.append(obj_p1)
+
+    if not notes:
+        return None
+    obs_lines = []
+    for bi, n in enumerate(notes, 1):
+        obs_lines.append(
+            f"[Chunk {bi}] made_of={n.get('made_of', '')} | style={n.get('style', '')} | "
+            f"cast={n.get('cast_notes', '')} | outfit={n.get('outfit_notes', '')} | room={n.get('room_notes', '')}"
+        )
+        for seg in n.get("segments") or []:
+            obs_lines.append(
+                f"  - {seg.get('label', '')}: shot_size={seg.get('shot_size', '')}; "
+                f"camera={seg.get('camera_move', '')}; action={seg.get('action', '')}"
+            )
+    synth_msg = {
+        "role": "user",
+        "content": (
+            "Chronological Per-Strip Visual Observations (from inspecting every storyboard strip in order):\n"
+            + "\n".join(obs_lines)
+            + "\n\nSynthesize these into one unified cast/outfit/room/choreography JSON matching all laws below:\n\n"
+            + prompt_txt
+        ),
+    }
+    obj_p2, _ = await _extract_json_with_repair(complete_fn, synth_msg, VIDEO_EXTRACT_SCHEMA, max_tokens=3600)
+    return obj_p2
+
+
+async def extract_video_to_plan(
+    video_path: str,
+    complete_fn,
+    in_sec: float = 0.0,
+    out_sec: float = 0.0,
+    max_seconds: float = 15.0,
+    two_pass: str | bool = "auto",
+) -> dict:
     if not video_path or not os.path.isfile(video_path):
         raise ValueError(f"Video file not found: {video_path}")
     mtime = int(os.path.getmtime(video_path))
-    cache_key = f"vidextract_v2|{os.path.abspath(video_path)}|{mtime}|{in_sec:.2f}|{out_sec:.2f}|{max_seconds:.1f}"
+    cache_key = f"vidextract_v3|{os.path.abspath(video_path)}|{mtime}|{in_sec:.2f}|{out_sec:.2f}|{max_seconds:.1f}"
     cached = _load_cache().get(cache_key)
     if isinstance(cached, dict) and cached.get("beats"):
         return _scrub_extracted_result(cached)
 
     import asyncio
-    strips, dur, cut_times, telemetry_str, beats_skeleton_str, strip_headers = await asyncio.get_running_loop().run_in_executor(
-        None, build_opencv_video_strips, video_path, in_sec, out_sec, max_seconds
+    bundle = await asyncio.get_running_loop().run_in_executor(
+        None, _build_strips_bundle, video_path, in_sec, out_sec, max_seconds
     )
+    strips = bundle["strips"]
+    dur = bundle["dur"]
+    cut_times = bundle["cut_times"]
+    cuts_meta = bundle["cuts_meta"]
+    telemetry_str = bundle["telemetry_str"]
+    beats_skeleton_str = bundle["beats_skeleton_str"]
+    strip_headers = bundle["strip_headers"]
+    strip_meta = bundle["strip_meta"]
+
+    if not strips:
+        raise ValueError(f"Could not decode frames from video: {video_path}")
+
     if cut_times:
-        cuts_str = ", ".join(f"{ct:.2f}s" for ct in cut_times)
+        cuts_str = ", ".join(f"{m['t']:.2f}s ({m['type']})" for m in cuts_meta)
         cuts_note = (
-            f"OPENCV DETECTED {len(cut_times)} HARD SHOT CUTS AT: {cuts_str} "
+            f"OPENCV DETECTED {len(cut_times)} SHOT TRANSITION(S) AT: {cuts_str} "
             f"(dividing the {dur:.2f}s clip into {len(cut_times) + 1} shots).\n"
             f"Output all {len(cut_times) + 1} shots in order using the exact `[Shot N] At MM:SS.mmm, ...` and "
             f"`At MM:SS.mmm-MM:SS.mmm, ...` timestamps in the Mandatory Beat Skeleton!\n\n"
@@ -978,42 +1323,42 @@ async def extract_video_to_plan(video_path: str, complete_fn, in_sec: float = 0.
         )
 
     prompt_txt = VIDEO_EXTRACTOR_SYSTEM % {"cuts_note": cuts_note, "beats_skeleton": beats_skeleton_str}
-    content = []
-    for idx, st_im in enumerate(strips):
-        hdr = strip_headers[idx] if idx < len(strip_headers) else f"IMAGE {idx + 1}"
-        content.append({"type": "text", "text": f"=== {hdr} ==="})
-        content.append({"type": "image_url", "image_url": {"url": encode_pil_mp(st_im, mp=1.35)}})
-    content.append({"type": "text", "text": prompt_txt})
+    use_two_pass = (two_pass is True) or (two_pass == "auto" and len(strips) > 6)
+    obj = None
+    raw = ""
 
-    user_msg = {"role": "user", "content": content}
-    raw = await complete_fn([user_msg], schema=VIDEO_EXTRACT_SCHEMA, temperature=0.2, max_tokens=3600)
-    from .. import planner as _pl
-    obj = _pl._parse_obj(raw)
-    if not isinstance(obj, dict):
-        obj = _parse_lenient_json_obj(raw)
-    if not isinstance(obj, dict):
-        # Single fast JSON-repair turn reusing the cached multimodal KV prefix
-        repair_msgs = [
-            user_msg,
-            {"role": "assistant", "content": str(raw or "")},
-            {"role": "user", "content": "Your previous reply had invalid JSON syntax (such as a missing comma or unescaped quote). Return ONLY the fixed valid JSON object matching the exact schema, with no extra prose."},
-        ]
+    if not use_two_pass:
+        content = []
+        for idx, st_im in enumerate(strips):
+            hdr = strip_headers[idx] if idx < len(strip_headers) else f"IMAGE {idx + 1}"
+            content.append({"type": "text", "text": f"=== {hdr} ==="})
+            content.append({"type": "image_url", "image_url": {"url": encode_pil_mp(st_im, mp=1.35)}})
+        content.append({"type": "text", "text": prompt_txt})
+        user_msg = {"role": "user", "content": content}
         try:
-            raw2 = await complete_fn(repair_msgs, schema=VIDEO_EXTRACT_SCHEMA, temperature=0.1, max_tokens=3600)
-            obj = _pl._parse_obj(raw2) or _parse_lenient_json_obj(raw2)
-            if isinstance(obj, dict):
-                raw = raw2
-        except Exception:
-            pass
+            obj, raw = await _extract_json_with_repair(complete_fn, user_msg, VIDEO_EXTRACT_SCHEMA, max_tokens=3600)
+        except Exception as exc:
+            msg_low = str(exc).lower()
+            if two_pass == "auto" and ("context" in msg_low or "token" in msg_low):
+                use_two_pass = True
+            else:
+                raise
+
+    if use_two_pass and not isinstance(obj, dict):
+        obj = await _extract_two_pass(complete_fn, strips, strip_headers, strip_meta, prompt_txt)
+
     if not isinstance(obj, dict):
         snippet = re.sub(r"\s+", " ", str(raw or "")).strip()[:180]
         raise ValueError(f"Vision model did not return a JSON object for the video extraction. ({snippet or 'empty reply'})")
     res = _scrub_extracted_result({
         "ok": True,
         "name": str(obj.get("name") or os.path.splitext(os.path.basename(video_path))[0]),
+        "made_of": str(obj.get("made_of") or ""),
+        "style": str(obj.get("style") or ""),
         "cast": str(obj.get("cast") or ""),
         "duration_s": dur,
         "cuts": cut_times,
+        "transitions": cuts_meta,
         "telemetry": telemetry_str,
         "outfit": str(obj.get("outfit") or ""),
         "room": str(obj.get("room") or ""),
@@ -1021,6 +1366,7 @@ async def extract_video_to_plan(video_path: str, complete_fn, in_sec: float = 0.
         "shot1": _clean_extracted_shot1(obj.get("shot1") or ""),
         "beats": [str(b).strip() for b in (obj.get("beats") or []) if str(b).strip()],
         "music": str(obj.get("music") or ""),
+        "two_pass": bool(use_two_pass),
     })
     if res["beats"]:
         _save_cache(cache_key, res)

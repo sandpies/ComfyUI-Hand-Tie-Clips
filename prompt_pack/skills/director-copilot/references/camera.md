@@ -37,7 +37,7 @@ the first hop ignores it.
 - Two or three shots per 12-15 s hop with lines, each at least 2 s. A hop with no lines can hold
   7-8 (see [action hops](#action-hops-with-no-lines)).
 - Under `hand_tie` a hop is one take: no `[Shot N]` cuts, one framing for the whole piece, the
-  join windows calm (SKILL.md rule 15).
+  join windows calm ([one_take](one_take.md)).
 
 ### Writing shots
 
@@ -73,6 +73,12 @@ times counted from the hop's start.
   stairs).
 - **Say a camera height twice when it matters** ("the camera stays low").
 - **Inserts are their own shot,** and name whose hands.
+- **No small step on the same axis.** A cut to a slightly tighter or wider size from about the same
+  angle reads as the picture skipping, not as a cut, and worst right after a camera move stops on a
+  face (a half circle that ends on her face, then "a cut to a close shot" of her: the user called it
+  the moment that killed the vibe). Let the move land on the size you want and hold it in the same
+  take, or cut to a clearly new side and height, or to a new subject. Read every pair of shots in
+  a hop for this before the hand-over; on Ue e it was hiding in seven places.
 - **A multi-shot beat runs long** (200-300 words for 3 shots in 12 s); the node's length warning
   is for one-take beats.
 
@@ -80,7 +86,7 @@ times counted from the hop's start.
 
 - A restart can cut anywhere; it opens on its own refs.
 - A `motion_context` continuation's `[Shot 1]` continues the pin: same place, angle and pose, no
-  cut in its first 2 s. The hop before it ends on a face (rule 8). Prefer the continuation as one
+  cut in its first 2 s. The hop before it ends on a face (SKILL.md, *end on a face*). Prefer the continuation as one
   take whose camera moves (pull back, drift, arc) to the next framing; put the cuts in restarts.
   The seams stay quiet.
 - A restart opens on another size or angle than the previous hop's last frame, chosen by the cut

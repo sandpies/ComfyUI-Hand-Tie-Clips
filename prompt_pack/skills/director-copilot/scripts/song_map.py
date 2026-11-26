@@ -23,6 +23,11 @@ import _htc  # noqa: E402
 
 
 def main():
+    # Lyrics can hold Japanese or other non-Latin text; a cp1252 console crashed printing them.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     ap = argparse.ArgumentParser()
     ap.add_argument("song")
     ap.add_argument("--listen", action="store_true", help="also transcribe lyrics")

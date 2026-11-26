@@ -51,7 +51,7 @@ The authority on fields, directives and word budgets is the pack's `prompt_pack/
 ```
 
 `join` continuous | match_cut | hard_cut; `pace` slow | steady | brisk; `tail` ongoing | settle |
-hold. Leave `camera` and `framing` out (SKILL.md rule 6). The film's last hop: `tail: "settle"`
+hold. Leave `camera` and `framing` out (SKILL.md, *camera in the beat*). The film's last hop: `tail: "settle"`
 (a tease: `hold`).
 
 ## 4. Writing a beat
@@ -61,7 +61,7 @@ budget (35-60 words for 8 s, 45-75 for 10 s, 70-100 for 15 s; `check_plan.py` en
 from the shot notes as what the camera sees.
 
 Order inside a beat:
-1. **A person acting, the place in that line** (rule 1).
+1. **A person acting, the place in that line** (SKILL.md, *person first*).
 2. **Who sings, to where, and the mouth:** "raps fast and low, his eyes on the lens, his lips
    shaping every word" (never "into the camera", which pulls the shot in). The first line starts on a free body: finish any hand task at least 2 s
    before the first vocal, or the model runs the task late and the lips start a second or two

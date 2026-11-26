@@ -3,6 +3,19 @@
 A film has no song. H3 makes every voice and sound itself, so the script carries what the song
 carries in a music video: the timing, the speech and the silence. Read with [camera](camera.md).
 
+The film's rules in brief (each is worked out below):
+
+- **Budget the story:** three or four turns a minute, each with a hop; end on a tease held 2-3 s.
+  The opening shows a want; every cut to a new place or time carries a link on screen.
+- **Nobody looks into the lens.** Eyes on the person being dealt with, in a named direction; every
+  line has a visible listener.
+- **Every face without a line has a mouth state and a named sound,** before, between and after the
+  lines. The speaker stays in frame for the whole line.
+- **Lines:** delivery and face outside the quote, one delivery, about ten words, one sentence per
+  quote, single quotes, plain spelling; still about two spoken words a second across a scene.
+- **Voices ride only speaking hops:** a voiced row where the character speaks, a voiceless row of
+  the same sheet elsewhere. Masked characters do not speak unless the mask has a moving jaw.
+
 ## 1. The script
 
 - **One-line story, then the turns:** anything that changes the situation (an arrival, an offer, a

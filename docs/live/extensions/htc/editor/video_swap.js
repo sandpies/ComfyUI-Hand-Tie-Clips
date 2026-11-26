@@ -252,15 +252,8 @@ export function createVideoSwap(node, { onWritten } = {}) {
     plateRow.append(wardSel, wardInput, pinsInput);
     body.appendChild(plateRow);
 
-    // Optional SandTie SWAP speech/style/wardrobe overlays.
+    // Optional SandTie SWAP speech/style/wardrobe overlays (mounted after `row` exists below).
     let extras = null;
-    import("./sandtie_ui.js").then((mod) => {
-        if (typeof mod?.mountSwapExtras === "function") {
-            extras = mod.mountSwapExtras(node, {
-                body, bgSel, wardInput, plateRow, beforeEl: row, syncControls: () => syncControls(),
-            });
-        }
-    }).catch(() => {});
 
     function fillTagPicker(sel, blankLabel) {
         const rows = railRows();
@@ -300,10 +293,18 @@ export function createVideoSwap(node, { onWritten } = {}) {
     row.appendChild(brief);
 
     const go = button("Analyze & write swap",
-        "Draft one standalone swap contract (automatically samples 5 clip frames and scans reference plates).",
+        "Draft one standalone swap contract (OpenCV motion/cut strips + camera telemetry + scoped reference scan).",
         () => run());
     row.appendChild(go);
     body.appendChild(row);
+
+    import("./sandtie_ui.js").then((mod) => {
+        if (typeof mod?.mountSwapExtras === "function") {
+            extras = mod.mountSwapExtras(node, {
+                body, bgSel, wardInput, plateRow, beforeEl: row, syncControls: () => syncControls(),
+            });
+        }
+    }).catch(() => {});
 
     /* -- Image Forge SWAP Keyframe Pin Painter ---------------------------- */
     const paintBox = el("details", "h3e-writer-conn");
@@ -711,6 +712,8 @@ export function createVideoSwap(node, { onWritten } = {}) {
                     rail_rows: rows.map((rowItem) => ({
                         tag: String(rowItem.tag || "").replace(/^@/, ""),
                         file: String(rowItem.file || "").trim(),
+                        ...(rowItem.source ? { source: String(rowItem.source) } : {}),
+                        ...(Array.isArray(rowItem.members) ? { members: rowItem.members } : {}),
                     })),
                     mode: modeSel.value,
                     background: bgSel.value,

@@ -25,6 +25,7 @@ import nodes
 from . import media as _media
 from . import mv_solver as _mv_solver
 from . import songmap as _songmap
+from comfy_api.latest import io
 
 TAG = "HandTieClips-Studio"
 
@@ -1706,14 +1707,74 @@ def import_output(
     }
 
 
+SHEET_BACKDROPS = {
+    # key: (character sheet backdrop, prop surface). Black is the default (11-25): sheets and props on
+    # matte black keep their own light and colour, and nothing of a backdrop's tone bleeds into a scene.
+    "black": ("a seamless matte-black backdrop", "a seamless matte-black surface"),
+    "gray": ("a plain neutral mid-gray seamless backdrop", "a plain mid-gray surface"),
+    "white": ("a seamless plain white backdrop", "a plain white surface"),
+}
+
+
+def _backdrop_words(backdrop: Any) -> tuple[str, str, str]:
+    key = str(backdrop or "black").strip().lower().replace("grey", "gray")
+    if key not in SHEET_BACKDROPS:
+        key = "black"
+    sheet, surface = SHEET_BACKDROPS[key]
+    return key, sheet, surface
+
+
+# The visual half of the Studio's ideate turn (11-25). Written as findings with reasons, not shouted
+# rules. It asks for a treatment before any asset: a place-per-section list of plates rendered as a
+# showcase reel of places with someone walking in front of each. Plates are per world, written from the
+# camera their shots use; `section` lists every section a world appears in (the Studio matches plates
+# to hops by it). `.format()` fields: aspect, sheet_backdrop, prop_surface.
+_IDEATE_VISUAL_RULES = (
+    "HOW TO WRITE THE TREATMENT, THE ASSETS AND THE BRIEF:\n"
+    "- `treatment` comes first, 4 to 6 sentences, and everything else is built from it: the video's one idea beyond "
+    "the lyrics (a device, a game, a rule of its world); its visual hook, one move, image or effect that belongs to this "
+    "video only and comes back bigger each time the refrain returns; what escalates from section to section, so the last "
+    "refrain pays off the first; and 2 to 4 worlds, each a designed set with its own light and one hero texture or prop. "
+    "Worlds can intercut inside a section. Without an idea the video reads as a reel of places with someone walking in "
+    "front of each one. Build the hook from the world reacting to the performer (puddles lighting up under each step, "
+    "signs glitching on the beat, rain freezing mid-air) or from a move of theirs that grows. A mirrored double, a "
+    "reflection that comes alive, a clone or a look-alike renders as a second full-size person beside them or merges "
+    "the two; if a reflection matters, keep it to the surface under their feet.\n"
+    "- Image prompts are read by an image model that draws every word it sees, so describe only what should be there, "
+    "in positive words (a negation such as `no people` tends to draw people). Bare places are described as vacant "
+    "surfaces: `rain-slicked empty asphalt`, `bare oak stage floor`.\n"
+    "- `cast_assets`: `{{tag, prompt}}` only for characters with no `role=cast` file in Existing Cast / Refs. Two "
+    "characters or a duet get two entries with clearly different wardrobe colours and silhouettes, since alike clothes "
+    "merge two people into one. Each prompt is 55-85 words: a character turnaround sheet, the same person shown three "
+    "times side by side in full body (front view, three-quarter view, back view) in a neutral standing pose, on "
+    "{sheet_backdrop}, because several views of one design hold the face and outfit across every camera angle better "
+    "than a single pose; even soft studio light with no coloured gels (so skin and clothing stay true in every scene), "
+    "specific age, heritage, facial structure, hairline and skin texture, the outfit's fabrics and defining cut, and one "
+    "signature detail on one side.\n"
+    "- `plate_assets`: `{{tag, section, prompt}}`, one per world from the treatment. `section` lists every song section "
+    "the world appears in (`verse, chorus`). Each prompt is 55-85 words for aspect {aspect}, written from where the "
+    "camera stands in that world's shots, because a plate pulls its own view behind every shot on it: name the lens and "
+    "height (`low angle from the floor, 24mm`, `high wide from above, 28mm`), the foreground edge, midground landmarks, "
+    "background depth, the light's direction and colour, and open floor where people stand, dance or walk. The place "
+    "is vacant: people come from the cast sheets.\n"
+    "- `prop_assets`: `{{tag, prompt}}` for 1 to 2 hero objects from the treatment, each alone on {prop_surface} under "
+    "even soft studio light.\n"
+    "- `brief`: 5 to 7 sentences for the WRITE tab, citing exact `@tags`: how the treatment plays section by section "
+    "(Intro -> Verse -> Pre-Chorus -> Chorus -> Bridge -> Outro), who sings on which shots (not every shot), where the "
+    "camera is placed for each section's energy (on the floor, on her body, high above, through something), the hook's "
+    "return each time, and the light and wardrobe that stay constant."
+)
+
+
 IDEATE_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["title", "song_style", "lyrics", "cast_assets", "plate_assets", "prop_assets", "brief"],
+    "required": ["title", "song_style", "lyrics", "treatment", "cast_assets", "plate_assets", "prop_assets", "brief"],
     "properties": {
         "title": {"type": "string"},
         "song_style": {"type": "string"},
         "lyrics": {"type": "string"},
+        "treatment": {"type": "string"},
         "brief": {"type": "string"},
         "cast_assets": {
             "type": "array",
@@ -2017,8 +2078,9 @@ async def ideate_mv(
     lyrics_only: bool = False,
     existing_style: str = "",
     existing_title: str = "",
+    backdrop: str = "black",
 ) -> dict[str, Any]:
-    """Turn a rough concept + cast list into a duration-scaled YuE2 song spec, asset prompts, and MV brief."""
+    """Turn a rough concept + cast list into a duration-scaled YuE2 song spec, a treatment, asset prompts, and MV brief."""
     from . import planner as _planner  # noqa: PLC0415
 
     cast_lines = []
@@ -2044,6 +2106,7 @@ async def ideate_mv(
         cast_lines.append(f"- @{t} ({', '.join(meta_bits)}): {desc or 'no visual description yet'}")
 
     prof = _find_profile(image_profile)
+    backdrop_key, sheet_backdrop, prop_surface = _backdrop_words(backdrop)
     plan = _song_timing_plan(duration_target_s, vocal_mode=vocal_mode)
     lang_clean = str(language or "auto").strip()
     vocal_clean = str(vocal_mode or "auto").strip()
@@ -2144,26 +2207,13 @@ async def ideate_mv(
             "You are an experienced Music Video Director and Songwriter preparing an end-to-end production pack "
             f"for MiniMax H3 video + YuE2 song synthesis + {prof['label']} image generation.\n"
             "Return ONLY one valid JSON object matching this exact schema (no markdown outside JSON; zero negative words anywhere in image prompts):\n"
-            '{"title":"...","song_style":"...","lyrics":"...",'
+            '{"title":"...","song_style":"...","lyrics":"...","treatment":"...",'
             '"cast_assets":[{"tag":"lead","prompt":"..."}],'
             '"plate_assets":[{"tag":"street","section":"verse","prompt":"..."}],'
             '"prop_assets":[{"tag":"mic","prompt":"..."}],'
             '"brief":"..."}\n\n'
             + style_rules + "\n" + lyrics_rules + "\n"
-            "RULES FOR H3 VISUAL ASSETS & PLATES (100% POSITIVE ENGLISH — ZERO negations like `no`, `not`, `never`, `without`, `nobody`, `empty of people` anywhere in prompts!):\n"
-            "- `cast_assets`: list of `{tag, prompt}` ONLY for characters in the concept who do NOT already have a `role=cast` file in Existing Cast / Refs. "
-            "(If two characters or a duet are implied, create 2 distinct cast entries with contrasting wardrobe colors/silhouettes.) "
-            "Each prompt must be 55-85 words describing a crisp head-to-mid-thigh or full-body studio character sheet on a plain neutral mid-gray seamless backdrop, "
-            "even flat diffused softbox studio lighting (keep colored neon/stage gels off the identity sheet so skin & clothing stay true across scenes), "
-            "specific age/heritage/facial bone structure/hairline/skin texture, detailed layered outfit fabrics, and one signature asymmetric detail.\n"
-            "- `plate_assets`: list of `{tag, section, prompt}` for 2 to 4 hero environment plates spanning the MV arc (`intro`/`verse`, `chorus`/`drop`, `bridge`/`outro`). "
-            f"Each prompt must be 55-85 words authored for aspect {aspect} as an establishing camera-first background plate for H3 Ref2VA:\n"
-            "  * Name exact lens & height (`28mm wide establishing eye-level frame` or `35mm dramatic low-angle`), clear horizontal ground/stage floor plane with wide open center floor space where performers can stand/dance/walk.\n"
-            "  * Specify foreground framing edge, midground architectural landmarks, and background depth + coherent practical lighting direction, color temperature, and reflective surfaces shared across plates of the same shoot.\n"
-            "  * Describe purely vacant architecture/lighting (`vacant rain-slicked asphalt plaza, clear empty oak stage floor, bare studio mirror wall`) with ZERO people, silhouettes, or negations.\n"
-            "- `prop_assets`: list of `{tag, prompt}` for 1 to 2 signature hero objects isolated cleanly on a plain mid-gray surface under even diffused studio light.\n"
-            "- `brief`: rich 5 to 7 sentence directing treatment for H3 Write citing exact `@tags` (`@cast`, `@plate`, `@prop`), mapping Intro -> Verse -> Pre-Chorus -> Chorus -> Bridge -> Outro, "
-            "explicitly stating who lip-syncs/performs, camera energy per section (e.g. Verse tracking/medium -> Chorus dynamic orbit/push-in -> Bridge contrast shift -> Outro settle), and coherent lighting/wardrobe continuity."
+            + _IDEATE_VISUAL_RULES.format(aspect=aspect, sheet_backdrop=sheet_backdrop, prop_surface=prop_surface)
         )
         user_msg = (
             f"MV Concept / Vibe: {str(idea or '').strip() or 'Moody late-night neon rooftop performance'}\n"
@@ -2228,6 +2278,7 @@ async def ideate_mv(
             "title": _as_text(obj.get("title") or existing_title or "Untitled MV", sep=" ") or "Untitled MV",
             "song_style": st_txt,
             "lyrics": ly_txt,
+            "treatment": "" if lyrics_only else _as_text(obj.get("treatment"), sep=" "),
             "brief": _as_text(obj.get("brief"), sep=" "),
             "cast_assets": [] if lyrics_only else _norm_assets(obj.get("cast_assets"), "cast", "cast"),
             "plate_assets": [] if lyrics_only else _norm_assets(obj.get("plate_assets"), "plate", "plate"),
@@ -2270,10 +2321,15 @@ async def ideate_mv(
                 isinstance(r, dict) and r.get("file") and r.get("subject") is None and r.get("retention") != "prop"
                 for r in (cast_rows or [])
             )
+            if len(res.get("treatment") or "") < 120:
+                gaps.append(
+                    "Write the `treatment` first: the video's one idea beyond the lyrics, its visual hook and how it grows "
+                    "each time the refrain returns, what escalates section by section, and the 2 to 4 worlds with their light."
+                )
             if not res["cast_assets"] and existing_with_files == 0 and not has_existing_cast:
-                gaps.append("Include at least 1 rich photographic `cast_assets` character sheet (55-85 words) on plain neutral gray studio backdrop.")
+                gaps.append(f"Include at least 1 `cast_assets` character sheet (55-85 words) on {sheet_backdrop}.")
             if not res["plate_assets"] and not has_existing_plate:
-                gaps.append("Include 2 to 4 detailed camera-first vacant `plate_assets` environments with clear open floor space.")
+                gaps.append("Include one `plate_assets` entry per world (2 to 4), each written from the camera position its shots use, with open floor where people stand.")
             bad_neg = [
                 a.get("tag") for a in (res["cast_assets"] + res["plate_assets"] + res["prop_assets"])
                 if _ASSET_NEG_RE.search(str(a.get("prompt") or ""))
@@ -2348,6 +2404,8 @@ async def ideate_mv(
                             cand["prop_assets"] = best["prop_assets"]
                         if not cand["brief"] and best["brief"]:
                             cand["brief"] = best["brief"]
+                        if not cand["treatment"] and best["treatment"]:
+                            cand["treatment"] = best["treatment"]
                     if not cand["title"] or cand["title"] == "Untitled MV":
                         cand["title"] = best["title"]
                     # Accept repaired output if it improved compliance (more lines or fewer gaps)
@@ -2359,12 +2417,16 @@ async def ideate_mv(
         except Exception:
             pass
 
+    # The treatment leads the brief, so the WRITE tab plans from the idea and not from a list of places.
+    if best.get("treatment") and best["treatment"] not in best["brief"]:
+        best["brief"] = ("Treatment: " + best["treatment"] + ("\n\n" + best["brief"] if best["brief"] else "")).strip()
     sung_final = _count_yue2_sung_lines(best["lyrics"])
     secs_final = _count_yue2_sections(best["lyrics"])
     bpm_final = _extract_bpm(best["song_style"])
     return {
         "ok": True,
         **best,
+        "backdrop": backdrop_key,
         "lyrics_only": bool(lyrics_only),
         "timing_plan": {
             "target_s": plan["target_s"],
@@ -2428,25 +2490,9 @@ def _viggle_run_with_lora(lora, executor, *args, **kwargs):
             hk.remove()
 
 
-class HTCQwenViggleLora:
+class _HTCQwenViggleLoraImpl:
     """Applies diffusers/PEFT Qwen-Image-2.1 LoRAs at runtime (unmerged) for Studio & RefMod extraction."""
 
-    DEPRECATED = True
-    CATEGORY = "Hand Tie Clips"
-    RETURN_TYPES = ("MODEL",)
-    FUNCTION = "load"
-    DESCRIPTION = "Internal runtime PEFT LoRA loader for Qwen 2.1 Viggle Turbo (avoids int8 quantization noise)."
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "model": ("MODEL", {"tooltip": "Qwen Image 2.1 / Viggle diffusion model to patch."}),
-                "lora_name": (_safe_list("loras"), {"tooltip": "Diffusers/PEFT Qwen LoRA file from models/loras/."}),
-                "strength": ("FLOAT", {"default": 1.0, "min": -4.0, "max": 4.0, "step": 0.05,
-                                       "tooltip": "Runtime PEFT LoRA strength (applied without merging int8 weights)."}),
-            }
-        }
 
     def load(self, model, lora_name, strength=1.0):
         import json as _json
@@ -2478,6 +2524,52 @@ class HTCQwenViggleLora:
             lambda executor, *a, **kw: _viggle_run_with_lora(lora, executor, *a, **kw),
         )
         return (m,)
+
+
+class HTCQwenViggleLora(io.ComfyNode, _HTCQwenViggleLoraImpl):
+    """V3 schema for HTCQwenViggleLora; the implementation lives in _HTCQwenViggleLoraImpl.
+
+    Also inherits _HTCQwenViggleLoraImpl so existing callers of the V1 API (HTCQwenViggleLora().load(...),
+    HTCQwenViggleLora.<helper>) keep working; core sees only the V3 hooks below."""
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id='HTCQwenViggleLora',
+            display_name='HTC Qwen Viggle LoRA',
+            category="Hand Tie Clips",
+            description="Internal runtime PEFT LoRA loader for Qwen 2.1 Viggle Turbo (avoids int8 quantization noise).",
+            is_deprecated=True,
+            inputs=[
+                io.Model.Input(
+                    'model',
+                    tooltip="Qwen Image 2.1 / Viggle diffusion model to patch.",
+                ),
+                io.Combo.Input(
+                    'lora_name',
+                    options=_safe_list("loras"),
+                    tooltip="Diffusers/PEFT Qwen LoRA file from models/loras/.",
+                ),
+                io.Float.Input(
+                    'strength',
+                    default=1.0,
+                    min=-4.0,
+                    max=4.0,
+                    step=0.05,
+                    tooltip="Runtime PEFT LoRA strength (applied without merging int8 weights).",
+                ),
+            ],
+            outputs=[
+                io.Model.Output(),
+            ],
+        )
+
+    @classmethod
+    def execute(cls, **kwargs):
+        result = _HTCQwenViggleLoraImpl().load(**kwargs)
+        if isinstance(result, dict):
+            return io.NodeOutput.from_dict(result)
+        return io.NodeOutput(*result) if result is not None else io.NodeOutput()
 
 
 NODE_CLASS_MAPPINGS = {"HTCQwenViggleLora": HTCQwenViggleLora}

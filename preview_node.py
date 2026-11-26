@@ -14,6 +14,7 @@ which pin mechanism each hop actually used, and how far the audio has drifted
 from the video.
 """
 from __future__ import annotations
+from comfy_api.latest import io
 
 try:
     from server import PromptServer
@@ -34,43 +35,12 @@ def _send(payload):
         print(f"[{TAG}] preview send skipped: {e!r}", flush=True)
 
 
-class HTCChainPreview:
+class _HTCChainPreviewImpl:
     """Pass images and audio through, and report the join.
 
     Wire between HandTieClips and CreateVideo.
     """
 
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "images": ("IMAGE", {
-                    "tooltip": "Generated video frames from HandTieClips. Passed through untouched for live preview and end-of-run diagnostics.",
-                }),
-            },
-            "optional": {
-                "audio": ("AUDIO", {
-                    "tooltip": "Generated soundtrack from HandTieClips. Wire it to measure A/V sync drift against the video frames.",
-                }),
-                "info": ("STRING", {
-                    "forceInput": True,
-                    "tooltip": "The info string from HandTieClips. Feeds seam health, motion overload, and hop diagnostics into the preview card.",
-                }),
-            },
-            "hidden": {"unique_id": "UNIQUE_ID"},
-        }
-
-    RETURN_TYPES = ("IMAGE", "AUDIO")
-    RETURN_NAMES = ("images", "audio")
-    FUNCTION = "run"
-    CATEGORY = "Hand Tie Clips"
-    OUTPUT_NODE = False
-    DESCRIPTION = (
-        "Preview panel for an H3 Ref2VA chain. Sits on the IMAGE wire before "
-        "CreateVideo and passes images and audio through untouched. Shows the "
-        "live sample, per-hop progress, which pin mechanism each hop used "
-        "(Motion-Context vs the AddGuide fallback), and end-of-run A/V drift."
-    )
 
     def run(self, images, audio=None, info="", unique_id=None):
         frames = int(images.shape[0]) if images is not None else 0
@@ -126,6 +96,53 @@ class HTCChainPreview:
         return (images, audio)
 
 
+class HTCChainPreview(io.ComfyNode, _HTCChainPreviewImpl):
+    """V3 schema for HTCChainPreview; the implementation lives in _HTCChainPreviewImpl.
+
+    Also inherits _HTCChainPreviewImpl so existing callers of the V1 API (HTCChainPreview().run(...),
+    HTCChainPreview.<helper>) keep working; core sees only the V3 hooks below."""
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id='HTCChainPreview',
+            display_name='H3 Chain Preview',
+            category="Hand Tie Clips",
+            description="Preview panel for an H3 Ref2VA chain. Sits on the IMAGE wire before "
+                "CreateVideo and passes images and audio through untouched. Shows the "
+                "live sample, per-hop progress, which pin mechanism each hop used "
+                "(Motion-Context vs the AddGuide fallback), and end-of-run A/V drift.",
+            inputs=[
+                io.Image.Input(
+                    'images',
+                    tooltip="Generated video frames from HandTieClips. Passed through untouched for live preview and end-of-run diagnostics.",
+                ),
+                io.Audio.Input(
+                    'audio',
+                    optional=True,
+                    tooltip="Generated soundtrack from HandTieClips. Wire it to measure A/V sync drift against the video frames.",
+                ),
+                io.String.Input(
+                    'info',
+                    optional=True,
+                    force_input=True,
+                    tooltip="The info string from HandTieClips. Feeds seam health, motion overload, and hop diagnostics into the preview card.",
+                ),
+            ],
+            outputs=[
+                io.Image.Output(display_name='images'),
+                io.Audio.Output(display_name='audio'),
+            ],
+            hidden=[io.Hidden.unique_id],
+        )
+
+    @classmethod
+    def execute(cls, **kwargs):
+        kwargs['unique_id'] = cls.hidden.unique_id
+        result = _HTCChainPreviewImpl().run(**kwargs)
+        if isinstance(result, dict):
+            return io.NodeOutput.from_dict(result)
+        return io.NodeOutput(*result) if result is not None else io.NodeOutput()
 
 
 # -- pre-rename ids ----------------------------------------------------------
@@ -138,7 +155,15 @@ class HTCChainPreview:
 
 
 class _LegacyH3ChainPreview(HTCChainPreview):
-    DEPRECATED = True
+    """Old node id 'H3ChainPreview': same node as HTCChainPreview, kept so old workflows load."""
+
+    @classmethod
+    def define_schema(cls):
+        schema = super().define_schema()
+        schema.node_id = 'H3ChainPreview'
+        schema.display_name = 'H3ChainPreview'
+        schema.is_deprecated = True
+        return schema
 
 
 NODE_CLASS_MAPPINGS = {

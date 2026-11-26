@@ -43,7 +43,7 @@ because bodies in contact are the hardest thing the model draws.
 - **A glance back is the chin over one shoulder** while chest and spine stay put.
 - **Her face from behind comes from a mirror ahead** in the frame: her real back in the
   foreground, her face only in the glass.
-- **Joins:** the hop before a `motion_context` continuation must end on a face (rule 8), which a
+- **Joins:** the hop before a `motion_context` continuation must end on a face (SKILL.md, *end on a face*), which a
   rear shot cannot give. Make a rear position its own restart with the sheets attached, or end
   the hop before the join on a face (a position change on screen, a mirror, a chin turn).
 

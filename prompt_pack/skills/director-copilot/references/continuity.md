@@ -120,7 +120,7 @@ holds), what happens (every change on screen), the END, and the END framing.
 - **Each START is the previous END,** exactly. Posture and spot changes happen on screen inside a
   hop: never sit in one hop and stand at the start of the next.
 - **The END framing is the next hop's first frame** on a continuation. Before a continuation it
-  is a face at medium or closer (rule 8).
+  is a face at medium or closer (SKILL.md, *end on a face*).
 - **Whatever the next hop needs at its start must be in this hop's END frame.** A continuation
   starts from the last frames it is handed; a prop resting on a chair the END frame shows empty
   pops in or flies in partway through the next hop, however the next beat words it. Before taking

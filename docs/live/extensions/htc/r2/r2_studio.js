@@ -52,6 +52,7 @@ function defaultState() {
         duration_target_s: 105,
         language: "auto",
         vocal_mode: "auto",
+        backdrop: "black",
         auto_wake: true,
         song_style: "",
         lyrics: "",
@@ -78,7 +79,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
     let busySong = false;
     let llmLoaded = false;
     let llmLoadSeq = 0;
-    let llmState = { running: false, online: false, backend: "lmstudio", backend_label: "LM Studio", model: "", startup_error: "" };
+    let llmState = { running: false, online: false, backend: "lmstudio", backend_label: "Local server", model: "", startup_error: "" };
 
     function loadState() {
         node.properties ??= {};
@@ -125,7 +126,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
         fetchCaps(true);
         loadLlmSettings({ quiet: true });
     });
-    const freeGpuBtn = button("\u2615 Free LLM VRAM", "Unload local nInfer / LM Studio writer model before queueing generation", async () => {
+    const freeGpuBtn = button("\u2615 Free LLM VRAM", "Unload the local writer model (nInfer or local server) before queueing generation", async () => {
         setStatus(conceptStatus, "Unloading LLM writer from VRAM...", "hint");
         await unloadWriterForGpu();
         await loadLlmSettings({ quiet: true });
@@ -186,7 +187,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
 
     const llmBackSel = el("select", "r2-st-sel");
     llmBackSel.title = "Writer backend (shared with Write / Standard / Swap)";
-    for (const [bid, blbl] of [["lmstudio", "LM Studio"], ["ninfer", "nInfer"]]) {
+    for (const [bid, blbl] of [["lmstudio", "Local server"], ["ninfer", "nInfer"]]) {
         const o = el("option", null, blbl);
         o.value = bid;
         llmBackSel.appendChild(o);
@@ -207,7 +208,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
     wakeWrap.append(wakeChk, el("span", null, "\u2615 Auto-Wake"));
     wakeWrap.title = "Auto-start nInfer from a cold start when Spark Concept & Assets is clicked";
 
-    const llmCfgBtn = button("\u2699 LLM Settings", "Configure nInfer / LM Studio URL, model ID & .ninfer paths", () => {
+    const llmCfgBtn = button("\u2699 LLM Settings", "Configure the writer: local server URL, model ID, or nInfer .ninfer paths", () => {
         const open = llmDrawer.hidden;
         llmDrawer.hidden = !open;
         llmCfgBtn.classList.toggle("h3e-on", open);
@@ -289,7 +290,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
     c1.appendChild(llmDrawer);
 
     function paintLlmBar() {
-        const lbl = llmState.backend_label || (llmState.backend === "ninfer" ? "nInfer" : "LM Studio");
+        const lbl = llmState.backend_label || (llmState.backend === "ninfer" ? "nInfer" : "Local server");
         if (llmState.backend) llmBackSel.value = llmState.backend;
         const isRunning = Boolean(llmState.running || llmState.online);
         if (isRunning) {
@@ -306,7 +307,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
     }
 
     async function switchLlmBackend(nextBack) {
-        const lbl = nextBack === "ninfer" ? "nInfer" : "LM Studio";
+        const lbl = nextBack === "ninfer" ? "nInfer" : "Local server";
         llmBackSel.value = nextBack;
         cfgBackSel.value = nextBack;
         cfgPathRow.hidden = nextBack !== "ninfer";
@@ -334,7 +335,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
             llmLoaded = true;
             const backs = Array.isArray(j.backends) && j.backends.length
                 ? j.backends
-                : [{ id: "lmstudio", label: "LM Studio", program: false }, { id: "ninfer", label: "nInfer", program: true }];
+                : [{ id: "lmstudio", label: "Local server", program: false }, { id: "ninfer", label: "nInfer", program: true }];
             cfgBackSel.textContent = "";
             for (const b of backs) {
                 const o = el("option", null, b.label || b.id);
@@ -348,7 +349,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
             cfgModelInp.value = j.model || "";
             cfgModelInp.placeholder = activeBack === "ninfer"
                 ? "model id (auto after Start; blank = auto)"
-                : "model id (optional on LM Studio)";
+                : "model id (optional if your server has one loaded)";
             cfgKeepWarmChk.checked = j.keep_warm !== false;
             cfgUnloadChk.checked = j.unload_on_run !== false;
             const curPaths = (j.server_paths && j.server_paths[activeBack]) || {};
@@ -385,7 +386,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
                 running: Boolean(j.running),
                 online: Boolean(j.online),
                 backend: activeBack,
-                backend_label: j.backend_label || (activeBack === "ninfer" ? "nInfer" : "LM Studio"),
+                backend_label: j.backend_label || (activeBack === "ninfer" ? "nInfer" : "Local server"),
                 model: j.model || "",
                 startup_error: j.startup_error || "",
             };
@@ -452,10 +453,10 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
                 if (!okSave) return;
             }
             if (action === "stop" && llmState.backend !== "ninfer") {
-                setStatus(conceptStatus, "Unloading LM Studio model from VRAM...", "hint");
+                setStatus(conceptStatus, "Unloading the writer model...", "hint");
                 await unloadWriterForGpu();
                 await loadLlmSettings({ quiet: true });
-                setStatus(conceptStatus, "LM Studio model unloaded.", "hint");
+                setStatus(conceptStatus, "Writer model unloaded.", "hint");
                 return;
             }
             setStatus(conceptStatus, action === "start" ? "Starting nInfer writer..." : "Stopping nInfer writer...", "hint");
@@ -630,6 +631,23 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
         syncLyricsMetrics();
     });
 
+    const backdropSel = el("select", "r2-st-sel");
+    backdropSel.title = "Backdrop for the character sheets and prop pictures the concept writes";
+    for (const [bVal, bLbl] of [
+        ["black", "Sheets: Black"],
+        ["gray", "Sheets: Gray"],
+        ["white", "Sheets: White"],
+    ]) {
+        const opt = el("option", null, bLbl);
+        opt.value = bVal;
+        backdropSel.appendChild(opt);
+    }
+    backdropSel.value = state.backdrop || "black";
+    backdropSel.addEventListener("change", () => {
+        state.backdrop = backdropSel.value;
+        saveState();
+    });
+
     const vibePresetSel = el("select", "r2-st-sel");
     vibePresetSel.title = "1-click starting MV genre/BPM preset (fills Idea, Vocal mode & Aspect)";
     for (const [pid, plbl] of MV_VIBE_PRESETS) {
@@ -652,7 +670,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
 
     const sparkBtn = button("\u2728 Spark Concept & Assets", "Generate rich YuE2 style, duration-scaled lyrics, and cast/plate/prop blueprints with local LLM", () => runIdeate({ lyricsOnly: false }), "h3e-btn h3e-btn-accent");
     const resparkLyricsBtn = button("\u21bb Scale Lyrics", "Rewrite & scale ONLY Style/Lyrics to the chosen timing dropdown (keeps your Card 3 assets untouched)", () => runIdeate({ lyricsOnly: true }));
-    ideaRow.append(vibePresetSel, ideaInput, aspectSel, durSel, langSel, vocalSel, sparkBtn, resparkLyricsBtn);
+    ideaRow.append(vibePresetSel, ideaInput, aspectSel, durSel, langSel, vocalSel, backdropSel, sparkBtn, resparkLyricsBtn);
     c1.appendChild(ideaRow);
 
     const specGrid = el("div", "r2-st-grid2");
@@ -754,6 +772,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
                     image_profile: state.image_profile || "qwen_viggle_6step",
                     language: state.language || "auto",
                     vocal_mode: state.vocal_mode || "auto",
+                    backdrop: state.backdrop || "black",
                     lyrics_only: Boolean(lyricsOnly),
                     song_style: state.song_style || "",
                     title: state.title || "",
@@ -781,7 +800,8 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
                         id: uid(),
                         tag: item.tag || "cast",
                         role: "cast",
-                        aspect: state.aspect === "16:9" ? "3:4" : (state.aspect || "3:4"),
+                        // a turnaround sheet (front, three-quarter, back) needs a wide canvas whatever the video's aspect
+                        aspect: "16:9",
                         mp: "inherit",
                         prompt: item.prompt || "",
                         ref1: "",
@@ -2052,6 +2072,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
         durSel.value = String(state.duration_target_s || 105);
         langSel.value = state.language || "auto";
         vocalSel.value = state.vocal_mode || "auto";
+        backdropSel.value = state.backdrop || "black";
         aspectSel.value = state.aspect || "16:9";
         imgMpSel.value = String(state.image_mp ?? "0");
         if (document.activeElement !== ideaInput) ideaInput.value = state.idea || "";

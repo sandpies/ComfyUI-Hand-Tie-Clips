@@ -29,6 +29,7 @@ import uuid
 
 import numpy as np
 import torch
+from comfy_api.latest import io
 
 try:
     from server import PromptServer
@@ -6137,7 +6138,16 @@ def _slice_take_audio(prepared, t0, t1, sr):
     return {"waveform": chunk.unsqueeze(0), "sample_rate": int(sr)}
 
 
-class HandTieClips:
+def _v3_accepted(fn, kwargs):
+    """The kwargs a V1 hook's signature accepts (all of them if it takes **kw)."""
+    import inspect as _inspect
+    params = _inspect.signature(fn).parameters
+    if any(p.kind is p.VAR_KEYWORD for p in params.values()):
+        return dict(kwargs)
+    return {k: v for k, v in kwargs.items() if k in params}
+
+
+class _HandTieClipsImpl:
     """Refs + shot plan + N hops, assembled into one clip.
 
     Each hop after the first pins the previous hop's sampler latent through
@@ -6145,810 +6155,10 @@ class HandTieClips:
     available. See the module docstring.
     """
 
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "model": ("MODEL", {
-                    "tooltip": "The MiniMax H3 model, with any LoRAs already applied."}),
-                "clip": ("CLIP", {"tooltip": "The H3 text encoder."}),
-                "vae": ("VAE", {"tooltip": "The H3 video VAE."}),
-                "audio_vae": ("VAE", {"tooltip": "The H3 audio VAE."}),
-                "prompt": ("STRING", {
-                    "multiline": True,
-                    "dynamicPrompts": False,
-                    "default": (
-                        "Live-action, natural indoor light. The person looks exactly "
-                        "as in the reference photographs.\n\n"
-                        "They sit at a table, look up, and speak one short line. "
-                        "Then they settle, watching the room."
-                    ),
-                    "tooltip": ("The prompt when no shot plan is set. Separate hops with --- on its own "
-                                "line."),
-                }),
-                "chains": (["1", "2", "3", "4", "5", "6", "7", "8"], {
-                    "default": "3",
-                    "tooltip": ("How many hops to render when no shot plan is set. With a plan, the shot "
-                                "count decides."),
-                }),
-                "resolution": (list(RESOLUTIONS), {
-                    "default": DEFAULT_RESOLUTION,
-                    "tooltip": ("Output size, as an area. 0.98 MP is H3's native size; the 1.1-2.0 MP "
-                                "rungs above it are past what the model was trained for."),
-                }),
-                "aspect": (list(ASPECTS), {
-                    "default": DEFAULT_ASPECT,
-                    "tooltip": "Frame shape. Sets width and height together with resolution.",
-                }),
-                "duration": (list(DURATION_FRAMES), {
-                    "default": "10 s",
-                    "tooltip": ("Length of each hop. A shot can set its own. Judge joins at 8 s or longer; "
-                                "5 s is too short to show them."),
-                }),
-                "overlap": (["0.9 s", "0.2 s", "1.6 s"], {
-                    "default": "0.9 s",
-                    "tooltip": ("How much of the previous hop each hop continues from. 0.9 s (22f) is the "
-                                "standard overlap; 1.6 s (39f) gives wider motion memory and lands cleanly "
-                                "on the 40 Hz / 24 fps 3-frame audio grid."),
-                }),
-                "seed": ("INT", {
-                    "default": 0, "min": 0, "max": 0xffffffffffffffff,
-                    "control_after_generate": True,
-                    "tooltip": ("Noise seed. With seed_per_shot on, hop N uses seed + N - 1. A "
-                                "shot can set its own seed on the SCRIPT tab.")
-                }),
-                "seed_per_shot": ("BOOLEAN", {
-                    "default": True,
-                    "label_on": "vary per hop",
-                    "label_off": "same seed every hop",
-                    "tooltip": ("on: each hop draws its own noise (seed + hop number - 1). off: "
-                                "every hop uses seed. A sand_tie take draws from its first hop's "
-                                "seed plus any seed a shot sets.")
-                }),
-                "steps": ("INT", {"default": 14, "min": 1, "max": 50, "tooltip":
-                    ("Sampling steps per hop. A shot can set its own. 8 for a turbo LoRA; more "
-                     "steps mostly improve generated speech.")}),
-                "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "res_multistep",
-                    "tooltip": "Sampler used for every hop."
-                }),
-                "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "beta",
-                    "tooltip": "Scheduler used for every hop."
-                }),
-                "shift_video": ("FLOAT", {"default": 12.0, "min": 0.01, "max": 100.0, "step": 0.01,
-                    "tooltip": ("Schedule shift for the picture (12 is usual). Higher spends more "
-                                "of the steps on large shapes and motion, lower on fine detail.")
-                }),
-                "shift_audio": ("FLOAT", {"default": 3.0, "min": 0.01, "max": 100.0, "step": 0.01,
-                    "tooltip": ("Schedule shift for the sound (3 is usual). Same idea as "
-                                "shift_video.")
-                }),
-                "ref_image_size": (["match", "max"], {
-                    "tooltip": ("How large reference pictures go in. match is faster; max keeps more face "
-                                "detail but is slower."),
-                }),
-            },
-            "optional": {
-                # The nine ref_image_N sockets, plus reference_video, voice
-                # and start_image, used to live at the TOP of this block --
-                # twelve of a sixteen-socket column that occupied a third of
-                # the node before the editor started. They are files now, and
-                # their replacements are appended at the BOTTOM of `optional`
-                # instead. See the note beside them: widget ORDER is part of
-                # the saved-workflow format.
-                "hop_script": (["verbatim", "next"], {
-                    "default": "verbatim",
-                    "tooltip": ("Only without a shot plan. next: later hops get only the new part of the "
-                                "prompt. verbatim: every hop gets its text as written."),
-                }),
-                "pin_to_qwen": (["off", "last frame", "pin clip", "both"], {
-                    "default": "last frame",
-                    "tooltip": ("Shows the text encoder where the previous hop ended. last frame (default) "
-                                "adds its last frame as a picture; pin clip adds the overlap as a short "
-                                "video."),
-                }),
-                "shot_plan": ("STRING", {
-                    "multiline": True,
-                    "default": "",
-                    "tooltip": "The shot list, written by the SCRIPT tab. One shot per hop.",
-                }),
-                "ref_plan": ("STRING", {
-                    "multiline": True,
-                    "default": "",
-                    "tooltip": ("The reference list, written by the REFS tab. Beats cite each reference by "
-                                "@tag."),
-                }),
-                "cache_hops": (["off", "on"], {
-                    "default": "off",
-                    "tooltip": ("Keep each rendered hop on disk. Unchanged hops load instead of "
-                                "re-rendering. Needed for retakes, render_from and the TIMELINE film."),
-                }),
-                "cache_budget_gb": ("FLOAT", {
-                    "default": 20.0, "min": 1.0, "max": 500.0, "step": 1.0,
-                    "tooltip": "Disk space for cached hops. The oldest are removed above this.",
-                }),
-                "audio_pin_frames": ("INT", {
-                    "default": 24, "min": 0, "max": 240, "step": 24,
-                    "tooltip": ("How much of the previous hop's sound each hop continues from, in frames "
-                                "(24 = 1 s). Raise it for dialogue that runs across joins. 0 matches the "
-                                "overlap."),
-                }),
-                "pin_renorm": (["off", "band"], {
-                    "default": "off",
-                    "tooltip": ("Counters the fine detail that builds up at each join. band applies it; off "
-                                "leaves the join as generated."),
-                }),
-                "pin_noise": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 0.10, "step": 0.005,
-                    "tooltip": ("Adds a little noise to the join, another way to stop detail building up. "
-                                "Try 0.05; 0 is off."),
-                }),
-                "tone_compensate": (_tone.CHAIN_MODES, {
-                    "default": "off",
-                    "tooltip": ("Evens out colour/brightness drift between hops. anchor locks whole chain "
-                                "tone; chroma holds Lab color balance/saturation while keeping face brightness "
-                                "untouched; anchor and chroma also fade out the colour step at each continuation "
-                                "join; frame_shift / gain_bias / lut smooth each join; off leaves hops as rendered."
-                                + (" anchor+carry (experimental, motion_context): anchor, and each continuation also "
-                                   "starts from frames pulled back to its scene's first hop, so drift stops feeding the "
-                                   "next hop; a restart or tone=rebase starts a new scene."
-                                   if _tone.CARRY_LISTED else "")),
-                }),
-                # ---------------------------------------------------------
-                # APPEND-ONLY ZONE. `widgets_values` in a saved workflow is a
-                # POSITIONAL array -- ComfyUI restores value[i] into widget[i]
-                # and never checks the name. A widget inserted anywhere but the
-                # end renumbers everything after it, and every previously saved
-                # workflow silently loads its values into the wrong widgets.
-                #
-                # These three were first added at the top of `optional`, which
-                # shifted hop_script..tone_compensate by +3. `ref_plan` then
-                # received audio_pin_frames' integer and the editor threw
-                # `(text || "").trim is not a function` on load -- the only
-                # visible symptom of a much wider silent corruption.
-                #
-                # Add new widgets HERE, at the bottom. Old workflows are then
-                # short rather than misaligned, and the new widget takes its
-                # default.
-                # ---------------------------------------------------------
-                "start_image_file": ("STRING", {
-                    "default": "",
-                    "tooltip": "A picture for hop 1 to start on. Set it on the MEDIA tab.",
-                }),
-                "reference_video_file": ("STRING", {
-                    "default": "",
-                    "tooltip": "A clip to borrow motion or look from. Set it on the MEDIA tab.",
-                }),
-                "voice_file": ("STRING", {
-                    "default": "",
-                    "tooltip": "A voice sample, cited as <Audio 1>. Set it on the MEDIA tab.",
-                }),
-                # Appended here on 2026-08-29, per the note above: LAST, so
-                # every saved workflow keeps its widget alignment and simply
-                # takes the default.
-                "establish": ("STRING", {
-                    # Single line on purpose. The editor hides only the widgets
-                    # it explicitly owns, so this one renders as a native widget
-                    # on the node body -- and one sentence in a one-line box is
-                    # discoverable where a multiline textarea would be a slab.
-                    "default": _d.ESTABLISH,
-                    "tooltip": ("A line added at the start of hop 1. The default says live action; change "
-                                "it for another style, or clear it."),
-                }),
-                # Appended 2026-08-30, still obeying the append-only rule above.
-                "render_through": ("INT", {
-                    "default": 0, "min": 0, "max": 64,
-                    "tooltip": "Stop after this hop. 0 renders every hop.",
-                }),
-                "quality": (["final", "draft"], {
-                    "default": "final",
-                    "tooltip": ("draft renders small and fast to check the story and the joins. final is "
-                                "the real render."),
-                }),
-                "dry_run": (["off", "on", "previs"], {
-                    "default": "off",
-                    "tooltip": ("on: build every hop's prompt without rendering; read them on the "
-                                "info output. previs (hand_tie only): render just the previews to "
-                                "check them; the full run reuses them."),
-                }),
-                "contact_sheet": (["off", "on"], {
-                    "default": "off",
-                    "tooltip": "Also output an image with each hop's first and last frame and its beat.",
-                }),
-                "tone_anchor": ("FLOAT", {
-                    "default": _tone.ANCHOR_STRENGTH, "min": 0.0, "max": 1.0, "step": 0.05,
-                    "tooltip": ("How strongly anchor pulls each hop back to the reference look. 0.35 is "
-                                "gentle; raise it if a long chain fades."),
-                }),
-                # APPENDED, never inserted -- the same rule the ref sockets at
-                # the top of this block were deleted for. `widgets_values` is a
-                # positional list, so a widget added anywhere but the end shifts
-                # every widget after it, and a workflow saved before the change
-                # reads its own settings out of the wrong slots. Silently: the
-                # numbers all still parse, they are just the wrong numbers.
-                "music_gain_db": ("FLOAT", {
-                    "default": -14.0, "min": -60.0, "max": 6.0, "step": 0.5,
-                    "tooltip": "Music level. -14 sits under speech; -6 is music-led.",
-                }),
-                "music_duck": ("FLOAT", {
-                    "default": 0.6, "min": 0.0, "max": 1.0, "step": 0.05,
-                    "tooltip": "Lowers the music while someone speaks. 0 is off; 0.6 keeps speech clear.",
-                }),
-                "music_fit": (["loop", "once"], {
-                    "default": "loop",
-                    "tooltip": ("loop repeats the track to fill the chain; once plays it through and then "
-                                "stops."),
-                }),
-                "music_fade_s": ("FLOAT", {
-                    "default": 1.0, "min": 0.0, "max": 10.0, "step": 0.25,
-                    "tooltip": "Fade in and out at the start and end of the music, in seconds.",
-                }),
-                # The picker's half of the soundtrack, and the one most people
-                # use. Same shape as voice_file: a basename under h3_refs, set
-                # in the panel. LAST, per the note at the top of this block.
-                "soundtrack_file": ("STRING", {
-                    "default": "",
-                    "tooltip": "A music file for the soundtrack. Set it on the MEDIA tab.",
-                }),
-                # Trim windows, appended 2026-09-01 -- LAST, per the note at
-                # the top of this block. Six floats rather than one JSON blob
-                # because these three slots are fixed and named, the same
-                # reason `voice_file` is its own widget. The rail's references
-                # are a LIST, which is why their per-item settings live in
-                # `ref_plan` instead.
-                #
-                # An end of 0.0 is the sentinel for "to the end of the file",
-                # so the default pair (0, 0) is untrimmed and costs nothing.
-                # media.clip_window is the single definition of what they mean.
-                "voice_start_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": ("Where the voice sample starts, in seconds. Leave both at 0 to use its "
-                                "first 8 s."),
-                }),
-                "voice_end_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where the voice sample ends, in seconds. 0 is the end of the file.",
-                }),
-                "reference_video_start_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where the reference clip starts, in seconds.",
-                }),
-                "reference_video_end_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where the reference clip ends, in seconds. 0 is the end.",
-                }),
-                "music_start_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where the music starts in the file, in seconds.",
-                }),
-                "music_end_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where the music ends in the file, in seconds. 0 is the end.",
-                }),
-                # Appended 2026-09-03 -- LAST, per the note at the top of this
-                # block. `render_through` has been here since 0.4 and stops the
-                # chain; this is the other end of the same range.
-                "render_from": ("INT", {
-                    "default": 0, "min": 0, "max": 64,
-                    "tooltip": ("Start rendering at this hop; earlier hops load from the cache. 0 starts at "
-                                "hop 1. Needs cache_hops on."),
-                }),
-                "reference_video_desc": ("STRING", {
-                    "default": "",
-                    "tooltip": ("What the reference clip is for, in a few words, e.g. \"a slow dolly along "
-                                "the counter\". Without it the model may copy the clip outright."),
-                }),
-                # Appended 2026-09-03 -- LAST, per the note at the top of this
-                # block.
-                "reference_video_size": (list(_media.VIDEO_SIZES), {
-                    "default": _media.DEFAULT_VIDEO_SIZE,
-                    "tooltip": ("How large the reference clip is decoded. Lower saves memory and makes the "
-                                "clip influence the result less, which helps when it fights your faces."),
-                }),
-                # APPENDED, never inserted. `widgets_values` is a bare ordered
-                # array matched to this schema by index, so a widget added
-                # anywhere but the end silently reassigns every later value in
-                # every saved workflow. Adding options to an existing combo is
-                # safe; adding a widget is not.
-                "pin_mech": (["auto", "motion_context", "addguide", "hand_tie", "hand_tie_mc", "windowed", "sand_tie"], {
-                    "default": "auto",
-                    "tooltip": ("How hops are joined. auto (recommended): Motion-Context when "
-                                "installed, else AddGuide. motion_context / addguide: force one; "
-                                "it stops with an error rather than fall back. hand_tie "
-                                "(experimental): renders a small preview of each section and ties "
-                                "every hop to it, so drift does not build up; needs a shot plan. "
-                                "hand_tie_mc: hand_tie with the preview as a Motion-Context "
-                                "guide. sand_tie: each take (up to an anchor: restart) renders as "
-                                "one continuous video with no joins; needs a recent ComfyUI and "
-                                "overlap 0.9 s. windowed is the old name of sand_tie."),
-                }),
-                # APPENDED, never inserted -- see the note above `pin_mech`.
-                "tone_anchor_ref": (["hop1", "still"], {
-                    "default": "hop1",
-                    "tooltip": ("What anchor holds the chain to. hop1 is the first hop's look; still is the "
-                                "start image, which needs start_image_file."),
-                }),
-                # APPENDED after pin_mech and tone_anchor_ref. Those two already
-                # shipped on this trunk; the 3x3 extra slots go last so existing
-                # v2 workflows keep their last two values as pin_mech /
-                # tone_anchor_ref. H3 natively takes 9 reference images, 3
-                # reference videos and 3 standalone reference audios; the pack
-                # matched the 9 and passed exactly one of each of the others.
-                "reference_video_2_file": ("STRING", {
-                    "default": "",
-                    "tooltip": "A second reference clip. Set it on the MEDIA tab.",
-                }),
-                "reference_video_2_start_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where reference clip 2 starts, in seconds.",
-                }),
-                "reference_video_2_end_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where reference clip 2 ends, in seconds. 0 is the end.",
-                }),
-                "reference_video_3_file": ("STRING", {
-                    "default": "",
-                    "tooltip": "A third reference clip. Set it on the MEDIA tab.",
-                }),
-                "reference_video_3_start_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where reference clip 3 starts, in seconds.",
-                }),
-                "reference_video_3_end_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where reference clip 3 ends, in seconds. 0 is the end.",
-                }),
-                "voice_2_file": ("STRING", {
-                    "default": "",
-                    "tooltip": "A second voice sample. Set it on the MEDIA tab.",
-                }),
-                "voice_2_start_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where voice 2 starts, in seconds. Leave both at 0 to use its first 8 s.",
-                }),
-                "voice_2_end_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where voice 2 ends, in seconds. 0 is the end.",
-                }),
-                "voice_3_file": ("STRING", {
-                    "default": "",
-                    "tooltip": "A third voice sample. Set it on the MEDIA tab.",
-                }),
-                "voice_3_start_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where voice 3 starts, in seconds. Leave both at 0 to use its first 8 s.",
-                }),
-                "voice_3_end_s": ("FLOAT", {
-                    "default": 0.0, "min": 0.0, "max": 3600.0, "step": 0.1,
-                    "tooltip": "Where voice 3 ends, in seconds. 0 is the end.",
-                }),
-                # APPENDED, never inserted. Empty string leaves every existing
-                # path byte-identical: the lock is not called, the cache key
-                # does not move, the delivered audio is still the generated
-                # chain. The file is ElevenLabs (or any) TTS / a real take;
-                # every hop lip-syncs to one continuous window of it.
-                "master_audio_file": ("STRING", {
-                    "default": "",
-                    "tooltip": ("One recorded take for the whole chain; the picture lip-syncs to it and the "
-                                "audio is used as-is. The beats still need the words. Empty is off."),
-                }),
-                "last_frame_guide": (["off", "before_restart", "still"], {
-                    "default": "off",
-                    "tooltip": ("Makes a hop end on the start image. before_restart does it only before a "
-                                "restart, so the cut matches; still does it on every hop."),
-                }),
-                # APPENDED 2026-09-09, LAST for the same reason as everything
-                # else down here: widgets_values is positional and a saved
-                # workflow reads it by index.
-                "voice_every_hop": (["off", "speaking", "on"], {
-                    "default": "off",
-                    "tooltip": ("Whether the voice samples ride after hop 1. speaking (recommended) keeps "
-                                "them on hops with a spoken line; off is hop 1 only; on is every hop."),
-                }),
-                # APPENDED 2026-09-14 (the refine pass). Same rule again:
-                # widgets_values is positional, so these go LAST and nothing
-                # above them moves. Everything here ships inert -- hop_refine
-                # defaults off and the hop key only carries these fields when
-                # it is on, so a workflow saved before today keys byte-identical.
-                "hop_refine": (["off", "full", "pin_only", "split"], {
-                    "default": "off",
-                    "tooltip": ("A light second pass per hop that restores texture. full: the "
-                                "refined hop is shown and continued from. pin_only: used only for "
-                                "the next hop's join. split: no extra pass; the hop's last "
-                                "refine_steps are finished in finer steps (refine_model / "
-                                "refine_sampler). Not with realism_boost."),
-                }),
-                "refine_denoise": ("FLOAT", {
-                    "default": 0.50, "min": 0.05, "max": 1.0, "step": 0.05,
-                    "tooltip": "How much the second pass changes. 0.5 is the usual value.",
-                }),
-                "refine_steps": ("INT", {
-                    "default": 2, "min": 0, "max": 40,
-                    "tooltip": "Steps in the second pass. 2 is the usual value; 0 uses the hop's steps.",
-                }),
-                "refine_sampler": (["same"] + comfy.samplers.KSampler.SAMPLERS, {
-                    "default": "same",
-                    "tooltip": "Sampler for the second pass. same uses the hop's.",
-                }),
-                "refine_scheduler": (["same"] + comfy.samplers.KSampler.SCHEDULERS, {
-                    "default": "simple",
-                    "tooltip": "Scheduler for the second pass. same uses the hop's.",
-                }),
-                "refine_cond": (["base", "hop"], {
-                    "default": "base",
-                    "tooltip": ("What the second pass follows. base is the prompt and references; hop also "
-                                "includes the join."),
-                }),
-                "refine_model": ("MODEL", {
-                    "tooltip": ("Optional different model for the second pass, e.g. an undistilled base "
-                                "under a turbo chain."),
-                }),
-                "refine_audio": (["freeze", "refine"], {
-                    "default": "freeze",
-                    "tooltip": ("freeze (recommended) leaves the sound untouched by the second pass; refine "
-                                "lets it change the audio too."),
-                }),
-                "refine_blend": ("STRING", {
-                    "default": _rblend.AUTO, "multiline": False,
-                    "tooltip": ("Which frames use the second pass. auto keeps the start of each hop as "
-                                "generated so joins stay clean. Empty uses the second pass everywhere."),
-                }),
-                "refine_blend_interp": (["linear", "smooth", "step"], {
-                    "default": "linear",
-                    "tooltip": "How refine_blend changes between its points. linear is the usual choice.",
-                }),
-                "refine_head": (["refine", "freeze"], {
-                    "default": "refine",
-                    "tooltip": ("Another way to keep joins clean: freeze leaves each hop's opening out of "
-                                "the second pass. refine includes it."),
-                }),
-                # APPENDED 2026-09-15 (the speed preset). Last slot again, for
-                # the same positional reason: nothing above it moves.
-                "speed_mode": (["regular", "turbo"], {
-                    "default": "regular",
-                    "tooltip": ("Set turbo when a turbo model or LoRA is on the wire; nothing detects it. "
-                                "It adjusts the second pass to suit, but a turbo chain still drifts more "
-                                "at the joins. regular otherwise."),
-                }),
-                # APPENDED 2026-09-19, LAST for the same reason as everything
-                # else down here: widgets_values is positional and a saved
-                # workflow reads it by index.
-                "master_audio_start_s": ("FLOAT", {
-                    # 0.01, not the 0.1 the other trim widgets declare. The
-                    # frontend derives its rounding from the step, so a 0.1 step
-                    # quantises a stored 4.03 to 4.00 -- 1440 samples at 48 kHz,
-                    # 30 ms, measured against a real render. On a two-grip trim
-                    # that error lands on a reference clip's in-point and is
-                    # inaudible; here it moves a locked take under a frozen
-                    # mouth, which is the one place in this node where 30 ms of
-                    # audio placement is a visible result. `round` is set
-                    # explicitly rather than left to be derived, because that
-                    # derivation is frontend behaviour and not a contract.
-                    "default": 0.0, "min": 0.0, "max": 3600.0,
-                    "step": 0.01, "round": 0.01,
-                    "tooltip": "Where the chain starts inside master_audio_file, in seconds.",
-                }),
-                # APPENDED 2026-09-20, LAST, for the reason stated above:
-                # inserting it beside the other refine_* widgets would have
-                # renumbered refine_cond onward in every saved workflow.
-                "refine_align": (["hop_tail", "denoise"], {
-                    "default": "denoise",
-                    "tooltip": ("Where the second pass starts. hop_tail re-runs the hop's own "
-                                "last steps and suits turbo models; denoise starts from "
-                                "refine_denoise on a schedule of its own."),
-                }),
-                # APPENDED 2026-09-23, LAST, same positional reason.
-                "realism_boost": (["off", "on"], {
-                    "default": "off",
-                    "tooltip": ("Upscale 2nd Pass, for more realistic texture. The hops render "
-                                "at the canvas size as usual, sound included; after the last hop "
-                                "the film is sized up to 2nd pass megapixels and its texture is "
-                                "re-drawn with the 2nd pass LoRAs below (recipe: "
-                                "minimax_h3_lms_v1.0_r64 0.5 + h3-realism-people 1.0). Runs "
-                                "before upsample when both are on."),
-                }),
-                "boost_lora_1": (_boost_lora_choices(), {
-                    "default": _boost_lora_default(0, _boost_lora_choices()),
-                    "tooltip": ("First 2nd-pass LoRA. The recipe uses minimax_h3_lms_v1.0_r64 at 0.5. None "
-                                "skips it."),
-                }),
-                "boost_lora_1_strength": ("FLOAT", {
-                    "default": BOOST_LORA_DEFAULTS[0][1],
-                    "min": -4.0, "max": 4.0, "step": 0.05,
-                    "tooltip": "Strength of 2nd-pass LoRA 1. The recipe uses 0.5."
-                }),
-                "boost_lora_2": (_boost_lora_choices(), {
-                    "default": _boost_lora_default(1, _boost_lora_choices()),
-                    "tooltip": ("Second 2nd-pass LoRA. The recipe uses h3-realism-people-t2v-i2v-r2v at 1.0. "
-                                "None skips it."),
-                }),
-                "boost_lora_2_strength": ("FLOAT", {
-                    "default": BOOST_LORA_DEFAULTS[1][1],
-                    "min": -4.0, "max": 4.0, "step": 0.05,
-                    "tooltip": "Strength of 2nd-pass LoRA 2. The recipe uses 1.0."
-                }),
-                # APPENDED 2026-09-28, LAST, same positional reason.
-                "boost_lora_3": (_boost_lora_choices(), {
-                    "default": "None",
-                    "tooltip": ("Third 2nd-pass LoRA, applied on top of the first two. Not in the recipe. "
-                                "None skips it."),
-                }),
-                "boost_lora_3_strength": ("FLOAT", {
-                    "default": BOOST_LORA_DEFAULTS[2][1],
-                    "min": -4.0, "max": 4.0, "step": 0.05,
-                    "tooltip": "Strength of 2nd-pass LoRA 3."
-                }),
-                # APPENDED 2026-09-29, LAST, same positional reason.
-                "upsample": (["off", "on"], {
-                    "default": "off",
-                    "tooltip": ("After the last hop, enlarge and sharpen the finished film (H3 "
-                                "latent upscaler, then one light re-draw). Only the delivered "
-                                "video changes. Needs the latent upscaler (upsample_model) "
-                                "in models/latent_upscale_models."),
-                }),
-                "upsample_megapixels": ("FLOAT", {
-                    "default": _tu.MEGAPIXELS, "min": 0.1, "max": 16.0, "step": 0.05,
-                    "tooltip": ("Output size for upsample, as area with the aspect kept "
-                                "(1 MP = 1024x1024). 1.5-2 is the usual range."),
-                }),
-                # APPENDED 2026-09-30, LAST, same positional reason.
-                "upsample_denoise": ("FLOAT", {
-                    "default": UPSAMPLE_DENOISE, "min": 0.0, "max": 1.0, "step": 0.005,
-                    "tooltip": ("Regen2K LoRA strength for the 3-step upsample re-draw "
-                                "(0.8 is the default; 0 skips the re-draw and only "
-                                "enlarges with the 3D latent upscaler)."),
-                }),
-                # APPENDED 2026-09-30, LAST, same positional reason.
-                "prompt_prefix": ("STRING", {
-                    "default": "", "multiline": False,
-                    "tooltip": ("Text put at the very start of every hop's prompt. For LoRA "
-                                "trigger words, which work best first. @tags are not replaced "
-                                "here: write plain text."),
-                }),
-                "prompt_suffix": ("STRING", {
-                    "default": "", "multiline": False,
-                    "tooltip": ("Text put at the very end of every hop's prompt, after the chain's own "
-                                "closing lines. For LoRAs that want a camera angle or similar last."),
-                }),
-                # APPENDED 2026-10-01, LAST, same positional reason.
-                "upsample_model": (_tu.choices(), {
-                    "default": _tu.default_upscaler(),
-                    "tooltip": ("The latent upscaler upsample enlarges with, from "
-                                "models/latent_upscale_models (huggingface.co/LBH-123-AI/"
-                                "Minimax_h3_latent_Upscaler). The 3D file is the recipe; the 2D "
-                                "one (minimax_h3_latent_upscaler_2d_conv_v1) takes "
-                                "upsample_sharpness. h3_upscaler_lms_v0.1 is the 3D network "
-                                "fine-tuned on Alissonerdx's sharpness data: a sharper enlarge, which "
-                                "needs less re-draw (try a lower upsample_denoise)."),
-                }),
-                # APPENDED 2026-10-01, LAST, same positional reason.
-                "boost_lora_4": (_boost_lora_choices(), {
-                    "default": "None",
-                    "tooltip": ("Fourth 2nd-pass LoRA, applied on top of the other three. Not in the "
-                                "recipe. None skips it."),
-                }),
-                "boost_lora_4_strength": ("FLOAT", {
-                    "default": 1.0, "min": -4.0, "max": 4.0, "step": 0.05,
-                    "tooltip": "Strength of 2nd-pass LoRA 4."
-                }),
-                # APPENDED 2026-10-04, LAST, same positional reason.
-                "upsample_lora": (_boost_lora_choices(), {
-                    "default": "None",
-                    "tooltip": ("Retired: ignored. Kept so saved graphs load with their values in "
-                                "place."),
-                }),
-                "upsample_lora_strength": ("FLOAT", {
-                    "default": 1.0, "min": -4.0, "max": 4.0, "step": 0.05,
-                    "tooltip": "Retired with upsample_lora: ignored."
-                }),
-                # The last widget (upsample_dit below is a socket and takes no
-                # widgets_values slot). This slot held split_finish_aug
-                # (2026-10-06, removed the same week: 0.85 burnt late hops in
-                # chain_00101 and changed nothing at 0.999). A graph saved with
-                # it carries 0.999 / 0.85 here, which ComfyUI casts to 0 for an
-                # INT -- and 0 means the recipe value, so it still queues.
-                "upsample_tile_tokens": ("INT", {
-                    "default": 0, "min": 0, "max": 1048576, "step": 1024,
-                    "tooltip": ("How much of the upsample goes to the GPU at once. 0 = automatic "
-                                "(recommended): it learns what your card can take. A number fixes "
-                                "it; lower uses less VRAM and is slower. Changing it never re-"
-                                "renders hops."),
-                }),
-                # APPENDED 2026-10-04, LAST. A socket, so it takes no widget slot.
-                "upsample_dit": ("MODEL", {
-                    "tooltip": ("Optional separate model for the upsample re-draw: a plain "
-                                "Load Diffusion Model with no LoRAs. Unwired uses the model the "
-                                "hops ran on. upsample_redraw ic runs on this model and needs "
-                                "the official minimax_h3_ref2va (fl2va, pruned and merged models "
-                                "cannot run it; the run stops before any hop if one is wired)."),
-                }),
-                # APPENDED 2026-10-14, LAST (recover branch, seam-fix batch). hand_tie only.
-                "ht_seam_fix": (["off", "on"], {
-                    "default": "off",
-                    "tooltip": ("hand_tie only. on: each hop opens on its preview, and the sound "
-                                "at every join carries on from the previous hop, so a line is not "
-                                "restarted or clipped there. off: without these fixes."),
-                }),
-                # APPENDED 2026-10-14, LAST. The SWAP tab's own script.
-                #
-                # ORDER IS LOAD BEARING and it was wrong the first time. These
-                # two were inserted between `ht_seam_source` and `ht_seam_fix`,
-                # while every workflow on disk stores them as the final two
-                # values. `widgets_values` is POSITIONAL, so a graph saved with
-                # [..., "off" (seam source), "on" (seam fix), "", ""] loaded
-                # `swap_script` = "on" -- a non-empty swap script on every
-                # chain workflow, so the gate refused to render the lot. The
-                # count matched, which is exactly why `check_workflows` was
-                # green while the node was unusable. They go last, after
-                # ht_seam_fix, and a graph saved by an older build must have
-                # two trailing "" for this to load.
-                #
-                # A widget and not a node property ON PURPOSE. `htc_lab_join` is
-                # read from `extra_pnginfo`, and CLAUDE.md records that an API
-                # queue drops that -- both lab nodes fall back to `rows`. A gate
-                # that cannot tell a swap from a chain on an API queue is not
-                # airtight, only airtight in the browser. A widget is positional
-                # state the graph carries however it was queued.
-                #
-                # Non-empty means "this is a swap": shot_plan is ignored, one hop
-                # is rendered, no pin and no continuation.
-                "swap_script": ("STRING", {
-                    "default": "",
-                    "multiline": True,
-                    "tooltip": ("Written by the SWAP tab; leave it alone. When set, the node "
-                                "renders one hop from it and ignores SCRIPT. A stale or hand-"
-                                "edited swap is refused at queue time."),
-                }),
-                # APPENDED 2026-10-14, LAST. Which rail plates a swap's hop rides.
-                # The whitelist, and it is load bearing in BOTH directions.
-                "swap_refs": ("STRING", {
-                    "default": "",
-                    "tooltip": ("Written by the SWAP tab: the @tags its hop uses. Empty = every "
-                                "wired picture; [] = none. Only read when swap_script is set."),
-                }),
-                # APPENDED 2026-10-15, LAST. Repurposed 2026-11-04 for Upscale
-                # 2nd Pass settings ("2nd pass chunking", "2nd pass megapixels",
-                # "2nd pass steps") so Upscale 2nd Pass and Upsample are completely
-                # independent stages while saved workflows keep their positional slots.
-                "audio_refine": (["off", "on"], {
-                    "default": "off",
-                    "tooltip": ("Shown as 2nd pass chunking. off (default): the 2nd pass "
-                                "re-draws the film in one go, which suits 1 MP on most cards. on: "
-                                "long films are cut into overlapping pieces and big frames into "
-                                "tiles, for less VRAM. Turn it on if the 2nd pass runs out of "
-                                "memory."),
-                }),
-                "audio_denoise": ("FLOAT", {
-                    "default": BOOST_DEFAULT_MEGAPIXELS, "min": 0.1, "max": 16.0, "step": 0.05,
-                    "tooltip": ("Shown as 2nd pass megapixels: the size the 2nd pass re-draws "
-                                "at. 1.0 (default) = about 1024x1024 worth of pixels, in the "
-                                "film's own shape. Separate from upsample_megapixels, which "
-                                "sets the final delivery size."),
-                }),
-                "audio_steps": ("INT", {
-                    "default": 3, "min": 1, "max": 30,
-                    "tooltip": ("Shown as 2nd pass steps: how many steps the 2nd pass "
-                                "re-draws in (default 3). More steps change the texture more; "
-                                "how much is re-drawn is set for you from this number."),
-                }),
-                "audio_sampler": (["same"] + comfy.samplers.KSampler.SAMPLERS, {
-                    "default": "same",
-                    "tooltip": "Retired: ignored. Kept so saved graphs load with their values in place.",
-                }),
-                "audio_scheduler": (["same"] + comfy.samplers.KSampler.SCHEDULERS, {
-                    "default": "same",
-                    "tooltip": "Retired: ignored. Kept so saved graphs load with their values in place.",
-                }),
-                "audio_seed_offset": ("INT", {
-                    "default": 0, "min": -1000000000, "max": 1000000000,
-                    "tooltip": "Retired: ignored. Kept so saved graphs load with their values in place.",
-                }),
-                # APPENDED 2026-10-26, LAST two widgets. Off adds no hop-key field.
-                "dialogue_lock": (list(_dlg.MODES), {
-                    "default": "off",
-                    "tooltip": ("Holds each hop's spoken lines so the words come out exactly as "
-                                "written and nobody adds any. lines: the lines only. lines+hold: "
-                                "also 1.5 s of quiet after each line, where extra words tend to "
-                                "start. full: the whole hop's sound. Lines come from "
-                                "dialogue_audio_file, or H3 drafts them first and keeps only the "
-                                "scripted words. Not with master_audio_file or SWAP; no effect "
-                                "under hand_tie."),
-                }),
-                "dialogue_audio_file": ("STRING", {
-                    "default": "",
-                    "tooltip": ("For dialogue_lock: a timed line recording (empty = H3 drafts lines). "
-                                "Or with master_audio_file set and dialogue_lock=off: set 'auto:vocals' (or "
-                                "a vocal stem file) to lip-sync H3 to isolated vocals while keeping the full mix in the MP4. "
-                                "auto:vocals needs torchaudio's HDemucs weights fetched once (never downloaded "
-                                "by the pack; see docs/MODELS.md), else it falls back to the full mix."),
-                }),
-                # APPENDED 2026-10-28, LAST widgets. Open-H3-Regenerate-2K LoRA selector + seed + cond.
-                "upsample_redraw": (_regen2k_lora_choices(), {
-                    "default": REGEN2K_DEFAULT_LORA,
-                    "tooltip": ("The upsample's re-draw. A Regen2K LoRA (models/loras; default "
-                                "open_h3_regenerate_2k_r256pp_bf16.safetensors), or ic: the "
-                                "in-context re-draw that keeps each piece's own frames and "
-                                "soundtrack in view, so faces, text and mouths stay the film's "
-                                "(slower; needs " + _ic.IC_LORA_SMALL + " and "
-                                + _ic.HYPERFLOW_LORA + " in models/loras)."),
-                }),
-                "regen2k_model": ("MODEL", {
-                    "tooltip": ("Optional model for upsample: wire UNETLoader "
-                                "(minimax_h3_fl2va_pruned_int8_convrot); HTC applies the "
-                                "selected Regen2K LoRA at upsample_denoise strength."),
-                }),
-                # Not named seed: ComfyUI hangs a randomize control on any widget
-                # called seed.
-                "regen2k_seed": ("INT", {
-                    "default": REGEN2K_SEED, "min": 0, "max": 0x7FFFFFFF,
-                    "tooltip": "Noise seed for the Regen2K upsample re-draw (default 42).",
-                }),
-                "regen2k_cond": (list(REGEN2K_COND_MODES), {
-                    "default": REGEN2K_DEFAULT_COND,
-                    "tooltip": ("What the Regen2K re-draw follows. hop_text (default): each hop's "
-                                "own text, without its pictures. none: no prompt."),
-                }),
-                "audio_model": ("MODEL", {
-                    "tooltip": "Retired with audio_refine: ignored.",
-                }),
-                # A literal, as every socket here: tools read these types from source.
-                "upsample_settings": ("HTC_UPSAMPLE", {
-                    "tooltip": ("Optional HTC Upsample Settings node: steps, schedule, noise, "
-                                "chunks, anchor, tiles and VRAM splits of the upsample. "
-                                "Unwired keeps the shipped recipe."),
-                }),
-                # APPENDED 2026-11-01, LAST widget (after regen2k_cond in widgets_values).
-                "cache_location": (list(_store.CACHE_LOCATIONS), {
-                    "default": "temp",
-                    "tooltip": ("Where cache_hops keeps hops. temp: emptied every time ComfyUI "
-                                "starts. user: kept across restarts, so a take can still be "
-                                "retaken or upsampled later; it stays until cache_budget_gb "
-                                "pushes it out or you press the clear-cache button."),
-                }),
-                # APPENDED 2026-11-02, LAST widget (after cache_location in widgets_values).
-                "tone_lock": (list(WT_TONE_CHOICES), {
-                    "default": WT_TONE_DEFAULT,
-                    "tooltip": ("sand_tie only. Keeps long continuous takes from washing out or drifting warm. "
-                                "0.5: gentle level anchor (people keep their look). 0.75: tighter level lock. "
-                                "full: strongest level + spread lock (can darken faces in dark scenes). "
-                                "chroma: holds color balance & saturation to the opening seconds while keeping face brightness untouched."),
-                }),
-                # APPENDED 2026-11-10, LAST widget (after tone_lock in widgets_values).
-                "upsample_steps": (list(UPSAMPLE_STEPS), {
-                    "default": UPSAMPLE_STEPS[0],
-                    "tooltip": ("Steps of the upsample re-draw (Regen2K or ic). 3 = the recipe. "
-                                "2 = about a third faster: Regen2K looked the same in "
-                                "side-by-side tests, ic starts later so a little less is "
-                                "re-drawn. A wired upsample_settings node keeps its own steps."),
-                }),
-                # APPENDED 2026-11-12, LAST widget (after upsample_steps in widgets_values).
-                "upsample_sharpness": ("INT", {
-                    "default": _tu.SHARPNESS, "min": 1, "max": _tu.SHARPNESS_MAX, "step": 1,
-                    "tooltip": ("Sharpness of the latent upscaler when upsample_model is the 2D "
-                                f"one ({_tu.UPSCALER_2D_FILE}): 1 = most faithful to the "
-                                "render (softest), 6 = sharpest. Also used by the upscale 2nd "
-                                "pass. The 3D upscaler has no tiers and ignores it."),
-                }),
-            },
-            "hidden": {
-                "unique_id": "UNIQUE_ID",
-            },
-        }
 
     # contact_sheet is APPENDED, never inserted: a saved workflow's links name
     # an output by index, so putting it anywhere but last would silently rewire
     # every graph that already uses this node.
-    RETURN_TYPES = ("IMAGE", "AUDIO", "STRING", "IMAGE")
-    RETURN_NAMES = ("images", "audio", "info", "contact_sheet")
-    FUNCTION = "run"
-    CATEGORY = "Hand Tie Clips"
-    DESCRIPTION = (
-        "MiniMax H3 Ref2VA chain. Hop 1 is a full generate; every later hop is a "
-        "continuation pinned to the previous hop's sampler latent via "
-        "Motion-Context, falling back to an AddGuide pixel pin when that is "
-        "unavailable. Author with shot_plan + ref_plan; hop_script=next treats "
-        "later blocks as what-happens-next; pin_to_qwen shows the incoming frame "
-        "to the text encoder."
-    )
 
     @classmethod
     def IS_CHANGED(cls, ref_plan="", start_image_file="",
@@ -12062,6 +11272,1209 @@ class HandTieClips:
         return (master_imgs, master_audio, info, sheet)
 
 
+class HandTieClips(io.ComfyNode, _HandTieClipsImpl):
+    """V3 schema for HandTieClips; the implementation lives in _HandTieClipsImpl.
+
+    Also inherits _HandTieClipsImpl so existing callers of the V1 API (HandTieClips().run(...),
+    HandTieClips.<helper>) keep working; core sees only the V3 hooks below."""
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id='HandTieClips',
+            display_name='H3 Ref2VA Chain',
+            category="Hand Tie Clips",
+            description="MiniMax H3 Ref2VA chain. Hop 1 is a full generate; every later hop is a "
+                "continuation pinned to the previous hop's sampler latent via "
+                "Motion-Context, falling back to an AddGuide pixel pin when that is "
+                "unavailable. Author with shot_plan + ref_plan; hop_script=next treats "
+                "later blocks as what-happens-next; pin_to_qwen shows the incoming frame "
+                "to the text encoder.",
+            inputs=[
+                io.Model.Input(
+                    'model',
+                    tooltip="The MiniMax H3 model, with any LoRAs already applied.",
+                ),
+                io.Clip.Input('clip', tooltip="The H3 text encoder."),
+                io.Vae.Input('vae', tooltip="The H3 video VAE."),
+                io.Vae.Input('audio_vae', tooltip="The H3 audio VAE."),
+                io.String.Input(
+                    'prompt',
+                    multiline=True,
+                    dynamic_prompts=False,
+                    default="Live-action, natural indoor light. The person looks exactly "
+                        "as in the reference photographs.\n\n"
+                        "They sit at a table, look up, and speak one short line. "
+                        "Then they settle, watching the room.",
+                    tooltip="The prompt when no shot plan is set. Separate hops with --- on its own "
+                                "line.",
+                ),
+                io.Combo.Input(
+                    'chains',
+                    options=["1", "2", "3", "4", "5", "6", "7", "8"],
+                    default="3",
+                    tooltip="How many hops to render when no shot plan is set. With a plan, the shot "
+                                "count decides.",
+                ),
+                io.Combo.Input(
+                    'resolution',
+                    options=list(RESOLUTIONS),
+                    default=DEFAULT_RESOLUTION,
+                    tooltip="Output size, as an area. 0.98 MP is H3's native size; the 1.1-2.0 MP "
+                                "rungs above it are past what the model was trained for.",
+                ),
+                io.Combo.Input(
+                    'aspect',
+                    options=list(ASPECTS),
+                    default=DEFAULT_ASPECT,
+                    tooltip="Frame shape. Sets width and height together with resolution.",
+                ),
+                io.Combo.Input(
+                    'duration',
+                    options=list(DURATION_FRAMES),
+                    default="10 s",
+                    tooltip="Length of each hop. A shot can set its own. Judge joins at 8 s or longer; "
+                                "5 s is too short to show them.",
+                ),
+                io.Combo.Input(
+                    'overlap',
+                    options=["0.9 s", "0.2 s", "1.6 s"],
+                    default="0.9 s",
+                    tooltip="How much of the previous hop each hop continues from. 0.9 s (22f) is the "
+                                "standard overlap; 1.6 s (39f) gives wider motion memory and lands cleanly "
+                                "on the 40 Hz / 24 fps 3-frame audio grid.",
+                ),
+                io.Int.Input(
+                    'seed',
+                    default=0,
+                    min=0,
+                    max=0xffffffffffffffff,
+                    control_after_generate=True,
+                    tooltip="Noise seed. With seed_per_shot on, hop N uses seed + N - 1. A "
+                                "shot can set its own seed on the SCRIPT tab.",
+                ),
+                io.Boolean.Input(
+                    'seed_per_shot',
+                    default=True,
+                    label_on="vary per hop",
+                    label_off="same seed every hop",
+                    tooltip="on: each hop draws its own noise (seed + hop number - 1). off: "
+                                "every hop uses seed. A sand_tie take draws from its first hop's "
+                                "seed plus any seed a shot sets.",
+                ),
+                io.Int.Input(
+                    'steps',
+                    default=14,
+                    min=1,
+                    max=50,
+                    tooltip="Sampling steps per hop. A shot can set its own. 8 for a turbo LoRA; more "
+                     "steps mostly improve generated speech.",
+                ),
+                io.Combo.Input(
+                    'sampler_name',
+                    options=comfy.samplers.KSampler.SAMPLERS,
+                    default="res_multistep",
+                    tooltip="Sampler used for every hop.",
+                ),
+                io.Combo.Input(
+                    'scheduler',
+                    options=comfy.samplers.KSampler.SCHEDULERS,
+                    default="beta",
+                    tooltip="Scheduler used for every hop.",
+                ),
+                io.Float.Input(
+                    'shift_video',
+                    default=12.0,
+                    min=0.01,
+                    max=100.0,
+                    step=0.01,
+                    tooltip="Schedule shift for the picture (12 is usual). Higher spends more "
+                                "of the steps on large shapes and motion, lower on fine detail.",
+                ),
+                io.Float.Input(
+                    'shift_audio',
+                    default=3.0,
+                    min=0.01,
+                    max=100.0,
+                    step=0.01,
+                    tooltip="Schedule shift for the sound (3 is usual). Same idea as "
+                                "shift_video.",
+                ),
+                io.Combo.Input(
+                    'ref_image_size',
+                    options=["match", "max"],
+                    tooltip="How large reference pictures go in. match is faster; max keeps more face "
+                                "detail but is slower.",
+                ),
+                # The nine ref_image_N sockets, plus reference_video, voice
+                # and start_image, used to live at the TOP of this block --
+                # twelve of a sixteen-socket column that occupied a third of
+                # the node before the editor started. They are files now, and
+                # their replacements are appended at the BOTTOM of `optional`
+                # instead. See the note beside them: widget ORDER is part of
+                # the saved-workflow format.
+                io.Combo.Input(
+                    'hop_script',
+                    options=["verbatim", "next"],
+                    optional=True,
+                    default="verbatim",
+                    tooltip="Only without a shot plan. next: later hops get only the new part of the "
+                                "prompt. verbatim: every hop gets its text as written.",
+                ),
+                io.Combo.Input(
+                    'pin_to_qwen',
+                    options=["off", "last frame", "pin clip", "both"],
+                    optional=True,
+                    default="last frame",
+                    tooltip="Shows the text encoder where the previous hop ended. last frame (default) "
+                                "adds its last frame as a picture; pin clip adds the overlap as a short "
+                                "video.",
+                ),
+                io.String.Input(
+                    'shot_plan',
+                    optional=True,
+                    multiline=True,
+                    default="",
+                    tooltip="The shot list, written by the SCRIPT tab. One shot per hop.",
+                ),
+                io.String.Input(
+                    'ref_plan',
+                    optional=True,
+                    multiline=True,
+                    default="",
+                    tooltip="The reference list, written by the REFS tab. Beats cite each reference by "
+                                "@tag.",
+                ),
+                io.Combo.Input(
+                    'cache_hops',
+                    options=["off", "on"],
+                    optional=True,
+                    default="off",
+                    tooltip="Keep each rendered hop on disk. Unchanged hops load instead of "
+                                "re-rendering. Needed for retakes, render_from and the TIMELINE film.",
+                ),
+                io.Float.Input(
+                    'cache_budget_gb',
+                    optional=True,
+                    default=20.0,
+                    min=1.0,
+                    max=500.0,
+                    step=1.0,
+                    tooltip="Disk space for cached hops. The oldest are removed above this.",
+                ),
+                io.Int.Input(
+                    'audio_pin_frames',
+                    optional=True,
+                    default=24,
+                    min=0,
+                    max=240,
+                    step=24,
+                    tooltip="How much of the previous hop's sound each hop continues from, in frames "
+                                "(24 = 1 s). Raise it for dialogue that runs across joins. 0 matches the "
+                                "overlap.",
+                ),
+                io.Combo.Input(
+                    'pin_renorm',
+                    options=["off", "band"],
+                    optional=True,
+                    default="off",
+                    tooltip="Counters the fine detail that builds up at each join. band applies it; off "
+                                "leaves the join as generated.",
+                ),
+                io.Float.Input(
+                    'pin_noise',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=0.10,
+                    step=0.005,
+                    tooltip="Adds a little noise to the join, another way to stop detail building up. "
+                                "Try 0.05; 0 is off.",
+                ),
+                io.Combo.Input(
+                    'tone_compensate',
+                    options=_tone.CHAIN_MODES,
+                    optional=True,
+                    default="off",
+                    tooltip="Evens out colour/brightness drift between hops. anchor locks whole chain "
+                                "tone; chroma holds Lab color balance/saturation while keeping face brightness "
+                                "untouched; anchor and chroma also fade out the colour step at each continuation "
+                                "join; frame_shift / gain_bias / lut smooth each join; off leaves hops as rendered."
+                                + (" anchor+carry (experimental, motion_context): anchor, and each continuation also "
+                                   "starts from frames pulled back to its scene's first hop, so drift stops feeding the "
+                                   "next hop; a restart or tone=rebase starts a new scene."
+                                   if _tone.CARRY_LISTED else ""),
+                ),
+                # ---------------------------------------------------------
+                # APPEND-ONLY ZONE. `widgets_values` in a saved workflow is a
+                # POSITIONAL array -- ComfyUI restores value[i] into widget[i]
+                # and never checks the name. A widget inserted anywhere but the
+                # end renumbers everything after it, and every previously saved
+                # workflow silently loads its values into the wrong widgets.
+                #
+                # These three were first added at the top of `optional`, which
+                # shifted hop_script..tone_compensate by +3. `ref_plan` then
+                # received audio_pin_frames' integer and the editor threw
+                # `(text || "").trim is not a function` on load -- the only
+                # visible symptom of a much wider silent corruption.
+                #
+                # Add new widgets HERE, at the bottom. Old workflows are then
+                # short rather than misaligned, and the new widget takes its
+                # default.
+                # ---------------------------------------------------------
+                io.String.Input(
+                    'start_image_file',
+                    optional=True,
+                    default="",
+                    tooltip="A picture for hop 1 to start on. Set it on the MEDIA tab.",
+                ),
+                io.String.Input(
+                    'reference_video_file',
+                    optional=True,
+                    default="",
+                    tooltip="A clip to borrow motion or look from. Set it on the MEDIA tab.",
+                ),
+                io.String.Input(
+                    'voice_file',
+                    optional=True,
+                    default="",
+                    tooltip="A voice sample, cited as <Audio 1>. Set it on the MEDIA tab.",
+                ),
+                # Appended here on 2026-08-29, per the note above: LAST, so
+                # every saved workflow keeps its widget alignment and simply
+                # takes the default.
+                io.String.Input(
+                    'establish',
+                    optional=True,
+                    default=_d.ESTABLISH,
+                    tooltip="A line added at the start of hop 1. The default says live action; change "
+                                "it for another style, or clear it.",
+                ),
+                # Appended 2026-08-30, still obeying the append-only rule above.
+                io.Int.Input(
+                    'render_through',
+                    optional=True,
+                    default=0,
+                    min=0,
+                    max=64,
+                    tooltip="Stop after this hop. 0 renders every hop.",
+                ),
+                io.Combo.Input(
+                    'quality',
+                    options=["final", "draft"],
+                    optional=True,
+                    default="final",
+                    tooltip="draft renders small and fast to check the story and the joins. final is "
+                                "the real render.",
+                ),
+                io.Combo.Input(
+                    'dry_run',
+                    options=["off", "on", "previs"],
+                    optional=True,
+                    default="off",
+                    tooltip="on: build every hop's prompt without rendering; read them on the "
+                                "info output. previs (hand_tie only): render just the previews to "
+                                "check them; the full run reuses them.",
+                ),
+                io.Combo.Input(
+                    'contact_sheet',
+                    options=["off", "on"],
+                    optional=True,
+                    default="off",
+                    tooltip="Also output an image with each hop's first and last frame and its beat.",
+                ),
+                io.Float.Input(
+                    'tone_anchor',
+                    optional=True,
+                    default=_tone.ANCHOR_STRENGTH,
+                    min=0.0,
+                    max=1.0,
+                    step=0.05,
+                    tooltip="How strongly anchor pulls each hop back to the reference look. 0.35 is "
+                                "gentle; raise it if a long chain fades.",
+                ),
+                # APPENDED, never inserted -- the same rule the ref sockets at
+                # the top of this block were deleted for. `widgets_values` is a
+                # positional list, so a widget added anywhere but the end shifts
+                # every widget after it, and a workflow saved before the change
+                # reads its own settings out of the wrong slots. Silently: the
+                # numbers all still parse, they are just the wrong numbers.
+                io.Float.Input(
+                    'music_gain_db',
+                    optional=True,
+                    default=-14.0,
+                    min=-60.0,
+                    max=6.0,
+                    step=0.5,
+                    tooltip="Music level. -14 sits under speech; -6 is music-led.",
+                ),
+                io.Float.Input(
+                    'music_duck',
+                    optional=True,
+                    default=0.6,
+                    min=0.0,
+                    max=1.0,
+                    step=0.05,
+                    tooltip="Lowers the music while someone speaks. 0 is off; 0.6 keeps speech clear.",
+                ),
+                io.Combo.Input(
+                    'music_fit',
+                    options=["loop", "once"],
+                    optional=True,
+                    default="loop",
+                    tooltip="loop repeats the track to fill the chain; once plays it through and then "
+                                "stops.",
+                ),
+                io.Float.Input(
+                    'music_fade_s',
+                    optional=True,
+                    default=1.0,
+                    min=0.0,
+                    max=10.0,
+                    step=0.25,
+                    tooltip="Fade in and out at the start and end of the music, in seconds.",
+                ),
+                # The picker's half of the soundtrack, and the one most people
+                # use. Same shape as voice_file: a basename under h3_refs, set
+                # in the panel. LAST, per the note at the top of this block.
+                io.String.Input(
+                    'soundtrack_file',
+                    optional=True,
+                    default="",
+                    tooltip="A music file for the soundtrack. Set it on the MEDIA tab.",
+                ),
+                # Trim windows, appended 2026-09-01 -- LAST, per the note at
+                # the top of this block. Six floats rather than one JSON blob
+                # because these three slots are fixed and named, the same
+                # reason `voice_file` is its own widget. The rail's references
+                # are a LIST, which is why their per-item settings live in
+                # `ref_plan` instead.
+                #
+                # An end of 0.0 is the sentinel for "to the end of the file",
+                # so the default pair (0, 0) is untrimmed and costs nothing.
+                # media.clip_window is the single definition of what they mean.
+                io.Float.Input(
+                    'voice_start_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where the voice sample starts, in seconds. Leave both at 0 to use its "
+                                "first 8 s.",
+                ),
+                io.Float.Input(
+                    'voice_end_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where the voice sample ends, in seconds. 0 is the end of the file.",
+                ),
+                io.Float.Input(
+                    'reference_video_start_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where the reference clip starts, in seconds.",
+                ),
+                io.Float.Input(
+                    'reference_video_end_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where the reference clip ends, in seconds. 0 is the end.",
+                ),
+                io.Float.Input(
+                    'music_start_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where the music starts in the file, in seconds.",
+                ),
+                io.Float.Input(
+                    'music_end_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where the music ends in the file, in seconds. 0 is the end.",
+                ),
+                # Appended 2026-09-03 -- LAST, per the note at the top of this
+                # block. `render_through` has been here since 0.4 and stops the
+                # chain; this is the other end of the same range.
+                io.Int.Input(
+                    'render_from',
+                    optional=True,
+                    default=0,
+                    min=0,
+                    max=64,
+                    tooltip="Start rendering at this hop; earlier hops load from the cache. 0 starts at "
+                                "hop 1. Needs cache_hops on.",
+                ),
+                io.String.Input(
+                    'reference_video_desc',
+                    optional=True,
+                    default="",
+                    tooltip="What the reference clip is for, in a few words, e.g. \"a slow dolly along "
+                                "the counter\". Without it the model may copy the clip outright.",
+                ),
+                # Appended 2026-09-03 -- LAST, per the note at the top of this
+                # block.
+                io.Combo.Input(
+                    'reference_video_size',
+                    options=list(_media.VIDEO_SIZES),
+                    optional=True,
+                    default=_media.DEFAULT_VIDEO_SIZE,
+                    tooltip="How large the reference clip is decoded. Lower saves memory and makes the "
+                                "clip influence the result less, which helps when it fights your faces.",
+                ),
+                # APPENDED, never inserted. `widgets_values` is a bare ordered
+                # array matched to this schema by index, so a widget added
+                # anywhere but the end silently reassigns every later value in
+                # every saved workflow. Adding options to an existing combo is
+                # safe; adding a widget is not.
+                io.Combo.Input(
+                    'pin_mech',
+                    options=["auto", "motion_context", "addguide", "hand_tie", "hand_tie_mc", "windowed", "sand_tie"],
+                    optional=True,
+                    default="auto",
+                    tooltip="How hops are joined. auto (recommended): Motion-Context when "
+                                "installed, else AddGuide. motion_context / addguide: force one; "
+                                "it stops with an error rather than fall back. hand_tie "
+                                "(experimental): renders a small preview of each section and ties "
+                                "every hop to it, so drift does not build up; needs a shot plan. "
+                                "hand_tie_mc: hand_tie with the preview as a Motion-Context "
+                                "guide. sand_tie: each take (up to an anchor: restart) renders as "
+                                "one continuous video with no joins; needs a recent ComfyUI and "
+                                "overlap 0.9 s. windowed is the old name of sand_tie.",
+                ),
+                # APPENDED, never inserted -- see the note above `pin_mech`.
+                io.Combo.Input(
+                    'tone_anchor_ref',
+                    options=["hop1", "still"],
+                    optional=True,
+                    default="hop1",
+                    tooltip="What anchor holds the chain to. hop1 is the first hop's look; still is the "
+                                "start image, which needs start_image_file.",
+                ),
+                # APPENDED after pin_mech and tone_anchor_ref. Those two already
+                # shipped on this trunk; the 3x3 extra slots go last so existing
+                # v2 workflows keep their last two values as pin_mech /
+                # tone_anchor_ref. H3 natively takes 9 reference images, 3
+                # reference videos and 3 standalone reference audios; the pack
+                # matched the 9 and passed exactly one of each of the others.
+                io.String.Input(
+                    'reference_video_2_file',
+                    optional=True,
+                    default="",
+                    tooltip="A second reference clip. Set it on the MEDIA tab.",
+                ),
+                io.Float.Input(
+                    'reference_video_2_start_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where reference clip 2 starts, in seconds.",
+                ),
+                io.Float.Input(
+                    'reference_video_2_end_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where reference clip 2 ends, in seconds. 0 is the end.",
+                ),
+                io.String.Input(
+                    'reference_video_3_file',
+                    optional=True,
+                    default="",
+                    tooltip="A third reference clip. Set it on the MEDIA tab.",
+                ),
+                io.Float.Input(
+                    'reference_video_3_start_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where reference clip 3 starts, in seconds.",
+                ),
+                io.Float.Input(
+                    'reference_video_3_end_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where reference clip 3 ends, in seconds. 0 is the end.",
+                ),
+                io.String.Input(
+                    'voice_2_file',
+                    optional=True,
+                    default="",
+                    tooltip="A second voice sample. Set it on the MEDIA tab.",
+                ),
+                io.Float.Input(
+                    'voice_2_start_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where voice 2 starts, in seconds. Leave both at 0 to use its first 8 s.",
+                ),
+                io.Float.Input(
+                    'voice_2_end_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where voice 2 ends, in seconds. 0 is the end.",
+                ),
+                io.String.Input(
+                    'voice_3_file',
+                    optional=True,
+                    default="",
+                    tooltip="A third voice sample. Set it on the MEDIA tab.",
+                ),
+                io.Float.Input(
+                    'voice_3_start_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where voice 3 starts, in seconds. Leave both at 0 to use its first 8 s.",
+                ),
+                io.Float.Input(
+                    'voice_3_end_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.1,
+                    tooltip="Where voice 3 ends, in seconds. 0 is the end.",
+                ),
+                # APPENDED, never inserted. Empty string leaves every existing
+                # path byte-identical: the lock is not called, the cache key
+                # does not move, the delivered audio is still the generated
+                # chain. The file is ElevenLabs (or any) TTS / a real take;
+                # every hop lip-syncs to one continuous window of it.
+                io.String.Input(
+                    'master_audio_file',
+                    optional=True,
+                    default="",
+                    tooltip="One recorded take for the whole chain; the picture lip-syncs to it and the "
+                                "audio is used as-is. The beats still need the words. Empty is off.",
+                ),
+                io.Combo.Input(
+                    'last_frame_guide',
+                    options=["off", "before_restart", "still"],
+                    optional=True,
+                    default="off",
+                    tooltip="Makes a hop end on the start image. before_restart does it only before a "
+                                "restart, so the cut matches; still does it on every hop.",
+                ),
+                # APPENDED 2026-09-09, LAST for the same reason as everything
+                # else down here: widgets_values is positional and a saved
+                # workflow reads it by index.
+                io.Combo.Input(
+                    'voice_every_hop',
+                    options=["off", "speaking", "on"],
+                    optional=True,
+                    default="off",
+                    tooltip="Whether the voice samples ride after hop 1. speaking (recommended) keeps "
+                                "them on hops with a spoken line; off is hop 1 only; on is every hop.",
+                ),
+                # APPENDED 2026-09-14 (the refine pass). Same rule again:
+                # widgets_values is positional, so these go LAST and nothing
+                # above them moves. Everything here ships inert -- hop_refine
+                # defaults off and the hop key only carries these fields when
+                # it is on, so a workflow saved before today keys byte-identical.
+                io.Combo.Input(
+                    'hop_refine',
+                    options=["off", "full", "pin_only", "split"],
+                    optional=True,
+                    default="off",
+                    tooltip="A light second pass per hop that restores texture. full: the "
+                                "refined hop is shown and continued from. pin_only: used only for "
+                                "the next hop's join. split: no extra pass; the hop's last "
+                                "refine_steps are finished in finer steps (refine_model / "
+                                "refine_sampler). Not with realism_boost.",
+                ),
+                io.Float.Input(
+                    'refine_denoise',
+                    optional=True,
+                    default=0.50,
+                    min=0.05,
+                    max=1.0,
+                    step=0.05,
+                    tooltip="How much the second pass changes. 0.5 is the usual value.",
+                ),
+                io.Int.Input(
+                    'refine_steps',
+                    optional=True,
+                    default=2,
+                    min=0,
+                    max=40,
+                    tooltip="Steps in the second pass. 2 is the usual value; 0 uses the hop's steps.",
+                ),
+                io.Combo.Input(
+                    'refine_sampler',
+                    options=["same"] + comfy.samplers.KSampler.SAMPLERS,
+                    optional=True,
+                    default="same",
+                    tooltip="Sampler for the second pass. same uses the hop's.",
+                ),
+                io.Combo.Input(
+                    'refine_scheduler',
+                    options=["same"] + comfy.samplers.KSampler.SCHEDULERS,
+                    optional=True,
+                    default="simple",
+                    tooltip="Scheduler for the second pass. same uses the hop's.",
+                ),
+                io.Combo.Input(
+                    'refine_cond',
+                    options=["base", "hop"],
+                    optional=True,
+                    default="base",
+                    tooltip="What the second pass follows. base is the prompt and references; hop also "
+                                "includes the join.",
+                ),
+                io.Model.Input(
+                    'refine_model',
+                    optional=True,
+                    tooltip="Optional different model for the second pass, e.g. an undistilled base "
+                                "under a turbo chain.",
+                ),
+                io.Combo.Input(
+                    'refine_audio',
+                    options=["freeze", "refine"],
+                    optional=True,
+                    default="freeze",
+                    tooltip="freeze (recommended) leaves the sound untouched by the second pass; refine "
+                                "lets it change the audio too.",
+                ),
+                io.String.Input(
+                    'refine_blend',
+                    optional=True,
+                    default=_rblend.AUTO,
+                    multiline=False,
+                    tooltip="Which frames use the second pass. auto keeps the start of each hop as "
+                                "generated so joins stay clean. Empty uses the second pass everywhere.",
+                ),
+                io.Combo.Input(
+                    'refine_blend_interp',
+                    options=["linear", "smooth", "step"],
+                    optional=True,
+                    default="linear",
+                    tooltip="How refine_blend changes between its points. linear is the usual choice.",
+                ),
+                io.Combo.Input(
+                    'refine_head',
+                    options=["refine", "freeze"],
+                    optional=True,
+                    default="refine",
+                    tooltip="Another way to keep joins clean: freeze leaves each hop's opening out of "
+                                "the second pass. refine includes it.",
+                ),
+                # APPENDED 2026-09-15 (the speed preset). Last slot again, for
+                # the same positional reason: nothing above it moves.
+                io.Combo.Input(
+                    'speed_mode',
+                    options=["regular", "turbo"],
+                    optional=True,
+                    default="regular",
+                    tooltip="Set turbo when a turbo model or LoRA is on the wire; nothing detects it. "
+                                "It adjusts the second pass to suit, but a turbo chain still drifts more "
+                                "at the joins. regular otherwise.",
+                ),
+                # APPENDED 2026-09-19, LAST for the same reason as everything
+                # else down here: widgets_values is positional and a saved
+                # workflow reads it by index.
+                io.Float.Input(
+                    'master_audio_start_s',
+                    optional=True,
+                    default=0.0,
+                    min=0.0,
+                    max=3600.0,
+                    step=0.01,
+                    round=0.01,
+                    tooltip="Where the chain starts inside master_audio_file, in seconds.",
+                ),
+                # APPENDED 2026-09-20, LAST, for the reason stated above:
+                # inserting it beside the other refine_* widgets would have
+                # renumbered refine_cond onward in every saved workflow.
+                io.Combo.Input(
+                    'refine_align',
+                    options=["hop_tail", "denoise"],
+                    optional=True,
+                    default="denoise",
+                    tooltip="Where the second pass starts. hop_tail re-runs the hop's own "
+                                "last steps and suits turbo models; denoise starts from "
+                                "refine_denoise on a schedule of its own.",
+                ),
+                # APPENDED 2026-09-23, LAST, same positional reason.
+                io.Combo.Input(
+                    'realism_boost',
+                    options=["off", "on"],
+                    optional=True,
+                    default="off",
+                    tooltip="Upscale 2nd Pass, for more realistic texture. The hops render "
+                                "at the canvas size as usual, sound included; after the last hop "
+                                "the film is sized up to 2nd pass megapixels and its texture is "
+                                "re-drawn with the 2nd pass LoRAs below (recipe: "
+                                "minimax_h3_lms_v1.0_r64 0.5 + h3-realism-people 1.0). Runs "
+                                "before upsample when both are on.",
+                ),
+                io.Combo.Input(
+                    'boost_lora_1',
+                    options=_boost_lora_choices(),
+                    optional=True,
+                    default=_boost_lora_default(0, _boost_lora_choices()),
+                    tooltip="First 2nd-pass LoRA. The recipe uses minimax_h3_lms_v1.0_r64 at 0.5. None "
+                                "skips it.",
+                ),
+                io.Float.Input(
+                    'boost_lora_1_strength',
+                    optional=True,
+                    default=BOOST_LORA_DEFAULTS[0][1],
+                    min=-4.0,
+                    max=4.0,
+                    step=0.05,
+                    tooltip="Strength of 2nd-pass LoRA 1. The recipe uses 0.5.",
+                ),
+                io.Combo.Input(
+                    'boost_lora_2',
+                    options=_boost_lora_choices(),
+                    optional=True,
+                    default=_boost_lora_default(1, _boost_lora_choices()),
+                    tooltip="Second 2nd-pass LoRA. The recipe uses h3-realism-people-t2v-i2v-r2v at 1.0. "
+                                "None skips it.",
+                ),
+                io.Float.Input(
+                    'boost_lora_2_strength',
+                    optional=True,
+                    default=BOOST_LORA_DEFAULTS[1][1],
+                    min=-4.0,
+                    max=4.0,
+                    step=0.05,
+                    tooltip="Strength of 2nd-pass LoRA 2. The recipe uses 1.0.",
+                ),
+                # APPENDED 2026-09-28, LAST, same positional reason.
+                io.Combo.Input(
+                    'boost_lora_3',
+                    options=_boost_lora_choices(),
+                    optional=True,
+                    default="None",
+                    tooltip="Third 2nd-pass LoRA, applied on top of the first two. Not in the recipe. "
+                                "None skips it.",
+                ),
+                io.Float.Input(
+                    'boost_lora_3_strength',
+                    optional=True,
+                    default=BOOST_LORA_DEFAULTS[2][1],
+                    min=-4.0,
+                    max=4.0,
+                    step=0.05,
+                    tooltip="Strength of 2nd-pass LoRA 3.",
+                ),
+                # APPENDED 2026-09-29, LAST, same positional reason.
+                io.Combo.Input(
+                    'upsample',
+                    options=["off", "on"],
+                    optional=True,
+                    default="off",
+                    tooltip="After the last hop, enlarge and sharpen the finished film (H3 "
+                                "latent upscaler, then one light re-draw). Only the delivered "
+                                "video changes. Needs the latent upscaler (upsample_model) "
+                                "in models/latent_upscale_models.",
+                ),
+                io.Float.Input(
+                    'upsample_megapixels',
+                    optional=True,
+                    default=_tu.MEGAPIXELS,
+                    min=0.1,
+                    max=16.0,
+                    step=0.05,
+                    tooltip="Output size for upsample, as area with the aspect kept "
+                                "(1 MP = 1024x1024). 1.5-2 is the usual range.",
+                ),
+                # APPENDED 2026-09-30, LAST, same positional reason.
+                io.Float.Input(
+                    'upsample_denoise',
+                    optional=True,
+                    default=UPSAMPLE_DENOISE,
+                    min=0.0,
+                    max=1.0,
+                    step=0.005,
+                    tooltip="Regen2K LoRA strength for the 3-step upsample re-draw "
+                                "(0.8 is the default; 0 skips the re-draw and only "
+                                "enlarges with the 3D latent upscaler).",
+                ),
+                # APPENDED 2026-09-30, LAST, same positional reason.
+                io.String.Input(
+                    'prompt_prefix',
+                    optional=True,
+                    default="",
+                    multiline=False,
+                    tooltip="Text put at the very start of every hop's prompt. For LoRA "
+                                "trigger words, which work best first. @tags are not replaced "
+                                "here: write plain text.",
+                ),
+                io.String.Input(
+                    'prompt_suffix',
+                    optional=True,
+                    default="",
+                    multiline=False,
+                    tooltip="Text put at the very end of every hop's prompt, after the chain's own "
+                                "closing lines. For LoRAs that want a camera angle or similar last.",
+                ),
+                # APPENDED 2026-10-01, LAST, same positional reason.
+                io.Combo.Input(
+                    'upsample_model',
+                    options=_tu.choices(),
+                    optional=True,
+                    default=_tu.default_upscaler(),
+                    tooltip="The latent upscaler upsample enlarges with, from "
+                                "models/latent_upscale_models (huggingface.co/LBH-123-AI/"
+                                "Minimax_h3_latent_Upscaler). The 3D file is the recipe; the 2D "
+                                "one (minimax_h3_latent_upscaler_2d_conv_v1) takes "
+                                "upsample_sharpness. h3_upscaler_lms_v0.1 is the 3D network "
+                                "fine-tuned on Alissonerdx's sharpness data: a sharper enlarge, which "
+                                "needs less re-draw (try a lower upsample_denoise).",
+                ),
+                # APPENDED 2026-10-01, LAST, same positional reason.
+                io.Combo.Input(
+                    'boost_lora_4',
+                    options=_boost_lora_choices(),
+                    optional=True,
+                    default="None",
+                    tooltip="Fourth 2nd-pass LoRA, applied on top of the other three. Not in the "
+                                "recipe. None skips it.",
+                ),
+                io.Float.Input(
+                    'boost_lora_4_strength',
+                    optional=True,
+                    default=1.0,
+                    min=-4.0,
+                    max=4.0,
+                    step=0.05,
+                    tooltip="Strength of 2nd-pass LoRA 4.",
+                ),
+                # APPENDED 2026-10-04, LAST, same positional reason.
+                io.Combo.Input(
+                    'upsample_lora',
+                    options=_boost_lora_choices(),
+                    optional=True,
+                    default="None",
+                    tooltip="Retired: ignored. Kept so saved graphs load with their values in "
+                                "place.",
+                ),
+                io.Float.Input(
+                    'upsample_lora_strength',
+                    optional=True,
+                    default=1.0,
+                    min=-4.0,
+                    max=4.0,
+                    step=0.05,
+                    tooltip="Retired with upsample_lora: ignored.",
+                ),
+                # The last widget (upsample_dit below is a socket and takes no
+                # widgets_values slot). This slot held split_finish_aug
+                # (2026-10-06, removed the same week: 0.85 burnt late hops in
+                # chain_00101 and changed nothing at 0.999). A graph saved with
+                # it carries 0.999 / 0.85 here, which ComfyUI casts to 0 for an
+                # INT -- and 0 means the recipe value, so it still queues.
+                io.Int.Input(
+                    'upsample_tile_tokens',
+                    optional=True,
+                    default=0,
+                    min=0,
+                    max=1048576,
+                    step=1024,
+                    tooltip="How much of the upsample goes to the GPU at once. 0 = automatic "
+                                "(recommended): it learns what your card can take. A number fixes "
+                                "it; lower uses less VRAM and is slower. Changing it never re-"
+                                "renders hops.",
+                ),
+                # APPENDED 2026-10-04, LAST. A socket, so it takes no widget slot.
+                io.Model.Input(
+                    'upsample_dit',
+                    optional=True,
+                    tooltip="Optional separate model for the upsample re-draw: a plain "
+                                "Load Diffusion Model with no LoRAs. Unwired uses the model the "
+                                "hops ran on. upsample_redraw ic runs on this model and needs "
+                                "the official minimax_h3_ref2va (fl2va, pruned and merged models "
+                                "cannot run it; the run stops before any hop if one is wired).",
+                ),
+                # APPENDED 2026-10-14, LAST (recover branch, seam-fix batch). hand_tie only.
+                io.Combo.Input(
+                    'ht_seam_fix',
+                    options=["off", "on"],
+                    optional=True,
+                    default="off",
+                    tooltip="hand_tie only. on: each hop opens on its preview, and the sound "
+                                "at every join carries on from the previous hop, so a line is not "
+                                "restarted or clipped there. off: without these fixes.",
+                ),
+                # APPENDED 2026-10-14, LAST. The SWAP tab's own script.
+                #
+                # ORDER IS LOAD BEARING and it was wrong the first time. These
+                # two were inserted between `ht_seam_source` and `ht_seam_fix`,
+                # while every workflow on disk stores them as the final two
+                # values. `widgets_values` is POSITIONAL, so a graph saved with
+                # [..., "off" (seam source), "on" (seam fix), "", ""] loaded
+                # `swap_script` = "on" -- a non-empty swap script on every
+                # chain workflow, so the gate refused to render the lot. The
+                # count matched, which is exactly why `check_workflows` was
+                # green while the node was unusable. They go last, after
+                # ht_seam_fix, and a graph saved by an older build must have
+                # two trailing "" for this to load.
+                #
+                # A widget and not a node property ON PURPOSE. `htc_lab_join` is
+                # read from `extra_pnginfo`, and CLAUDE.md records that an API
+                # queue drops that -- both lab nodes fall back to `rows`. A gate
+                # that cannot tell a swap from a chain on an API queue is not
+                # airtight, only airtight in the browser. A widget is positional
+                # state the graph carries however it was queued.
+                #
+                # Non-empty means "this is a swap": shot_plan is ignored, one hop
+                # is rendered, no pin and no continuation.
+                io.String.Input(
+                    'swap_script',
+                    optional=True,
+                    default="",
+                    multiline=True,
+                    tooltip="Written by the SWAP tab; leave it alone. When set, the node "
+                                "renders one hop from it and ignores SCRIPT. A stale or hand-"
+                                "edited swap is refused at queue time.",
+                ),
+                # APPENDED 2026-10-14, LAST. Which rail plates a swap's hop rides.
+                # The whitelist, and it is load bearing in BOTH directions.
+                io.String.Input(
+                    'swap_refs',
+                    optional=True,
+                    default="",
+                    tooltip="Written by the SWAP tab: the @tags its hop uses. Empty = every "
+                                "wired picture; [] = none. Only read when swap_script is set.",
+                ),
+                # APPENDED 2026-10-15, LAST. Repurposed 2026-11-04 for Upscale
+                # 2nd Pass settings ("2nd pass chunking", "2nd pass megapixels",
+                # "2nd pass steps") so Upscale 2nd Pass and Upsample are completely
+                # independent stages while saved workflows keep their positional slots.
+                io.Combo.Input(
+                    'audio_refine',
+                    options=["off", "on"],
+                    optional=True,
+                    default="off",
+                    tooltip="Shown as 2nd pass chunking. off (default): the 2nd pass "
+                                "re-draws the film in one go, which suits 1 MP on most cards. on: "
+                                "long films are cut into overlapping pieces and big frames into "
+                                "tiles, for less VRAM. Turn it on if the 2nd pass runs out of "
+                                "memory.",
+                ),
+                io.Float.Input(
+                    'audio_denoise',
+                    optional=True,
+                    default=BOOST_DEFAULT_MEGAPIXELS,
+                    min=0.1,
+                    max=16.0,
+                    step=0.05,
+                    tooltip="Shown as 2nd pass megapixels: the size the 2nd pass re-draws "
+                                "at. 1.0 (default) = about 1024x1024 worth of pixels, in the "
+                                "film's own shape. Separate from upsample_megapixels, which "
+                                "sets the final delivery size.",
+                ),
+                io.Int.Input(
+                    'audio_steps',
+                    optional=True,
+                    default=3,
+                    min=1,
+                    max=30,
+                    tooltip="Shown as 2nd pass steps: how many steps the 2nd pass "
+                                "re-draws in (default 3). More steps change the texture more; "
+                                "how much is re-drawn is set for you from this number.",
+                ),
+                io.Combo.Input(
+                    'audio_sampler',
+                    options=["same"] + comfy.samplers.KSampler.SAMPLERS,
+                    optional=True,
+                    default="same",
+                    tooltip="Retired: ignored. Kept so saved graphs load with their values in place.",
+                ),
+                io.Combo.Input(
+                    'audio_scheduler',
+                    options=["same"] + comfy.samplers.KSampler.SCHEDULERS,
+                    optional=True,
+                    default="same",
+                    tooltip="Retired: ignored. Kept so saved graphs load with their values in place.",
+                ),
+                io.Int.Input(
+                    'audio_seed_offset',
+                    optional=True,
+                    default=0,
+                    min=-1000000000,
+                    max=1000000000,
+                    tooltip="Retired: ignored. Kept so saved graphs load with their values in place.",
+                ),
+                # APPENDED 2026-10-26, LAST two widgets. Off adds no hop-key field.
+                io.Combo.Input(
+                    'dialogue_lock',
+                    options=list(_dlg.MODES),
+                    optional=True,
+                    default="off",
+                    tooltip="Holds each hop's spoken lines so the words come out exactly as "
+                                "written and nobody adds any. lines: the lines only. lines+hold: "
+                                "also 1.5 s of quiet after each line, where extra words tend to "
+                                "start. full: the whole hop's sound. Lines come from "
+                                "dialogue_audio_file, or H3 drafts them first and keeps only the "
+                                "scripted words. Not with master_audio_file or SWAP; no effect "
+                                "under hand_tie.",
+                ),
+                io.String.Input(
+                    'dialogue_audio_file',
+                    optional=True,
+                    default="",
+                    tooltip="For dialogue_lock: a timed line recording (empty = H3 drafts lines). "
+                                "Or with master_audio_file set and dialogue_lock=off: set 'auto:vocals' (or "
+                                "a vocal stem file) to lip-sync H3 to isolated vocals while keeping the full mix in the MP4. "
+                                "auto:vocals needs torchaudio's HDemucs weights fetched once (never downloaded "
+                                "by the pack; see docs/MODELS.md), else it falls back to the full mix.",
+                ),
+                # APPENDED 2026-10-28, LAST widgets. Open-H3-Regenerate-2K LoRA selector + seed + cond.
+                io.Combo.Input(
+                    'upsample_redraw',
+                    options=_regen2k_lora_choices(),
+                    optional=True,
+                    default=REGEN2K_DEFAULT_LORA,
+                    tooltip="The upsample's re-draw. A Regen2K LoRA (models/loras; default "
+                                "open_h3_regenerate_2k_r256pp_bf16.safetensors), or ic: the "
+                                "in-context re-draw that keeps each piece's own frames and "
+                                "soundtrack in view, so faces, text and mouths stay the film's "
+                                "(slower; needs " + _ic.IC_LORA_SMALL + " and "
+                                + _ic.HYPERFLOW_LORA + " in models/loras).",
+                ),
+                io.Model.Input(
+                    'regen2k_model',
+                    optional=True,
+                    tooltip="Optional model for upsample: wire UNETLoader "
+                                "(minimax_h3_fl2va_pruned_int8_convrot); HTC applies the "
+                                "selected Regen2K LoRA at upsample_denoise strength.",
+                ),
+                # Not named seed: ComfyUI hangs a randomize control on any widget
+                # called seed.
+                io.Int.Input(
+                    'regen2k_seed',
+                    optional=True,
+                    default=REGEN2K_SEED,
+                    min=0,
+                    max=0x7FFFFFFF,
+                    tooltip="Noise seed for the Regen2K upsample re-draw (default 42).",
+                ),
+                io.Combo.Input(
+                    'regen2k_cond',
+                    options=list(REGEN2K_COND_MODES),
+                    optional=True,
+                    default=REGEN2K_DEFAULT_COND,
+                    tooltip="What the Regen2K re-draw follows. hop_text (default): each hop's "
+                                "own text, without its pictures. none: no prompt.",
+                ),
+                io.Model.Input(
+                    'audio_model',
+                    optional=True,
+                    tooltip="Retired with audio_refine: ignored.",
+                ),
+                # A literal, as every socket here: tools read these types from source.
+                io.Custom('HTC_UPSAMPLE').Input(
+                    'upsample_settings',
+                    optional=True,
+                    tooltip="Optional HTC Upsample Settings node: steps, schedule, noise, "
+                                "chunks, anchor, tiles and VRAM splits of the upsample. "
+                                "Unwired keeps the shipped recipe.",
+                ),
+                # APPENDED 2026-11-01, LAST widget (after regen2k_cond in widgets_values).
+                io.Combo.Input(
+                    'cache_location',
+                    options=list(_store.CACHE_LOCATIONS),
+                    optional=True,
+                    default="temp",
+                    tooltip="Where cache_hops keeps hops. temp: emptied every time ComfyUI "
+                                "starts. user: kept across restarts, so a take can still be "
+                                "retaken or upsampled later; it stays until cache_budget_gb "
+                                "pushes it out or you press the clear-cache button.",
+                ),
+                # APPENDED 2026-11-02, LAST widget (after cache_location in widgets_values).
+                io.Combo.Input(
+                    'tone_lock',
+                    options=list(WT_TONE_CHOICES),
+                    optional=True,
+                    default=WT_TONE_DEFAULT,
+                    tooltip="sand_tie only. Keeps long continuous takes from washing out or drifting warm. "
+                                "0.5: gentle level anchor (people keep their look). 0.75: tighter level lock. "
+                                "full: strongest level + spread lock (can darken faces in dark scenes). "
+                                "chroma: holds color balance & saturation to the opening seconds while keeping face brightness untouched.",
+                ),
+                # APPENDED 2026-11-10, LAST widget (after tone_lock in widgets_values).
+                io.Combo.Input(
+                    'upsample_steps',
+                    options=list(UPSAMPLE_STEPS),
+                    optional=True,
+                    default=UPSAMPLE_STEPS[0],
+                    tooltip="Steps of the upsample re-draw (Regen2K or ic). 3 = the recipe. "
+                                "2 = about a third faster: Regen2K looked the same in "
+                                "side-by-side tests, ic starts later so a little less is "
+                                "re-drawn. A wired upsample_settings node keeps its own steps.",
+                ),
+                # APPENDED 2026-11-12, LAST widget (after upsample_steps in widgets_values).
+                io.Int.Input(
+                    'upsample_sharpness',
+                    optional=True,
+                    default=_tu.SHARPNESS,
+                    min=1,
+                    max=_tu.SHARPNESS_MAX,
+                    step=1,
+                    tooltip="Sharpness of the latent upscaler when upsample_model is the 2D "
+                                f"one ({_tu.UPSCALER_2D_FILE}): 1 = most faithful to the "
+                                "render (softest), 6 = sharpest. Also used by the upscale 2nd "
+                                "pass. The 3D upscaler has no tiers and ignores it.",
+                ),
+            ],
+            outputs=[
+                io.Image.Output(display_name='images'),
+                io.Audio.Output(display_name='audio'),
+                io.String.Output(display_name='info'),
+                io.Image.Output(display_name='contact_sheet'),
+            ],
+            hidden=[io.Hidden.unique_id],
+        )
+
+    @classmethod
+    def execute(cls, **kwargs):
+        kwargs['unique_id'] = cls.hidden.unique_id
+        result = _HandTieClipsImpl().run(**kwargs)
+        if isinstance(result, dict):
+            return io.NodeOutput.from_dict(result)
+        return io.NodeOutput(*result) if result is not None else io.NodeOutput()
+
+    @classmethod
+    def fingerprint_inputs(cls, **kwargs):
+        return _HandTieClipsImpl.IS_CHANGED(**_v3_accepted(_HandTieClipsImpl.IS_CHANGED, kwargs))
+
+
 # -- pre-rename ids ----------------------------------------------------------
 # A plain alias in NODE_CLASS_MAPPINGS keeps old workflows loading, but it also
 # lists the node a second time in search: ComfyUI falls back to the mapping key
@@ -12072,11 +12485,19 @@ class HandTieClips:
 
 
 # One timing summary per run, printed when it ends (stage_timer.py).
-HandTieClips.run = _st.timed_run(HandTieClips.run, TAG)
+_HandTieClipsImpl.run = _st.timed_run(_HandTieClipsImpl.run, TAG)
 
 
 class _LegacyH3RefChain(HandTieClips):
-    DEPRECATED = True
+    """Old node id 'H3RefChain': same node as HandTieClips, kept so old workflows load."""
+
+    @classmethod
+    def define_schema(cls):
+        schema = super().define_schema()
+        schema.node_id = 'H3RefChain'
+        schema.display_name = 'H3RefChain'
+        schema.is_deprecated = True
+        return schema
 
 
 NODE_CLASS_MAPPINGS = {
