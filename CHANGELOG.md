@@ -3,10 +3,17 @@
 User-facing. The files named here are in the repository, not in the installed
 pack — the published package excludes them.
 
-## 4.0.0 hotfixes — 2026-11-17 to 2026-11-26
+## 4.0.0 hotfixes — 2026-11-17 to 2026-11-28
 
-Six hotfixes on top of 4.0.0, no version change. Saved workflows load as before.
+Seven hotfixes on top of 4.0.0, no version change. Saved workflows load as before.
 The newest is first.
+
+### Hotfix 7 — 2026-11-28
+- **Upsampler re-draw with TAESD previews no longer fails on its second step** with
+  `RuntimeError: aimdo memory compile error`. The progress bar handed the previewer the whole
+  audio-video latent; it now gets the video latent, as ComfyUI's own preview does. TAEHV previews
+  show on the node's bar again. Found and fixed by plz12345
+  ([H3 Video Upsampler #8](https://github.com/sandpies/ComfyUI-H3-Video-Upsampler/pull/8)).
 
 ### Hotfix 6 — 2026-11-26
 - **All nodes are V3.** Every node now uses ComfyUI's newer node format. Same widgets, same order, same
