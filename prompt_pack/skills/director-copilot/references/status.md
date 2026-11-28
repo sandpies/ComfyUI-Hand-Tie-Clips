@@ -72,6 +72,9 @@ then change the line here.
 - A cut in the middle of one continuous action: read as a jump.
 - A cut to a slightly tighter size on the axis where a camera move just stopped: read as a skip, "killed the vibe".
 - A floating or changed thing named only in the shot where it changes: gone after the next cut (sheets lifted into the sky vanished at 1:28). Name it in every later shot until it changes back.
+- A gag on something a person already wears (turn his cap round, set the cop's cap straight): a second cap was put on, or the worn one vanished at the cut (Tomare v4). Keep gags on the body (a hand bent into a sign, a fingertip in a cheek) and name the worn item "on his head" as a state.
+- A frozen extra written "frozen mid-step" in a tracking shot: walked backward for a second, then froze. Write a planted stance ("standing ..., both feet planted").
+- Someone in a scene left out of a hop's END frame: in the continuation they appeared from nowhere when the action needed them (Tomare v4 hop 10).
 - Someone sitting in frame left out of a shot: popped in at the next cut with a new prop.
 - A tilt past a counter to the floor behind it: the counter vanished.
 - A spot asking for contact the plate cannot give: the person sat on air.

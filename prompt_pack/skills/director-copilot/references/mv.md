@@ -45,6 +45,12 @@ H3 will not cut every 0.8 s, so take the shape, not the numbers:
   ("slicing one hand on every beat") loops. Quick gestures get their real steps (reach, cover,
   shove, swing back). Named pose hits that land on the downbeat and freeze read as choreography;
   "dances" reads as flapping.
+- **Dance is the whole body; an action is one part.** A dance move names what the feet, hips,
+  torso, arms and head do together on the count, even a simple step-touch ("steps right and
+  touches her left foot in, hips swaying with it, shoulders rolling, arms loose at her sides,
+  head tilting on the touch"). Hands and face alone (leaning in, slicing the air, nodding at the
+  lens) read as rapping with gestures, not dancing (user, Tomare v3: "mostly her bopping and
+  facing the camera").
 - **Few timed windows inside one continuous take,** at most two, each around 1.7 s or longer, on
   the key moment. Many or short windows render as stutter cuts. Everything else flows with
   "then ... on the beat". Cuts between shots are free.

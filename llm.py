@@ -29,6 +29,7 @@ purpose. It is marked as such where it is defined. Nothing else here may.
 
 import ipaddress
 import json
+import os
 import urllib.parse
 
 TAG = "HandTieClips"
@@ -91,6 +92,19 @@ BACKENDS = {
         # and says so, rather than reporting a success that freed nothing --
         # which is what silently OOM'd the first render at 31 GB used.
         "evictable": False,
+    },
+    # basalt (github.com/jesdga95/basalt): an NVFP4 engine for Blackwell cards,
+    # serving `.basalt` packs. OpenAI chat on :8080 by default, and it reads both
+    # thinking switches `_chat_body` sends. Unlike nInfer it CAN free the card in
+    # place: POST /v1/unload ends the engine between requests (the server stays
+    # up) and the next request loads the pack again. It serves one pack, so the
+    # unload needs no model name and the model box can be left empty.
+    "basalt": {
+        "label": "basalt",
+        "default_base": "http://127.0.0.1:8080",
+        "model_optional": True,
+        "unload": "basalt",
+        "evictable": True,
     },
 }
 DEFAULT_BACKEND = "lmstudio"
@@ -178,7 +192,161 @@ def active_label():
 
 # Where a server binary lives when the user did not say. Both directions use
 # this -- the panel can also SET `server_exe` if the install is somewhere else.
-SERVER_EXES = (("ninfer", "ninfer-serve.exe"),)
+SERVER_EXES = (("ninfer", "ninfer-serve.exe"), ("basalt", "basalt.exe"))
+
+
+def can_start(name):
+    """This pack can start and stop `name` itself (Start button, auto-wake)."""
+    return str(name or "").strip().lower() in dict(SERVER_EXES)
+
+
+# -- basalt: a release archive, not one binary ----------------------------
+#
+# The Windows archive is <root>/bin/basalt.exe (the engine) + <root>/serve (a
+# Python server) + <root>/.venv (its requirements). `basalt.exe serve` only
+# runs `<venv python> -m serve.server --engine-bin <basalt.exe> ...` and waits:
+# on Windows it holds the server in no job, so ending that launcher would
+# orphan the server and its engine. This pack therefore starts the server
+# command itself. Ending the venv python ends the interpreter it spawned
+# (measured 2026-11-28 with --mock-engine: whole tree gone, port closed), and
+# the server keeps its engine in a kill-on-close job, so one kill frees the card.
+BASALT_ROOTS = tuple(os.path.join(f"{d}:\\", p) for d in ("C", "D")
+                     for p in ("basalt", os.path.join("AI", "basalt")))
+
+
+def _basalt_root():
+    """The basalt install root (holds bin/basalt.exe), or None."""
+    saved = str((CONN.get("servers") or {}).get("basalt", {}).get("exe") or "").strip()
+    cands = []
+    if saved:
+        p = os.path.abspath(saved)
+        if os.path.isfile(p):
+            p = os.path.dirname(p)                      # .../bin/basalt.exe -> .../bin
+        cands += [p, os.path.dirname(p)]                # a root, or its bin folder
+    else:
+        cands += list(BASALT_ROOTS)
+    for r in cands:
+        if os.path.isfile(os.path.join(r, "bin", "basalt.exe")):
+            return r
+    return None
+
+
+def _basalt_python(root):
+    p = os.path.join(root, ".venv", "Scripts", "python.exe")
+    return p if os.path.isfile(p) else None
+
+
+def _resolve_basalt_model(model_arg, root):
+    """A `.basalt` pack: the given file, the newest one in a given folder, or
+    the newest one in <root>/models. -> (path, error)."""
+    raw = str(model_arg or (CONN.get("servers") or {}).get("basalt", {}).get("model_file") or "").strip()
+    cand = os.path.abspath(raw) if raw else os.path.join(root, "models")
+    if os.path.isfile(cand):
+        if not cand.lower().endswith(".basalt"):
+            return "", f"{cand} is not a .basalt pack (basalt serves .basalt files only)."
+        return cand, ""
+    if os.path.isdir(cand):
+        packs = []
+        for dirpath, _dirs, files in os.walk(cand):
+            packs += [os.path.join(dirpath, f) for f in files if f.lower().endswith(".basalt")]
+        if packs:
+            return max(packs, key=os.path.getmtime), ""
+        return "", f"No .basalt pack in {cand}. Put one there or set the pack path in Settings."
+    return "", f"basalt pack path not found: {cand}"
+
+
+def _basalt_procs(root):
+    """Running processes of THIS basalt install: (pid, role) for the venv
+    python (the server) and bin/basalt*.exe (engine, vision). Matched by full
+    image path, so no other python or program is ever touched."""
+    try:
+        import psutil
+    except Exception:
+        return []
+    want = {os.path.normcase(os.path.join(root, ".venv", "Scripts", "python.exe")): "server",
+            os.path.normcase(os.path.join(root, "bin", "basalt.exe")): "engine",
+            os.path.normcase(os.path.join(root, "bin", "basalt-vision.exe")): "vision"}
+    out = []
+    for p in psutil.process_iter(["pid", "exe"]):
+        try:
+            role = want.get(os.path.normcase(p.info.get("exe") or ""))
+        except Exception:
+            role = None
+        if role:
+            out.append((int(p.info["pid"]), role))
+    return out
+
+
+def _stop_basalt():
+    """End this install's server (its tree goes with it), then any engine left
+    over from a crashed server. -> processes ended."""
+    root = _basalt_root()
+    if not root:
+        print(f"[{TAG}] no basalt install found; leaving it alone", flush=True)
+        return 0
+    try:
+        import psutil
+    except Exception:
+        print(f"[{TAG}] cannot stop basalt: psutil is missing", flush=True)
+        return 0
+    stopped = 0
+    for role_pass in ("server", "engine", "vision"):
+        for pid, role in _basalt_procs(root):
+            if role != role_pass:
+                continue
+            try:
+                proc = psutil.Process(pid)
+                proc.kill()
+                proc.wait(timeout=5)
+                stopped += 1
+                print(f"[{TAG}] stopped basalt {role} (pid {pid})", flush=True)
+            except Exception:
+                pass
+    return stopped
+
+
+def _start_basalt(model_file=None, ctx_size=None):
+    """Spawn the basalt server for the configured pack. -> (ok, message)."""
+    import subprocess
+    root = _basalt_root()
+    if not root:
+        return False, ("No basalt install found. Unzip the basalt Windows release to C:\\basalt or "
+                       "D:\\basalt (bin\\basalt.exe inside), or set its folder in Settings.")
+    py = _basalt_python(root)
+    if not py:
+        return False, (f"basalt at {root} has no .venv. In that folder run: py -3 -m venv .venv, "
+                       f"then .venv\\Scripts\\pip install -r requirements.txt")
+    model, err = _resolve_basalt_model(model_file, root)
+    if not model:
+        return False, err
+    ctx = _server_ctx_size("basalt", ctx_size=ctx_size)
+    exe = os.path.join(root, "bin", "basalt.exe")
+    argv = [py, "-m", "serve.server", "--engine-bin", exe, "--model", model,
+            "--host", "127.0.0.1", "--port", _server_port("basalt"),
+            "--max-context", str(ctx), "--kv", "nvfp4",
+            # 0.5.7 refuses a bare --vision; dynamic = the encoder waits in RAM and
+            # visits the card per picture (docs/models/qwen38-27b.md), no standing VRAM.
+            "--vision", "dynamic",
+            "--reasoning-effort", "none"]
+    logdir = os.path.dirname(exe)
+    try:
+        err_fh = open(os.path.join(logdir, "server.err"), "ab")
+        # startup_error() reads from the last "starting engine": mark this start.
+        err_fh.write(f"\n[htc] starting engine: {os.path.basename(model)}\n".encode())
+        err_fh.flush()
+        out_fh = open(os.path.join(logdir, "server.out"), "ab")
+        subprocess.Popen(argv, cwd=root, stdout=out_fh, stderr=err_fh,  # noqa: S603
+                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except Exception as exc:
+        return False, f"could not start basalt: {exc}"
+    try:
+        if not os.path.isfile(_conn_path()) or backend_name(CONN.get("backend")) != "basalt":
+            save_conn({"backend": "basalt"})
+    except Exception:
+        pass
+    print(f"[{TAG}] started basalt: {os.path.basename(model)} (max-context {ctx})", flush=True)
+    return True, (f"Starting basalt with {os.path.basename(model)}. A 27B pack takes about "
+                  f"30 s to load; the writer waits for it.")
 
 # A model to serve, when the backend needs one named on the command line.
 # Filled in by the route from the node's own widgets; kept here so the default
@@ -224,6 +392,9 @@ def _server_exe(name):
     instead".
     """
     import os
+    if name == "basalt":
+        root = _basalt_root()
+        return os.path.join(root, "bin", "basalt.exe") if root else None
     spec = dict(SERVER_EXES).get(name)
     if not spec:
         return None
@@ -556,6 +727,9 @@ def find_server_pids(name=None):
     """Return active PIDs for the writer binary (`ninfer-serve.exe`), without spawning shells."""
     import os
     n = str(name or backend_name(CONN.get("backend")))
+    if n == "basalt":
+        root = _basalt_root()
+        return [pid for pid, role in _basalt_procs(root) if role == "server"] if root else []
     exe = _server_exe(n)
     spec_exe = dict(SERVER_EXES).get(n)
     if not exe and not spec_exe:
@@ -644,7 +818,7 @@ async def start_process_async(model_file=None, name=None, ctx_size=None):
         if len(pids) >= 2:
             print(f"[{TAG}] detected {len(pids)} stacked {n} processes ({pids}); stopping before clean start", flush=True)
             await loop.run_in_executor(None, stop_process, n)
-        if n == "ninfer" and shares_this_gpu((CONN.get("servers") or {}).get(n, {}).get("server_url") or backend_spec(n)["default_base"]):
+        if can_start(n) and shares_this_gpu((CONN.get("servers") or {}).get(n, {}).get("server_url") or backend_spec(n)["default_base"]):
             await loop.run_in_executor(None, free_comfy_vram_if_idle)
         return start_process(model_file=model_file, name=n, already_checked=True, ctx_size=ctx_size)
 
@@ -662,8 +836,10 @@ def start_process(model_file=None, name=None, already_checked=False, ctx_size=No
     if len(pids) >= 2:
         print(f"[{TAG}] detected {len(pids)} stacked {n} processes ({pids}); stopping before clean start", flush=True)
         stop_process(n)
-    if not already_checked and n == "ninfer" and shares_this_gpu((CONN.get("servers") or {}).get(n, {}).get("server_url") or backend_spec(n)["default_base"]):
+    if not already_checked and can_start(n) and shares_this_gpu((CONN.get("servers") or {}).get(n, {}).get("server_url") or backend_spec(n)["default_base"]):
         free_comfy_vram_if_idle()
+    if n == "basalt":
+        return _start_basalt(model_file=model_file, ctx_size=ctx_size)
     exe = _server_exe(n)
     if not exe:
         return False, (f"No {backend_spec(n)['label']} binary found. Put ninfer-serve.exe in "
@@ -753,6 +929,8 @@ def stop_process(name=None):
     """
     import os
     n = str(name or backend_name(CONN.get("backend")))
+    if n == "basalt":
+        return _stop_basalt()
     exe = _server_exe(n)
     spec_exe = dict(SERVER_EXES).get(n)
     if not exe and not spec_exe:
@@ -1536,6 +1714,11 @@ def _chat_body(model, messages, *, schema, temperature, max_tokens):
     # unloaded a 26B model ~30s after the prompt finished, while its panel still
     # reported the writer warm. Lifetime is this pack's to manage, on the
     # explicit unload below.
+    if _is_basalt():
+        # basalt serves ONE pack and answers an unknown name (or "") with an
+        # unknown-model error; a request with no model goes to that pack. So a
+        # stale name from an earlier pack can never break the writer.
+        body.pop("model", None)
     if schema is not None and structured_supported():
         body["response_format"] = {
             "type": "json_schema",
@@ -2021,7 +2204,7 @@ async def unload(base_url, model):
     import aiohttp
 
     base = normalise_base(base_url)
-    if not (base and model):
+    if not (base and (model or _is_basalt())):
         return False
     if not shares_this_gpu(base):
         print(f"[{TAG}] writer is not on this machine -- leaving it loaded",
@@ -2030,6 +2213,11 @@ async def unload(base_url, model):
 
     try:
         async with aiohttp.ClientSession() as session:
+            if _is_basalt():
+                ok, note = await _basalt_unload(session, base)
+                if not ok and note != "nothing is loaded":
+                    print(f"[{TAG}] {note}", flush=True)
+                return ok
             if await _unload_one(session, base, model):
                 return True
     except Exception as exc:
@@ -2039,6 +2227,42 @@ async def unload(base_url, model):
     print(f"[{TAG}] no unload endpoint answered -- free the VRAM in {active_label()} "
           f"if the render runs short", flush=True)
     return False
+
+
+def _is_basalt():
+    """The configured backend is basalt. Read raw: backend_name() logs on a miss."""
+    return str(CONN.get("backend") or "").strip().lower() == "basalt"
+
+
+async def _basalt_unload(session, base):
+    """basalt's own verb: POST /v1/unload ends its engine. -> (freed, note).
+
+    Only a JSON `"status": "unloaded"` counts as freed, so a server that answers
+    200 to any path cannot pass for a successful eviction. basalt refuses an
+    unload from a foreign browser Origin; this call is server-side and sends
+    none. 409 means a request is still running on it.
+    """
+    import aiohttp
+    try:
+        async with session.post(
+            base + "/v1/unload", json={},
+            timeout=aiohttp.ClientTimeout(total=UNLOAD_TIMEOUT),
+        ) as resp:
+            try:
+                status = str((await resp.json(content_type=None)).get("status") or "")
+            except Exception:
+                status = ""
+            if resp.status == 200 and status == "unloaded":
+                print(f"[{TAG}] basalt unloaded its pack (the next write loads it again)",
+                      flush=True)
+                return True, "basalt pack"
+            if resp.status == 200 and status == "not loaded":
+                return False, "nothing is loaded"
+            if resp.status == 409:
+                return False, "basalt is busy with a request -- unload it once it finishes"
+            return False, f"basalt /v1/unload answered {resp.status} {status}".strip()
+    except Exception as exc:
+        return False, f"basalt /v1/unload failed: {exc}"
 
 
 async def unload_all(base_url, fallback_model=""):
@@ -2072,6 +2296,15 @@ async def unload_all(base_url, fallback_model=""):
         # someone else's model. Freeing VRAM here would free the wrong VRAM.
         return 0, ("the writer is not on loopback -- nothing to free here. "
                    "If it IS this machine, address it as localhost.")
+
+    if _is_basalt():
+        # One pack per server and its own verb: no listing, no model name.
+        try:
+            async with aiohttp.ClientSession() as session:
+                ok, note = await _basalt_unload(session, base)
+        except Exception as exc:
+            return 0, f"basalt unload failed: {exc}"
+        return (1, note) if ok else (0, note)
 
     try:
         listed = await models(base)
@@ -2124,6 +2357,9 @@ def configured():
     try:
         conn = load_conn() or {}
         if conn.get("model"):
+            return True
+        if str(conn.get("backend") or "").strip().lower() == "basalt":
+            # basalt unloads without a model name, so an empty model box is set up.
             return True
         return not backend_spec(conn.get("backend")).get("evictable", True)
     except Exception:

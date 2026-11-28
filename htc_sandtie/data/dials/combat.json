@@ -2025,6 +2025,114 @@
       "duration_best": "12-15 s",
       "duration_tip": "⏱ BEST LENGTH: 12–15 s (290–362f) — High-wire wuxia flexible spear vs twin swords amidst cherry petals.",
       "rule": "Moonlit traditional stone courtyard swept by drifting cherry blossom petals and glowing red lanterns: At 00:00.000-00:02.600, <Subject 1> charges directly forward spinning a crimson-tasseled flexible steel spear in roaring figure-eight arcs that deflect three throwing daggers in crisp metallic sparks. At 00:02.600-00:06.000, sweeping crane camera orbits fast as <Subject 1> plants the spear butt squarely onto wet cobblestones, pole-vaults high over two converging curved blades, and kicks cleanly off a tall red lacquered pillar driving a descending shaft-sweep across both attackers. At 00:06.000-00:09.500, camera snap-zooms tightly behind the gleaming spear tip as <Subject 1> spirals airborne through swirling pink blossoms unleashing an ultimate dragon-pierce shockwave thrust that blasts the armored commander crashing backward through carved wooden screen doors. At 00:09.500-00:12.500, cherry petals float across splintered lattice screens while <Subject 1> plants the crimson spear vertically upright beside one boot."
+    },
+    {
+      "id": "combat_parkour_wall_run_roof_leap",
+      "label": "🏃 Parkour Stunt: Rooftop Wall-Run -> Gap Vault -> Shoulder Drop Roll",
+      "group": "Cinematic Stunts & Explosions",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> sprints at full speed across wet concrete rooftop gravel, planting two rapid angled boot steps high along a brick parapet wall to carry momentum across a wide alley gap. In Beat 2, <Subject 1> vaults cleanly over an AC vent unit with one palm planted flat and legs tucked horizontally mid-air as jacket tails whip behind. In Beat 3, <Subject 1> touches down on the opposite roof ledge, tucks straight into a tight diagonal shoulder roll across scattered pebbles, and springs upright into a low ready stance facing forward."
+    },
+    {
+      "id": "combat_motorcycle_slide_dismount_draw",
+      "label": "🏍️ Akira Stunt: Neon Motorcycle Drift Slide -> Boot Skid -> Weapon Draw",
+      "group": "Cinematic Stunts & Explosions",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> leans sharply low on a speeding sport motorcycle entering a slick wet avenue, kicking the rear tire wide into a dramatic sideways power-slide as bright orange sparks and water spray fan out behind the rear wheel. In Beat 2, <Subject 1> plants one booted heel firmly onto the asphalt to pivot the bike into a broadside halt, swinging one leg smoothly over the saddle while neon reflections ripple across the wet ground. In Beat 3, <Subject 1> steps forward past the glowing headlight beam in a wide planted stance, drawing a weapon cleanly from the hip with eyes locked ahead."
+    },
+    {
+      "id": "combat_glass_shatter_slowmo_breach",
+      "label": "💥 Breach Stunt: Window Dive -> Mid-Air Glass Shower -> Tactical Landing",
+      "group": "Cinematic Stunts & Explosions",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "8-10 s",
+      "rule": "In Beat 1, <Subject 1> drives shoulder-first through a tall backlit window pane, exploding tempered glass into hundreds of sparkling tumbling shards catching rim light across the room. In Beat 2, time stretches into crisp suspended motion as <Subject 1> twists mid-air above the floor with hair and coat flaring among drifting glass fragments. In Beat 3, <Subject 1> lands smoothly on one knee and one planted boot amid clattering glass, snapping both hands forward into a steady two-handed ready guard."
+    },
+    {
+      "id": "combat_corridor_flashlight_pie_clear",
+      "label": "🔦 Tactical Gun-Fu: Flashlight Corner Pie -> Double Tap -> Mag Flip Reload",
+      "group": "Gun-Fu, Tactical & Firearms",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> hugs a dim concrete hallway corner in a compact tactical crouch, sweeping a bright pistol-mounted flashlight beam smoothly around the doorway edge in crisp incremental steps. In Beat 2, <Subject 1> snaps straight onto target and fires two crisp rapid double-taps as bright muzzle flashes illuminate the corridor walls and brass casings arc sideways. In Beat 3, <Subject 1> drops the spent magazine with one thumb flick, slams a fresh mag home from the belt in one fluid wrist snap, and re-centers the glowing beam downrange."
+    },
+    {
+      "id": "combat_katana_raindrop_iaido_freeze",
+      "label": "⚡ Iaido Stunt: Falling Raindrop Tension -> Lightning Draw Slash -> Sheath Click",
+      "group": "Katana, Sword & Melee",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "8-10 s",
+      "rule": "In Beat 1, <Subject 1> stands coiled in a low forward-weighted stance in pouring rain, left thumb nudging the katana guard a single millimeter free of the scabbard as raindrops bead along steel and knuckles. In Beat 2, <Subject 1> explodes forward in a blinding single-step horizontal draw slash that cleaves a bright silver arc through the rain curtain and sends a wide crescent of water spray erupting sideways. In Beat 3, <Subject 1> settles into a dead-still low finish, flicks rainwater cleanly off the blade tip, and slides the katana smoothly back into the scabbard until the guard clicks shut."
+    },
+    {
+      "id": "combat_elevator_mirror_ambush_takedown",
+      "label": "🪞 Close-Quarters Stunt: Glass Elevator Reflex -> Elbow Parry -> Wall-Slam Pin",
+      "group": "Environmental, Prop & Parkour Combat Interactions",
+      "domain": "combat_action",
+      "aspect_best": "9:16",
+      "duration_best": "10-12 s",
+      "rule": "In Beat 1, <Subject 1> stands alertly inside a mirrored brass-and-glass elevator watching a reflection shift behind them, pivoting sharply on the ball of the front foot to deflect an incoming lunge with a tight forearm-and-elbow parry. In Beat 2, <Subject 1> steps inside the attacker's reach, driving a crisp palm heel strike into the torso followed by a decisive hip-pivot redirect that sends the opponent slamming back against the glass elevator wall. In Beat 3, <Subject 1> locks a firm forearm pin across the opponent's shoulders while holding sharp direct eye contact."
+    },
+    {
+      "id": "uber_fight_neon_laundromat_washer_vault_ko",
+      "label": "⚡ UBER FIGHT (ms): One-Take Neon Laundromat Washer-Vault Kick, Basket Sweep & Dryer Glass Blast (16:9)",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "rule": "One unbroken fast-paced lateral fight shot inside a fluorescent midnight laundromat keeping <Subject 1> on the left and <Subject 2> on the right with fast reactive camera tracking: At 00:00.000-00:02.600, battle erupts immediately as <Subject 2> sprints forward, vaults off a stainless steel washing machine, and fires a flying side-kick at the head of <Subject 1>, <Subject 1> ducks low under the boot while camera drops fast, <Subject 2> lands right and <Subject 1> snaps three blistering jab-cross-elbow strikes hitting the jaw of <Subject 2>. At 00:02.600-00:05.600, <Subject 2> rebounds off a chrome vending machine, kicks a rolling wire laundry basket across the wet tile floor at the shins of <Subject 1>, <Subject 1> leaps cleanly over the spinning basket, lands low, and drives a sharp front-kick into the ribs of <Subject 2> throwing soap suds and water droplets across the aisle. At 00:05.600-00:09.000, camera whips fast sideways tracking both fighters trading tight forearm blocks, snapping hooks, and rising knees center frame before locking into a collar clinch where <Subject 1> pivots hips and slams <Subject 2> hard across the folding counter with plastic hangers scattering everywhere. At 00:09.000-00:12.400, <Subject 2> lunges back throwing a wild overhead hook, <Subject 1> slips underneath and camera zooms fast inward onto the ultimate spinning back-kick of <Subject 1> that blasts <Subject 2> airborne backward straight through a row of glowing glass dryer doors in a bright burst of sparks and shattering glass. At 00:12.400-00:15.000, <Subject 2> crashes hard onto broken glass beneath flickering neon tubes as sparks drift down and camera pulls fast wide around <Subject 1> standing victorious on the left ready to move."
+    },
+    {
+      "id": "uber_fight_rainy_container_yard_floodlight_ko",
+      "label": "⚡ UBER FIGHT (ms): One-Take Rainy Container-Yard Wall-Kick, Crate Smash & Floodlight Blast (16:9)",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "rule": "One unbroken fast-paced lateral fight shot between wet steel shipping containers under pouring rain keeping <Subject 1> on the left and <Subject 2> on the right with fast reactive camera tracking: At 00:00.000-00:02.600, battle erupts immediately as <Subject 2> charges through flooded puddles, kicks high off a corrugated steel wall into a lunging roundhouse kick at <Subject 1>, <Subject 1> ducks fast under the sweeping boot while camera drops low, rising straight into a thunderous left hook and right uppercut hitting the chin of <Subject 2> in a spray of rain. At 00:02.600-00:05.600, <Subject 2> staggers off a wooden cargo crate, snaps back with a sharp low calf-kick and straight cross, <Subject 1> checks the kick, parries the punch outward, and whips a crouching spinning heel-sweep through deep water throwing a wide silver sheet of rain spray as <Subject 2> leaps straight over the sweeping leg. At 00:05.600-00:09.000, camera whips fast sideways tracking both fighters trading crisp boxing combinations, palm deflections, and clinch knees center frame before <Subject 1> hooks an underarm shoulder-throw hurling <Subject 2> crashing straight through a stack of wooden pallets in splintering wood. At 00:09.000-00:12.400, <Subject 2> scrambles upright swinging a heavy right haymaker, <Subject 1> ducks inside and camera zooms fast inward onto the ultimate leaping knee-and-chest thrust-kick of <Subject 1> that blasts <Subject 2> airborne backward straight into a towering steel floodlight rig in a bright orange electrical explosion. At 00:12.400-00:15.000, <Subject 2> crashes onto wet asphalt beneath raining sparks and shattered floodlight glass as camera pulls fast wide around <Subject 1> standing victorious on the left ready to move."
+    },
+    {
+      "id": "uber_fight_tokyo_izakaya_counter_shoji_ko",
+      "label": "⚡ UBER FIGHT (ms): One-Take Tokyo Izakaya Stool Parry, Bar-Slide Sweep & Shoji Blast (16:9)",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "rule": "One unbroken fast-paced lateral fight shot inside a warm lantern-lit Tokyo izakaya keeping <Subject 1> on the left and <Subject 2> on the right with fast reactive camera tracking: At 00:00.000-00:02.600, battle erupts immediately as <Subject 2> charges forward swinging a heavy wooden barstool at the head of <Subject 1>, <Subject 1> drops low while camera dips fast and blasts a rising side-kick straight through the stool splintering wood sideways before snapping two rapid palm strikes into the chest of <Subject 2>. At 00:02.600-00:05.600, <Subject 2> leaps onto the lacquered wooden counter, vaults forward throwing a flying knee over rising kitchen steam, <Subject 1> sidesteps cleanly, grabs the jacket collar of <Subject 2> mid-landing, and slides knee-first across the long counter kicking ceramic bowls airborne while <Subject 2> rolls back onto both boots. At 00:05.600-00:09.000, camera whips fast sideways tracking both fighters trading rapid close-range elbow parries, ribs hooks, and sweeping leg checks center frame before <Subject 1> locks a tight wrist-and-hip judo throw slamming <Subject 2> hard onto the timber floor with glowing paper lanterns swaying overhead. At 00:09.000-00:12.400, <Subject 2> springs up launching a spinning backfist, <Subject 1> ducks inside and camera zooms fast inward onto the ultimate double-palm kinetic chest thrust of <Subject 1> that blasts <Subject 2> airborne backward straight through wooden shoji lattice doors into the rainy neon alley in a shower of torn paper and splinters. At 00:12.400-00:15.000, <Subject 2> skids across wet alley cobblestones beneath drifting paper shards and warm steam as camera pulls fast wide around <Subject 1> standing victorious on the left ready to move."
+    },
+    {
+      "id": "uber_fight_marble_museum_glass_case_ko",
+      "label": "⚡ UBER FIGHT (ms): One-Take Marble Museum Plinth-Vault, Pillar Counter & Glass-Case Blast (16:9)",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "rule": "One unbroken fast-paced lateral fight shot inside a moonlit marble museum gallery keeping <Subject 1> on the left and <Subject 2> on the right with fast reactive camera tracking: At 00:00.000-00:02.600, battle erupts immediately as <Subject 2> sprints forward, vaults off a stone display plinth, and snaps a high flying kick at the head of <Subject 1>, <Subject 1> leans sharp backward under the boot while camera drops fast, then steps forward firing crisp jab-cross-hook punches cracking the guard of <Subject 2>. At 00:02.600-00:05.600, <Subject 2> bounces off a fluted marble column, counters with a spinning elbow and low shin sweep, <Subject 1> hops cleanly over the sweeping boot, drives a heavy knee into the midsection of <Subject 2>, and redirects the momentum of <Subject 2> shoulder-first into a glass pedestal cracking the top pane. At 00:05.600-00:09.000, camera whips fast sideways tracking both fighters trading lightning forearm deflections, rising uppercuts, and counter side-kicks center frame before locking into a close clinch where <Subject 1> twists hips and hurls <Subject 2> skidding across polished marble floor tiles. At 00:09.000-00:12.400, <Subject 2> charges back throwing a leaping superman punch, <Subject 1> pivots cleanly and camera zooms fast inward onto the ultimate spinning heel-kick of <Subject 1> that blasts <Subject 2> airborne backward straight through a tall illuminated glass display case in a dazzling waterfall of tempered glass shards. At 00:12.400-00:15.000, <Subject 2> crashes hard onto glittering glass across the marble floor beneath glowing gallery spotlights as camera pulls fast wide around <Subject 1> standing victorious on the left ready to move."
+    },
+    {
+      "id": "uber_fight_cyber_server_hall_core_blast_ko",
+      "label": "⚡ UBER FIGHT (ms): One-Take Cyber Server-Hall Rack-Kick, Cable Sparks & Core-Glass Blast (16:9)",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "rule": "One unbroken fast-paced lateral fight shot down a narrow glowing cyan-and-crimson server corridor keeping <Subject 1> on the left and <Subject 2> on the right with fast reactive camera tracking: At 00:00.000-00:02.600, battle erupts immediately as <Subject 2> kicks off a tall blinking steel server rack and launches a flying knee toward <Subject 1>, <Subject 1> ducks fast while camera drops low, slips right, and fires rapid body-hooks and a crisp backfist snapping the head of <Subject 2> sideways. At 00:02.600-00:05.600, <Subject 2> slams against a steel rack showering blue electrical sparks, springs straight back with a spinning hook-kick over the duck of <Subject 1>, lands low, and whips a crouching leg sweep tearing floor cables in bright electric arcs as <Subject 1> jumps straight over the leg of <Subject 2>. At 00:05.600-00:09.000, camera whips fast sideways tracking both fighters trading sharp palm parries, rapid straight punches, and knee counters center frame before locking into a tight clinch where <Subject 1> drives an explosive hip-throw slamming <Subject 2> hard against the steel server bay door. At 00:09.000-00:12.400, <Subject 2> lunges upright swinging a heavy right cross, <Subject 1> slips inside and camera zooms fast inward onto the ultimate charged chest thrust-kick of <Subject 1> that blasts <Subject 2> airborne backward straight through the glowing glass main-core partition in a bright cyan-and-orange spark explosion. At 00:12.400-00:15.000, <Subject 2> crashes onto shattered glass inside the smoking server core as bright sparks rain down and camera pulls fast wide around <Subject 1> standing victorious on the left ready to move."
+    },
+    {
+      "id": "uber_fight_monsoon_helipad_beacon_blast_ko",
+      "label": "⚡ UBER FIGHT (ms): One-Take Monsoon Helipad Puddle-Sweep, Crate-Vault & Beacon-Rig Blast (16:9)",
+      "group": "00 · Uber Fight Scene Choreography (Millisecond Paced)",
+      "domain": "combat_action",
+      "aspect_best": "16:9",
+      "duration_best": "12-15 s",
+      "rule": "One unbroken fast-paced lateral fight shot across a rain-lashed skyscraper helipad ringed by red warning strobes keeping <Subject 1> on the left and <Subject 2> on the right with fast reactive camera tracking: At 00:00.000-00:02.600, battle erupts immediately as <Subject 2> sprints through sheets of rain and launches a leaping axe-kick at <Subject 1>, <Subject 1> sidesteps cleanly while camera dips fast and drives a crushing liver-punch and rising uppercut into <Subject 2> sending a bright burst of rainwater off both jackets. At 00:02.600-00:05.600, <Subject 2> vaults off a yellow steel equipment crate launching a rapid double roundhouse kick, <Subject 1> blocks the first high with twin forearms, ducks the second, and fires a low sweeping leg-kick across flooded tarmac throwing a dramatic wave of glowing red-lit water spray. At 00:05.600-00:09.000, camera whips fast sideways tracking both fighters trading blistering Muay Thai elbows, snapping hooks, and body knees center frame before locking into a collar clinch where <Subject 1> pivots sharply and throws <Subject 2> skidding across the flooded painted helipad circle. At 00:09.000-00:12.400, <Subject 2> surges upright charging forward with a wild right punch, <Subject 1> ducks inside and camera zooms fast inward onto the ultimate flying double-kick of <Subject 1> that blasts <Subject 2> airborne backward straight into the sparking red helipad beacon tower in a bright fiery electrical blast. At 00:12.400-00:15.000, <Subject 2> crashes onto wet concrete beneath cascading orange sparks and pouring rain as camera pulls fast wide around <Subject 1> standing victorious on the left ready to move."
     }
   ]
 }

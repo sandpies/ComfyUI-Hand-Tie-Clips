@@ -218,11 +218,14 @@ def _strip_all_dialogue(text: str) -> str:
 
 
 def sanitize_additive_rule(text: str) -> str:
-    out = str(text or "")
-    out = re.sub(r"\(\s*(?:no|not|never|without|avoid)\b[^)]{0,50}\)", "", out, flags=re.I)
-    for rx, repl in _NEG_REPLACEMENTS:
-        out = rx.sub(repl, out)
-    out = _META_SCAFFOLD_RX.sub("", out)
+    def _clean_seg(seg: str) -> str:
+        s = re.sub(r"\(\s*(?:no|not|never|without|avoid)\b[^)]{0,50}\)", "", seg, flags=re.I)
+        for rx, repl in _NEG_REPLACEMENTS:
+            s = rx.sub(repl, s)
+        s = _META_SCAFFOLD_RX.sub("", s)
+        return re.sub(r"\s{2,}", " ", s)
+
+    out = _clean_outside_d(str(text or ""), _clean_seg)
     return re.sub(r"\s{2,}", " ", out).strip()
 
 
@@ -927,6 +930,7 @@ def finish_block(
         ward_ids_fin = _cat.parse_multi_ids(flavors.get("wardrobe"))
         wmode_fin = _bg.get_dial_mode(flavors, "wardrobe", "sequence")
         sex_scene_fin = _dir.is_sexual(brief, str(flavors.get("explicit") or ""), str(flavors.get("wardrobe") or ""))
+        style_xfer_fin = _dir.resolve_style_transfer(brief=brief, flavors=flavors, lab=lab)
         missing_ret = []
         for s_n in sorted((lab.get("subjects") or {}).keys()):
             s_meta = (lab.get("subjects") or {}).get(s_n) or {}
@@ -938,15 +942,20 @@ def finish_block(
             eth_note = f" ({eth_s})" if eth_s else ""
             all_nude_fin = bool({"nude_both_partners", "nude_all_cast_subjects_s1_s9"} & set(ward_ids_fin))
             split_assigned = bool(wmode_fin == "split" and len(ward_ids_fin) >= s_n)
-            use_partial = bool((anal_nude and s_n in (1, 2)) or (ward_ids_fin and (s_n == 1 or all_nude_fin or split_assigned)) or (sex_scene_fin and s_n == 2))
+            use_partial = bool(style_xfer_fin or (anal_nude and s_n in (1, 2)) or (ward_ids_fin and (s_n == 1 or all_nude_fin or split_assigned)) or (sex_scene_fin and s_n == 2))
             if not re.search(rf"^\s*<Subject {s_n}>[^\n]*\b(?:fully_preserved|partially_preserved)\b", ret, re.M):
                 pres = (
                     f"partially_preserved -{cname_str} keeping facial bone structure{eth_note}, hair, and body identity{pic_cite} while completely nude from Frame 0"
                     if (anal_nude and s_n == 1)
                     else (
-                        f"partially_preserved -{cname_str} keeping facial bone structure{eth_note}, hair, and body identity{pic_cite} with the active scene wardrobe state"
-                        if use_partial
-                        else f"fully_preserved -{cname_str} keeping facial bone structure{eth_note}, hair, and outfit identity{pic_cite}"
+                        f"partially_preserved -{cname_str} keeping facial likeness{eth_note}, hair, and outfit design{pic_cite}, re-rendered in {style_xfer_fin['label']}"
+                        if style_xfer_fin and not (ward_ids_fin and (s_n == 1 or all_nude_fin or split_assigned))
+                        else (
+                            f"partially_preserved -{cname_str} keeping facial bone structure{eth_note}, hair, and body identity{pic_cite} with the active scene wardrobe state"
+                            + (f", re-rendered in {style_xfer_fin['label']}" if style_xfer_fin else "")
+                            if use_partial
+                            else f"fully_preserved -{cname_str} keeping facial bone structure{eth_note}, hair, and outfit identity{pic_cite}"
+                        )
                     )
                 )
                 missing_ret.append(f"<Subject {s_n}> (appears in {_shots_for_subject(s_n)}): {pres}")
@@ -982,12 +991,12 @@ def finish_block(
         new_ret = "\n".join(_sort_ref_lines(ret_tagged_lines + missing_ret)).strip()
         if new_ret:
             t = _replace_section_body(t, "retention_analysis:", new_ret, ("detailed_description:", "overall_soundscape:"))
-        if anal_nude or ward_ids_fin:
+        if anal_nude or ward_ids_fin or style_xfer_fin:
             t = re.sub(r"(<Subject 1>[^\n:]*:\s*)fully_preserved", r"\1partially_preserved", t, count=1)
-        if anal_nude or "nude_both_partners" in ward_ids_fin or "nude_all_cast_subjects_s1_s9" in ward_ids_fin or sex_scene_fin or (len(ward_ids_fin) >= 2 and wmode_fin == "split"):
+        if anal_nude or style_xfer_fin or "nude_both_partners" in ward_ids_fin or "nude_all_cast_subjects_s1_s9" in ward_ids_fin or sex_scene_fin or (len(ward_ids_fin) >= 2 and wmode_fin == "split"):
             t = re.sub(r"(<Subject 2>[^\n:]*:\s*)fully_preserved", r"\1partially_preserved", t, count=1)
-        if "nude_all_cast_subjects_s1_s9" in ward_ids_fin or wmode_fin == "split":
-            for s_n_idx in range(3, len(ward_ids_fin) + 1 if wmode_fin == "split" else 10):
+        if style_xfer_fin or "nude_all_cast_subjects_s1_s9" in ward_ids_fin or wmode_fin == "split":
+            for s_n_idx in range(3, (len(ward_ids_fin) + 1 if (wmode_fin == "split" and not style_xfer_fin) else 10)):
                 t = re.sub(rf"(<Subject {s_n_idx}>[^\n:]*:\s*)fully_preserved", r"\1partially_preserved", t, count=1)
 
         sdefs = _std._field(t, "subject_definitions:")
@@ -1024,6 +1033,8 @@ def finish_block(
                             sl = re.sub(r"<Picture\s+\d+>", owned[0], sl)
                     sl = _refs._STUDIO_BACKDROP_RX.sub(" ", sl)
                     sl = re.sub(r"\(\s*Anchor\s*:\s*", "(", sl, flags=re.I)
+                    if style_xfer_fin:
+                        sl = _dir.strip_source_medium_words(sl, style_xfer_fin)
                     sl = re.sub(r"\s{2,}", " ", sl).strip()
                 sdef_lines.append(sl)
             sdefs = "\n".join(sdef_lines).strip()
@@ -1035,6 +1046,8 @@ def finish_block(
             owned_pic_nums = {int(p["n"]) for p in pics_for_s if p.get("n") is not None}
             s_desc = next((str(p.get("desc") or "").strip() for p in pics_for_s if p.get("desc")), "")
             s_desc = re.sub(r"^\s*Anchor\s*:\s*", "", s_desc, flags=re.I).strip()
+            if style_xfer_fin:
+                s_desc = _dir.strip_source_medium_words(s_desc, style_xfer_fin)
             eth_s = _refs.extract_ethnicity_phrase(s_desc, brief=brief)
             cname = s_meta.get("char_name") or s_meta.get("name") or ""
             cname_str = f" {cname}," if cname else ""
@@ -1407,23 +1420,34 @@ def build_pass2_audit_checklist(
     ward_p2_str = str(flavors.get("wardrobe") or "")
     plan_hint_p2 = str(flavors.get("plan_hint") or "")
     mirror_p2 = _dir.is_mirror_scene_active(exp_p2_str, cam_p2_str)
+    style_xfer_p2 = _dir.resolve_style_transfer(brief=brief, flavors=flavors, lab=lab)
 
     for s_n in sorted((lab.get("subjects") or {}).keys()):
         for sp in [p for p in (lab.get("pictures") or []) if p.get("subject") == s_n]:
             s_desc = str(sp.get("desc") or "").strip()
+            if style_xfer_p2:
+                s_desc = _dir.strip_source_medium_words(s_desc, style_xfer_p2)
             eth = _refs.extract_ethnicity_phrase(s_desc, brief=brief)
             full_anchor = _refs.extract_identity_anchor_summary(s_desc, brief=brief, cap=220)
+            if style_xfer_p2:
+                full_anchor = _dir.strip_source_medium_words(full_anchor, style_xfer_p2)
             if eth:
                 if s_n == 1 and rear_scene and not mirror_p2:
                     eth_r = _refs.strip_front_facial_features_for_rear(eth)
                     rear_anchor = _refs.strip_front_facial_features_for_rear(full_anchor) if full_anchor else eth_r
-                    extra_r = f" (keep rear-visible hair/build/style `{rear_anchor}`)" if (rear_anchor and rear_anchor.lower() != eth_r.lower()) else ""
+                    extra_r = f" (keep rear-visible hair/build `{rear_anchor}`)" if (rear_anchor and rear_anchor.lower() != eth_r.lower()) else ""
                     checks.append(f"RACIAL LOCK (<Subject {s_n}>): Name as `{eth}` in headers{extra_r}; in `[Shot 1]` use rear-visible `{eth_r}` only while keeping face turned forward away from the camera.")
+                elif style_xfer_p2:
+                    extra_f = f" plus face/eye likeness, marks, build, and hair (`{full_anchor}`) re-rendered in {style_xfer_p2['label']}" if (full_anchor and full_anchor.lower() != eth.lower()) else f" re-rendered in {style_xfer_p2['label']}"
+                    checks.append(f"STYLE-TRANSFER IDENTITY LOCK (<Subject {s_n}>): Keep `partially_preserved` in `retention_analysis:` and identify `{eth}`{extra_f} — omit source-medium labels.")
                 else:
                     extra_f = f" plus exact medium/style, face/eye geometry, marks, build, and hair (`{full_anchor}`)" if (full_anchor and full_anchor.lower() != eth.lower()) else ""
                     checks.append(f"RACIAL LOCK (<Subject {s_n}>): Name explicitly as `{eth}` in `subject_definitions:`, `summary:`, `retention_analysis:`, and `[Shot 1]`{extra_f}.")
             elif s_desc:
-                checks.append(f"SHEET LOCK (<Subject {s_n}>): Preserve style and character anchor from {sp['label']} ({(full_anchor or s_desc)[:180]}).")
+                if style_xfer_p2:
+                    checks.append(f"STYLE-TRANSFER SHEET LOCK (<Subject {s_n}>): Keep likeness/outfit from {sp['label']} ({(full_anchor or s_desc)[:180]}) re-rendered in {style_xfer_p2['label']} (`partially_preserved`).")
+                else:
+                    checks.append(f"SHEET LOCK (<Subject {s_n}>): Preserve style and character anchor from {sp['label']} ({(full_anchor or s_desc)[:180]}).")
 
     ward_opts = _cat.resolve_dial_opts("wardrobe", ward_p2_str)
     if ward_opts:

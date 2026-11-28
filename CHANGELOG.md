@@ -3,10 +3,36 @@
 User-facing. The files named here are in the repository, not in the installed
 pack — the published package excludes them.
 
-## 4.0.0 hotfixes — 2026-11-17 to 2026-11-28
+## 4.0.0 hotfixes — 2026-11-17 to 2026-11-29
 
-Seven hotfixes on top of 4.0.0, no version change. Saved workflows load as before.
+Eight hotfixes on top of 4.0.0, no version change. Saved workflows load as before.
 The newest is first.
+
+### Hotfix 8 — 2026-11-29
+- **MV Studio times your own lyrics.** With **Listen** on, the lyrics in the studio are timed against
+  the song's vocal track by forced alignment (torchaudio's multilingual aligner, on the CPU, weights
+  in the torch cache like the vocal separator) instead of being guessed back by Whisper. Japanese kana
+  is romanised built in; write a reading after a kanji, `右(みぎ)へ`, or it is skipped. On a test song
+  every hand-checked lyric time landed within ~0.3 s. Lyrics that do not fit the song are detected
+  and Whisper is used, as before. The status line says "Lyrics timed from your lyrics."
+- **basalt writer backend.** Pick **basalt** as the writer server: the node can start and stop it
+  like nInfer, and frees its memory before a render.
+- **Writer setup guide** (`docs/writer_setup.html`, linked from the demo page): one page to install a
+  local writer (LM Studio, Ollama, llama.cpp, basalt or nInfer) and connect it.
+- **SandTie Scribe:**
+  - Style transfer (real to anime or 3D, anime to real) no longer leaves "photorealistic" in the
+    subject lines.
+  - Dance is written as full-body choreography: feet, hips, torso, arms and head on the count, with the
+    hands as accents. More dance words switch it on (shuffle, popping, waacking, hip-hop, salsa and more).
+  - Built-in combos match their keywords again (most never matched).
+  - Lines in quotes inside dial rules are left intact.
+  - Multi-select FX, place, talk style and character fixed.
+  - Instant CPU Tie now uses the FX, era, TV show, expression and life dials.
+  - Catalog tuning across poses, combat, explicit and scripts.
+- **Phone monitor:** the time per hop is no longer inflated by hops loaded from cache.
+- **Director co-pilot skill:** new post looks (VCR on-screen display, labels pinned to people, manga
+  sound-effect words, tape-cut and screen switch-off effects); post burns keep the render's bitrate;
+  `song_map.py --lyrics` times known lyrics.
 
 ### Hotfix 7 — 2026-11-28
 - **Upsampler re-draw with TAESD previews no longer fails on its second step** with

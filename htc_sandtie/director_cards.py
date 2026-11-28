@@ -914,10 +914,25 @@ def uses_solo_blowjob_template(brief: str, explicit_id: str = "", plan: str = ""
     return True
 
 
-def is_mirror_scene_active(explicit_id: str = "", camera_id: str = "") -> bool:
+def is_mirror_scene_active(
+    explicit_id: str = "",
+    camera_id: str = "",
+    *,
+    place_id: str = "",
+    lens_id: str = "",
+    brief: str = "",
+) -> bool:
     eids = [x.lower() for x in _cat.parse_multi_ids(explicit_id)]
     cids = [x.lower() for x in _cat.parse_multi_ids(camera_id)]
-    return any(x in MIRROR_EXPLICIT_IDS for x in eids) or any(x in MIRROR_CAMERA_IDS for x in cids)
+    pids = [x.lower() for x in _cat.parse_multi_ids(place_id)]
+    lids = [x.lower() for x in _cat.parse_multi_ids(lens_id)]
+    if any(x in MIRROR_EXPLICIT_IDS for x in eids) or any(x in MIRROR_CAMERA_IDS for x in cids):
+        return True
+    if any("mirror" in x for x in pids) or "comp_mirror_dual_plane" in lids:
+        return True
+    if brief and re.search(r"\b(?:in\s+front\s+of\s+(?:a|the)\s+mirror|mirror\s+reflection|vanity\s+mirror|full[- ]length\s+mirror)\b", brief, re.I):
+        return True
+    return False
 
 
 def resolve_pov_mode(brief: str, flavors: dict | None = None, plan: str = "") -> str:
@@ -978,7 +993,18 @@ def playbook_matches(brief: str, explicit_id: str = "") -> list[dict]:
     pb = _cat._load_json("playbook.json")
     hits = []
     for k, entry in pb.items():
-        if re.search(rf"\b{re.escape(k.replace('_', '[ _-]?'))}\b", text, re.I):
+        key_pat = r"[ _-]?".join(re.escape(part) for part in k.split("_") if part)
+        matched = bool(key_pat and re.search(rf"\b{key_pat}\b", text, re.I))
+        if not matched and isinstance(entry, dict):
+            trig = entry.get("trigger")
+            if isinstance(trig, list):
+                matched = any(
+                    str(t or "").strip() and re.search(rf"\b{re.escape(str(t).strip())}\b", text, re.I)
+                    for t in trig
+                )
+            elif isinstance(trig, str) and trig.strip():
+                matched = bool(re.search(rf"\b{re.escape(trig.strip())}\b", text, re.I))
+        if matched:
             hits.append(entry)
     return hits[:2]
 
@@ -990,6 +1016,18 @@ def format_playbook_directive(entry: dict, *, has_camera_or_explicit: bool = Fal
         bits.append(f"Framing: {entry['shooting']}")
     if entry.get("styling") and not has_subject_or_wardrobe:
         bits.append(f"Styling: {entry['styling']}")
+    if entry.get("mechanics"):
+        mech = entry["mechanics"]
+        mech_s = "; ".join(str(x) for x in mech[:2]) if isinstance(mech, list) else str(mech)
+        if mech_s.strip():
+            bits.append(f"Mechanics: {mech_s.strip()}")
+    if entry.get("tone"):
+        bits.append(f"Tone: {entry['tone']}")
+    if entry.get("moves") and not has_camera_or_explicit:
+        mv = entry["moves"]
+        mv_s = ", ".join(str(x) for x in mv[:3]) if isinstance(mv, list) else str(mv)
+        if mv_s.strip():
+            bits.append(f"Moves: {mv_s.strip()}")
     if entry.get("vocab"):
         bits.append(f"Textures/Verbs: {entry['vocab']}")
     if entry.get("phrases") and not has_brief:
@@ -997,11 +1035,121 @@ def format_playbook_directive(entry: dict, *, has_camera_or_explicit: bool = Fal
     return f"PLAYBOOK MODULE ({title}): " + " ".join(bits)
 
 
+_NONPHOTO_2D_RX = re.compile(
+    r"\b(?:2d\s*anime|2d\s*(?:style|animation|cel|drawn|hand[- ]?drawn)|cel[- ]?shad\w*|sakuga|"
+    r"ufotable|ghibli|shinkai|studio\s*trigger|manhwa|webtoon|manga|comic\s*ink|ink\s*riot|"
+    r"watercolor|oil\s*paint\w*|impressionist|hand[- ]?drawn|sketch|lineart|real2anime|anime\s*style|theatrical\s*anime)\b",
+    re.I,
+)
+_NONPHOTO_3D_RX = re.compile(
+    r"\b(?:pixar|octane|stylized\s*3d|3d\s*(?:cgi|render|animation|style|character|short)|"
+    r"2\.5d|arcane|claymation|stop[- ]?motion|papercraft|unreal\s*engine|aaa\s*game|"
+    r"low[- ]?poly|ps1|voxel|lego|plush|felt|porcelain\s*doll)\b",
+    re.I,
+)
+_NONPHOTO_ART_RX = re.compile(
+    r"\b(?:monet|dutch\s*master|collage|liquid\s*chrome|holographic\s*glass|shadow\s*box|pixel\s*art)\b",
+    re.I,
+)
+_PHOTO_TARGET_RX = re.compile(
+    r"\b(?:live[- ]?action|photorealistic|photo[- ]?real|ultrareal|raw\s*35mm|raw\s*sensor|anime2real)\b",
+    re.I,
+)
+_HYBRID_LIVE_STYLE_IDS = {"anime2real_live_action_vfx", "h3_handdrawn_fusion"}
+
+_SRC_PHOTO_RX = re.compile(
+    r"\b(?:photorealistic(?:\s+live[- ]?action)?|photo[- ]?real(?:ism)?|live[- ]?action|raw\s+photo(?:graph)?|glossy\s+editorial\s+digital\s+photo)\b",
+    re.I,
+)
+_SRC_STYLIZED_RX = re.compile(
+    r"\b(?:2d\s+cel[- ]?shaded\s+anime|2d\s+anime|cel[- ]?shaded\s+anime|digital\s+illustration|3d\s+cgi\s+render|3d\s+render|anime\s+illustration|manga\s+illustration)\b",
+    re.I,
+)
+
+
+def resolve_style_transfer(brief: str = "", flavors: dict | None = None, lab: dict | None = None) -> dict | None:
+    """Detect when active style dial / brief requests a medium conversion vs wired subject refs.
+
+    Returns None when no medium conversion is active, or a dict:
+      {"target": "2d_anime"|"3d_stylized"|"painted_art"|"photoreal", "label": str, "cues": str}
+    """
+    flavors = flavors or {}
+    lab = lab or {}
+    subj_pics = [p for p in (lab.get("pictures") or []) if p.get("subject") is not None]
+    if not subj_pics:
+        return None
+    style_opts = _cat.resolve_dial_opts("style", flavors.get("style"))
+    # Exclude live-action + 2D VFX hybrid presets unless brief explicitly asks to convert the subject
+    non_hybrid_styles = [o for o in style_opts if str(o.get("id") or "") not in _HYBRID_LIVE_STYLE_IDS]
+    style_blob = " ".join(
+        f"{o.get('group', '')} {o.get('id', '')} {o.get('label', '')} {o.get('rule', '')}"
+        for o in non_hybrid_styles
+    )
+    brief_s = str(brief or "")
+    combined = f"{style_blob} {brief_s}"
+
+    target = ""
+    if any(str(o.get("group") or "").lower() in ("anime", "drawn") for o in non_hybrid_styles) or _NONPHOTO_2D_RX.search(combined):
+        target = "2d_anime"
+    elif any(str(o.get("group") or "").lower() == "animation" for o in non_hybrid_styles) or _NONPHOTO_3D_RX.search(combined):
+        target = "3d_stylized"
+    elif any(str(o.get("group") or "").lower() == "wacky" for o in non_hybrid_styles) or _NONPHOTO_ART_RX.search(combined):
+        target = "painted_art"
+    elif _PHOTO_TARGET_RX.search(combined):
+        target = "photoreal"
+
+    if not target:
+        return None
+
+    desc_blob = " ".join(str(p.get("desc") or "") for p in subj_pics)
+    src_is_stylized = bool(_SRC_STYLIZED_RX.search(desc_blob))
+    src_is_photo = bool(_SRC_PHOTO_RX.search(desc_blob)) or not src_is_stylized
+
+    if target in ("2d_anime", "3d_stylized", "painted_art") and src_is_photo:
+        if target == "2d_anime":
+            return {
+                "target": target,
+                "label": "2D hand-drawn cel-shaded anime",
+                "cues": "crisp ink outlines, flat two-tone cel shading, stylized anime eyes and specular highlights, and hand-drawn hair/cloth motion",
+            }
+        if target == "3d_stylized":
+            return {
+                "target": target,
+                "label": "stylized 3D CGI animation",
+                "cues": "sculpted 3D stylized shaders, clean subsurface scattering, articulated 3D hair strands, and animated CG lighting",
+            }
+        return {
+            "target": target,
+            "label": "stylized artistic medium",
+            "cues": "visible brush/material texture and stylized artistic rendering matching the chosen visual style",
+        }
+    if target == "photoreal" and src_is_stylized:
+        return {
+            "target": target,
+            "label": "photorealistic live-action cinema",
+            "cues": "real human skin pores, natural subsurface light, authentic fabric weave, and real optical camera depth",
+        }
+    return None
+
+
+def strip_source_medium_words(text: str, style_xfer: dict | None) -> str:
+    """Strip conflicting source-medium labels (e.g. 'Photorealistic, ') when style transfer is active."""
+    s = str(text or "").strip()
+    if not s or not style_xfer:
+        return s
+    rx = _SRC_STYLIZED_RX if style_xfer.get("target") == "photoreal" else _SRC_PHOTO_RX
+    s = rx.sub("", s)
+    s = re.sub(r"^[\s,.;:\-–—]+", "", s)
+    s = re.sub(r"\(\s*[,.;:\-–—]+\s*", "(", s)
+    s = re.sub(r",\s*,+", ",", s)
+    return re.sub(r"\s{2,}", " ", s).strip()
+
+
 def dance_vocab_directive(brief: str, pose_id: str = "") -> str:
     pids = [x.lower() for x in _cat.parse_multi_ids(pose_id)]
     has_dance_pose = any(p.startswith(("dance_", "dvm_", "ensemble_kpop", "ensemble_tiktok", "ensemble_girl_group")) for p in pids)
     if not has_dance_pose and (not brief or not re.search(
-        r"\b(?:dance|dancing|choreo\w*|groove|twerk|hip\s*sway|body\s*wave|gravure|idol|tiktok|douyin|kemusan|subject\s*three|slickback|jersey\s*club|k[- ]?pop|pole\s*dance|heels|chest\s*pop|waist\s*wine)\b",
+        r"\b(?:dance|dancing|choreo\w*|groove|twerk|hip\s*sway|body\s*wave|gravure|idol|tiktok|douyin|kemusan|subject\s*three|slickback|jersey\s*club|k[- ]?pop|pole\s*dance|heels|chest\s*pop|waist\s*wine|shuffle|popping|waacking|tutting|hip[- ]?hop|breakdance|footwork|bachata|salsa|tango)\b",
         brief,
         re.I,
     )):
@@ -1010,7 +1158,7 @@ def dance_vocab_directive(brief: str, pose_id: str = "") -> str:
     pr = dv.get("pacing_rules") or {}
     fg = pr.get("fingertip_rule", "")
     return (
-        "SANDTIE DANCE VOCABULARY: "
+        "SANDTIE FULL-BODY CHOREOGRAPHY LAW: "
         f"{pr.get('motion_language', '')} {pr.get('anatomy_order', '')} {pr.get('orientation_lock', '')}"
         + (f" {fg}" if fg else "")
     ).strip()

@@ -361,10 +361,15 @@ async function poll(){
   else {pill.className="pill idle";pill.textContent=running?"RUNNING":"IDLE";}
   $("hop").textContent=of?(Math.min(last+(busy?1:0),of)+" / "+of):"–";
   $("upd").textContent=hhmm(S.now);
+  // Seconds per frame, one value per pair of neighbouring hops, lower median taken. A hop loaded
+  // from the cache keeps the time it was first written (maybe a cancelled run hours ago), so one
+  // pair can hold a stale gap; it only ever inflates, so two pairs and the lower median drop it.
   let per=null;
-  if(hops.length>=2){const a=hops[0],b=hops[hops.length-1];const f=hops.slice(1).reduce((x,h)=>x+h.frames,0);per=(b.written-a.written)/Math.max(1,f);}
+  const rates=[];
+  for(let i=1;i<hops.length;i++){const a=hops[i-1],b=hops[i];if(b.hop===a.hop+1&&b.written>a.written&&b.frames>0)rates.push((b.written-a.written)/b.frames);}
+  if(rates.length>=2){rates.sort((x,y)=>x-y);per=rates[Math.floor((rates.length-1)/2)];}
   if(per){const avgF=hops.reduce((x,h)=>x+h.frames,0)/hops.length;$("per").textContent=Math.max(1,Math.round(per*avgF/60))+" min";$("eta").textContent=busy?hhmm(S.last_written+per*avgF*(of-last)):(of&&last>=of?"done":"–");}
-  else {$("per").textContent="–";$("eta").textContent=busy?"after hop 2":"–";}
+  else {$("per").textContent="–";$("eta").textContent=busy?"after hop 3":"–";}
   const strip=$("strip"); strip.replaceChildren();
   for(let i=1;i<=of;i++){const d=document.createElement("div");d.className="seg"+(i<=last?" done":(busy&&i===last+1?" now":""));d.style.setProperty("--c",colourOf(i));
     const sh=(S.shots||[])[i-1]; d.style.flex=(sh&&parseFloat(sh.dur))?parseFloat(sh.dur)+" 1 0":"1 1 0";

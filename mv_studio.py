@@ -1360,14 +1360,16 @@ def _parse_songmap_pct(msg: str, prev_pct: int) -> int:
     return max(prev_pct, 5)
 
 
-def _load_cached_song_map(song_name: str, *, listen: bool = False) -> tuple[str, dict[str, Any]]:
+def _load_cached_song_map(song_name: str, *, listen: bool = False,
+                          lyrics: str = "") -> tuple[str, dict[str, Any]]:
     path = _resolve_song_file(song_name)
     base = os.path.basename(path)
     try:
         mtime = float(os.path.getmtime(path))
     except OSError:
         mtime = 0.0
-    key = (path, mtime, bool(listen))
+    lyrics = str(lyrics or "") if listen else ""
+    key = (path, mtime, bool(listen), _songmap._lyrics_key(lyrics))
     ev: threading.Event | None = None
     owner = False
     while True:
@@ -1412,6 +1414,7 @@ def _load_cached_song_map(song_name: str, *, listen: bool = False) -> tuple[str,
             allow_download=False,
             device=dev,
             threads=threads,
+            lyrics=lyrics or None,
         )
         _set_songmap_progress(base, running=True, stage="Solving downbeat cuts...", pct=95, device=dev)
         with _CACHE_LOCK:
@@ -1529,9 +1532,11 @@ def analyze_song(
     sections: list[dict[str, Any]] | None = None,
     pattern: list[str] | None = None,
     end_s: float | None = None,
+    lyrics: str = "",
 ) -> dict[str, Any]:
-    """Run `songmap` + `mv_solver` on an audio file and return UI-ready timeline data."""
-    path, sm = _load_cached_song_map(song_name, listen=listen)
+    """Run `songmap` + `mv_solver` on an audio file and return UI-ready timeline data.
+    With `listen` and the song's known `lyrics`, lines are timed by forced alignment, not guessed."""
+    path, sm = _load_cached_song_map(song_name, listen=listen, lyrics=lyrics)
     sec_rows = sections if sections else _format_sections_for_ui(sm)
     pat_tuple = tuple(str(x) for x in pattern) if pattern else None
     solved = _solve_with_fallback(sm, sec_rows, pattern=pat_tuple, end_s=end_s)
@@ -1549,6 +1554,8 @@ def analyze_song(
         "tracked_note": str(sm.get("tracked_note") or ""),
         "path": str(sm.get("path") or "tempo-only"),
         "has_stem": bool(sm.get("stem")),
+        "aligned": bool(sm.get("aligned")),
+        "how": str(sm.get("how") or ""),
         "sections": sec_rows,
         "solved": solved,
     }
@@ -1561,9 +1568,11 @@ def solve_mv(
     listen: bool = False,
     pattern: list[str] | None = None,
     end_s: float | None = None,
+    lyrics: str = "",
 ) -> dict[str, Any]:
     """Re-solve hop cut points cleanly after the user edits section bars/kinds."""
-    return analyze_song(song_name, listen=listen, sections=sections, pattern=pattern, end_s=end_s)
+    return analyze_song(song_name, listen=listen, sections=sections, pattern=pattern, end_s=end_s,
+                        lyrics=lyrics)
 
 
 def extract_clip_frame(

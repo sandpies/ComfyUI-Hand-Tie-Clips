@@ -1,63 +1,61 @@
 {
-  "vocabulary_version": "2.0-sandtie",
-  "description": "Clean-room SandTie H3 kinetic choreography vocabulary built with clear skeletal shoulder, spine, hip, arm, and footwork phrasing.",
+  "vocabulary_version": "3.0-sandtie-fullbody",
+  "description": "Clean-room SandTie H3 full-body choreography vocabulary anchored in foot-to-floor contact, weight transfer, spatial travel, level changes, and crisp beat-synced dime-stops.",
   "pacing_rules": {
-    "motion_language": "Describe smooth natural speed transitions ('glides gently', 'snaps crisply', 'rolls steadily') rather than numeric Hz values.",
-    "anatomy_order": "Describe clear skeletal motion across feet, knees, hips, shoulders, elbows, wrists, and hair inertia—keep movement rooted in posture shifts, footwork, and arm lines rather than chest-bouncing jargon.",
-    "orientation_lock": "State initial body angle toward or away from camera in [Shot 1], keeping left/right hand placement concrete in every beat.",
-    "fingertip_rule": "Articulate choreography down to wrists, palms, knuckles, and individual fingers (sequential pinky-to-thumb curls, 90-degree wrist hinges, interlocked finger-tutting frames, sharp finger-gun recoils, and fingertips grazing lens or jawline), pairing hand snaps with motivated gimbal drops, whip pans, or crane reveals."
+    "motion_language": "Use grounded kinetic verbs with crisp hit-and-hold timing ('plants weight onto the left heel and snaps into a clean dime-stop', 'drives diagonally across the floor', 'drops into a low wide knee lunge and locks') rather than vague continuous swaying ('glides', 'melts', 'sways', 'undulates'). Follow dynamic hits with brief beat-synced holds so H3 locks clean shapes.",
+    "anatomy_order": "Build every beat from the ground up: explicit foot-to-floor contact and weight transfer (planted heel, ball-of-foot pivot, wide athletic stance, cross-step travel), knee bend and extension, hip drive over the weighted leg, torso twist, clean arm lines, and reactive hair/fabric inertia.",
+    "orientation_lock": "Default to full-body head-to-footwear framing unless a close-up cut is explicitly requested. State initial body facing, stance width, and floor position in [Shot 1], and track left/right/forward/back floor travel in every beat.",
+    "fingertip_rule": "Pair sharp wrist hinges, finger-frames, and arm angles with active footwork, weight shifts, or level drops so hands accent full-body choreography rather than stationary hand-waving."
   },
   "categories": {
     "views_and_framing": [
-      "full-body head-to-footwear vertical framing",
-      "medium three-quarter hip-up framing",
-      "tight collarbone-and-face close-up",
-      "rear three-quarter over-shoulder framing"
+      "full-body head-to-footwear vertical framing showing planted shoes and floor space",
+      "wide full-body horizontal stage framing with generous left-right travel room",
+      "low-angle full-body tracking shot skimming near shoe level",
+      "medium-wide three-quarter knee-up framing during fast footwork transitions"
     ],
     "core_actions": [
-      "figure-eight hip sway shifting weight smoothly left to right",
-      "vertical spine wave rolling seamlessly from shoulders through waist and hips",
-      "sharp shoulder-and-torso snap followed by controlled posture release",
-      "slow 360-degree pivot turn planting heels cleanly on the final beat",
-      "controlled deep knee drop rising smoothly through the lower spine"
+      "explosive cross-step travel from screen-left to screen-right planting wide into a crisp knee-bent dime-stop",
+      "sharp heel-toe pivot turn whipping 180 degrees and locking weight onto the front bent knee",
+      "low athletic squat drop with chest snap, rising cleanly onto the ball of the right foot into a tall diagonal reach",
+      "syncopated running-man and T-step footwork gliding laterally across the floor with grounded shoe contact",
+      "tight torso isolation pop followed immediately by a sharp lunge step and clean full-body freeze"
     ],
     "upper_body_and_hands": [
-      "fingertips gliding lightly along collarbone toward the jawline",
-      "both palms sweeping slowly behind hair and resting briefly at the nape",
-      "index finger tracing an unhurried beckon toward the lens",
-      "hands bracing lightly on waist/hips framing hip rotations"
+      "diagonal forearm lock snapping across chest height while stepping wide onto the right foot",
+      "crisp 90-degree elbow-and-wrist waacking strikes framing the head during a quick backstep",
+      "sharp shoulder-and-ribcage isolation hit paired with a wide-stance arm extension and palm-out stop",
+      "clean overhead arm sweep dropping into waist-level fists on a deep plie knee bend"
     ],
     "finales_and_poses": [
-      "settles weight cleanly onto one hip with poised chin tilt and unbroken eye lock",
-      "turns three-quarters back over one shoulder holding a knowing smirk",
-      "steps smoothly toward the lens landing in an intimate upper-body hold"
+      "lands a wide athletic diagonal lunge with chest open, one arm extended crisp, and chin locked toward lens",
+      "snaps a tight 180-degree heel-pivot turn into a dead-stop asymmetric silhouette with weight planted on the back hip",
+      "steps briskly forward into the foreground, plants both boots wide, and locks a poised chin-up stage freeze"
     ],
     "tiktok_and_kpop_flows": [
-      "crisp double shoulder-and-torso snap flowing smoothly into a liquid vertical spine wave",
-      "rapid figure-eight hip shake on bent knees with clean weight shift and flowing hair inertia",
-      "playful cheek-poke finger heart and glossy idol wink held cleanly at beat end",
-      "smooth knee drop sweeping palms up outer thighs while tossing hair backward",
-      "elbow-locked isolated upper-torso slides snapping left to right on percussive hits"
+      "crisp double chest-and-shoulder pop with bouncing knee drive snapping into a sharp lateral cross-step and dime-stop",
+      "rapid heel-toe crisscross footwork paired with clean alternating elbow strikes and hair whip",
+      "low bent-knee drop sweeping palms up outer legs before springing upright into a 180-degree pivot freeze",
+      "elbow-locked upper-torso slides traveling side-to-side on alternating planted steps",
+      "anti-drop dead-stop freeze on a clean angular arm frame exploding into rapid syncopated side-steps"
     ],
     "club_twerk_and_heels": [
-      "deep lumbar spine arch pulsing isolated rhythmic hip-and-glute bounces with rhythmic knee drive",
-      "weightless 360-degree chrome pole orbit spin melting into a slow thigh-hook descent",
-      "confident stiletto catwalk cross-step snapping into a 180-degree hair-whip lookback",
-      "sultry chair reverse-straddle back arch rolling steadily from collarbone through waist"
+      "wide-stance heel-planted squat pulse driving rhythmic hip drops with hands braced firmly on knees",
+      "360-degree pole orbit walk-around hooking the inner thigh into a controlled low-knee floor drop",
+      "assertive stiletto cross-step runway walk snapping into a sharp 180-degree heel-pivot and hair whip",
+      "chair straddle step-over dropping from standing height into a braced forearm seat hold"
     ],
     "douyin_and_trending_flows": [
-      "rapid crossed wrist-rolls paired with crisp inward-outward ankle glide steps (Subject Three / Kemusan)",
-      "alternating bent-wrist cat-paw sway with bouncy hip taps and cheerful head tilts",
-      "snappy wrist-flick silk folding fan opening beside a fluid 360-degree flowing-sleeve spin",
-      "breezy side-step groove with shoulder shrug, hair tuck behind the ear, and finger-heart wink",
-      "weightless floating slickback foot-swap glide beneath calm swinging arms"
+      "crisp crossed wrist-rolls synchronized with rapid inward-outward ankle glide steps traveling across the floor",
+      "weightless slickback heel-swap glide traveling laterally beneath clean swinging arms",
+      "snappy wrist-flick folding-fan snap paired with a crisp 360-degree cross-step turn",
+      "bouncy side-step groove with sharp shoulder pop, knee bounce, and clean planted-foot stop"
     ],
     "kpop_fingertip_tutting_and_mv_cuts": [
-      "sequential pinky-to-index finger-wave ripple gliding across collarbone level with elbows locked taut",
-      "90-degree geometric wrist hinges forming clean right-angle L-boxes and interlocked finger triangles framing one eye",
-      "pinky-to-thumb blossom curl snapping open diagonal arms cleanly into chest-height fists",
-      "open fingertips reaching straight toward wide-angle glass triggering a crisp beat-synced gimbal downward drop and micro-shake",
-      "anti-drop dead-stop freeze on poised fingertip command pose exploding immediately into crisp heel-toe crisscross footwork"
+      "90-degree geometric wrist hinges and arm frames paired with crisp heel-toe side-steps",
+      "sharp chest-height forearm locks snapping open into a wide-stance diagonal lunge",
+      "anti-drop dead-stop freeze on a poised angular silhouette exploding immediately into rapid crisscross footwork",
+      "beat-synced gimbal drop tracking from planted boots up through a fast 360-degree pivot turn"
     ]
   }
 }

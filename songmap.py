@@ -2265,8 +2265,197 @@ def _cache_store(path, sm):
         pass
 
 
+# ---------------------------------------------------------------- known lyrics: forced alignment
+# Whisper has to GUESS a sung word, and on a bilingual rap it guesses wrong ("make it, make it" for
+# 右へ、右へ). When the lyrics are known (MV Studio wrote them) the only question is WHEN each word
+# is sung: torchaudio's MMS_FA aligner answers that on the vocal stem, in 1100+ languages, and never
+# invents words. Measured on Tomare against hand-checked times: every anchor within ~0.3 s, where
+# Whisper had heard almost none of verse 1.
+_KANA_PAIRS = ("あa いi うu えe おo かka きki くku けke こko さsa しshi すsu せse そso たta ちchi つtsu "
+               "てte とto なna にni ぬnu ねne のno はha ひhi ふfu へhe ほho まma みmi むmu めme もmo やya "
+               "ゆyu よyo らra りri るru れre ろro わwa ゐi ゑe をo んn がga ぎgi ぐgu げge ごgo ざza じji "
+               "ずzu ぜze ぞzo だda ぢji づzu でde どdo ばba びbi ぶbu べbe ぼbo ぱpa ぴpi ぷpu ぺpe ぽpo "
+               "ぁa ぃi ぅu ぇe ぉo ゔvu")
+_KANA = {p[0]: p[1:] for p in _KANA_PAIRS.split()}
+_YOUON = {"ゃ": "ya", "ゅ": "yu", "ょ": "yo"}
+# A forced alignment of the WRONG lyrics still returns times; its scores give it away, but the MEAN
+# score barely does (right 0.30 / 0.35 vs wrong 0.15 / 0.14 on Tomare and Yoko). The share of words
+# the aligner is sure of (score > 0.5) separates them by ~2x each side: right 0.22 / 0.32, wrong
+# 0.03 / 0.05 (11-29, two songs, swapped lyrics as the wrong case).
+ALIGN_SURE_WORD = 0.5
+ALIGN_MIN_SURE_SHARE = 0.12
+ALIGN_MIN_SHARE = 0.6        # this share of the lyric lines must align, or Whisper is used
+
+
+def romanise_kana(s):
+    """Hepburn romaji for hiragana/katakana (built in: no dependency). Other characters -> space."""
+    s = "".join(chr(ord(c) - 0x60) if "ァ" <= c <= "ヶ" else c for c in s)
+    out, i = [], 0
+    while i < len(s):
+        c, nxt = s[i], (s[i + 1] if i + 1 < len(s) else "")
+        if c == "っ":                                        # doubles the next consonant
+            r = _KANA.get(nxt, "")
+            if r:
+                out.append("t" if r.startswith("ch") else r[0])
+            i += 1
+            continue
+        if c == "ー":                                        # long vowel repeats the last vowel
+            v = next((ch for ch in reversed("".join(out)) if ch in "aeiou"), "")
+            out.append(v)
+            i += 1
+            continue
+        if nxt in _YOUON and c in _KANA:                     # き+ゃ kya, し+ゃ sha, じ+ゃ ja
+            stem, y = _KANA[c][:-1], _YOUON[nxt]
+            out.append(stem + (y[1:] if stem.endswith(("sh", "ch", "j")) else y))
+            i += 2
+            continue
+        out.append(_KANA.get(c) or _YOUON.get(c) or " ")
+        i += 1
+    return "".join(out)
+
+
+def parse_lyrics(text):
+    """Lyrics text (plain, or markdown: the ``` block holding [Section] tags) -> lines
+    [{"section", "text", "words", "kanji"}]. Stage directions in brackets are dropped -- "(spoken)",
+    "(beat stops)" -- except a shout ending in "!" ("(hey!)"), which is sung. A kanji has no reading
+    without a dictionary: write one after it, 右(みぎ), or it becomes a skip the aligner stretches."""
+    text = str(text or "")
+    blocks = re.findall(r"```[a-z]*\n(.*?)```", text, re.S)
+    tagged = [b for b in blocks if re.search(r"^\s*\[[^\]]+\]\s*$", b, re.M)]
+    if tagged:
+        text = max(tagged, key=len)
+    lines, section = [], ""
+    for raw in text.splitlines():
+        s = raw.strip()
+        if not s or s.startswith("#"):
+            continue
+        tag = re.fullmatch(r"\[([^\]]*)\]", s)
+        if tag:
+            section = tag.group(1).split(":")[0].strip()
+            continue
+        s = re.sub(r"[一-鿿々]+[(（]([ぁ-ゖァ-ヺー]+)[)）]", r"\1", s)
+        s = re.sub(r"[(（]([^)）]*)[)）]",
+                   lambda q: q.group(1) if q.group(1).strip().endswith(("!", "！")) else " ", s)
+        words, kanji = [], False
+        for run in re.findall(r"[A-Za-z']+|[ぁ-ゖァ-ヺー]+|[一-鿿々]+|\d+", s):
+            if run[0].isdigit() or "一" <= run[0] <= "鿿" or run[0] == "々":
+                words.append("*")
+                kanji = kanji or not run[0].isdigit()
+            elif run[0].isascii():
+                w = run.lower().strip("'")
+                if w:
+                    words.append(w)
+            else:
+                r = (romanise_kana(run[:-1]).strip() + " e") if (len(run) > 1 and run.endswith("へ")) \
+                    else ("e" if run == "へ" else romanise_kana(run))
+                words += r.split()
+        words = [w for i, w in enumerate(words) if not (w == "*" and i and words[i - 1] == "*")]
+        if any(w != "*" for w in words):
+            lines.append({"section": section, "text": raw.strip(), "words": words,
+                          "kanji": kanji})
+    return lines
+
+
+def _mms_fa_present():
+    """torchaudio's MMS_FA weights in the torch hub cache (no download without allow_download)."""
+    try:
+        from torchaudio.pipelines import MMS_FA  # noqa: PLC0415
+        url = getattr(MMS_FA, "_path", "") or ""
+    except Exception:
+        return False
+    name = os.path.basename(url) or "model.pt"
+    # load_state_dict_from_url saves under torch.hub.get_dir()/checkpoints (the root already ends
+    # in "hub"; joining another "hub" made the weights look missing); newer torchaudio uses
+    # torchaudio/models like the separator does.
+    for p in (os.path.join(_torch_cache_root(), "checkpoints", name), _torch_hub_bundle_present(name)[1]):
+        if os.path.isfile(p) and os.path.getsize(p) > 500_000_000:
+            return True
+    return False
+
+
+def align_lyrics(stem, sr, lyrics, *, status=_log, allow_download=False, device=None):
+    """Time KNOWN lyric lines on a vocal stem. -> (lines [{"a","b","text","score","section","words"}],
+    note). Lines are [] when it cannot or should not be trusted; the note says why, and the caller
+    falls back to transcription."""
+    parsed = parse_lyrics(lyrics)
+    if not parsed:
+        return [], "no lyric lines to align"
+    if not _mms_fa_present() and not allow_download:
+        return [], "MMS_FA aligner weights not on disk (torch hub); transcribed instead"
+    try:
+        import torch  # noqa: PLC0415
+        import torchaudio  # noqa: PLC0415
+        from torchaudio.pipelines import MMS_FA as bundle  # noqa: PLC0415
+    except Exception as e:
+        return [], "torchaudio aligner unavailable (%s)" % type(e).__name__
+    dev, _ = resolve_device(device)
+    try:
+        wav = torch.from_numpy(np.asarray(stem, np.float32))[None]
+        if int(sr) != bundle.sample_rate:
+            wav = torchaudio.functional.resample(wav, int(sr), bundle.sample_rate)
+        wav = wav / (wav.abs().max() + 1e-8) * 0.9
+        model = bundle.get_model(with_star=True).to(dev).eval()
+        dictionary = bundle.get_dict(star="*")
+        words, owner = ["*"], [None]              # a skip at the start, between lines, at the end
+        for li, ln in enumerate(parsed):
+            for w in ln["words"]:
+                clean = w if w == "*" else "".join(ch for ch in w if ch in dictionary)
+                if clean:
+                    words.append(clean)
+                    owner.append(li)
+            words.append("*")
+            owner.append(None)
+        tokens = [[dictionary[ch] for ch in w] for w in words]
+        status("aligning %d known lyric lines on the vocal stem (%s)" % (len(parsed), dev))
+        with torch.inference_mode():
+            step = bundle.sample_rate * 30             # 30 s emission pieces keep memory flat
+            em = torch.cat([model(wav[:, i:i + step].to(dev))[0].cpu()
+                            for i in range(0, wav.shape[1], step)], dim=1)
+            flat = torch.tensor([t for w in tokens for t in w], dtype=torch.int32)[None]
+            if em.shape[1] < flat.shape[1]:
+                return [], "lyrics longer than the song can hold; transcribed instead"
+            ali, sc = torchaudio.functional.forced_align(em, flat, blank=0)
+            spans = torchaudio.functional.merge_tokens(ali[0], sc[0].exp())
+        del model
+        free_device(dev)
+    except Exception as e:
+        free_device(dev)
+        return [], "alignment failed (%s: %s); transcribed instead" % (type(e).__name__, str(e)[:80])
+    ratio = wav.shape[1] / bundle.sample_rate / em.shape[1]
+    per = [[] for _ in parsed]
+    k = 0
+    for w, tok, o in zip(words, tokens, owner):
+        sp = spans[k:k + len(tok)]
+        k += len(tok)
+        if o is None or w == "*":
+            continue
+        n = sum(s.end - s.start for s in sp)
+        per[o].append((w, sp[0].start * ratio, sp[-1].end * ratio,
+                       sum(float(s.score) * (s.end - s.start) for s in sp) / max(1, n)))
+    lines = []
+    for ln, ws in zip(parsed, per):
+        if ws:
+            lines.append({"a": round(ws[0][1], 3), "b": round(ws[-1][2], 3), "text": ln["text"],
+                          "section": ln["section"], "kanji": ln["kanji"],
+                          "score": round(sum(x[3] for x in ws) / len(ws), 3),
+                          "words": [(w, round(a, 2), round(b, 2), round(s, 3)) for w, a, b, s in ws]})
+    share = len(lines) / max(1, len(parsed))
+    ws = [x[3] for line in lines for x in line["words"]]
+    sure = sum(1 for v in ws if v > ALIGN_SURE_WORD) / max(1, len(ws))
+    note = "forced alignment of the known lyrics (MMS_FA): %d/%d lines, %.0f%% of words sure" % (
+        len(lines), len(parsed), 100 * sure)
+    if share < ALIGN_MIN_SHARE or sure < ALIGN_MIN_SURE_SHARE:
+        return [], note + " -- too weak to trust (wrong lyrics for this song?); transcribed instead"
+    return lines, note
+
+
+def _lyrics_key(lyrics):
+    import hashlib  # noqa: PLC0415
+    return hashlib.sha1(str(lyrics or "").strip().encode("utf-8")).hexdigest()[:16] if str(lyrics or "").strip() else ""
+
+
 def song_map(path, *, listen=False, status=_print, allow_download=False,
-             device=None, threads=None):
+             device=None, threads=None, lyrics=None):
     """A song file -> the numbers WRITE reasons about.
 
     Keys: file, dur, bpm, beat_s, bar_s, first_downbeat_s, downbeats, energy,
@@ -2277,6 +2466,10 @@ def song_map(path, *, listen=False, status=_print, allow_download=False,
     adds sung regions and lyric lines, and reports which of the two listening
     paths it managed (`stem` or `mix`) in `how`.
 
+    `lyrics` (optional, with `listen=True`): the song's known lyrics. They are timed by forced
+    alignment on the vocal stem instead of transcribed (`aligned` True, `how` says so); lyrics
+    that do not fit the song (weak scores) fall back to transcription.
+
     `device` DEFAULTS TO CPU and is not inferred. This module runs inside ComfyUI
     beside a render, and a background analysis that quietly takes the GPU because
     one happens to be visible is the same mistake every time: round 2 spent the
@@ -2286,6 +2479,11 @@ def song_map(path, *, listen=False, status=_print, allow_download=False,
     """
     path = str(path)
     cached = _cache_load(path)
+    lkey = _lyrics_key(lyrics) if listen else ""
+    if cached is not None and lkey and cached.get("lyrics_key") != lkey:
+        status("%s: lyrics given that this cached map was not timed with, listening again"
+               % os.path.basename(path))
+        cached = None
     # The cache is only a shortcut for the SAME KIND of request, and the check has to
     # be EQUALITY, not `not listen`. Two ways round, both of them measured:
     #
@@ -2409,9 +2607,18 @@ def song_map(path, *, listen=False, status=_print, allow_download=False,
         # 44.1 kHz stem as if it were 16 kHz and put every sung bar past the end.
         audio = stem if stem is not None else mono
         audio_sr = int(stem_sr if stem is not None else sr)
-        lines, lnote = transcribe(audio, audio_sr, status=status,
-                                  allow_download=bool(allow_download),
-                                  device=device, threads=threads)
+        lines, lnote = [], ""
+        if lkey and stem is not None:
+            lines, lnote = align_lyrics(stem, stem_sr, lyrics, status=status,
+                                        allow_download=bool(allow_download), device=device)
+            status(lnote)
+        sm["aligned"] = bool(lines)
+        sm["lyrics_key"] = lkey                  # tried with these lyrics, aligned or not
+        if not lines:
+            lines, tnote = transcribe(audio, audio_sr, status=status,
+                                      allow_download=bool(allow_download),
+                                      device=device, threads=threads)
+            lnote = (lnote + "; " if lnote else "") + tnote
         if stem is not None:
             env2, low2, hz2 = onset_envelope(stem, stem_sr)
             e2, _, _ = bar_features(env2, low2, hz2, grid)

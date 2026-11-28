@@ -18,6 +18,8 @@
  */
 import { el, button, widgetByName } from "./widget_utils.js";
 import { parseRefPlan, refmodVoice } from "./ref_rail.js";
+// Writer backends this pack starts and stops itself (llm.SERVER_EXES).
+const HTC_STARTABLE = new Set(["ninfer", "basalt"]);
 
 const LLM_URL = "/h3_ref_chain/llm";
 
@@ -860,7 +862,7 @@ function writeThread(t) {
           paintPathRows();
         // The address placeholder follows the backend, because :1234 typed into
         // a nInfer panel is the single most likely wrong thing here.
-        url.placeholder = conn.backend === "ninfer"
+        url.placeholder = HTC_STARTABLE.has(conn.backend)
             ? "http://127.0.0.1:8080" : "http://127.0.0.1:1234";
 
         // Preselect the SAVED model rather than letting the list decide. If the
@@ -952,8 +954,8 @@ if (!list.length) {
             // the Start button right here, and a person following the sentence
             // would go looking for a Developer tab that does not exist.
             const what = conn.backend_label
-                || (conn.backend === "ninfer" ? "nInfer" : "Local server");
-            const how = conn.backend === "ninfer"
+                || (({ ninfer: "nInfer", basalt: "basalt" }[conn.backend] || "Local server"));
+            const how = HTC_STARTABLE.has(conn.backend)
                 ? `Press Start writer below.`
                 : `Start your local server and load a model.`;
             say(!conn.online

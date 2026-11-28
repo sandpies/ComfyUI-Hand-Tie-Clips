@@ -529,16 +529,16 @@ def compute_shot_topology(
         genre_s = "dance"
         if T < 6.0:
             role_specs = [
-                ("count_hit", "Count-1 Pop & Stance Anchor", 0.28, "music_hit"),
-                ("groove_layer", "Compound Groove & Camera Arc", 0.44, "music_hit"),
-                ("ending_hold", "Final Pose & Ending-Fairy Lock", 0.28, "music_hit"),
+                ("count_hit", "Full-Body Stance & Count-1 Hit", 0.28, "music_hit"),
+                ("groove_layer", "Footwork Travel & Level Drop", 0.44, "music_hit"),
+                ("ending_hold", "Planted Lunge & Dime-Stop Freeze", 0.28, "music_hit"),
             ]
         else:
             role_specs = [
-                ("count_hit", "Count-1 Opening Hit & Framing", 0.22, "music_hit"),
-                ("groove_layer", "Multi-Layer Groove & Footwork", 0.30, "music_hit"),
-                ("choreo_turn", "Choreo Spin / Center Break", 0.28, "music_hit"),
-                ("ending_hold", "Poised Ending-Fairy Pose Hold", 0.20, "music_hit"),
+                ("count_hit", "Full-Body Framing & Count-1 Hit", 0.22, "music_hit"),
+                ("groove_layer", "Footwork Travel & Weight Shift", 0.30, "music_hit"),
+                ("choreo_turn", "Level Drop, Pivot Turn & Arm Snap", 0.28, "music_hit"),
+                ("ending_hold", "Planted Stage Lunge & Dead-Stop Hold", 0.20, "music_hit"),
             ]
     else:
         genre_s = "explicit_general" if is_sex_scene else ("fetish" if flavors.get("fetish") else "cinema")
@@ -780,6 +780,26 @@ def camera_trajectory_plan(
             f"COMBAT WHIP-TO-ULTIMATE ZOOM LAW: Dart fast laterally with punches ({ts_list[0]}), drop low on sweeps and tilt steeply up on mid-air clashes ({mid_ts}), snap-zoom tightly inward onto the signature ultimate attack ({ts_list[-2] if n >= 3 else ts_list[-1]}), and whip wide across crash debris ({ts_list[-1]})."
         )
 
+    if cid in ("shot_reverse", "copilot_plate_side_180_lock", "over_the_shoulder") and n >= 2:
+        return (
+            "180-DEGREE EYELINE LAW: Keep the camera strictly on one side of the axis between subjects — "
+            "frame <Subject 1> looking screen-right in [Shot 1] and <Subject 2> looking screen-left on reverse cuts so eyelines meet cleanly across every cut."
+        )
+
+    if cid in ("coverage_dolly_zoom_compress", "coverage_dolly_zoom_stretch", "dolly_zoom"):
+        if cid == "coverage_dolly_zoom_stretch":
+            return (
+                "DOLLY-ZOOM STRETCH LAW: Physically dolly forward toward the subject while zooming the focal length wide simultaneously, keeping subject frame size steady as background walls stretch deep into perspective."
+            )
+        return (
+            "DOLLY-ZOOM COMPRESS LAW: Physically dolly backward away from the subject while zooming the focal length tight simultaneously, keeping subject frame size steady as background depth swells and compresses behind them."
+        )
+
+    if cid in ("overhead", "birds_eye", "top_down", "three_quarter_top_down"):
+        return (
+            "TOP-DOWN COMPASS LOCK: Anchor body orientation explicitly to the frame edges (head toward top of frame, feet toward bottom of frame, left/right arm placement clear) so overhead body alignment stays consistent across every beat."
+        )
+
     if has_bg_plate and cid and cid not in (
         "handheld", "static_close", "oner", "copilot_hand_tie_calm_join",
         "finger_follow_macro", "macro_lens", "portrait_vertical_stack",
@@ -789,19 +809,24 @@ def camera_trajectory_plan(
     return ""
 
 
-def fx_trajectory_plan(fx_opt: dict | None, light_opt: dict | None, spans: list[tuple[float, float]], fx_timing: str = "delayed_mid") -> str:
-    if not fx_opt or not spans or len(spans) < 2 or fx_timing == "from_start":
+def fx_trajectory_plan(fx_opt: dict | list[dict] | None, light_opt: dict | None, spans: list[tuple[float, float]], fx_timing: str = "delayed_mid") -> str:
+    fx_list = [o for o in (fx_opt if isinstance(fx_opt, list) else ([fx_opt] if fx_opt else [])) if isinstance(o, dict)]
+    if not fx_list or not spans or len(spans) < 2 or fx_timing == "from_start":
         return ""
-    fx_id_l = str(fx_opt.get("id") or "").lower()
-    if fx_id_l.startswith(("fx_ultrareal_", "fx_vhs_", "fx_anamorphic_")) or fx_id_l in ("fx_raindrop_on_camera_glass", "fx_golden_dust_motes_sunbeam"):
+    if all(
+        str(o.get("id") or "").lower().startswith(("fx_ultrareal_", "fx_vhs_", "fx_anamorphic_"))
+        or str(o.get("id") or "").lower() in ("fx_raindrop_on_camera_glass", "fx_golden_dust_motes_sunbeam")
+        for o in fx_list
+    ):
         return ""
     ts_list = [f"At {stamp(a)}-{stamp(b)}" for a, b in spans]
     mid_idx = max(1, len(ts_list) // 2)
     first_half = ts_list[:mid_idx]
     second_half = ts_list[mid_idx:]
     light_str = light_opt["rule"] if light_opt and light_opt.get("rule") else "clean physical key and rim lighting"
+    fx_rules = " + ".join(str(o.get("rule") or o.get("label") or "").strip() for o in fx_list if (o.get("rule") or o.get("label")))
     return (
         "DELAYED MID-CLIP FX & LIGHTING PACING LAW: "
         f"In [Shot 1] and across {', '.join(first_half)}, render {light_str} cleanly on face, hair, and outfit so identity anchors clearly; "
-        f"starting in {second_half[0]} (and continuing across {', '.join(second_half)}), unleash the visual FX: {fx_opt['rule']}"
+        f"starting in {second_half[0]} (and continuing across {', '.join(second_half)}), unleash the visual FX: {fx_rules}"
     )

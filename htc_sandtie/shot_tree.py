@@ -1307,6 +1307,9 @@ def build_shot_tree(
     cam_opts = _cat.resolve_dial_opts("camera", flavors.get("camera"))
     style_opts = _cat.resolve_dial_opts("style", flavors.get("style"))
     col_opts = _cat.resolve_dial_opts("colour", flavors.get("colour"))
+    era_opts = _cat.resolve_dial_opts("era", flavors.get("era"))
+    tv_opts = _cat.resolve_dial_opts("tv_show", flavors.get("tv_show"))
+    fx_opts = _cat.resolve_dial_opts("fx", flavors.get("fx"))
     exp_opts = _cat.resolve_dial_opts("explicit", flavors.get("explicit"))
     combat_opts = _cat.resolve_dial_opts("combat", flavors.get("combat"))
     pose_opts = _cat.resolve_dial_opts("pose", flavors.get("pose"))
@@ -1319,7 +1322,13 @@ def build_shot_tree(
     is_pov = pov_val in ("male", "female", "on")
     is_sex = _dir.is_sexual(brief, str(flavors.get("explicit") or ""), str(flavors.get("wardrobe") or ""), fetish_id=str(flavors.get("fetish") or ""))
     rear_scene = _dir.is_rear_facing(brief, str(flavors.get("explicit") or ""), plan=plan, camera_id=str(flavors.get("camera") or ""), pose_id=str(flavors.get("pose") or ""))
-    mirror_scene = _dir.is_mirror_scene_active(str(flavors.get("explicit") or ""), str(flavors.get("camera") or ""))
+    mirror_scene = _dir.is_mirror_scene_active(
+        str(flavors.get("explicit") or ""),
+        str(flavors.get("camera") or ""),
+        place_id=str(flavors.get("place") or ""),
+        lens_id=str(flavors.get("lens") or ""),
+        brief=brief,
+    )
     mixed_orient = _dir.has_mixed_front_and_rear_beats(brief, explicit_id=str(flavors.get("explicit") or ""), plan=plan)
     spans = topo["spans"]
     n_shots = len(topo["shots"])
@@ -1434,23 +1443,20 @@ def build_shot_tree(
         "cast_n": len(subs),
     }
 
-    def _cam_profile(txt: str) -> tuple[str, str, str]:
+    def _cam_profile(txt: str) -> tuple[str, str, str, str, str, str]:
         tl = str(txt or "").lower()
         elev = "low" if re.search(r"\b(?:low[- ]angle|worm.?s[- ]eye|floor[- ]level|near shin|looking (?:steeply )?upward)\b", tl) else ("high" if re.search(r"\b(?:high[- ]angle|elevated angle|bird.?s[- ]eye|overhead|top[- ]down|looking (?:cleanly )?down(?:ward)?)\b", tl) else "")
         size = "close" if re.search(r"\b(?:extreme close[- ]up|ecu|close[- ]up|tight frame|macro)\b", tl) else ("wide" if re.search(r"\b(?:wide shot|full[- ]body|full shot|establishing wide|long shot)\b", tl) else "")
         orient = "rear" if re.search(r"\b(?:from behind|behind-the-back|rear angle|rear view|over-the-shoulder|from the rear)\b", tl) else ("front" if re.search(r"\b(?:facing camera|front-facing|frontal|direct eye contact)\b", tl) else "")
-        return elev, size, orient
+        motion = "static" if re.search(r"\b(?:static\s+locked|locked[- ]off|tripod\s+locked|motionless\s+camera)\b", tl) else ("moving" if re.search(r"\b(?:orbit|tracking|dolly|crane|whip[- ]?pan|handheld|steadi?cam|pedestal)\b", tl) else "")
+        roll = "tilted" if re.search(r"\b(?:dutch\s+angle|canted|tilted\s+horizon|barrel\s+roll)\b", tl) else ("level" if re.search(r"\b(?:strictly\s+level\s+horizon|level\s+horizon)\b", tl) else "")
+        persp = "pov" if re.search(r"\b(?:first[- ]person\s+pov|\bpov\b)\b", tl) else ("third" if re.search(r"\b(?:over[- ]the[- ]shoulder|third[- ]person|side[- ]profile)\b", tl) else "")
+        return elev, size, orient, motion, roll, persp
 
     def _cam_conflicts(a: str, b: str) -> bool:
-        ea, sa, oa = _cam_profile(a)
-        eb, sb, ob = _cam_profile(b)
-        if ea and eb and ea != eb:
-            return True
-        if sa and sb and sa != sb:
-            return True
-        if oa and ob and oa != ob:
-            return True
-        return False
+        pa = _cam_profile(a)
+        pb = _cam_profile(b)
+        return any(va and vb and va != vb for va, vb in zip(pa, pb))
 
     # Build [Shot 1] header metadata
     canvas_asp = _bg.detect_canvas_aspect(brief=brief, node_aspect=str(flavors.get("aspect") or ""), camera_id=",".join(o["id"] for o in cam_opts))
@@ -1470,6 +1476,26 @@ def build_shot_tree(
         st_str = _fin.sanitize_additive_rule(style_opts[0].get("rule") or style_opts[0]["label"])
         s1_parts.append(st_str)
         s1_cam_parts.append(st_str)
+    style_xfer_st = _dir.resolve_style_transfer(brief=brief, flavors=flavors, lab=lab)
+    if style_xfer_st:
+        s1_parts.append(f"rendered in {style_xfer_st['label']} with {style_xfer_st['cues']}")
+    if era_opts:
+        s1_parts.append(_lc_lead(_fin.sanitize_additive_rule(era_opts[0].get("rule") or era_opts[0]["label"])))
+    if tv_opts:
+        s1_parts.append(_lc_lead(_fin.sanitize_additive_rule(tv_opts[0].get("world") or tv_opts[0]["label"])))
+    fx_timing_st = str(flavors.get("fx_timing") or "delayed_mid").strip().lower()
+    if fx_opts and (
+        fx_timing_st == "from_start"
+        or len(spans) < 2
+        or all(
+            str(o.get("id") or "").lower().startswith(("fx_ultrareal_", "fx_vhs_", "fx_anamorphic_"))
+            or str(o.get("id") or "").lower() in ("fx_raindrop_on_camera_glass", "fx_golden_dust_motes_sunbeam")
+            for o in fx_opts
+        )
+    ):
+        fx_s1 = ", ".join(_lc_lead(_fin.sanitize_additive_rule(o.get("rule") or o["label"])) for o in fx_opts if (o.get("rule") or o.get("label")))
+        if fx_s1:
+            s1_parts.append(fx_s1)
 
     exp_is_cont = topo["genre"] == "explicit_cont"
     shot1_cam_txt = exp_cams.get(0) or cb_cams.get(0) or pose_cams.get(0) or ""
@@ -1855,7 +1881,36 @@ def render_skeleton_prose(
 
     place_opts = _cat.resolve_dial_opts("place", flavors.get("place"))
     seq_place = len(place_opts) >= 2 and _bg.get_dial_mode(flavors, "place", "sequence") == "sequence"
+    fx_opts_r = _cat.resolve_dial_opts("fx", flavors.get("fx"))
+    fx_timing_r = str(flavors.get("fx_timing") or "delayed_mid").strip().lower()
+    delayed_fx_txt = ""
+    total_beats_r = sum(len(sh.beats) for sh in tree.shots)
+    if fx_opts_r and fx_timing_r != "from_start" and total_beats_r >= 2 and not all(
+        str(o.get("id") or "").lower().startswith(("fx_ultrareal_", "fx_vhs_", "fx_anamorphic_"))
+        or str(o.get("id") or "").lower() in ("fx_raindrop_on_camera_glass", "fx_golden_dust_motes_sunbeam")
+        for o in fx_opts_r
+    ):
+        delayed_fx_txt = ", ".join(_lc_lead(_fin.sanitize_additive_rule(o.get("rule") or o["label"])) for o in fx_opts_r if (o.get("rule") or o.get("label")))
+    mid_beat_global = max(1, total_beats_r // 2)
+
+    expr_val_r = _dir.normalize_perf_level("expression", flavors.get("expression"), fallback="natural")
+    life_val_r = _dir.normalize_perf_level("life", flavors.get("life"), fallback="natural")
+    _EXPR_CPU_MAP = {
+        "stoic": "holding calm deadpan facial restraint",
+        "subtle": "showing subtle eye and brow micro-reads",
+        "vivid": "with vivid expressive facial acting",
+        "theatrical": "with bold heightened theatrical expression",
+    }
+    _LIFE_CPU_MAP = {
+        "lock": "with quiet steady breathing and poised stillness",
+        "subtle": "as subtle room air and breath stir gently",
+        "alive": "with active swaying hair, fabric motion, and lively prop details",
+        "hyper": "amid kinetic swirling hair, reactive fabric, and layered background movement",
+    }
+    perf_tail_b0 = ", ".join(p for p in (_EXPR_CPU_MAP.get(expr_val_r, ""), _LIFE_CPU_MAP.get(life_val_r, "")) if p)
+
     lines = [tree.header_s1]
+    global_bi = 0
 
     for s_idx, sh in enumerate(tree.shots):
         if s_idx > 0:
@@ -1878,7 +1933,12 @@ def render_skeleton_prose(
                         act = f"{act} with {prev_disp}"
                     else:
                         act = f"{act} with {prev_disp} still held clear"
+            if global_bi == 0 and perf_tail_b0 and perf_tail_b0.lower() not in act.lower():
+                act = f"{act}, {perf_tail_b0}"
+            if delayed_fx_txt and global_bi == mid_beat_global and delayed_fx_txt[:24].lower() not in act.lower():
+                act = f"{act}, unleashing {delayed_fx_txt}"
             lines.append(f"At {_bg.stamp(mb.t0)}-{_bg.stamp(mb.t1)}, {act}.{mb.dialogue_text}")
+            global_bi += 1
 
     return "\n".join(lines)
 

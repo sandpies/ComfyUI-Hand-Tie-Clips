@@ -32,7 +32,17 @@ A song that is easy to film:
 ```
 <comfy-python> scripts/song_map.py <song> --listen --out songmap.json
 <comfy-python> scripts/song_map.py <song> --relisten 40-66 66-84     # spans the lyrics missed
+<comfy-python> scripts/song_map.py <song> --lyrics LYRICS.md --out songmap.json   # lyrics KNOWN
 ```
+
+**When the lyrics are known, use `--lyrics`, not `--listen`.** It times the given words by forced
+alignment (torchaudio MMS_FA, on the Demucs vocal stem, CPU) instead of guessing them: on Tomare it
+put verse 1, the pre-hook, both hook とまれ shouts, the bridge and the hard stop within ~0.3 s of
+the hand-checked times, where Whisper had heard almost none of verse 1. Give it the lyrics as
+actually sung (a generator repeats or drops lines; fix the file first). Japanese kana is romanised
+built in; write a reading after any kanji, `右(みぎ)へ`, or it is skipped. Stacked or gang vocals
+score low but keep their order; under 0.12 is flagged for the ear. Lines with no `[Section]` tag of
+their own are counted in the section above them.
 
 Read the output for:
 - **Tempo and bar.** Most songs are 4/4. If it reports 3 or 6 beats per bar, or a tempo that

@@ -32,8 +32,21 @@ except ImportError:  # pragma: no cover
     sys.exit("post.py needs opencv (pip install opencv-python), e.g. the ComfyUI venv python.")
 
 FONTS = {"telop": "Mochiy Pop One", "glitch": "Rubik Glitch", "orbit": "Bungee", "orbit_jp": "Dela Gothic One",
-         "base": "Anton", "counter": "DotGothic16", "counter_flash": "Dela Gothic One"}
-BLOCKING = ("freeze card", "kaleidoscope", "colour isolation", "bass shake")
+         "base": "Anton", "counter": "DotGothic16", "counter_flash": "Dela Gothic One",
+         "osd": "Consolas", "sfx": "Dela Gothic One", "label": "Bebas Neue"}
+BLOCKING = ("freeze card", "kaleidoscope", "colour isolation", "bass shake", "tape cut", "crt off")
+
+
+def visible(a, b, hide):
+    """(a, b) minus every hidden window, as a list of spans."""
+    out, cur = [], a
+    for ha, hb in sorted(w for w in hide if w[0] < b and w[1] > a):
+        if ha > cur:
+            out.append((cur, ha))
+        cur = max(cur, hb)
+    if cur < b:
+        out.append((cur, b))
+    return out
 
 
 # ================================================================ shared
@@ -323,8 +336,12 @@ class Burn:
         W, H = self.W, self.H
         key = (kind, txt, s, r)
         if key not in self._size:
-            evs = self.telop_events(0, 1, txt, W // 2, H // 2, r, s, anim=False) if kind == "telop" else \
-                [self.ev(0, 1, f"\\an5\\pos({W // 2},{H // 2})\\fn{self.fonts['glitch']}\\fs{s}\\bord0", txt, 0)]
+            if kind == "telop":
+                evs = self.telop_events(0, 1, txt, W // 2, H // 2, r, s, anim=False)
+            elif kind == "sfx":
+                evs = self.sfx_events(0, 1, txt, W // 2, H // 2, r, s, "&HFFFFFF&", anim=False)
+            else:
+                evs = [self.ev(0, 1, f"\\an5\\pos({W // 2},{H // 2})\\fn{self.fonts['glitch']}\\fs{s}\\bord0", txt, 0)]
             (self.work / "_m.ass").write_text(self.head() + "\n".join(evs) + "\n", encoding="utf-8")
             raw = subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", f"color=black:s={W}x{H}:d=0.1",
                                   "-vf", "format=bgr24," + self.ass_filter("_m.ass"), "-frames:v", "1",
@@ -460,6 +477,280 @@ class Burn:
         log.append(f"counter: {len(spans)} readout spans in {start:.1f}-{end:.1f}")
         return out, log
 
+    # ---------------------------------------------------------- VCR on-screen display
+    def build_osd(self, start, end):
+        """A VCR on-screen display (plan "osd": {"states": [[t, "play"|"pause"], ...], "date": "AM 7:00  NOV.28",
+        "play_hold": 2.5}). PAUSE stays up while paused; PLAY shows for play_hold s after each play. The tape
+        counter (bottom right) runs only while playing. Top line hides in blocking fx; the bottom line also in
+        baked windows. Film time (the plan offset is not applied)."""
+        cfg = self.c.get("osd")
+        if not cfg or not cfg.get("states"):
+            return [], []
+        W, H, ev = self.W, self.H, self.ev
+        dur = float(self.c["duration"])
+        states = sorted((float(t), s) for t, s in cfg["states"])
+        block = [(f["a"], f["b"]) for f in self.c["fx"] if f["kind"] in BLOCKING]
+        hide_bottom = block + [(a, b) for a, b, _n in self.c.get("baked", [])]
+        fs = int(H * 0.06)
+        mx, my = int(W * 0.036), int(H * 0.052)
+        font = self.fonts["osd"]
+
+        def txt(a, b, x, y, an, s, body, draw=False):
+            out = []
+            for a2, b2 in visible(max(a, start), min(b, end), hide):
+                ra, rb = a2 - start, b2 - start
+                base = f"\\an{an}\\fn{font}\\b1\\fs{s}\\bord0" + ("\\p1" if draw else "")
+                for dx, dy, col, al, lay in ((3, 3, "&H000000&", "&H60&", 7), (-2, 0, "&H4646FF&", "&H50&", 8),
+                                             (2, 0, "&HFFDC46&", "&H50&", 8), (0, 0, "&HFFFFFF&", "&H00&", 9)):
+                    out.append(ev(ra, rb, base + f"\\pos({x + dx},{y + dy})\\1c{col}\\alpha{al}", body, lay))
+            return out
+
+        out, log = [], []
+        icon_h = int(fs * 0.8)
+        pause_icon = (f"m 0 0 l {icon_h // 4} 0 l {icon_h // 4} {icon_h} l 0 {icon_h} "
+                      f"m {icon_h // 2} 0 l {icon_h // 2 + icon_h // 4} 0 l {icon_h // 2 + icon_h // 4} {icon_h} "
+                      f"l {icon_h // 2} {icon_h}")
+        play_icon = f"m 0 0 l {int(icon_h * 0.85)} {icon_h // 2} l 0 {icon_h}"
+        hold = float(cfg.get("play_hold", 2.5))
+        play_spans, played = [], 0.0
+        for i, (t, s) in enumerate(states):
+            t1 = states[i + 1][0] if i + 1 < len(states) else dur
+            hide = block
+            if s == "pause":
+                out += txt(t, t1, mx, my, 7, 0, pause_icon, draw=True)
+                out += txt(t, t1, mx + int(icon_h * 1.2), my - int(fs * 0.12), 7, fs, "PAUSE")
+            else:
+                b = min(t1, t + hold)
+                out += txt(t, b, mx, my, 7, 0, play_icon, draw=True)
+                out += txt(t, b, mx + int(icon_h * 1.2), my - int(fs * 0.12), 7, fs, "PLAY")
+                play_spans.append((t, t1))
+            log.append(f"{t:7.2f} osd      {s.upper()}")
+        # bottom line: date + a tape counter that runs only while playing
+        hide = hide_bottom
+        fsb = int(fs * 0.75)
+        yb = H - my
+        if cfg.get("date"):
+            out += txt(0, dur, mx, yb, 1, fsb, cfg["date"])
+
+        def counter(t):
+            return sum(max(0.0, min(t, b) - a) for a, b in play_spans)
+
+        marks = sorted({0.0, dur} | {a for a, b in play_spans} | {b for a, b in play_spans})
+        for a, b in play_spans:                          # every counter second ticks over while playing
+            k = math.floor(counter(a)) + 1
+            while True:
+                tt = a + (k - counter(a))
+                if tt >= b:
+                    break
+                marks.append(tt)
+                k += 1
+        marks = sorted(set(m for m in marks if 0 <= m <= dur))
+        for a, b in zip(marks, marks[1:]):
+            if b <= start or a >= end:
+                continue
+            c = int(counter(a + 1e-4))
+            out += txt(a, b, W - mx, yb, 3, fsb, "SP %d:%02d:%02d" % (c // 3600, c % 3600 // 60, c % 60))
+        log.append(f"osd: {len(states)} states, tape counter runs {sum(b - a for a, b in play_spans):.1f} s")
+        return out, log
+
+    def reserve_osd(self, busy):
+        """Keep words and labels off the OSD's top-left readout and its bottom line."""
+        if self.c.get("osd"):
+            busy = busy.copy()
+            busy[0, :int(self.H * 0.15), :int(self.W * 0.24)] = 3.0
+            busy[0, int(self.H * 0.86):, :] = 3.0
+        return busy
+
+    # ---------------------------------------------------------- manga sound-effect words
+    def sfx_events(self, a, b, txt, x, y, r, s, col, anim=True):
+        st = self.STAMP if anim else ""
+        base = f"\\an5\\pos({x},{y})\\frz{r}\\fn{self.fonts['sfx']}\\fs{s}{st}"
+        return [self.ev(a, b, base + "\\bord16\\3c&H101010&\\1c&H101010&\\shad7\\4c&H000000&\\4a&H70&", txt, 0),
+                self.ev(a, b, base + f"\\bord0\\1c{col}\\shad0", txt, 1)]
+
+    def build_sfx(self, start, end, taken_windows):
+        """Plan "sfx": [[t, "シーン", {"vertical": true, "color": "&HFFFFFF&", "size": 130, "rot": 0, "dur": 1.4}]].
+        Placed like a telop: never over people or faces; dropped when the frame is too crowded. Film time."""
+        out, log = [], []
+        for item in self.c.get("sfx", []):
+            t, word = float(item[0]), item[1]
+            o = item[2] if len(item) > 2 else {}
+            if not (start <= t < end - 0.3):
+                continue
+            txt = "\\N".join(word) if o.get("vertical") else word
+            a = t
+            nc = self.next_cut(a)
+            b = min(a + float(o.get("dur", 1.2)), nc) if nc - a >= 0.5 else a + float(o.get("dur", 1.2))
+            busy = self.reserve_osd(np.max([self.busy_map(self.grab(x)) for x in sorted({a + 0.05, (a + b) / 2, b - 0.05})],
+                                           axis=0))
+            taken = [box for (wa, wb, box) in taken_windows if wa < b and wb > a]
+            r = float(o.get("rot", 0 if o.get("vertical") else 8))
+            best = self.place("sfx", txt, int(o.get("size", 130)), r, busy, taken, o.get("prefer", "top"))
+            if best is None or best[4] > float(self.c.get("max_overlap", 0.12)):
+                log.append(f"{t:7.2f} sfx      {word:16s} DROPPED: frame too crowded")
+                continue
+            sc, x, y, sz, ov, w, hh = best
+            out += self.sfx_events(a - start, b - start, txt, x, y, r, sz, o.get("color", "&H00E6FF&"))
+            taken_windows.append((a, b, (x - w // 2, y - hh // 2, x + w // 2, y + hh // 2)))
+            log.append(f"{t:7.2f} sfx      {word:16s} ({x},{y}) fs{sz} overlap {ov:.3f}")
+        return out, log
+
+    # ---------------------------------------------------------- museum labels on frozen people
+    def track_labels(self, start, end):
+        """Plan "labels": [{"a": 22.1, "b": 24.6, "items": [["MID-YAWN", "No.1 / FROZEN", 108], ...]}] where the
+        number is the face's x at "a" (from a still). Boxes sit still in space clear of people over the whole
+        window; the leader line follows each tracked head. Returns per-frame draw lists keyed by frame index."""
+        from PIL import ImageFont
+        W, H, FPS = self.W, self.H, self.FPS
+        frames, log = {}, []
+        fdir = self.dir / self.fontsdir
+
+        def font(names, size):
+            for n in names:
+                for p in list(fdir.glob(n)) + [Path("C:/Windows/Fonts") / n]:
+                    if p.is_file():
+                        return ImageFont.truetype(str(p), size)
+            return ImageFont.load_default()
+        big = font(["BebasNeue-Regular.ttf"], int(H * 0.044))
+        small = font(["consolab.ttf", "consola.ttf"], int(H * 0.021))
+        for L in self.c.get("labels", []):
+            a, b = float(L["a"]), float(L["b"])
+            if b <= start or a >= end:
+                continue
+            cap = cv2.VideoCapture(self.V)
+            cap.set(cv2.CAP_PROP_POS_MSEC, a * 1000)
+            n = int(round((b - a) * FPS))
+            pos = {i: None for i in range(len(L["items"]))}
+            tracks, lost = [], {i: 0 for i in pos}
+            for k in range(n):
+                ok, fr = cap.read()
+                if not ok:
+                    break
+                if k % 2 == 0:
+                    fs = [(x + w / 2, y + h / 2, w) for x, y, w, h in self.faces(fr)]
+                    for i, it in enumerate(L["items"]):
+                        ref = pos[i] if pos[i] is not None else (float(it[2]), None, 0)
+                        cand = [f for f in fs if abs(f[0] - ref[0]) < (90 if pos[i] is not None else 120)
+                                and (ref[1] is None or abs(f[1] - ref[1]) < 120)]
+                        if cand:
+                            f = min(cand, key=lambda q: abs(q[0] - ref[0]))
+                            pos[i] = f if pos[i] is None else tuple(0.5 * p + 0.5 * q for p, q in zip(pos[i], f))
+                            lost[i] = 0
+                        else:
+                            lost[i] += 2
+                tracks.append({i: (pos[i] if pos[i] is not None and lost[i] < 0.3 * FPS else None) for i in pos})
+            cap.release()
+            bw_ = {i: int(max(big.getlength(it[0]), small.getlength(it[1])) + 28) for i, it in enumerate(L["items"])}
+            bh = int(H * 0.044 + H * 0.021 + 22)
+            found = {i for tr in tracks for i, v in tr.items() if v is not None}
+            for i, it in enumerate(L["items"]):
+                log.append(f"{a:7.2f} label    {it[0]:16s} " + ("pinned above the tracked head" if i in found else
+                                                                 f"DROPPED: face never found near x={it[2]}"))
+            f0 = int(round((a - start) * FPS))
+            top = int(H * 0.15)
+            for k, tr in enumerate(tracks):
+                items, placed = [], []
+                for j, i in enumerate(sorted(found)):
+                    head = tr[i]
+                    t_in = k / FPS - 0.12 * j
+                    if head is None or t_in < 0:
+                        continue
+                    hx, hy, fw = head
+                    bw = bw_[i]
+                    x0 = int(min(max(hx - bw / 2, 16), W - bw - 16))
+                    y0 = int(hy - 0.55 * fw - 30 - bh)               # a short stub above the head
+                    if x0 < W * 0.24 and y0 < top:
+                        y0 = top                                     # clear of the PAUSE readout
+                    if y0 < 8 or y0 + bh > H * 0.86:
+                        continue
+                    box = (x0, y0, bw, bh)
+                    faces_hit = any(abs(f[0] - (x0 + bw / 2)) < bw / 2 + f[2] / 2 and y0 < f[1] + f[2] * 1.2
+                                    and y0 + bh > f[1] - f[2] * 0.2 for f in tr.values() if f is not None)
+                    if faces_hit or any(x0 < q[0] + q[2] and q[0] < x0 + bw and y0 < q[1] + q[3] and q[1] < y0 + bh
+                                        for q in placed):
+                        continue
+                    placed.append(box)
+                    al = min(1.0, t_in / 0.08, (b - a - k / FPS) / 0.2)
+                    items.append((box, (hx, hy - 0.55 * fw), L["items"][i][0], L["items"][i][1], al))
+                frames[f0 + k] = items
+        return frames, (big, small), log
+
+    def draw_labels(self, fr, items, fonts):
+        from PIL import Image, ImageDraw
+        big, small = fonts
+        ov = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(ov)
+        alpha = max(al for *_, al in items)
+        for (x0, y0, bw, bh), head, t1, t2, al in items:
+            A = int(255 * al)
+            if head is not None:
+                hx, hy = int(head[0]), int(head[1] - 6)
+                ex = min(max(hx, x0 + 8), x0 + bw - 8)
+                ey = y0 + bh if y0 + bh < hy else y0
+                d.line([(hx, hy), (ex, ey)], fill=(255, 255, 255, A), width=3)
+                d.ellipse([hx - 6, hy - 6, hx + 6, hy + 6], fill=(255, 255, 255, A), outline=(0, 0, 0, A))
+            d.rectangle([x0, y0, x0 + bw, y0 + bh], fill=(250, 248, 240, A), outline=(20, 20, 20, A), width=2)
+            d.text((x0 + 12, y0 + 4), t1, font=big, fill=(20, 20, 20, A))
+            d.text((x0 + 12, y0 + bh - small.size - 6), t2, font=small, fill=(120, 30, 30, A))
+        if alpha <= 0:
+            return fr
+        o = np.array(ov).astype(np.float32)
+        m = o[..., 3:4] / 255
+        rgb = o[..., [2, 1, 0]]
+        return (fr.astype(np.float32) * (1 - m) + rgb * m).astype(np.uint8)
+
+    # ---------------------------------------------------------- tape fx
+    def tape_cut(self, fr, t, a, b, seed):
+        """VHS head-switch on a cut: rows wobble, a noisy band at the bottom, chroma slips, a small vertical jump.
+        Strongest at the window's middle (put the cut there)."""
+        W, H = self.W, self.H
+        p = (t - a) / (b - a)
+        k = math.sin(math.pi * min(max(p, 0), 1))
+        rng = np.random.default_rng(seed + int(t * 1000))
+        ys = np.arange(H, dtype=np.float32)
+        dx = k * (14 * np.sin(ys * 0.045 + t * 60) + 5 * rng.standard_normal(H))
+        band = ys > H * (1 - 0.08 * k - 0.02)
+        dx[band] += k * (60 + 40 * rng.random())
+        mapx = (np.arange(W, dtype=np.float32)[None, :] - dx[:, None]).astype(np.float32)
+        mapy = np.repeat(((ys + k * H * 0.03 * (rng.random() - 0.3)) % H)[:, None], W, axis=1).astype(np.float32)
+        out = cv2.remap(fr, mapx, mapy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_WRAP)
+        bb, gg, rr = cv2.split(out)
+        s = int(round(8 * k))
+        out = cv2.merge([np.roll(bb, s, axis=1), gg, np.roll(rr, -s, axis=1)])
+        o = out.astype(np.float32)
+        o[band] = o[band] * 0.6 + rng.random((int(band.sum()), W, 1)) * 170 * k
+        for _ in range(int(6 * k)):
+            y = int(rng.integers(0, H - 3))
+            o[y:y + int(rng.integers(1, 4))] = o[y:y + 3].mean() * 0.3 + 200 * rng.random((1, W, 1))
+        g = o.mean(axis=2, keepdims=True)
+        o = o * (1 - 0.35 * k) + g * 0.35 * k
+        return np.clip(o * (1 + 0.15 * k * math.sin(t * 90)), 0, 255).astype(np.uint8)
+
+    def crt_off(self, fr, t, a, b):
+        """The set switching off: the picture squashes to a bright line, the line to a dot, the dot fades."""
+        W, H = self.W, self.H
+        p = (t - a) / (b - a)
+        out = np.zeros_like(fr, dtype=np.float32)
+        if p < 0.45:
+            q = p / 0.45
+            h = max(3, int(H * (1 - q) ** 2.2))
+            gain = 1 + 1.6 * q
+            sq = cv2.resize(fr, (W, h), interpolation=cv2.INTER_AREA).astype(np.float32) * gain
+            y0 = (H - h) // 2
+            out[y0:y0 + h] = sq
+        elif p < 0.72:
+            q = (p - 0.45) / 0.27
+            w = max(6, int(W * (1 - q) ** 1.8))
+            x0 = (W - w) // 2
+            out[H // 2 - 2:H // 2 + 2, x0:x0 + w] = 255
+            out = cv2.GaussianBlur(out, (0, 0), 3) * 1.6 + out
+        elif p < 1.0:
+            q = (p - 0.72) / 0.28
+            r = max(1, int(7 * (1 - q)))
+            cv2.circle(out, (W // 2, H // 2), r, (255, 255, 255), -1)
+            out = (cv2.GaussianBlur(out, (0, 0), 6) * 2.5 + out) * (1 - q)
+        return np.clip(out, 0, 255).astype(np.uint8)
+
     def build_orbits(self, start, end):
         """Per-frame ring events round the singer's neck: (front, back, frame ranges that need a matte)."""
         W, H, FPS, BAR, ev = self.W, self.H, self.FPS, self.BAR, self.ev
@@ -584,6 +875,14 @@ class Burn:
         cf, clog = self.build_counter(start, end)
         front += cf
         log += clog
+        of2, olog = self.build_osd(start, end)
+        front += of2
+        log += olog
+        sf, slog = self.build_sfx(start, end, [])
+        front += sf
+        log += slog
+        label_frames, label_fonts, llog = self.track_labels(start, end) if self.c.get("labels") else ({}, None, [])
+        log += llog
         freeze = [f for f in self.windows("freeze card") if start <= f["a"] < end]
         for f in freeze:
             a, b = f["a"], f["b"]
@@ -613,6 +912,7 @@ class Burn:
         shakes = [a for a, b in wins("bass shake")]
         kal = self.windows("kaleidoscope")
         leakw, trailw = wins("light leak"), wins("light trails")
+        tapew, crtw = wins("tape cut"), wins("crt off")
         iso_hue = {(f["a"], f["b"]): f.get("keep_hue", [[0, 8], [165, 180]]) for f in self.windows("colour isolation")}
         if isow and not self.sessions():
             isow = []
@@ -623,10 +923,15 @@ class Burn:
         fb_, fw_ = self.text_stream("_front.ass", dur, "black"), self.text_stream("_front.ass", dur, "white")
         bb_, bw_ = self.text_stream("_back.ass", dur, "black"), self.text_stream("_back.ass", dur, "white")
         out = self.dir / f"post_{int(start)}_{int(end)}.mp4"
+        # Keep the render's quality: the source's own video bitrate, not a CRF (CRF 18 on a 16 Mbps
+        # render came out at 5 Mbps, user 11-29 Tomare), the soundtrack copied untouched.
+        br = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=bit_rate",
+                             "-of", "csv=p=0", self.V], capture_output=True, text=True).stdout.strip()
+        rate = ["-b:v", br, "-maxrate", str(int(int(br) * 1.25)), "-bufsize", str(int(br) * 2)]             if br.isdigit() else ["-crf", "12"]
         enc = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s",
                                 f"{W}x{H}", "-r", str(FPS), "-i", "-", "-ss", str(start), "-t", str(dur), "-i", self.V,
-                                "-map", "0:v", "-map", "1:a?", "-c:v", "libx264", "-preset", "medium", "-crf", "18",
-                                "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart",
+                                "-map", "0:v", "-map", "1:a?", "-c:v", "libx264", "-preset", "slow", *rate,
+                                "-pix_fmt", "yuv420p", "-c:a", "copy", "-movflags", "+faststart",
                                 "-shortest", str(out)], stdin=subprocess.PIPE)
         held = trail = None
         cache = (-1, None, None)
@@ -684,6 +989,11 @@ class Burn:
             if iso and tight is not None:
                 k = min(1.0, (t - iso[0]) / 0.06, (iso[1] - t) / 0.06)
                 fr = self.isolate(fr, tight, wide, k, iso_hue[iso])
+            if label_frames.get(i):
+                fr = self.draw_labels(fr, label_frames[i], label_fonts)
+            for n_, (a, b) in enumerate(tapew):
+                if a <= t < b:
+                    fr = self.tape_cut(fr, t, a, b, n_ * 7919)
             base = fr.astype(np.float32)
             ab, cb = self.layer(lb, lbw)
             outf = base * (1 - ab) + cb
@@ -700,6 +1010,10 @@ class Burn:
                     leak = g[..., None] * np.array([40, 150, 255], np.float32) * min(1, p * 2)
                     outf = 255 - (255 - outf) * (255 - leak) / 255
                     outf *= min(1.0, (b - t) / 1.2)
+            for a, b in crtw:                                # switch-off: last, over everything
+                if t >= a:
+                    outf = self.crt_off(np.clip(outf, 0, 255).astype(np.uint8), t, a, b).astype(np.float32) \
+                        if t < b else np.zeros_like(outf)
             enc.stdin.write(np.clip(outf, 0, 255).astype(np.uint8).tobytes())
             if i % 240 == 0:
                 print(f"  {t:6.1f}s", flush=True)

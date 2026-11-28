@@ -11,6 +11,8 @@
 import { el, button, widgetByName } from "../editor/widget_utils.js";
 import { IMAGE_MP_STOPS, previewImageDims, runForgeGraph, unloadWriterForGpu, viewUrl } from "../editor/forge_queue.js";
 import { readPlan, writePlan, readRefs, writeRefs, durationOf } from "./r2_store.js";
+// Writer backends this pack starts and stops itself (llm.SERVER_EXES).
+const HTC_STARTABLE = new Set(["ninfer", "basalt"]);
 
 const STUDIO_PROP = "h3_mv_studio";
 const LLM_URL = "/h3_ref_chain/llm";
@@ -187,7 +189,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
 
     const llmBackSel = el("select", "r2-st-sel");
     llmBackSel.title = "Writer backend (shared with Write / Standard / Swap)";
-    for (const [bid, blbl] of [["lmstudio", "Local server"], ["ninfer", "nInfer"]]) {
+    for (const [bid, blbl] of [["lmstudio", "Local server"], ["ninfer", "nInfer"], ["basalt", "basalt"]]) {
         const o = el("option", null, blbl);
         o.value = bid;
         llmBackSel.appendChild(o);
@@ -290,7 +292,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
     c1.appendChild(llmDrawer);
 
     function paintLlmBar() {
-        const lbl = llmState.backend_label || (llmState.backend === "ninfer" ? "nInfer" : "Local server");
+        const lbl = llmState.backend_label || (({ ninfer: "nInfer", basalt: "basalt" }[llmState.backend] || "Local server"));
         if (llmState.backend) llmBackSel.value = llmState.backend;
         const isRunning = Boolean(llmState.running || llmState.online);
         if (isRunning) {
@@ -301,16 +303,16 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
             llmPill.textContent = `${lbl} Offline`;
             llmPill.className = "r2-st-pill";
         }
-        llmStartBtn.disabled = Boolean(llmState.running) || llmState.backend !== "ninfer";
-        llmStartBtn.style.display = llmState.backend === "ninfer" ? "" : "none";
+        llmStartBtn.disabled = Boolean(llmState.running) || !HTC_STARTABLE.has(llmState.backend);
+        llmStartBtn.style.display = HTC_STARTABLE.has(llmState.backend) ? "" : "none";
         llmStopBtn.disabled = !isRunning;
     }
 
     async function switchLlmBackend(nextBack) {
-        const lbl = nextBack === "ninfer" ? "nInfer" : "Local server";
+        const lbl = ({ ninfer: "nInfer", basalt: "basalt" }[nextBack] || "Local server");
         llmBackSel.value = nextBack;
         cfgBackSel.value = nextBack;
-        cfgPathRow.hidden = nextBack !== "ninfer";
+        cfgPathRow.hidden = !HTC_STARTABLE.has(nextBack);
         llmPill.textContent = `Checking ${lbl}…`;
         llmPill.className = "r2-st-pill";
         try {
@@ -335,7 +337,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
             llmLoaded = true;
             const backs = Array.isArray(j.backends) && j.backends.length
                 ? j.backends
-                : [{ id: "lmstudio", label: "Local server", program: false }, { id: "ninfer", label: "nInfer", program: true }];
+                : [{ id: "lmstudio", label: "Local server", program: false }, { id: "ninfer", label: "nInfer", program: true }, { id: "basalt", label: "basalt", program: true }];
             cfgBackSel.textContent = "";
             for (const b of backs) {
                 const o = el("option", null, b.label || b.id);
@@ -347,13 +349,13 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
             llmBackSel.value = activeBack;
             cfgUrlInp.value = j.server_url || "";
             cfgModelInp.value = j.model || "";
-            cfgModelInp.placeholder = activeBack === "ninfer"
+            cfgModelInp.placeholder = HTC_STARTABLE.has(activeBack)
                 ? "model id (auto after Start; blank = auto)"
                 : "model id (optional if your server has one loaded)";
             cfgKeepWarmChk.checked = j.keep_warm !== false;
             cfgUnloadChk.checked = j.unload_on_run !== false;
             const curPaths = (j.server_paths && j.server_paths[activeBack]) || {};
-            const hasProg = (backs.find((b) => b.id === activeBack)?.program) || activeBack === "ninfer";
+            const hasProg = (backs.find((b) => b.id === activeBack)?.program) || HTC_STARTABLE.has(activeBack);
             cfgPathRow.hidden = !hasProg;
             cfgExeInp.value = curPaths.exe || "";
             cfgExeInp.placeholder = curPaths.found_exe
@@ -386,7 +388,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
                 running: Boolean(j.running),
                 online: Boolean(j.online),
                 backend: activeBack,
-                backend_label: j.backend_label || (activeBack === "ninfer" ? "nInfer" : "Local server"),
+                backend_label: j.backend_label || (({ ninfer: "nInfer", basalt: "basalt" }[activeBack] || "Local server")),
                 model: j.model || "",
                 startup_error: j.startup_error || "",
             };
@@ -415,7 +417,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
                 keep_warm: cfgKeepWarmChk.checked,
                 unload_on_run: cfgUnloadChk.checked,
             };
-            if (activeBack === "ninfer" || !cfgPathRow.hidden) {
+            if (HTC_STARTABLE.has(activeBack) || !cfgPathRow.hidden) {
                 const ctxNum = Number(cfgCtxSel.value) || 65536;
                 patch.ctx_size = ctxNum;
                 patch.servers = {
@@ -452,7 +454,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
                 const okSave = await saveLlmSettings({ quiet: true });
                 if (!okSave) return;
             }
-            if (action === "stop" && llmState.backend !== "ninfer") {
+            if (action === "stop" && !HTC_STARTABLE.has(llmState.backend)) {
                 setStatus(conceptStatus, "Unloading the writer model...", "hint");
                 await unloadWriterForGpu();
                 await loadLlmSettings({ quiet: true });
@@ -739,7 +741,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
         busyConcept = true;
         sparkBtn.disabled = true;
         resparkLyricsBtn.disabled = true;
-        const coldWake = !llmState.running && llmState.backend === "ninfer" && state.auto_wake !== false;
+        const coldWake = !llmState.running && HTC_STARTABLE.has(llmState.backend) && state.auto_wake !== false;
         if (coldWake) {
             llmPill.textContent = "Starting nInfer…";
             setStatus(conceptStatus, "Waking nInfer from cold start & writing scaled MV concept (~15-30s)...", "hint");
@@ -1215,7 +1217,9 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
             const r = await fetch("/h3_ref_chain/mv/song_map", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ song: fn, listen: Boolean(state.listen) }),
+                // with listen on, the studio's own lyrics are timed by forced alignment, not guessed
+                body: JSON.stringify({ song: fn, listen: Boolean(state.listen),
+                    lyrics: state.listen ? String(state.lyrics || "") : "" }),
             });
             const j = await r.json();
             if (!r.ok || !j.ok) {
@@ -1226,7 +1230,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
             saveState();
             renderSongAnalysis();
             syncPipelineStrip();
-            setStatus(songStatus, `Analyzed ${j.file}: ${j.bpm} BPM, ${(j.sections || []).length} sections, ${(j.solved?.hops || []).length} solved hops.`, "hint");
+            setStatus(songStatus, `Analyzed ${j.file}: ${j.bpm} BPM, ${(j.sections || []).length} sections, ${(j.solved?.hops || []).length} solved hops.${j.aligned ? " Lyrics timed from your lyrics." : ""}`, "hint");
         } catch (err) {
             setStatus(songStatus, String(err), "error");
         } finally {
@@ -1251,6 +1255,7 @@ export function createStudioPane(node, { onChange, onSendToWrite } = {}) {
                     song: state.song_file,
                     sections: sa.sections || [],
                     listen: Boolean(state.listen),
+                    lyrics: state.listen ? String(state.lyrics || "") : "",
                 }),
             });
             const j = await r.json();

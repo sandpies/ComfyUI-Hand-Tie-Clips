@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Writer Setup</title>
+<style>
+:root{
+  --bg:#080a0f; --bg2:#0c0f16; --panel:#11151d; --panel2:#161b25; --line:#232b39;
+  --txt:#e7ecf6; --dim:#8f9db4; --dim2:#64718a;
+  --acc:#7c5cff; --acc2:#25d0ff; --ok:#38d39f; --warn:#ffb84d; --bad:#ff6b6b;
+  --mono:ui-monospace,SFMono-Regular,"Cascadia Code",Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; color:var(--txt); padding-bottom:70px;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(124,92,255,.20), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(37,208,255,.13), transparent 55%),
+    var(--bg);
+  font:15px/1.62 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--acc2); text-decoration:none} a:hover{text-decoration:underline}
+code{font-family:var(--mono); font-size:.88em; background:#1b2230; border:1px solid var(--line); padding:1px 6px; border-radius:5px; color:#cfe3ff}
+main{max-width:980px; margin:0 auto; padding:34px 18px}
+.brand{display:flex; align-items:center; gap:10px; font-weight:700; color:var(--dim); font-size:13px; letter-spacing:.3px}
+.dot{width:22px; height:22px; border-radius:7px; background:linear-gradient(135deg,var(--acc),var(--acc2)); box-shadow:0 0 18px rgba(124,92,255,.55)}
+h1{font-size:40px; line-height:1.08; letter-spacing:-1.4px; margin:18px 0 8px}
+h1 span{background:linear-gradient(90deg,var(--acc),var(--acc2)); -webkit-background-clip:text; background-clip:text; color:transparent}
+h2{font-size:20px; letter-spacing:-.3px; margin:0 0 6px}
+.lead{color:var(--dim); font-size:17px; max-width:62ch; margin:0}
+.q{margin:34px 0 12px; font-size:13px; color:var(--dim); letter-spacing:.6px; text-transform:uppercase; font-weight:600}
+.gpus{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+.gpu{all:unset; cursor:pointer; background:linear-gradient(180deg,var(--panel),var(--bg2)); border:1px solid var(--line); border-radius:14px; padding:16px 16px 14px; transition:.15s}
+.gpu:hover{border-color:#3a4660; transform:translateY(-1px)}
+.gpu.on{border-color:var(--acc); box-shadow:0 0 0 1px var(--acc), 0 10px 30px rgba(124,92,255,.18)}
+.gpu b{display:block; font-size:16px; margin-bottom:3px}
+.gpu small{color:var(--dim); font-size:13px}
+.verdict{margin:14px 0 0; color:var(--dim); min-height:24px}
+.verdict strong{color:var(--txt)}
+.tabs{display:flex; gap:8px; flex-wrap:wrap; margin:30px 0 0; border-bottom:1px solid var(--line); padding-bottom:12px}
+.tab{all:unset; cursor:pointer; padding:8px 14px; border-radius:10px; border:1px solid var(--line); background:var(--panel2); color:var(--dim); font-weight:600; font-size:14px; position:relative}
+.tab:hover{color:var(--txt)}
+.tab.on{color:#04060b; background:linear-gradient(135deg,var(--acc),var(--acc2)); border-color:transparent}
+.tab .star{position:absolute; top:-8px; right:-6px; font-size:10px; background:var(--ok); color:#04110c; border-radius:99px; padding:1px 6px; font-weight:700; display:none}
+.tab.pick .star{display:block}
+.track{display:none; animation:in .2s ease} .track.on{display:block}
+@keyframes in{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
+.needs{display:flex; flex-wrap:wrap; gap:6px; margin:16px 0 4px}
+.pill{font-size:12px; padding:3px 10px; border-radius:99px; border:1px solid var(--line); color:var(--dim); background:var(--panel2)}
+.pill.ok{color:#04110c; background:var(--ok); border-color:transparent; font-weight:600}
+.step{display:flex; gap:14px; align-items:flex-start; background:linear-gradient(180deg,var(--panel),var(--bg2)); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin:12px 0}
+.num{flex:0 0 auto; width:30px; height:30px; border-radius:9px; display:grid; place-items:center; font-weight:700; color:#04060b; background:linear-gradient(135deg,var(--acc),var(--acc2))}
+.body{flex:1 1 auto; min-width:0}
+.body p{margin:4px 0}
+.dim{color:var(--dim)}
+.code{position:relative; background:#0a0d14; border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin:10px 0 2px; font-family:var(--mono); font-size:12.6px; line-height:1.55; color:#cfe0f5; white-space:pre-wrap; word-break:break-word; max-height:300px; overflow:auto}
+.code.short{max-height:none}
+.copy{all:unset; cursor:pointer; position:sticky; float:right; top:0; margin:-4px -6px 0 8px; font:600 12px/1 -apple-system,"Segoe UI",sans-serif; padding:7px 12px; border-radius:8px; background:linear-gradient(135deg,var(--acc),var(--acc2)); color:#04060b}
+.copy.done{background:var(--ok)}
+.note{border-left:3px solid var(--warn); background:rgba(255,184,77,.07); padding:10px 14px; border-radius:0 10px 10px 0; margin:12px 0; color:#f2dcb8}
+.note.good{border-color:var(--ok); background:rgba(56,211,159,.07); color:#c6f0df}
+.shot{display:inline-flex; gap:8px; align-items:center; font-size:12.5px; background:#0f131b; border:1px solid var(--line); border-radius:9px; padding:6px 10px; margin-top:6px}
+.shot i{font-style:normal; padding:2px 8px; border-radius:6px; background:var(--panel2); border:1px solid var(--line)}
+.shot .r{color:#04110c; background:var(--ok); border-color:transparent; font-weight:600}
+table{width:100%; border-collapse:collapse; font-size:14px; margin:8px 0}
+td{border-top:1px solid var(--line); padding:10px 8px; vertical-align:top}
+td:first-child{color:var(--txt); width:38%; font-weight:600}
+td:last-child{color:var(--dim)}
+h2.sec{margin-top:44px}
+footer{margin-top:44px; color:var(--dim2); font-size:12.5px}
+@media (max-width:680px){
+  main{padding:22px 16px} h1{font-size:30px}
+  .gpus{grid-template-columns:1fr}
+  .step{padding:14px} .code{font-size:12px}
+  td:first-child{width:auto} tr{display:block; border-top:1px solid var(--line)} td{display:block; border:0; padding:6px 4px}
+}
+</style>
+</head>
+<body>
+<main>
+<div class="brand"><div class="dot"></div>HAND-TIE CLIPS &amp; SANDTIE PROMPTRIG · WRITER SETUP</div>
+<h1>Give the writer <span>a brain.</span></h1>
+<p class="lead">The writer is a text AI that runs on your own PC. Pick your graphics card, follow the steps for one tool, and the writer pill on the node turns green. You only do this once.</p>
+
+<div class="q">1 · Which graphics card do you have?</div>
+<div class="gpus">
+  <button class="gpu" data-gpu="5090"><b>RTX 5090</b><small>32 GB, Blackwell</small></button>
+  <button class="gpu" data-gpu="50"><b>Other RTX 50-series</b><small>5060, 5070, 5080</small></button>
+  <button class="gpu" data-gpu="any"><b>Anything else</b><small>RTX 30/40, AMD, Mac, laptop</small></button>
+</div>
+<p class="verdict" id="verdict">Pick one above and the best tool for it gets a <strong>★ pick</strong> badge.</p>
+
+<div class="q">2 · Set up one tool</div>
+<div class="tabs" id="tabs">
+  <button class="tab on" data-t="lmstudio">LM Studio<span class="star">★ pick</span></button>
+  <button class="tab" data-t="ollama">Ollama<span class="star">★ pick</span></button>
+  <button class="tab" data-t="llama">llama.cpp<span class="star">★ pick</span></button>
+  <button class="tab" data-t="basalt">basalt<span class="star">★ pick</span></button>
+  <button class="tab" data-t="ninfer">nInfer<span class="star">★ pick</span></button>
+</div>
+
+<!-- LM STUDIO -->
+<section class="track on" id="t-lmstudio">
+  <div class="needs"><span class="pill ok">easiest</span><span class="pill">any GPU, Mac too</span><span class="pill">clicks only, no typing</span></div>
+  <div class="step"><div class="num">1</div><div class="body"><h2>Install LM Studio</h2>
+    <p>Download it from <a href="https://lmstudio.ai" target="_blank" rel="noopener">lmstudio.ai</a> and open it.</p></div></div>
+  <div class="step"><div class="num">2</div><div class="body"><h2>Load a text model</h2>
+    <p>Use one you already have, or find one in its search tab. It must be a <b>text</b> model: an image or video model will not write.</p></div></div>
+  <div class="step"><div class="num">3</div><div class="body"><h2>Turn its server on</h2>
+    <p>Open the <b>Developer</b> tab and switch <b>Start server</b> on. It listens on port 1234.</p></div></div>
+  <div class="step"><div class="num">4</div><div class="body"><h2>Connect the node</h2>
+    <p>On the node press <b>⚙</b> beside the writer status, pick <b>Local server</b>, paste this address, and save.</p>
+    <div class="code short"><button class="copy">copy</button>http://127.0.0.1:1234</div>
+    <div class="shot"><i>Local server</i><i class="r">Local server Ready</i></div></div></div>
+</section>
+
+<!-- OLLAMA -->
+<section class="track" id="t-ollama">
+  <div class="needs"><span class="pill">any GPU, Mac too</span><span class="pill">one command</span></div>
+  <div class="step"><div class="num">1</div><div class="body"><h2>Install Ollama</h2>
+    <p>Download it from <a href="https://ollama.com" target="_blank" rel="noopener">ollama.com</a>. It runs in the background after that.</p></div></div>
+  <div class="step"><div class="num">2</div><div class="body"><h2>Get a text model</h2>
+    <p>In a terminal, with the tag of the model you want:</p>
+    <div class="code short"><button class="copy">copy</button>ollama pull &lt;your-model-tag&gt;</div></div></div>
+  <div class="step"><div class="num">3</div><div class="body"><h2>Connect the node</h2>
+    <p>Press <b>⚙</b>, pick <b>Local server</b>, paste the address and type the same tag in the model box.</p>
+    <div class="code short"><button class="copy">copy</button>http://127.0.0.1:11434</div></div></div>
+  <div class="note">Ollama ignores the "thinking off" switch the node sends. A model that thinks first can come back with an empty reply. If that happens, use a non-thinking model or LM Studio.</div>
+</section>
+
+<!-- LLAMA.CPP -->
+<section class="track" id="t-llama">
+  <div class="needs"><span class="pill">any GPU</span><span class="pill">a .gguf file you have</span><span class="pill">for terminal people</span></div>
+  <div class="step"><div class="num">1</div><div class="body"><h2>Get llama.cpp</h2>
+    <p>Download a build for your card from the <a href="https://github.com/ggml-org/llama.cpp/releases" target="_blank" rel="noopener">llama.cpp releases</a> and unzip it.</p></div></div>
+  <div class="step"><div class="num">2</div><div class="body"><h2>Start the server</h2>
+    <p>From that folder, with your model's path. <code>--jinja</code> is needed for "thinking off" to work.</p>
+    <div class="code short"><button class="copy">copy</button>llama-server -m "C:\path\to\your-model.gguf" -c 16384 -ngl 99 --port 8080 --jinja</div></div></div>
+  <div class="step"><div class="num">3</div><div class="body"><h2>Connect the node</h2>
+    <p>Press <b>⚙</b>, pick <b>Local server</b>, paste the address.</p>
+    <div class="code short"><button class="copy">copy</button>http://127.0.0.1:8080</div></div></div>
+  <div class="note">llama-server has no "unload" switch. Close it (Ctrl+C) before a render, or the render may run out of VRAM.</div>
+</section>
+
+<!-- BASALT -->
+<section class="track" id="t-basalt">
+  <div class="needs"><span class="pill ok">the node starts and stops it</span><span class="pill">RTX 50-series only</span><span class="pill">Windows 10/11</span><span class="pill">Python 3.10+</span><span class="pill">CUDA Toolkit 13</span></div>
+  <div class="step"><div class="num">1</div><div class="body"><h2>Install basalt: paste this into PowerShell</h2>
+    <p class="dim">Start menu → type <b>PowerShell</b> → open it → paste → Enter. It downloads the latest basalt, checks the file is intact, unpacks it to <code>C:\basalt</code> and sets up its Python. It tells you if anything is missing.</p>
+    <div class="code"><button class="copy">copy</button>&amp; {
+  $Dir = 'C:\basalt'
+  [Net.ServicePointManager]::SecurityProtocol = 'Tls12'
+  $ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'
+  Write-Host '[1/5] Finding the latest basalt release...'
+  # the newest release that already has its Windows zip (a fresh release can be empty for a while)
+  $a = (Invoke-RestMethod 'https://api.github.com/repos/jesdga95/basalt/releases?per_page=10') |
+    ForEach-Object { $_.assets } | Where-Object { $_.name -like '*windows-x64.zip' } | Select-Object -First 1
+  if (-not $a) { throw 'No Windows build found on the basalt releases page. Try again later.' }
+  $zip = Join-Path $env:TEMP $a.name
+  Write-Host "[2/5] Downloading $($a.name)..."
+  Invoke-WebRequest $a.browser_download_url -OutFile $zip
+  if ((Get-FileHash $zip -Algorithm SHA256).Hash.ToLower() -ne $a.digest.Split(':')[1]) { throw 'Checksum mismatch: the download is damaged. Run this again.' }
+  Write-Host "[3/5] Unpacking to $Dir..."
+  $tmp = Join-Path $env:TEMP 'basalt_unpack'; Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+  Expand-Archive $zip $tmp -Force
+  $src = (Get-ChildItem $tmp -Recurse -Filter basalt.exe | Select-Object -First 1).Directory.Parent.FullName
+  New-Item -ItemType Directory $Dir, "$Dir\models" -Force | Out-Null
+  Copy-Item "$src\*" $Dir -Recurse -Force
+  Remove-Item $tmp, $zip -Recurse -Force
+  Write-Host '[4/5] Setting up its Python (one minute)...'
+  if (-not (Get-Command py -ErrorAction SilentlyContinue)) { throw 'Python is missing: install it from python.org (3.10 or newer), then run this again.' }
+  py -3 -m venv "$Dir\.venv"
+  &amp; "$Dir\.venv\Scripts\python.exe" -m pip install -q --disable-pip-version-check -r "$Dir\requirements.txt"
+  Write-Host '[5/5] Checking your GPU setup...'
+  where.exe cudart64_13.dll *&gt; $null
+  if ($LASTEXITCODE -ne 0) { Write-Host 'Missing: the CUDA 13 runtime. Install the CUDA Toolkit 13 from developer.nvidia.com/cuda-downloads, then restart.' -ForegroundColor Yellow }
+  Write-Host "Done. Put your .basalt model file in $Dir\models" -ForegroundColor Green
+}</div></div></div>
+  <div class="step"><div class="num">2</div><div class="body"><h2>Add a model</h2>
+    <p>basalt runs <code>.basalt</code> model files. Put yours in <code>C:\basalt\models</code>. The node uses the newest one there, or the file you set in <b>⚙</b>.</p></div></div>
+  <div class="step"><div class="num">3</div><div class="body"><h2>Press Start</h2>
+    <p>Press <b>⚙</b>, pick <b>basalt</b>, then <b>Start</b>. The first load takes about half a minute. With <b>☕ Auto-Wake</b> on, just write: the node starts it for you.</p>
+    <div class="shot"><i>basalt</i><i class="r">basalt Ready</i><i>Start</i></div></div></div>
+  <div class="note good">Before every render the node unloads basalt's model to free the card and reloads it on your next write. Keep <b>Unload on Run</b> ticked in <b>⚙</b>.</div>
+</section>
+
+<!-- NINFER -->
+<section class="track" id="t-ninfer">
+  <div class="needs"><span class="pill ok">the node starts and stops it</span><span class="pill">RTX 5090 only</span><span class="pill">Windows 11</span><span class="pill">nothing else to install</span></div>
+  <div class="step"><div class="num">1</div><div class="body"><h2>Install nInfer: paste this into PowerShell</h2>
+    <p class="dim">It downloads the latest Windows build (about 450 MB), checks it, unpacks it to <code>C:\ninfer</code>, then opens nInfer's own model picker: type a number and press Enter.</p>
+    <div class="code"><button class="copy">copy</button>&amp; {
+  $Dir = 'C:\ninfer'
+  [Net.ServicePointManager]::SecurityProtocol = 'Tls12'
+  $ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'
+  Write-Host '[1/4] Finding the latest nInfer Windows release...'
+  $a = (Invoke-RestMethod 'https://api.github.com/repos/natpate/ninfer-windows/releases?per_page=10') |
+    ForEach-Object { $_.assets } | Where-Object { $_.name -like '*.zip' } | Select-Object -First 1
+  if (-not $a) { throw 'No Windows build found on the nInfer releases page. Try again later.' }
+  $zip = Join-Path $env:TEMP $a.name
+  Write-Host "[2/4] Downloading $($a.name) (about 450 MB)..."
+  Invoke-WebRequest $a.browser_download_url -OutFile $zip
+  if ((Get-FileHash $zip -Algorithm SHA256).Hash.ToLower() -ne $a.digest.Split(':')[1]) { throw 'Checksum mismatch: the download is damaged. Run this again.' }
+  Write-Host "[3/4] Unpacking to $Dir..."
+  $tmp = Join-Path $env:TEMP 'ninfer_unpack'; Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+  Expand-Archive $zip $tmp -Force
+  $src = (Get-ChildItem $tmp -Recurse -Filter ninfer-serve.exe | Select-Object -First 1).Directory.FullName
+  New-Item -ItemType Directory $Dir, "$Dir\models" -Force | Out-Null
+  Copy-Item "$src\*" $Dir -Recurse -Force
+  Remove-Item $tmp, $zip -Recurse -Force
+  Write-Host '[4/4] Pick a model to download (nInfer runs its own .ninfer files only)...'
+  Push-Location $Dir; try { cmd /c download_model.bat } finally { Pop-Location }
+  Write-Host "Done. nInfer is in $Dir" -ForegroundColor Green
+}</div></div></div>
+  <div class="step"><div class="num">2</div><div class="body"><h2>Press Start</h2>
+    <p>Press <b>⚙</b>, pick <b>nInfer</b>, then <b>Start</b>. With <b>☕ Auto-Wake</b> on, just write: the node starts it for you.</p>
+    <div class="shot"><i>nInfer</i><i class="r">nInfer Ready</i><i>Start</i></div></div></div>
+  <div class="note good">nInfer cannot unload in place, so before a render the node stops it, and Auto-Wake starts it again when you next write (about 30 s). Keep <b>Unload on Run</b> ticked.</div>
+</section>
+
+<h2 class="sec">If it doesn't turn green</h2>
+<table>
+  <tr><td>Pill says <i>Offline</i> after Start</td><td>The red bar under it says why. The full log is <code>C:\basalt\bin\server.err</code> or <code>C:\ninfer\server.err</code>.</td></tr>
+  <tr><td>"No model selected"</td><td>Local server only: type the model's name in the model box in <b>⚙</b>, or load one in LM Studio.</td></tr>
+  <tr><td>The render runs out of VRAM</td><td>Tick <b>Unload on Run</b> in <b>⚙</b>. With llama.cpp, close the server first.</td></tr>
+  <tr><td>"Python is missing" (basalt)</td><td>Install Python 3.10 or newer from <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org</a> and paste the installer again.</td></tr>
+  <tr><td>"Missing: the CUDA 13 runtime" (basalt)</td><td>Install the <a href="https://developer.nvidia.com/cuda-downloads" target="_blank" rel="noopener">CUDA Toolkit 13</a>, restart, then press Start.</td></tr>
+  <tr><td>Empty or cut-off plans</td><td>Use a bigger context (16384 or more) or a stronger model. With Ollama, see its note above.</td></tr>
+  <tr><td>"Checksum mismatch"</td><td>The download broke on the way. Paste the installer again.</td></tr>
+</table>
+
+<footer>basalt: <a href="https://github.com/jesdga95/basalt" target="_blank" rel="noopener">jesdga95/basalt</a> (MIT) · nInfer for Windows: <a href="https://github.com/natpate/ninfer-windows" target="_blank" rel="noopener">natpate/ninfer-windows</a>, a port of <a href="https://github.com/Neroued/ninfer" target="_blank" rel="noopener">Neroued/ninfer</a>. These are other people's projects; Hand-Tie Clips and SandTie only start, stop and talk to them.</footer>
+</main>
+<script>
+(function () {
+  var picks = {
+    "5090": { tabs: ["ninfer", "basalt"], text: "<strong>nInfer</strong> or <strong>basalt</strong>: both are built for your card, and the node starts and stops them for you." },
+    "50": { tabs: ["basalt"], text: "<strong>basalt</strong>: built for RTX 50-series, and the node starts and stops it for you. Pick a model that fits your card's memory." },
+    "any": { tabs: ["lmstudio"], text: "<strong>LM Studio</strong>: the easiest, no typing at all. Ollama works too." }
+  };
+  function showTab(t) {
+    document.querySelectorAll(".tab").forEach(function (b) { b.classList.toggle("on", b.dataset.t === t); });
+    document.querySelectorAll(".track").forEach(function (s) { s.classList.toggle("on", s.id === "t-" + t); });
+  }
+  document.querySelectorAll(".tab").forEach(function (b) { b.addEventListener("click", function () { showTab(b.dataset.t); }); });
+  document.querySelectorAll(".gpu").forEach(function (g) {
+    g.addEventListener("click", function () {
+      var p = picks[g.dataset.gpu];
+      document.querySelectorAll(".gpu").forEach(function (x) { x.classList.toggle("on", x === g); });
+      document.querySelectorAll(".tab").forEach(function (b) { b.classList.toggle("pick", p.tabs.indexOf(b.dataset.t) >= 0); });
+      document.getElementById("verdict").innerHTML = "Best for you: " + p.text;
+      showTab(p.tabs[0]);
+    });
+  });
+  function copyText(text, btn) {
+    function done() { btn.textContent = "copied"; btn.classList.add("done"); setTimeout(function () { btn.textContent = "copy"; btn.classList.remove("done"); }, 1400); }
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done, fallback); } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch (e) {} document.body.removeChild(ta);
+    }
+  }
+  document.querySelectorAll(".copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var box = btn.parentNode, text = "";
+      box.childNodes.forEach(function (n) { if (n !== btn) text += n.textContent; });
+      copyText(text.trim(), btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

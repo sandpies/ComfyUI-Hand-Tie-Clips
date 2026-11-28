@@ -61,32 +61,36 @@ async def ensure_writer_ready(_llm, auto_wake: bool = True) -> tuple[bool, str]:
     backend = _llm.backend_name(conn.get("backend"))
     if await _llm.server_running_async(backend):
         return True, "running"
-    if backend != "ninfer" or not auto_wake:
+    startable = (_llm.can_start(backend) if hasattr(_llm, "can_start")
+                 else backend == "ninfer")
+    if not startable or not auto_wake:
         return False, f"{_llm.active_label()} is not running."
+    lbl = (_llm.backend_spec(backend)["label"] if hasattr(_llm, "backend_spec")
+           else {"ninfer": "nInfer"}.get(backend, backend))
     loop = asyncio.get_running_loop()
     lock = _WAKE_LOCKS.get(loop)
     if lock is None:
         lock = asyncio.Lock()
         _WAKE_LOCKS[loop] = lock
     async with lock:
-        if await _llm.server_running_async("ninfer"):
+        if await _llm.server_running_async(backend):
             return True, "running"
-        pids_before = _llm.find_server_pids("ninfer") if hasattr(_llm, "find_server_pids") else []
+        pids_before = _llm.find_server_pids(backend) if hasattr(_llm, "find_server_pids") else []
         if len(pids_before) == 1:
             already_loading = True
         else:
             already_loading = False
-            ok, msg = await _llm.start_process_async(name="ninfer")
+            ok, msg = await _llm.start_process_async(name=backend)
             if not ok:
                 return False, msg
         for wait_i in range(80):
             await asyncio.sleep(1.5)
-            if await _llm.server_running_async("ninfer"):
-                return True, ("running" if already_loading else "auto-started nInfer")
-            if wait_i >= 1 and hasattr(_llm, "find_server_pids") and not _llm.find_server_pids("ninfer"):
-                err = _llm.startup_error("ninfer")
-                return False, f"nInfer exited during startup{': ' + err if err else '.'}"
-        return False, "nInfer did not answer within 120s after startup."
+            if await _llm.server_running_async(backend):
+                return True, ("running" if already_loading else f"auto-started {lbl}")
+            if wait_i >= 1 and hasattr(_llm, "find_server_pids") and not _llm.find_server_pids(backend):
+                err = _llm.startup_error(backend)
+                return False, f"{lbl} exited during startup{': ' + err if err else '.'}"
+        return False, f"{lbl} did not answer within 120s after startup."
 
 
 def _wait_for_ninfer_exit(timeout_ms: int = 2500) -> int:
@@ -509,7 +513,7 @@ def register_sandtie_routes(instance, web) -> None:
 
         try:
             res = await _vcv.extract_video_to_plan(vpath, complete_fn, in_sec=in_sec, out_sec=out_sec)
-            res["woke_writer"] = wake_msg == "auto-started nInfer"
+            res["woke_writer"] = str(wake_msg or "").startswith("auto-started")
             return web.json_response(res)
         except Exception as exc:
             return web.json_response({"ok": False, "error": str(exc)})
@@ -612,8 +616,8 @@ def register_sandtie_routes(instance, web) -> None:
             images, start_url, start_path = [], None, ""
 
         notes = []
-        if wake_msg == "auto-started nInfer":
-            notes.append("nInfer was stopped after your last render — auto-started it in VRAM.")
+        if str(wake_msg or "").startswith("auto-started"):
+            notes.append(f"{_llm.active_label()} was stopped after your last render — auto-started it in VRAM.")
         write_temp = max(0.9, float(conn.get("temperature") or 0.95)) if conn.get("backend") == "ninfer" else float(conn.get("temperature") or 0.8)
 
         async def complete_fn(messages, schema=None, temperature=None, max_tokens=None):

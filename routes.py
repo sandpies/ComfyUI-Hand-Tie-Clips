@@ -616,20 +616,20 @@ def register():
         backend = _llm.backend_name(conn.get("backend"))
         is_up = await _llm.server_running_async(backend)
         if not is_up:
-            if auto_wake and backend == "ninfer":
+            if auto_wake and _llm.can_start(backend):
                 woke = await _addon_writer_ready(_llm)
                 conn = _llm.load_conn()
                 is_up = await _llm.server_running_async(backend)
                 if not is_up and not woke:
-                    err = _llm.startup_error("ninfer")
+                    err = _llm.startup_error(backend)
                     return web.json_response({
                         "ok": False,
-                        "error": (f"nInfer failed to start: {err}" if err
-                                  else "Could not auto-start nInfer — check LLM Settings in Studio."),
+                        "error": (f"{_llm.backend_spec(backend)['label']} failed to start: {err}" if err
+                                  else f"Could not auto-start {_llm.backend_spec(backend)['label']} — check LLM Settings in Studio."),
                     })
             else:
                 lbl = _llm.backend_spec(backend)["label"]
-                hint = ("press Start in Studio's LLM bar" if backend == "ninfer"
+                hint = ("press Start in Studio's LLM bar" if _llm.can_start(backend)
                         else "start your local server and load a model")
                 return web.json_response({"ok": False, "error": f"{lbl} is offline — {hint}."})
 
@@ -2324,7 +2324,8 @@ def register():
             got = await asyncio.get_running_loop().run_in_executor(
                 None,
                 lambda: _mvs.analyze_song(
-                    song, listen=listen, sections=secs, pattern=pat, end_s=end_s))
+                    song, listen=listen, sections=secs, pattern=pat, end_s=end_s,
+                    lyrics=str(body.get("lyrics") or "")))
             return web.json_response(got)
         except Exception as exc:  # noqa: BLE001
             print(f"[{TAG}] mv song_map failed: {exc!r}", flush=True)
@@ -2349,7 +2350,8 @@ def register():
             got = await asyncio.get_running_loop().run_in_executor(
                 None,
                 lambda: _mvs.solve_mv(
-                    song, secs, listen=listen, pattern=pat, end_s=end_s))
+                    song, secs, listen=listen, pattern=pat, end_s=end_s,
+                    lyrics=str(body.get("lyrics") or "")))
             return web.json_response(got)
         except Exception as exc:  # noqa: BLE001
             print(f"[{TAG}] mv solve failed: {exc!r}", flush=True)
@@ -2494,20 +2496,20 @@ def register():
         is_up = await _llm.server_running_async(backend)
 
         if not is_up:
-            if auto_wake and backend == "ninfer":
+            if auto_wake and _llm.can_start(backend):
                 woke = await _addon_writer_ready(_llm)
                 conn = _llm.load_conn()
                 is_up = await _llm.server_running_async(backend)
                 if not is_up and not woke:
-                    err = _llm.startup_error("ninfer")
+                    err = _llm.startup_error(backend)
                     return web.json_response({
                         "ok": False,
-                        "error": (f"nInfer failed to start: {err}" if err
-                                  else "Could not auto-start nInfer — check Settings in Studio and press Start."),
+                        "error": (f"{_llm.backend_spec(backend)['label']} failed to start: {err}" if err
+                                  else f"Could not auto-start {_llm.backend_spec(backend)['label']} — check Settings in Studio and press Start."),
                     })
             else:
                 lbl = _llm.backend_spec(backend)["label"]
-                hint = ("press Start in Studio's LLM bar" if backend == "ninfer"
+                hint = ("press Start in Studio's LLM bar" if _llm.can_start(backend)
                         else "start your local server and load a model")
                 return web.json_response({"ok": False, "error": f"{lbl} is offline — {hint}."})
 

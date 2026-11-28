@@ -200,16 +200,16 @@ def _genre_micro_example(*, sex_scene: bool, combat_scene: bool, has_dance: bool
     if has_dance:
         if duo:
             return (
-                f"[Shot 1] Medium-full framing inside the venue with {s_tok} screen-left and {s2_tok} staggered screen-right in contrasting stance.\n"
-                f"At 00:00.000-00:03.000, {s_tok} snaps crisp upper-body accents left while {s2_tok} bends into a delayed low-knee groove right.\n"
-                f"At 00:03.000-00:07.000, {s2_tok} executes a fast 360-degree turn and sweep kick while {s_tok} stays crouched clapping on beat.\n"
-                f"At 00:07.000-00:10.000, {s_tok} frames her chin left while {s2_tok} raises both arms into a tall V hold right."
+                f"[Shot 1] Full-body head-to-footwear framing inside the venue with {s_tok} screen-left and {s2_tok} staggered screen-right with clear floor space.\n"
+                f"At 00:00.000-00:03.000, {s_tok} steps wide left snapping crisp chest-and-arm hits while {s2_tok} drops into a deep bent-knee stance behind-right.\n"
+                f"At 00:03.000-00:07.000, {s2_tok} travels forward with rapid heel-toe footwork into a crisp 360-degree pivot turn while {s_tok} slides sideways into a low lunge.\n"
+                f"At 00:07.000-00:10.000, both plant feet wide facing forward, snap opposite diagonal arm frames, and lock a sharp dead-stop finale hold."
             )
         return (
-            f"[Shot 1] Medium-full framing inside the venue as {s_tok} locks eyes with the camera in poised opening stance.\n"
-            f"At 00:00.000-00:03.000, {s_tok} snaps crisp upper-body accents on beat while hair and fabric flare smoothly.\n"
-            f"At 00:03.000-00:07.000, {s_tok} glides through fluid hip isolations and a sharp turn as camera arcs smoothly inward.\n"
-            f"At 00:07.000-00:10.000, {s_tok} lands an ending-fairy hold with bright smile and poised eye lock."
+            f"[Shot 1] Full-body head-to-footwear framing inside the venue with clear floor space around {s_tok} in a wide athletic opening stance.\n"
+            f"At 00:00.000-00:03.000, {s_tok} drives weight onto the left heel, snaps two crisp shoulder-and-ribcage pops, and steps wide right into a sharp dime-stop.\n"
+            f"At 00:03.000-00:07.000, {s_tok} drops low through bent knees, travels laterally across the floor with brisk cross-steps, and whips a tight 360-degree pivot turn.\n"
+            f"At 00:07.000-00:10.000, {s_tok} plants both feet into a wide diagonal lunge, snaps one arm crisply upward, and locks a poised chin-up stage freeze."
         )
     return (
         f"[Shot 1] Grounded cinema framing inside the set as {s_tok} anchors screen position in motivated practical light.\n"
@@ -274,9 +274,22 @@ def build_flavor_facts(
     prelim_cam_id = str(flavors.get("camera") or "").strip()
     prelim_pose_id = str(flavors.get("pose") or "").strip()
     rear_prelim = _dir.is_rear_facing(brief, prelim_exp_id, plan=plan, plan_hint=plan_hint, camera_id=prelim_cam_id, pose_id=prelim_pose_id)
-    mirror_prelim = _dir.is_mirror_scene_active(prelim_exp_id, prelim_cam_id)
+    mirror_prelim = _dir.is_mirror_scene_active(
+        prelim_exp_id,
+        prelim_cam_id,
+        place_id=str(flavors.get("place") or ""),
+        lens_id=str(flavors.get("lens") or ""),
+        brief=brief,
+    )
 
     # 1. Character racial/ethnic, style & distinctive facial anchor locks
+    style_xfer = _dir.resolve_style_transfer(brief=brief, flavors=flavors, lab=lab)
+    if style_xfer:
+        facts.append(
+            f"STYLE TRANSFER OVERRIDE ({style_xfer['label']}): Override the reference sheet's source medium completely. "
+            f"Mark every subject as `partially_preserved` in `retention_analysis:` (preserving facial likeness, hair, and outfit design from `<Picture N>`, re-rendered in {style_xfer['label']}), "
+            f"omit source-medium words from `subject_definitions:`, `summary:`, and `detailed_description:`, and describe skin, eyes, hair, and clothing using {style_xfer['cues']}."
+        )
     _ward_opts_id = _cat.resolve_dial_opts("wardrobe", flavors.get("wardrobe"))
     _ward_snip = _fin.sanitize_additive_rule(_ward_opts_id[0].get("rule") or "") if _ward_opts_id else ""
     for s_n in sorted((lab.get("subjects") or {}).keys()):
@@ -286,17 +299,27 @@ def build_flavor_facts(
         for sp in [p for p in (lab.get("pictures") or []) if p.get("subject") == s_n]:
             s_desc = str(sp.get("desc") or "").strip()
             s_desc_id = s_desc.replace(_ward_snip, "").strip() if (_ward_snip and _ward_snip in s_desc) else s_desc
+            if style_xfer:
+                s_desc_id = _dir.strip_source_medium_words(s_desc_id, style_xfer)
             eth = _refs.extract_ethnicity_phrase(s_desc_id, brief=brief)
             full_anchor = _refs.extract_identity_anchor_summary(s_desc_id, brief=brief, cap=180)
+            if style_xfer:
+                full_anchor = _dir.strip_source_medium_words(full_anchor, style_xfer)
             if eth:
                 if s_n == 1 and rear_prelim and not mirror_prelim:
                     eth_r = _refs.strip_front_facial_features_for_rear(eth)
                     rear_anchor = _refs.strip_front_facial_features_for_rear(full_anchor) if full_anchor else eth_r
-                    extra_rear = f" (rear hair/build/style: `{rear_anchor}`)" if (rear_anchor and rear_anchor.lower() != eth_r.lower()) else ""
+                    extra_rear = f" (rear hair/build: `{rear_anchor}`)" if (rear_anchor and rear_anchor.lower() != eth_r.lower()) else ""
                     poss_p, _, _ = _infer_subject_pronouns(s_n, lab=lab, brief=brief, flavors=flavors)
                     facts.append(
                         f"CHARACTER IDENTITY LOCK (<Subject {s_n}>{cname_str} in {sp['label']}): "
                         f"Name as `{eth}` in `subject_definitions:`, `summary:`, `retention_analysis:`{extra_rear}; in `[Shot 1]` (rear view) write `{eth_r}` only, keeping {poss_p} face away from camera."
+                    )
+                elif style_xfer:
+                    extra_anchor = f" — keep face/marks/build/hair likeness (`{full_anchor}`) re-rendered in {style_xfer['label']}" if (full_anchor and full_anchor.lower() != eth.lower()) else f" re-rendered in {style_xfer['label']}"
+                    facts.append(
+                        f"CHARACTER IDENTITY LOCK (<Subject {s_n}>{cname_str} in {sp['label']}): "
+                        f"Identify as `{eth}` in `subject_definitions:`, `summary:`, `retention_analysis:`, and `[Shot 1]`{extra_anchor}."
                     )
                 else:
                     extra_anchor = f" — keep style/face/marks/build/hair (`{full_anchor}`)" if (full_anchor and full_anchor.lower() != eth.lower()) else ""
@@ -306,10 +329,16 @@ def build_flavor_facts(
                     )
                 break
             elif s_desc_id:
-                facts.append(
-                    f"CHARACTER SHEET LOCK (<Subject {s_n}>{cname_str} in {sp['label']}): "
-                    f"Preserve style and anchor from {sp['label']} ({(full_anchor or s_desc_id)[:180]}) in `subject_definitions:` and `retention_analysis:`."
-                )
+                if style_xfer:
+                    facts.append(
+                        f"CHARACTER SHEET LOCK (<Subject {s_n}>{cname_str} in {sp['label']}): "
+                        f"Keep likeness and outfit anchor from {sp['label']} ({(full_anchor or s_desc_id)[:180]}) re-rendered in {style_xfer['label']} (`partially_preserved`)."
+                    )
+                else:
+                    facts.append(
+                        f"CHARACTER SHEET LOCK (<Subject {s_n}>{cname_str} in {sp['label']}): "
+                        f"Preserve style and anchor from {sp['label']} ({(full_anchor or s_desc_id)[:180]}) in `subject_definitions:` and `retention_analysis:`."
+                    )
                 break
 
     place_opts = _cat.resolve_dial_opts("place", flavors.get("place"))
@@ -473,7 +502,7 @@ def build_flavor_facts(
 
     fx_timing = str(flavors.get("fx_timing") or "delayed_mid")
     if fx_opts:
-        fx_traj = _bg.fx_trajectory_plan(fx_opt, light_opt, spans, fx_timing=fx_timing)
+        fx_traj = _bg.fx_trajectory_plan(fx_opts, light_opt, spans, fx_timing=fx_timing)
         if fx_traj:
             facts.append(fx_traj)
         else:
@@ -482,9 +511,12 @@ def build_flavor_facts(
     if len(place_opts) >= 2 and _bg.get_dial_mode(flavors, "place", "sequence") == "sequence":
         alloc_pl = _alloc_opts_to_timeline(place_opts, spans, tree)
         facts.append("SCENE PROGRESSION (1->2): " + " -> ".join(f"{_clean_ui_label(o['label'])} ({', '.join(ts for _, ts in bl)}): {_fin.sanitize_additive_rule(o.get('rule',''))}" for o, bl in alloc_pl))
+    elif len(place_opts) >= 2:
+        facts.append("SCENE SETTING (FUSION): " + " + ".join(f"{_clean_ui_label(o['label'])} ({_fin.sanitize_additive_rule(o.get('rule') or o['label'])})" for o in place_opts))
     elif place_opt and place_opt.get("rule"):
         facts.append(f"SCENE SETTING ({_clean_ui_label(place_opt['label'])}): {_fin.sanitize_additive_rule(place_opt['rule'])}")
-    if char_opts and not (lab.get("pictures")):
+    has_subj_pics = any(p.get("subject") is not None for p in (lab.get("pictures") or []))
+    if char_opts and not has_subj_pics:
         facts.append("CAST ARCHETYPES: " + " | ".join(f"{_clean_ui_label(o['label'])} ({_fin.sanitize_additive_rule(o.get('rule',''))})" for o in char_opts))
 
     # Poses & Cinema Knowledge (only condense to Shot-Tree pointer when blueprint is active AND not overridden by explicit/combat)
@@ -533,8 +565,10 @@ def build_flavor_facts(
         facts.append("NON-DIEGETIC MUSIC (put ONLY in `non_diegetic_music:`, keep strictly separate from `overall_soundscape:`): " + ", ".join(_fin.sanitize_additive_rule(o.get("rule") or "") for o in music_opts if o.get("rule")))
 
     target_lang = _dlg.detect_target_language(brief, acc_opt)
-    if talk_opt and not no_dialogue:
-        facts.append(f"SPEECH DELIVERY ({talk_opt['label']}): {talk_opt.get('words', '')}")
+    if talk_opts and not no_dialogue:
+        t_lbl = " + ".join(o["label"] for o in talk_opts)
+        t_words = " / ".join(str(o.get("words") or "").strip() for o in talk_opts if str(o.get("words") or "").strip())
+        facts.append(f"SPEECH DELIVERY ({t_lbl}): {t_words}")
     if target_lang != "English" and not no_dialogue:
         native_ex = _dlg.native_sample_for(target_lang)
         acc_desc = (acc_opt.get("words") or acc_opt.get("accent") or target_lang) if acc_opt else target_lang
@@ -552,7 +586,13 @@ def build_flavor_facts(
     anal_scene = _dir.is_anal(brief, explicit_id=exp_id, plan=plan, plan_hint=plan_hint)
     pegging_scene = _dir.is_pegging_scene(brief, explicit_id=exp_id, plan=plan, plan_hint=plan_hint)
     rear_scene = _dir.is_rear_facing(brief, exp_id, plan=plan, plan_hint=plan_hint, camera_id=cam_id, pose_id=pose_id)
-    mirror_scene = _dir.is_mirror_scene_active(exp_id, cam_id)
+    mirror_scene = _dir.is_mirror_scene_active(
+        exp_id,
+        cam_id,
+        place_id=str(flavors.get("place") or ""),
+        lens_id=str(flavors.get("lens") or ""),
+        brief=brief,
+    )
     over_shoulder = _dir.is_over_shoulder(brief, explicit_id=exp_id, camera_id=cam_id, plan=plan, plan_hint=plan_hint, pose_id=pose_id)
     mouth_occupied = _dir.is_mouth_occupied(brief, explicit_id=exp_id, plan=plan, plan_hint=plan_hint)
     solo_bj_oral = _dir.uses_solo_blowjob_template(brief, explicit_id=exp_id, plan=plan, plan_hint=plan_hint)
@@ -651,7 +691,7 @@ def build_flavor_facts(
     )
     if is_dance_active:
         facts.append(
-            "COMPOUND MULTI-LAYER GROOVE (ZERO STIFF SINGLE-PART MOTION): Never animate just one isolated limb or joint — layer simultaneous footwork or bouncy hops, hip-and-pelvis drive, alternating shoulder-and-torso snaps, active arm/elbow rhythm, and hair inertia on every beat so dancers stay fluid and alive."
+            "FULL-BODY CHOREOGRAPHY & ANTI-SWAY LOCK (ZERO JELLYFISH DRIFT): Default to full-body head-to-footwear framing so shoes and floor travel stay visible. Ground every beat in concrete foot-to-floor weight transfer (planted heels, cross-steps, lunges, level drops, pivot turns) paired with crisp hit-and-stop freezes (dime-stops) rather than continuous vague swaying or stationary hip oscillation."
         )
     if is_dance_active and music_opts:
         m_bpm_hit = re.search(r"\b(\d{2,3})\s*BPM\b", " ".join(f"{o.get('label','')} {o.get('rule','')}" for o in music_opts), re.I)
@@ -735,7 +775,11 @@ def build_flavor_facts(
                 "COMBAT DYNAMIC CAMERA & PENULTIMATE ULTIMATE LAW: Drive fast, energetic fighting camera motion across jump kicks, crouching sweeps, mid-air clashes, and force blasts, executing a tight push-in zoom during the ultimate attack strictly inside the next-to-last beat; dedicate the final beat solely to knockback crash, settling debris, and victor recovery so the ultimate attack completes fully before the clip ends (keep every camera and body move fast and urgent, free of slow or soft pacing)."
             )
 
-    if len((lab.get("subjects") or {}).keys()) >= 2 or (combat_scene and any(re.search(r"<Subject\s+2>|S1\s*(?:vs|\+)\s*S2", str(o.get("label") or "") + " " + str(o.get("rule") or ""), re.I) for o in combat_opts)):
+    _has_two_subj_preset = (
+        any(int(o.get("people") or 0) >= 2 or re.search(r"<Subject\s+2>|\bduet\b", f"{o.get('label', '')} {o.get('rule', '')}", re.I) for o in pose_opts)
+        or any(re.search(r"<Subject\s+2>|S1\s*(?:vs|\+)\s*S2", f"{o.get('label', '')} {o.get('rule', '')}", re.I) for o in (combat_opts + exp_opts))
+    )
+    if len((lab.get("subjects") or {}).keys()) >= 2 or _has_two_subj_preset:
         facts.append("SCREEN-AXIS GEOMETRY: Anchor each subject's screen-left / screen-right placement and eyeline direction in [Shot 1] and keep orientation consistent across cuts unless an orbit or cross-over moves them.")
         if pose_opts or combat_opts:
             facts.append("DUET ASYMMETRY & ROLE SPLIT: Preserve each subject's exact assigned screen depth, limb pose, solo vs crouched support role, and staggered timing rather than making both subjects perform identical mirrored gestures.")
@@ -745,7 +789,12 @@ def build_flavor_facts(
         " ".join(f"{o.get('id','')} {o.get('rule','')}" for o in (exp_opts + combat_opts + pose_opts)),
     ])
     if sex_scene or re.search(
-        r"\b(?:cowgirl|mating press|doggy|spitroast|missionary|prone[- ]bone|facesit|straddl\w*|mounted|against (?:the )?wall|wall[- ]pin|lifted|carry|kote-gaeshi|harai-goshi|pak-sao|chi-sao|hurricanrana|waacking|gancho|ocho|contrapposto|tutting)\b",
+        r"\b(?:cowgirl|mating press|doggy|spitroast|missionary|prone[- ]bone|facesit|straddl\w*|mounted|"
+        r"against (?:the )?wall|wall[- ]pin|lifted|carry|kote-gaeshi|harai-goshi|pak-sao|chi-sao|"
+        r"hurricanrana|waacking|gancho|ocho|contrapposto|tutting|"
+        r"handstand|headstand|upside[- ]?down|backflip|frontflip|somersault|cartwheel|suplex|"
+        r"armbar|triangle\s+choke|seoi[- ]?nage|piledriver|sixty[- ]?nine|\b69\b|scissors?|"
+        r"wall[- ]?run|vault|pole\s+spin|floor\s+spiral|arabesque|vogue\s+dip|spine[- ]?arch)\b",
         _geom_blob,
         re.I,
     ):

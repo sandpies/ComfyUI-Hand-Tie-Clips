@@ -42,6 +42,19 @@ rendered film: it is exact, it can be redone one range at a time, and it never c
     `{"floors": [[0, "1F"], [12.96, "2F"]], "flash": [49.2], "flash_text": "うえ!", "corner": "tl"}`,
     in film time (the plan `offset` is not applied). Tick it over on the measured cuts, not the plan's
     hop times, or it changes a shot early. Used on Ue e in place of Orbit (user's pick).
+- **OSD** (VCR on-screen display) is for a video whose idea is a remote: PAUSE / PLAY in the top
+  left on given times, a date and a tape counter that runs only while playing along the bottom.
+  Plan key `osd`: `{"states": [[0, "play"], [21.0, "pause"]], "date": "AM 7:00  NOV.28"}`, film time.
+  The bottom line hides in `baked` windows. Used on Tomare.
+- **Labels** pin a small museum tag ("MID-YAWN / No.1 / FROZEN") a stub above each tracked head,
+  riding with the person; a tag drops when its face is lost or it would cover a face. Plan key
+  `labels`: `[{"a": 22.1, "b": 24.6, "items": [["MID-YAWN", "No.1 / FROZEN", <face x at a>]]}]`.
+  Tags fixed in space failed on a rising camera: the people moved under them, and the people
+  matte read the whole road as a person at that height.
+- **SFX** words (manga sound effects, シーン / ピタッ!) are placed like stickers, off people and faces
+  and off the OSD. Plan key `sfx`: `[[t, "シーン", {"vertical": true, "color": "&HFFFFFF&"}]]`.
+- **Place samples by detection too.** A look sheet placed by eye put a word on a face and a label
+  dot on empty road (user, Tomare). Mock-ups use the same faces + matte scoring as the burn.
 - **Never over the star.** Each word is placed by scoring every slot over its whole hold (three
   frames: in, middle, out). People count after a generous dilation and faces count three times;
   busy detail only breaks ties. If no slot is clear, the word shrinks in two steps, and if it is
@@ -68,6 +81,8 @@ rendered film: it is exact, it can be redone one range at a time, and it never c
 | Kaleidoscope | an opener on a shot with no face | zoom in enough that no corner goes black; unfold by about 2 s. Mirrored faces read as creepy |
 | Light trails | a slow bridge | bright pixels linger; ease in over 1 s, out over 1.5 s, and stop before an after-image the render already has |
 | Light leak | the last 3-4 s | warm flare drifting across, then fade to black |
+| Tape cut | a place change on a video-tape themed piece, about 0.28 s centred on the cut | rows wobble, a noisy head-switch band at the bottom, chroma slips, a small vertical jump |
+| CRT off | the very end, after the last sound (about 0.85 s) | the picture squashes to a bright line, the line to a dot, the dot fades to black |
 
 - Run one fx at a time. Text and fx share a frame only by design (RGB split with glitch words).
 - Kicks for zooms, splits and shakes come from the rises of the sound under 120 Hz, measured over
@@ -107,6 +122,9 @@ python post.py burn cues.json START END [--yunet face_model.onnx]
   model are optional; without them placement uses detail only, the ring is not tucked, and
   colour isolation is skipped, and the tool says which. Use the ComfyUI venv python when rembg
   lives there.
+- The burn encodes at the source's own video bitrate and copies the soundtrack. It used CRF 18,
+  which took a 16 Mbps render down to 5 Mbps (Tomare, user caught it by file size). Check the
+  final's bitrate against the source before calling a burn done.
 - Cost: CPU only. Frames that need a matte (orbit and isolation) run at about ten times real time
   at 48 fps, and everything else is fast; a 3 min film with eight such moments took about half an
   hour. Burn the sample range first.
